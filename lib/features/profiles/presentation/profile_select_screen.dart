@@ -27,34 +27,63 @@ class ProfileSelectScreen extends ConsumerWidget {
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(KvlSpacing.xl, KvlSpacing.huge, KvlSpacing.xl, KvlSpacing.xl),
+            padding: const EdgeInsets.fromLTRB(
+              KvlSpacing.xl,
+              KvlSpacing.huge,
+              KvlSpacing.xl,
+              KvlSpacing.xl,
+            ),
             child: Column(
               children: [
                 Text(
                   'Who is Practicing?',
-                  style: KvlText.title(18).copyWith(color: Colors.white, fontWeight: FontWeight.w500),
+                  style: KvlText.title(
+                    20,
+                  ).copyWith(color: Colors.white, fontWeight: FontWeight.w600),
                 ),
-                const SizedBox(height: KvlSpacing.xxl),
+                const SizedBox(height: 44),
                 Expanded(
                   child: profilesAsync.when(
-                    loading: () => const Center(child: CircularProgressIndicator(color: Colors.white)),
-                    error: (e, _) => Center(child: Text('$e', style: KvlText.body().copyWith(color: Colors.white))),
+                    loading: () => const Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    ),
+                    error: (e, _) => Center(
+                      child: Text(
+                        '$e',
+                        style: KvlText.body().copyWith(color: Colors.white),
+                      ),
+                    ),
                     data: (profiles) => _ProfileGrid(
                       profiles: profiles,
                       cap: ref.watch(profileCapProvider),
                       onTapProfile: (p) async {
-                        await ref.read(profileRepositoryProvider).setActive(p.id);
+                        await ref
+                            .read(profileRepositoryProvider)
+                            .setActive(p.id);
                         if (context.mounted) context.go(KvlRoute.home);
                       },
-                      onTapAddMember: () => _showAddDialog(context, ref, session?.userId),
+                      onTapAddMember: () =>
+                          _showAddDialog(context, ref, session?.userId),
                     ),
                   ),
                 ),
-                const SizedBox(height: KvlSpacing.lg),
+                const SizedBox(height: 30),
                 if (hasSession)
-                  _link(context, 'Manage Profiles', () => context.go(KvlRoute.profile)),
-                _link(context, 'Login with another number', () => context.go(KvlRoute.otpLogin)),
-                _link(context, 'Create a new account', () => context.go(KvlRoute.createAccount)),
+                  _link(
+                    context,
+                    'Manage Profiles',
+                    () => context.go(KvlRoute.profile),
+                  ),
+                _link(
+                  context,
+                  'Login with another number',
+                  () => context.go(KvlRoute.otpLogin),
+                ),
+                _link(
+                  context,
+                  'Create a new account',
+                  () => context.go(KvlRoute.createAccount),
+                ),
               ],
             ),
           ),
@@ -63,7 +92,8 @@ class ProfileSelectScreen extends ConsumerWidget {
     );
   }
 
-  Widget _link(BuildContext context, String label, VoidCallback onTap) => Padding(
+  Widget _link(BuildContext context, String label, VoidCallback onTap) =>
+      Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: InkWell(
           onTap: onTap,
@@ -77,7 +107,11 @@ class ProfileSelectScreen extends ConsumerWidget {
         ),
       );
 
-  Future<void> _showAddDialog(BuildContext context, WidgetRef ref, String? userId) async {
+  Future<void> _showAddDialog(
+    BuildContext context,
+    WidgetRef ref,
+    String? userId,
+  ) async {
     if (userId == null) {
       context.go(KvlRoute.createAccount);
       return;
@@ -88,7 +122,11 @@ class ProfileSelectScreen extends ConsumerWidget {
     );
     if (result == null) return;
     final repo = ref.read(profileRepositoryProvider);
-    final created = await repo.create(userId: userId, name: result.name, relation: result.relation);
+    final created = await repo.create(
+      userId: userId,
+      name: result.name,
+      relation: result.relation,
+    );
     await repo.setActive(created.id);
     if (context.mounted) context.go(KvlRoute.home);
   }
@@ -108,22 +146,48 @@ class _ProfileGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 2,
-      crossAxisSpacing: KvlSpacing.xxl,
-      mainAxisSpacing: KvlSpacing.lg,
-      childAspectRatio: .9,
-      children: [
-        for (final p in profiles) _ProfileTile(profile: p, onTap: () => onTapProfile(p)),
-        if (profiles.length < cap) _AddMemberTile(onTap: onTapAddMember),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxHeight < 520;
+        final avatarSize = compact ? 104.0 : 122.0;
+        return GridView.count(
+          padding: EdgeInsets.zero,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 2,
+          crossAxisSpacing: compact ? 26 : 40,
+          mainAxisSpacing: compact ? 28 : 44,
+          childAspectRatio: compact ? .86 : .82,
+          children: [
+            for (final p in profiles)
+              _ProfileTile(
+                profile: p,
+                avatarSize: avatarSize,
+                compact: compact,
+                onTap: () => onTapProfile(p),
+              ),
+            if (profiles.length < cap)
+              _AddMemberTile(
+                avatarSize: avatarSize,
+                compact: compact,
+                onTap: onTapAddMember,
+              ),
+          ],
+        );
+      },
     );
   }
 }
 
 class _ProfileTile extends StatelessWidget {
-  const _ProfileTile({required this.profile, required this.onTap});
+  const _ProfileTile({
+    required this.profile,
+    required this.avatarSize,
+    required this.compact,
+    required this.onTap,
+  });
   final Profile profile;
+  final double avatarSize;
+  final bool compact;
   final VoidCallback onTap;
 
   @override
@@ -135,33 +199,75 @@ class _ProfileTile extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 88,
-            height: 88,
+            width: avatarSize,
+            height: avatarSize,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white.withValues(alpha: .14),
-              border: Border.all(color: Colors.white.withValues(alpha: .3), width: 2),
+              gradient: _avatarGradient(profile),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: .38),
+                width: 1.4,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: .22),
+                  blurRadius: 18,
+                  offset: const Offset(0, 9),
+                ),
+              ],
             ),
             alignment: Alignment.center,
             child: Text(
               profile.initials,
-              style: KvlText.title(28).copyWith(color: Colors.white),
+              style: KvlText.title(
+                compact ? 34 : 40,
+              ).copyWith(color: Colors.white),
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            profile.displayLabel,
-            style: KvlText.caption(12.5).copyWith(color: Colors.white),
-            textAlign: TextAlign.center,
+          SizedBox(height: compact ? 10 : 14),
+          SizedBox(
+            width: avatarSize + 26,
+            child: Text(
+              profile.displayLabel,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: KvlText.ui(
+                compact ? 15 : 17,
+                FontWeight.w500,
+              ).copyWith(color: Colors.white),
+              textAlign: TextAlign.center,
+            ),
           ),
         ],
       ),
     );
   }
+
+  LinearGradient _avatarGradient(Profile profile) {
+    final seed = (profile.avatarSeed ?? profile.id).hashCode.abs();
+    final palettes = [
+      const [Color(0xFF6EA4BF), Color(0xFFF4C98E)],
+      const [Color(0xFFFFC05A), Color(0xFFE68C27)],
+      const [Color(0xFF94D2BD), Color(0xFF0A9396)],
+      const [Color(0xFFE9C46A), Color(0xFFE76F51)],
+    ];
+    final colors = palettes[seed % palettes.length];
+    return LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: colors,
+    );
+  }
 }
 
 class _AddMemberTile extends StatelessWidget {
-  const _AddMemberTile({required this.onTap});
+  const _AddMemberTile({
+    required this.avatarSize,
+    required this.compact,
+    required this.onTap,
+  });
+  final double avatarSize;
+  final bool compact;
   final VoidCallback onTap;
 
   @override
@@ -173,18 +279,32 @@ class _AddMemberTile extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 88,
-            height: 88,
+            width: avatarSize,
+            height: avatarSize,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withValues(alpha: .55), width: 2, style: BorderStyle.solid),
+              color: Colors.white.withValues(alpha: .04),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: .45),
+                width: 1.4,
+              ),
             ),
             alignment: Alignment.center,
-            child: const Icon(Icons.add, color: Colors.white, size: 28),
+            child: Icon(
+              Icons.add_rounded,
+              color: Colors.white.withValues(alpha: .78),
+              size: compact ? 42 : 50,
+            ),
           ),
-          const SizedBox(height: 8),
-          Text('Add Member',
-              style: KvlText.caption(12.5).copyWith(color: Colors.white), textAlign: TextAlign.center),
+          SizedBox(height: compact ? 10 : 14),
+          Text(
+            'Add Member',
+            style: KvlText.ui(
+              compact ? 15 : 17,
+              FontWeight.w500,
+            ).copyWith(color: Colors.white.withValues(alpha: .72)),
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );
@@ -216,7 +336,10 @@ class _AddProfileDialogState extends State<_AddProfileDialog> {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          TextField(controller: _name, decoration: const InputDecoration(labelText: 'Name')),
+          TextField(
+            controller: _name,
+            decoration: const InputDecoration(labelText: 'Name'),
+          ),
           const SizedBox(height: KvlSpacing.md),
           DropdownButtonFormField<FamilyRelation>(
             initialValue: _relation,
@@ -225,12 +348,16 @@ class _AddProfileDialogState extends State<_AddProfileDialog> {
               for (final r in FamilyRelation.values)
                 DropdownMenuItem(value: r, child: Text(r.label)),
             ],
-            onChanged: (v) => setState(() => _relation = v ?? FamilyRelation.other),
+            onChanged: (v) =>
+                setState(() => _relation = v ?? FamilyRelation.other),
           ),
         ],
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
         FilledButton(
           onPressed: () {
             if (_name.text.trim().isEmpty) return;

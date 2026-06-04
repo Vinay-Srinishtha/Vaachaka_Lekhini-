@@ -7,8 +7,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/providers.dart';
 import '../../../../app/router.dart';
+import '../../../../core/i18n/language_options.dart';
 import '../../../../core/theme/theme.dart';
 import '../../../../core/widgets/widgets.dart';
+import '../../../settings/domain/settings_repository.dart';
 import '../data/voice_enrolment_service.dart';
 import '../domain/voice_enrolment.dart';
 
@@ -17,7 +19,8 @@ class VoiceTrainingScreen extends ConsumerStatefulWidget {
   final String mantraId;
 
   @override
-  ConsumerState<VoiceTrainingScreen> createState() => _VoiceTrainingScreenState();
+  ConsumerState<VoiceTrainingScreen> createState() =>
+      _VoiceTrainingScreenState();
 }
 
 class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen> {
@@ -74,12 +77,16 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen> {
     await _service.stop();
     final profile = ref.read(activeProfileProvider).value;
     if (profile == null) return;
-    await ref.read(voiceEnrolmentRepositoryProvider).save(VoiceEnrolment(
-          profileId: profile.id,
-          mantraId: widget.mantraId,
-          samples: _count,
-          trainedAt: DateTime.now(),
-        ));
+    await ref
+        .read(voiceEnrolmentRepositoryProvider)
+        .save(
+          VoiceEnrolment(
+            profileId: profile.id,
+            mantraId: widget.mantraId,
+            samples: _count,
+            trainedAt: DateTime.now(),
+          ),
+        );
     if (!mounted) return;
     context.go('${KvlRoute.handwritingSubmit}/${widget.mantraId}');
   }
@@ -100,8 +107,12 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen> {
   @override
   Widget build(BuildContext context) {
     final mantra = ref.watch(mantraByIdProvider(widget.mantraId));
-    final mantraText = mantra?.name.devanagari ?? '…';
-    final mantraRoman = mantra?.name.roman ?? '';
+    final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
+    final script =
+        mantra?.name.scriptForLanguage(settings.languageCode) ??
+        settings.languageCode.mantraScriptForLanguage;
+    final mantraText =
+        mantra?.name.displayForLanguage(settings.languageCode) ?? '…';
 
     return KvlScaffold(
       title: '',
@@ -113,7 +124,11 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen> {
           const SizedBox(height: KvlSpacing.lg),
           Center(child: _MicBubble(recording: _recording)),
           const SizedBox(height: KvlSpacing.xl),
-          Text('Train Your Voice', textAlign: TextAlign.center, style: KvlText.title(20)),
+          Text(
+            'Train Your Voice',
+            textAlign: TextAlign.center,
+            style: KvlText.title(20),
+          ),
           const SizedBox(height: 6),
           Text(
             'Let me learn your unique chanting pattern for accurate counting.',
@@ -132,14 +147,20 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen> {
                       const TextSpan(text: 'Say '),
                       TextSpan(
                         text: mantraText,
-                        style: KvlText.mantraDevanagari(14).copyWith(color: KvlColors.primaryDeep),
+                        style: KvlText.mantraByScript(
+                          script,
+                          14,
+                        ).copyWith(color: KvlColors.primaryDeep),
                       ),
-                      TextSpan(text: '  ·  "$mantraRoman" eleven times clearly'),
+                      TextSpan(text: ' eleven times clearly'),
                     ],
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text('Speak naturally at your normal pace and volume', style: KvlText.caption(11)),
+                Text(
+                  'Speak naturally at your normal pace and volume',
+                  style: KvlText.caption(11),
+                ),
               ],
             ),
           ),
@@ -148,7 +169,9 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen> {
           const SizedBox(height: 4),
           Center(
             child: Text(
-              _recording ? '● Recording  ·  $_count / $_target' : 'Tap Start to begin',
+              _recording
+                  ? '● Recording  ·  $_count / $_target'
+                  : 'Tap Start to begin',
               style: KvlText.caption(11.5).copyWith(
                 color: _recording ? KvlColors.primaryDeep : KvlColors.muted,
                 fontWeight: FontWeight.w600,
@@ -157,9 +180,11 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen> {
           ),
           if (_error != null) ...[
             const SizedBox(height: 8),
-            Text(_error!,
-                textAlign: TextAlign.center,
-                style: KvlText.caption(11.5).copyWith(color: KvlColors.danger)),
+            Text(
+              _error!,
+              textAlign: TextAlign.center,
+              style: KvlText.caption(11.5).copyWith(color: KvlColors.danger),
+            ),
           ],
           const SizedBox(height: KvlSpacing.lg),
           KvlButton(
@@ -186,9 +211,12 @@ class _MicBubble extends StatefulWidget {
   State<_MicBubble> createState() => _MicBubbleState();
 }
 
-class _MicBubbleState extends State<_MicBubble> with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 1800))..repeat(reverse: true);
+class _MicBubbleState extends State<_MicBubble>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1800),
+  )..repeat(reverse: true);
 
   @override
   void dispose() {
@@ -209,10 +237,20 @@ class _MicBubbleState extends State<_MicBubble> with SingleTickerProviderStateMi
           height: 130,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            gradient: RadialGradient(colors: [const Color(0xFFFFB572), KvlColors.primary]),
+            gradient: RadialGradient(
+              colors: [const Color(0xFFFFB572), KvlColors.primary],
+            ),
             boxShadow: [
-              BoxShadow(color: KvlColors.primary.withValues(alpha: .16), blurRadius: 0, spreadRadius: middle),
-              BoxShadow(color: KvlColors.primary.withValues(alpha: .08), blurRadius: 0, spreadRadius: outer),
+              BoxShadow(
+                color: KvlColors.primary.withValues(alpha: .16),
+                blurRadius: 0,
+                spreadRadius: middle,
+              ),
+              BoxShadow(
+                color: KvlColors.primary.withValues(alpha: .08),
+                blurRadius: 0,
+                spreadRadius: outer,
+              ),
             ],
           ),
           alignment: Alignment.center,
@@ -231,9 +269,12 @@ class _Waveform extends StatefulWidget {
   State<_Waveform> createState() => _WaveformState();
 }
 
-class _WaveformState extends State<_Waveform> with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 1100))..repeat();
+class _WaveformState extends State<_Waveform>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1100),
+  )..repeat();
 
   @override
   void dispose() {

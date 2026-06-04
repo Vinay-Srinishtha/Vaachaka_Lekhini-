@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/router.dart';
+import '../../../core/navigation/back_navigation.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/utils/indian_number_format.dart';
 import '../../../core/widgets/widgets.dart';
@@ -144,7 +145,8 @@ class _SetTargetWritingsScreenState extends ConsumerState<SetTargetWritingsScree
           const SizedBox(height: KvlSpacing.sm),
           Center(
             child: TextButton(
-              onPressed: context.canPop() ? () => context.pop() : null,
+              onPressed: () =>
+                  context.popOrGo('${KvlRoute.handwritingSubmit}/${widget.mantraId}'),
               child: Text(
                 'Cancel',
                 style: KvlText.caption(12).copyWith(color: KvlColors.primaryDeep, fontWeight: FontWeight.w500),

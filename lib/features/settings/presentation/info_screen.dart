@@ -22,14 +22,21 @@ class InfoScreen extends StatelessWidget {
           Container(
             width: 64,
             height: 64,
-            decoration: const BoxDecoration(color: KvlColors.primaryGhost, shape: BoxShape.circle),
+            decoration: const BoxDecoration(
+              color: KvlColors.primaryGhost,
+              shape: BoxShape.circle,
+            ),
             alignment: Alignment.center,
             child: Icon(t.icon, color: KvlColors.primaryDeep, size: 28),
           ),
           const SizedBox(height: KvlSpacing.md),
           Center(child: Text(t.title, style: KvlText.title(17))),
           const SizedBox(height: KvlSpacing.sm),
-          Text(t.body, textAlign: TextAlign.center, style: KvlText.body(12).copyWith(height: 1.6)),
+          Text(
+            t.body,
+            textAlign: TextAlign.center,
+            style: KvlText.body(12).copyWith(height: 1.6),
+          ),
         ],
       ),
     );
@@ -41,33 +48,37 @@ class InfoScreen extends StatelessWidget {
         return const _Topic(
           title: 'Help & FAQs',
           icon: Icons.help_outline_rounded,
-          body: 'Common questions and how-to guides will be published here. For urgent issues, please use Report Issue.',
+          body:
+              'Common questions and how-to guides will be published here. For urgent issues, please use Report Issue.',
         );
       case 'report':
         return const _Topic(
           title: 'Report Issue',
           icon: Icons.flag_outlined,
-          body: 'Tell us what went wrong and we will look into it. Email integration is being set up.',
+          body:
+              'Tell us what went wrong and we will look into it. Email integration is being set up.',
         );
       case 'feedback':
         return const _Topic(
           title: 'Share Feedback',
           icon: Icons.feedback_outlined,
-          body: 'We listen to every suggestion. Let us know what feels right or what needs to change.',
+          body:
+              'We listen to every suggestion. Let us know what feels right or what needs to change.',
         );
       case 'privacy':
         return const _Topic(
           title: 'Privacy Policy',
           icon: Icons.lock_outline_rounded,
-          body: 'Your practice data lives on your device until you choose to sync it. Voice and handwriting samples never leave this device in version 1.',
+          body:
+              'Your practice data lives on your device until you choose to sync it. Voice and handwriting samples never leave this device in version 1.',
         );
       case 'about':
       default:
         return const _Topic(
-          title: 'About Koti Vachika Lekhini',
+          title: 'About Vaachaka Lekhini',
           icon: Icons.self_improvement_rounded,
           body:
-              'Koti Vachika Lekhini is your personal spiritual practice companion. Chant or write your chosen mantras, track your progress, and grow your discipline — together with your family.\n\nVersion 0.1.0',
+              'Vaachaka Lekhini is your personal spiritual practice companion. Chant or write your chosen mantras, track your progress, and grow your discipline — together with your family.\n\nVersion 0.1.0',
         );
     }
   }

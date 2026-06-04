@@ -60,18 +60,19 @@ class PracticeState {
     String? errorMessage,
     bool clearError = false,
     bool? micPermanentlyDenied,
-  }) =>
-      PracticeState(
-        program: program ?? this.program,
-        modality: modality ?? this.modality,
-        isRunning: isRunning ?? this.isRunning,
-        sessionCount: sessionCount ?? this.sessionCount,
-        todaysTotal: todaysTotal ?? this.todaysTotal,
-        streak: streak ?? this.streak,
-        activeSessionId: clearSession ? null : (activeSessionId ?? this.activeSessionId),
-        errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
-        micPermanentlyDenied: micPermanentlyDenied ?? this.micPermanentlyDenied,
-      );
+  }) => PracticeState(
+    program: program ?? this.program,
+    modality: modality ?? this.modality,
+    isRunning: isRunning ?? this.isRunning,
+    sessionCount: sessionCount ?? this.sessionCount,
+    todaysTotal: todaysTotal ?? this.todaysTotal,
+    streak: streak ?? this.streak,
+    activeSessionId: clearSession
+        ? null
+        : (activeSessionId ?? this.activeSessionId),
+    errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+    micPermanentlyDenied: micPermanentlyDenied ?? this.micPermanentlyDenied,
+  );
 }
 
 /// Owns the live counting loop for one program. UI watches it for state;
@@ -102,16 +103,9 @@ class PracticeController extends AsyncNotifier<PracticeState> {
     final todaysTotal = await _programs.countForDay(programId, today);
     final streak = await _programs.currentStreak(programId);
 
-    // If the user has already trained their voice for this mantra, voice
-    // mode is the natural default. Otherwise fall back to manual tap-to-count.
-    final enrolment = await ref
-        .read(voiceEnrolmentRepositoryProvider)
-        .get(program.profileId, program.mantraId);
-    final defaultModality = enrolment != null ? SessionModality.voice : SessionModality.manual;
-
     return PracticeState(
       program: program,
-      modality: defaultModality,
+      modality: SessionModality.manual,
       isRunning: false,
       sessionCount: 0,
       todaysTotal: todaysTotal,
@@ -141,12 +135,14 @@ class PracticeController extends AsyncNotifier<PracticeState> {
       modality: s.modality,
     );
 
-    state = AsyncData(s.copyWith(
-      isRunning: true,
-      sessionCount: 0,
-      activeSessionId: session.id,
-      clearError: true,
-    ));
+    state = AsyncData(
+      s.copyWith(
+        isRunning: true,
+        sessionCount: 0,
+        activeSessionId: session.id,
+        clearError: true,
+      ),
+    );
 
     if (s.modality == SessionModality.voice && mantra != null) {
       _voice = VoiceEnrolmentService();
@@ -174,15 +170,18 @@ class PracticeController extends AsyncNotifier<PracticeState> {
     final next = await Permission.microphone.request();
     if (next.isGranted) return true;
 
-    final permanentlyDenied = next.isPermanentlyDenied || status.isPermanentlyDenied;
+    final permanentlyDenied =
+        next.isPermanentlyDenied || status.isPermanentlyDenied;
     final s = state.value;
     if (s != null) {
-      state = AsyncData(s.copyWith(
-        errorMessage: permanentlyDenied
-            ? 'Mic access is blocked. Open Settings to enable it, or tap Manual to count by hand.'
-            : 'Mic access is needed to count chants. Allow it, or switch to Manual.',
-        micPermanentlyDenied: permanentlyDenied,
-      ));
+      state = AsyncData(
+        s.copyWith(
+          errorMessage: permanentlyDenied
+              ? 'Mic access is blocked. Open Settings to enable it, or tap Manual to count by hand.'
+              : 'Mic access is needed to count chants. Allow it, or switch to Manual.',
+          micPermanentlyDenied: permanentlyDenied,
+        ),
+      );
     }
     return false;
   }
@@ -196,7 +195,9 @@ class PracticeController extends AsyncNotifier<PracticeState> {
   void clearError() {
     final s = state.value;
     if (s != null) {
-      state = AsyncData(s.copyWith(clearError: true, micPermanentlyDenied: false));
+      state = AsyncData(
+        s.copyWith(clearError: true, micPermanentlyDenied: false),
+      );
     }
   }
 
@@ -215,10 +216,9 @@ class PracticeController extends AsyncNotifier<PracticeState> {
     final delta = newCount - s.sessionCount;
     if (delta <= 0) return;
     _pendingFlush += delta;
-    state = AsyncData(s.copyWith(
-      sessionCount: newCount,
-      todaysTotal: s.todaysTotal + delta,
-    ));
+    state = AsyncData(
+      s.copyWith(sessionCount: newCount, todaysTotal: s.todaysTotal + delta),
+    );
   }
 
   Future<void> _flush() async {
@@ -274,14 +274,16 @@ class PracticeController extends AsyncNotifier<PracticeState> {
       unawaited(HapticFeedback.heavyImpact());
     }
 
-    state = AsyncData(s.copyWith(
-      isRunning: false,
-      sessionCount: 0,
-      program: program,
-      todaysTotal: today,
-      streak: streak,
-      clearSession: true,
-    ));
+    state = AsyncData(
+      s.copyWith(
+        isRunning: false,
+        sessionCount: 0,
+        program: program,
+        todaysTotal: today,
+        streak: streak,
+        clearSession: true,
+      ),
+    );
   }
 
   void _failVoice(String message) {
@@ -303,4 +305,6 @@ class PracticeController extends AsyncNotifier<PracticeState> {
 }
 
 final practiceControllerProvider =
-    AsyncNotifierProvider.family<PracticeController, PracticeState, String>(PracticeController.new);
+    AsyncNotifierProvider.family<PracticeController, PracticeState, String>(
+      PracticeController.new,
+    );

@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../core/remote_config/remote_config.dart';
 import '../core/remote_config/remote_config_keys.dart';
+import '../core/navigation/back_navigation.dart';
 import '../core/theme/theme.dart';
+import '../core/utils/indian_number_format.dart';
 import '../core/widgets/widgets.dart';
 import '../features/auth/presentation/create_account_screen.dart';
 import '../features/auth/presentation/otp_login_screen.dart';
@@ -55,12 +57,12 @@ abstract final class KvlRoute {
   static const quickStart = '/quick-start';
   static const mantraSelection = '/mantra-selection';
   static const mantraByNeed = '/mantra-by-need';
-  static const mantraDetails = '/mantra-details';      // + /:id
-  static const voiceTraining = '/voice-training';       // + /:mantraId
+  static const mantraDetails = '/mantra-details'; // + /:id
+  static const voiceTraining = '/voice-training'; // + /:mantraId
   static const handwritingSubmit = '/handwriting-submit'; // + /:mantraId
-  static const handwritingWrite = '/handwriting-write';   // + /:mantraId
+  static const handwritingWrite = '/handwriting-write'; // + /:mantraId
   static const handwritingCapture = '/handwriting-capture'; // + /:mantraId
-  static const handwritingUpload = '/handwriting-upload';   // + /:mantraId
+  static const handwritingUpload = '/handwriting-upload'; // + /:mantraId
 
   // Later phases — reserved.
   static const setTargetWritings = '/set-target-writings';
@@ -90,7 +92,11 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       if (session == null) return isAuth ? null : KvlRoute.welcome;
       if (activeProfile == null) {
-        const allowed = {KvlRoute.profileSelect, KvlRoute.createAccount, KvlRoute.otpLogin};
+        const allowed = {
+          KvlRoute.profileSelect,
+          KvlRoute.createAccount,
+          KvlRoute.otpLogin,
+        };
         return allowed.contains(loc) ? null : KvlRoute.profileSelect;
       }
       if (isAuth) return KvlRoute.home;
@@ -98,49 +104,82 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: KvlRoute.welcome, builder: (_, _) => const WelcomeScreen()),
-      GoRoute(path: KvlRoute.profileSelect, builder: (_, _) => const ProfileSelectScreen()),
-      GoRoute(path: KvlRoute.createAccount, builder: (_, _) => const CreateAccountScreen()),
-      GoRoute(path: KvlRoute.otpLogin, builder: (_, _) => const OtpLoginScreen()),
+      GoRoute(
+        path: KvlRoute.profileSelect,
+        builder: (_, _) => const ProfileSelectScreen(),
+      ),
+      GoRoute(
+        path: KvlRoute.createAccount,
+        builder: (_, _) => const CreateAccountScreen(),
+      ),
+      GoRoute(
+        path: KvlRoute.otpLogin,
+        builder: (_, _) => const OtpLoginScreen(),
+      ),
 
       // Mantra + enrolment — outside the shell so they get the back arrow chrome.
-      GoRoute(path: KvlRoute.quickStart, builder: (_, _) => const QuickStartScreen()),
-      GoRoute(path: KvlRoute.mantraSelection, builder: (_, _) => const MantraSelectionScreen()),
-      GoRoute(path: KvlRoute.mantraByNeed, builder: (_, _) => const MantraByNeedScreen()),
+      GoRoute(
+        path: KvlRoute.quickStart,
+        builder: (_, _) => const QuickStartScreen(),
+      ),
+      GoRoute(
+        path: KvlRoute.mantraSelection,
+        builder: (_, _) => const MantraSelectionScreen(),
+      ),
+      GoRoute(
+        path: KvlRoute.mantraByNeed,
+        builder: (_, _) => const MantraByNeedScreen(),
+      ),
       GoRoute(
         path: '${KvlRoute.mantraDetails}/:id',
-        builder: (_, state) => MantraDetailsScreen(mantraId: state.pathParameters['id']!),
+        builder: (_, state) =>
+            MantraDetailsScreen(mantraId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '${KvlRoute.voiceTraining}/:mantraId',
-        builder: (_, state) => VoiceTrainingScreen(mantraId: state.pathParameters['mantraId']!),
+        builder: (_, state) =>
+            VoiceTrainingScreen(mantraId: state.pathParameters['mantraId']!),
       ),
       GoRoute(
         path: '${KvlRoute.handwritingSubmit}/:mantraId',
-        builder: (_, state) => HandwritingSubmitScreen(mantraId: state.pathParameters['mantraId']!),
+        builder: (_, state) => HandwritingSubmitScreen(
+          mantraId: state.pathParameters['mantraId']!,
+        ),
       ),
       GoRoute(
         path: '${KvlRoute.handwritingWrite}/:mantraId',
-        builder: (_, state) => WriteOnScreenScreen(mantraId: state.pathParameters['mantraId']!),
+        builder: (_, state) => WriteOnScreenScreen(
+          mantraId: state.pathParameters['mantraId']!,
+          programId: state.uri.queryParameters['programId'],
+        ),
       ),
       GoRoute(
         path: '${KvlRoute.handwritingCapture}/:mantraId',
-        builder: (_, state) => CaptureHandwritingScreen(mantraId: state.pathParameters['mantraId']!),
+        builder: (_, state) => CaptureHandwritingScreen(
+          mantraId: state.pathParameters['mantraId']!,
+        ),
       ),
       GoRoute(
         path: '${KvlRoute.handwritingUpload}/:mantraId',
-        builder: (_, state) => UploadHandwritingScreen(mantraId: state.pathParameters['mantraId']!),
+        builder: (_, state) => UploadHandwritingScreen(
+          mantraId: state.pathParameters['mantraId']!,
+        ),
       ),
 
       // Phase 3 — programs / targets / daily progress
       GoRoute(
         path: '${KvlRoute.setTargetWritings}/:mantraId',
-        builder: (_, state) => SetTargetWritingsScreen(mantraId: state.pathParameters['mantraId']!),
+        builder: (_, state) => SetTargetWritingsScreen(
+          mantraId: state.pathParameters['mantraId']!,
+        ),
       ),
       GoRoute(
         path: '${KvlRoute.setTargetDays}/:mantraId/:writings',
         builder: (_, state) {
           final writings = int.tryParse(state.pathParameters['writings']!) ?? 0;
-          final daysHint = int.tryParse(state.uri.queryParameters['days'] ?? '');
+          final daysHint = int.tryParse(
+            state.uri.queryParameters['days'] ?? '',
+          );
           return SetTargetDaysScreen(
             mantraId: state.pathParameters['mantraId']!,
             writings: writings,
@@ -150,39 +189,77 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '${KvlRoute.dailyProgress}/:programId',
-        builder: (_, state) => DailyProgressScreen(programId: state.pathParameters['programId']!),
+        builder: (_, state) =>
+            DailyProgressScreen(programId: state.pathParameters['programId']!),
       ),
       GoRoute(
         path: '${KvlRoute.practice}/:programId',
-        builder: (_, state) => CounterScreen(programId: state.pathParameters['programId']!),
+        builder: (_, state) =>
+            CounterScreen(programId: state.pathParameters['programId']!),
       ),
-      GoRoute(path: KvlRoute.inviteFriends, builder: (_, _) => const InviteFriendsScreen()),
-      GoRoute(path: KvlRoute.rewardHistory, builder: (_, _) => const RewardHistoryScreen()),
+      GoRoute(
+        path: KvlRoute.inviteFriends,
+        builder: (_, _) => const InviteFriendsScreen(),
+      ),
+      GoRoute(
+        path: KvlRoute.rewardHistory,
+        builder: (_, _) => const RewardHistoryScreen(),
+      ),
       GoRoute(path: KvlRoute.profile, builder: (_, _) => const ProfileScreen()),
-      GoRoute(path: KvlRoute.addFamily, builder: (_, _) => const AddFamilyScreen()),
+      GoRoute(
+        path: KvlRoute.addFamily,
+        builder: (_, _) => const AddFamilyScreen(),
+      ),
       GoRoute(
         path: '/info/:topic',
-        builder: (_, state) => InfoScreen(topic: state.pathParameters['topic'] ?? 'about'),
+        builder: (_, state) =>
+            InfoScreen(topic: state.pathParameters['topic'] ?? 'about'),
       ),
 
       StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) => _ShellPage(shell: navigationShell),
+        builder: (context, state, navigationShell) =>
+            _ShellPage(shell: navigationShell),
         branches: [
-          StatefulShellBranch(routes: [
-            GoRoute(path: KvlRoute.home, builder: (_, _) => const HomeScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: KvlRoute.programs, builder: (_, _) => const ProgramsScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: KvlRoute.practice, builder: (_, _) => const PracticeScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: KvlRoute.community, builder: (_, _) => const CommunityScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: KvlRoute.store, builder: (_, _) => const StoreScreen()),
-          ]),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: KvlRoute.home,
+                builder: (_, _) => const HomeScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: KvlRoute.programs,
+                builder: (_, _) => const ProgramsScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: KvlRoute.practice,
+                builder: (_, _) => const PracticeScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: KvlRoute.community,
+                builder: (_, _) => const CommunityScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: KvlRoute.store,
+                builder: (_, _) => const StoreScreen(),
+              ),
+            ],
+          ),
         ],
       ),
     ],
@@ -200,7 +277,13 @@ class _ShellPage extends ConsumerWidget {
   const _ShellPage({required this.shell});
   final StatefulNavigationShell shell;
 
-  static const _titles = ['Home', 'My Programs', 'Practice', 'Community', 'Store'];
+  static const _titles = [
+    'Home',
+    'My Programs',
+    'Practice',
+    'Streak Leaderboard',
+    'Reward Store',
+  ];
 
   /// Tab indices in [kvlNavItems] for the feature-flag-gated tabs.
   /// Must match the order in `_titles` / the StatefulShell branches.
@@ -212,22 +295,95 @@ class _ShellPage extends ConsumerWidget {
     final profile = ref.watch(activeProfileProvider).value;
     final initial = profile?.initials ?? '?';
     final cfg = ref.watch(remoteConfigProvider).value ?? RemoteConfig.empty;
+    final isCommunity = shell.currentIndex == _communityTab;
+    final isStore = shell.currentIndex == _storeTab;
+    final points = ref.watch(rewardTotalProvider).value ?? 0;
     final hidden = <int>{
-      if (!cfg.boolFlag(RemoteConfigKeys.communityTab, fallback: true)) _communityTab,
+      if (!cfg.boolFlag(RemoteConfigKeys.communityTab, fallback: true))
+        _communityTab,
       if (!cfg.boolFlag(RemoteConfigKeys.storeTab, fallback: true)) _storeTab,
     };
+    final usesCustomHeader = shell.currentIndex == 0 || shell.currentIndex == 2;
     return Scaffold(
       backgroundColor: KvlColors.bg,
-      appBar: KvlTopBar(
-        title: _titles[shell.currentIndex],
-        showBack: false,
-        trailing: _AvatarChip(initial: initial, onTap: () => context.push(KvlRoute.profile)),
-      ),
+      extendBodyBehindAppBar: true,
+      appBar: usesCustomHeader
+          ? null
+          : KvlTopBar(
+              title: _titles[shell.currentIndex],
+              showBack: shell.currentIndex == 1,
+              onBack: shell.currentIndex == 1
+                  ? () => context.popOrGo(KvlRoute.home)
+                  : null,
+              topGapColor: isCommunity || isStore ? Colors.black : null,
+              leading: isStore
+                  ? _RewardHistoryChip(
+                      points: points,
+                      onTap: () => context.push(KvlRoute.rewardHistory),
+                    )
+                  : null,
+              trailing: _AvatarChip(
+                initial: initial,
+                onTap: () => context.push(KvlRoute.profile),
+              ),
+            ),
       body: shell,
       bottomNavigationBar: KvlBottomNav(
         currentIndex: shell.currentIndex,
-        onTap: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
+        onTap: (i) =>
+            shell.goBranch(i, initialLocation: i == shell.currentIndex),
         hiddenIndices: hidden,
+      ),
+    );
+  }
+}
+
+class _RewardHistoryChip extends StatelessWidget {
+  const _RewardHistoryChip({required this.points, required this.onTap});
+  final int points;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: KvlRadius.brSM,
+      child: SizedBox(
+        width: 92,
+        height: 44,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.star_rounded, size: 16, color: KvlColors.gold),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    IndianNumberFormat.format(points),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: KvlText.ui(
+                      12,
+                      FontWeight.w700,
+                    ).copyWith(color: KvlColors.ink),
+                  ),
+                ),
+              ],
+            ),
+            Text(
+              'See History',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: KvlText.caption(9.5).copyWith(
+                color: KvlColors.primaryDeep,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -255,7 +411,13 @@ class _AvatarChip extends StatelessWidget {
           ),
         ),
         alignment: Alignment.center,
-        child: Text(initial, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+        child: Text(
+          initial,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }

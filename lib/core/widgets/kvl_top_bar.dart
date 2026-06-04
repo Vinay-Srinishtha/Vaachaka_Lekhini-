@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../navigation/back_navigation.dart';
 import '../theme/colors.dart';
 import '../theme/spacing.dart';
 import '../theme/typography.dart';
@@ -15,6 +16,7 @@ class KvlTopBar extends StatelessWidget implements PreferredSizeWidget {
     this.trailing,
     this.onBack,
     this.showBack = true,
+    this.topGapColor,
   });
 
   final String? title;
@@ -23,52 +25,77 @@ class KvlTopBar extends StatelessWidget implements PreferredSizeWidget {
   final Widget? trailing;
   final VoidCallback? onBack;
   final bool showBack;
+  final Color? topGapColor;
 
   @override
-  Size get preferredSize => const Size.fromHeight(56);
+  Size get preferredSize => const Size.fromHeight(100);
 
   @override
   Widget build(BuildContext context) {
-    final back = !showBack
-        ? const SizedBox(width: 36)
-        : (leading ??
-            _CircleIconButton(
-              icon: Icons.arrow_back_ios_new_rounded,
-              onTap: onBack ?? () => Navigator.of(context).maybePop(),
-            ));
+    final back =
+        leading ??
+        (!showBack
+            ? const SizedBox(width: 36)
+            : _CircleIconButton(
+                icon: Icons.arrow_back_ios_new_rounded,
+                onTap: onBack ?? () => context.popOrGo('/'),
+              ));
 
-    return SafeArea(
-      bottom: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(KvlSpacing.lg, KvlSpacing.sm, KvlSpacing.lg, KvlSpacing.sm),
-        child: Row(
+    final topGap = MediaQuery.viewPaddingOf(context).top.clamp(36.0, 48.0);
+    return Material(
+      color: Colors.transparent,
+      child: SizedBox(
+        height: topGap + 64,
+        child: Column(
           children: [
-            back,
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
+            ColoredBox(
+              color: topGapColor ?? Colors.transparent,
+              child: SizedBox(height: topGap),
+            ),
+            Container(
+              height: 64,
+              padding: const EdgeInsets.symmetric(horizontal: KvlSpacing.lg),
+              decoration: BoxDecoration(
+                color: KvlColors.bg,
+                border: Border(
+                  bottom: BorderSide(
+                    color: KvlColors.rule.withValues(alpha: .55),
+                  ),
+                ),
+              ),
+              child: Row(
                 children: [
-                  if (title != null)
-                    Text(
-                      title!,
-                      style: KvlText.ui(15, FontWeight.w600),
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                  back,
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (title != null)
+                          Text(
+                            title!,
+                            style: KvlText.ui(17, FontWeight.w700),
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        if (subtitle != null)
+                          Text(
+                            subtitle!,
+                            style: KvlText.caption(
+                              10,
+                            ).copyWith(color: KvlColors.primaryDeep),
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                      ],
                     ),
-                  if (subtitle != null)
-                    Text(
-                      subtitle!,
-                      style: KvlText.caption(10).copyWith(color: KvlColors.primaryDeep),
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                  ),
+                  trailing ?? const SizedBox(width: 36),
                 ],
               ),
             ),
-            trailing ?? const SizedBox(width: 36),
           ],
         ),
       ),
@@ -89,7 +116,10 @@ class _CircleIconButton extends StatelessWidget {
       child: Container(
         width: 36,
         height: 36,
-        decoration: const BoxDecoration(color: KvlColors.surface, shape: BoxShape.circle),
+        decoration: const BoxDecoration(
+          color: KvlColors.surface,
+          shape: BoxShape.circle,
+        ),
         alignment: Alignment.center,
         child: Icon(icon, size: 16, color: KvlColors.inkSoft),
       ),

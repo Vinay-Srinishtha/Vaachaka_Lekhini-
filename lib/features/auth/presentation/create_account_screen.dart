@@ -14,7 +14,8 @@ class CreateAccountScreen extends ConsumerStatefulWidget {
   const CreateAccountScreen({super.key});
 
   @override
-  ConsumerState<CreateAccountScreen> createState() => _CreateAccountScreenState();
+  ConsumerState<CreateAccountScreen> createState() =>
+      _CreateAccountScreenState();
 }
 
 class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
@@ -68,7 +69,9 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
       _busy = true;
       _error = null;
     });
-    final result = await ref.read(authRepositoryProvider).verifyOtp(
+    final result = await ref
+        .read(authRepositoryProvider)
+        .verifyOtp(
           mobile: _e164Mobile,
           otp: _otp,
           username: _username.text,
@@ -101,6 +104,12 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
     return KvlScaffold(
       title: 'Create Account',
       scrollable: true,
+      padding: EdgeInsets.fromLTRB(
+        KvlSpacing.lg,
+        0,
+        KvlSpacing.lg,
+        MediaQuery.viewInsetsOf(context).bottom + KvlSpacing.lg,
+      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -131,7 +140,11 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                   children: [
                     SizedBox(
                       width: 78,
-                      child: KvlInput(label: 'Code', hint: '+91', readOnly: true),
+                      child: KvlInput(
+                        label: 'Code',
+                        hint: '+91',
+                        readOnly: true,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -152,20 +165,42 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                   controller: _referral,
                 ),
                 const SizedBox(height: KvlSpacing.md),
-                _LanguagePicker(value: _language, onChanged: (v) => setState(() => _language = v)),
+                _LanguagePicker(
+                  value: _language,
+                  onChanged: (v) => setState(() => _language = v),
+                ),
                 const SizedBox(height: KvlSpacing.lg),
                 if (!_otpSent)
-                  KvlButton(label: _busy ? 'Sending…' : 'Send OTP', onPressed: _busy ? null : _sendOtp)
+                  KvlButton(
+                    label: _busy ? 'Sending…' : 'Send OTP',
+                    onPressed: _busy ? null : _sendOtp,
+                  )
                 else ...[
-                  Text('Enter the 6-digit code', style: KvlText.caption(11.5), textAlign: TextAlign.center),
+                  Text(
+                    'Enter the 6-digit code',
+                    style: KvlText.caption(11.5),
+                    textAlign: TextAlign.center,
+                  ),
                   const SizedBox(height: KvlSpacing.sm),
-                  PinCodeInput(onChanged: (v) => _otp = v, onCompleted: (_) => _register()),
+                  PinCodeInput(
+                    onChanged: (v) => _otp = v,
+                    onCompleted: (_) => _register(),
+                  ),
                   const SizedBox(height: KvlSpacing.lg),
-                  KvlButton(label: _busy ? 'Verifying…' : 'Register', onPressed: _busy ? null : _register),
+                  KvlButton(
+                    label: _busy ? 'Verifying…' : 'Register',
+                    onPressed: _busy ? null : _register,
+                  ),
                 ],
                 if (_error != null) ...[
                   const SizedBox(height: KvlSpacing.sm),
-                  Text(_error!, style: KvlText.caption(11.5).copyWith(color: KvlColors.danger), textAlign: TextAlign.center),
+                  Text(
+                    _error!,
+                    style: KvlText.caption(
+                      11.5,
+                    ).copyWith(color: KvlColors.danger),
+                    textAlign: TextAlign.center,
+                  ),
                 ],
               ],
             ),
@@ -173,7 +208,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
           const SizedBox(height: KvlSpacing.lg),
           Center(
             child: GestureDetector(
-              onTap: () => context.go(KvlRoute.otpLogin),
+              onTap: () => context.push(KvlRoute.otpLogin),
               child: RichText(
                 text: TextSpan(
                   style: KvlText.caption(11.5),
@@ -181,7 +216,10 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                     const TextSpan(text: 'Already have an account? '),
                     TextSpan(
                       text: 'Login',
-                      style: TextStyle(color: KvlColors.primaryDeep, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        color: KvlColors.primaryDeep,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
@@ -211,7 +249,12 @@ class _LanguagePicker extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Select Language', style: KvlText.caption(11.5).copyWith(color: KvlColors.inkSoft, fontWeight: FontWeight.w500)),
+        Text(
+          'Select Language',
+          style: KvlText.caption(
+            11.5,
+          ).copyWith(color: KvlColors.inkSoft, fontWeight: FontWeight.w500),
+        ),
         const SizedBox(height: 4),
         Container(
           decoration: BoxDecoration(
@@ -228,7 +271,10 @@ class _LanguagePicker extends StatelessWidget {
               borderRadius: KvlRadius.brMD,
               items: [
                 for (final (code, label) in _options)
-                  DropdownMenuItem(value: code, child: Text(label, style: KvlText.ui(13))),
+                  DropdownMenuItem(
+                    value: code,
+                    child: Text(label, style: KvlText.ui(13)),
+                  ),
               ],
               onChanged: (v) {
                 if (v != null) onChanged(v);

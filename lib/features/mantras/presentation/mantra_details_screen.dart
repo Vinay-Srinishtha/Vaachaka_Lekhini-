@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/providers.dart';
 import '../../../app/router.dart';
+import '../../../core/i18n/language_options.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../settings/domain/settings_repository.dart';
 import '../domain/mantra.dart';
 
 class MantraDetailsScreen extends ConsumerWidget {
@@ -21,25 +23,37 @@ class MantraDetailsScreen extends ConsumerWidget {
         body: Center(child: Text('Mantra not found', style: KvlText.body())),
       );
     }
+    final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
+    final script = mantra.name.scriptForLanguage(settings.languageCode);
+    final name = mantra.name.displayForLanguage(settings.languageCode);
     return KvlScaffold(
-      title: '${mantra.name.roman} Mantra Details',
+      title: '$name Mantra Details',
       trailing: const _FavoriteButton(),
       scrollable: true,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: KvlSpacing.sm),
-          MantraText(mantra.name.devanagari, size: 32),
+          MantraText(name, script: script, size: 32),
           const SizedBox(height: KvlSpacing.md),
           _DeityHero(),
           const SizedBox(height: KvlSpacing.md),
-          Text(mantra.description, style: KvlText.body(12).copyWith(height: 1.55, color: KvlColors.inkSoft)),
+          Text(
+            mantra.description,
+            style: KvlText.body(
+              12,
+            ).copyWith(height: 1.55, color: KvlColors.inkSoft),
+          ),
           const SizedBox(height: KvlSpacing.md),
-          _PronunciationCard(mantra: mantra),
+          _PronunciationCard(
+            mantra: mantra,
+            languageCode: settings.languageCode,
+          ),
           const SizedBox(height: KvlSpacing.md),
           KvlButton(
-            label: 'Start Practice with ${mantra.name.roman} Mantra',
-            onPressed: () => context.push('${KvlRoute.voiceTraining}/$mantraId'),
+            label: 'Start Practice with $name Mantra',
+            onPressed: () =>
+                context.push('${KvlRoute.voiceTraining}/$mantraId'),
           ),
         ],
       ),
@@ -90,7 +104,9 @@ class _DeityHero extends StatelessWidget {
         child: Center(
           child: Text(
             'ॐ',
-            style: KvlText.mantraDevanagari(110).copyWith(color: Colors.white.withValues(alpha: .4)),
+            style: KvlText.mantraDevanagari(
+              110,
+            ).copyWith(color: Colors.white.withValues(alpha: .4)),
           ),
         ),
       ),
@@ -99,11 +115,13 @@ class _DeityHero extends StatelessWidget {
 }
 
 class _PronunciationCard extends StatelessWidget {
-  const _PronunciationCard({required this.mantra});
+  const _PronunciationCard({required this.mantra, required this.languageCode});
   final Mantra mantra;
+  final String languageCode;
 
   @override
   Widget build(BuildContext context) {
+    final name = mantra.name.displayForLanguage(languageCode);
     return KvlCard(
       padding: const EdgeInsets.all(KvlSpacing.md),
       child: Row(
@@ -116,24 +134,38 @@ class _PronunciationCard extends StatelessWidget {
               borderRadius: KvlRadius.brSM,
             ),
             alignment: Alignment.center,
-            child: const Icon(Icons.music_note_rounded, color: Colors.white, size: 18),
+            child: const Icon(
+              Icons.music_note_rounded,
+              color: Colors.white,
+              size: 18,
+            ),
           ),
           const SizedBox(width: KvlSpacing.sm),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Pronunciation Guide', style: KvlText.ui(11.5, FontWeight.w600)),
-                Text('${mantra.name.roman} Mantra', style: KvlText.muted(10.5)),
+                Text(
+                  'Pronunciation Guide',
+                  style: KvlText.ui(11.5, FontWeight.w600),
+                ),
+                Text('$name Mantra', style: KvlText.muted(10.5)),
               ],
             ),
           ),
           Container(
             width: 30,
             height: 30,
-            decoration: const BoxDecoration(color: KvlColors.primary, shape: BoxShape.circle),
+            decoration: const BoxDecoration(
+              color: KvlColors.primary,
+              shape: BoxShape.circle,
+            ),
             alignment: Alignment.center,
-            child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 18),
+            child: const Icon(
+              Icons.play_arrow_rounded,
+              color: Colors.white,
+              size: 18,
+            ),
           ),
         ],
       ),

@@ -1,6 +1,6 @@
-# KVL Admin
+# Vaachaka Lekhini Admin
 
-Admin dashboard + content backend for the **Koti Vachika Lekhini (KVL)** Flutter app.
+Admin dashboard + content backend for the **Vaachaka Lekhini** Flutter app.
 Everything the Flutter client sees — mantras, store items, feature flags — is controlled from here.
 
 - SvelteKit 2 + Svelte 5 (runes)

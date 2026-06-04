@@ -44,8 +44,8 @@
 		</div>
 		{#if !collapsed || mobileOpen}
 			<div class="ml-3 overflow-hidden">
-				<div class="text-sm font-semibold text-gray-900 leading-tight">KVL Admin</div>
-				<div class="text-[11px] text-gray-500 leading-tight">Vachika Lekhini</div>
+				<div class="text-sm font-semibold text-gray-900 leading-tight">Vaachaka Lekhini Admin</div>
+				<div class="text-[11px] text-gray-500 leading-tight">Vaachaka Lekhini</div>
 			</div>
 		{/if}
 		<button

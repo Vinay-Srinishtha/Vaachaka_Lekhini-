@@ -17,7 +17,7 @@ const mantras = [
 		nameTelugu: 'శ్రీ రామ',
 		nameKannada: 'ಶ್ರೀ ರಾಮ',
 		description:
-			'The Sri Rama mantra is a sacred chant that invokes the divine energy of Lord Rama, an incarnation of Vishnu. It is revered for its power to bestow peace, righteousness, and spiritual liberation. Chanting this mantra helps purify the mind, body, and soul, and is a cornerstone of the Koti Vachika Lekhini practice, guiding devotees on their spiritual journey.',
+			'The Sri Rama mantra is a sacred chant that invokes the divine energy of Lord Rama, an incarnation of Vishnu. It is revered for its power to bestow peace, righteousness, and spiritual liberation. Chanting this mantra helps purify the mind, body, and soul, and is a cornerstone of the Vaachaka Lekhini practice, guiding devotees on their spiritual journey.',
 		deity: 'Rama',
 		thumbPalette: 'saffron' as const,
 		tags: ['peace', 'righteousness', 'liberation'] as const

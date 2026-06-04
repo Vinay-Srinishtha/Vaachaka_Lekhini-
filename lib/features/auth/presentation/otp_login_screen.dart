@@ -82,10 +82,9 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
       _busy = true;
       _error = null;
     });
-    final result = await ref.read(authRepositoryProvider).verifyOtp(
-          mobile: _e164Mobile,
-          otp: _otp,
-        );
+    final result = await ref
+        .read(authRepositoryProvider)
+        .verifyOtp(mobile: _e164Mobile, otp: _otp);
     if (!mounted) return;
     switch (result) {
       case Ok(:final value):
@@ -116,12 +115,15 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
   Widget build(BuildContext context) {
     return KvlScaffold(
       title: 'Login',
-      scrollable: true,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: KvlSpacing.md),
-          Text('Welcome back', textAlign: TextAlign.center, style: KvlText.title(17)),
+          Text(
+            'Welcome back',
+            textAlign: TextAlign.center,
+            style: KvlText.title(17),
+          ),
           const SizedBox(height: 4),
           Text(
             'Enter the mobile number associated with your account.',
@@ -131,7 +133,10 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
           const SizedBox(height: KvlSpacing.lg),
           Row(
             children: [
-              SizedBox(width: 78, child: KvlInput(label: 'Code', hint: '+91', readOnly: true)),
+              SizedBox(
+                width: 78,
+                child: KvlInput(label: 'Code', hint: '+91', readOnly: true),
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: KvlInput(
@@ -146,7 +151,10 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
           ),
           const SizedBox(height: KvlSpacing.lg),
           if (!_otpSent)
-            KvlButton(label: _busy ? 'Sending…' : 'Send OTP', onPressed: _busy ? null : _sendOtp)
+            KvlButton(
+              label: _busy ? 'Sending…' : 'Send OTP',
+              onPressed: _busy ? null : _sendOtp,
+            )
           else ...[
             Text(
               'Enter the 6-digit code sent to your number.',
@@ -154,32 +162,46 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
               style: KvlText.caption(11.5),
             ),
             const SizedBox(height: KvlSpacing.md),
-            PinCodeInput(onChanged: (v) => _otp = v, onCompleted: (_) => _login()),
+            PinCodeInput(
+              onChanged: (v) => _otp = v,
+              onCompleted: (_) => _login(),
+            ),
             const SizedBox(height: KvlSpacing.sm),
             Center(
               child: _resendSeconds > 0
-                  ? Text('Resend OTP in ${_resendSeconds}s', style: KvlText.caption(11))
+                  ? Text(
+                      'Resend OTP in ${_resendSeconds}s',
+                      style: KvlText.caption(11),
+                    )
                   : GestureDetector(
                       onTap: _sendOtp,
                       child: Text(
                         'Resend OTP',
-                        style: KvlText.caption(11.5).copyWith(color: KvlColors.primaryDeep, fontWeight: FontWeight.w600),
+                        style: KvlText.caption(11.5).copyWith(
+                          color: KvlColors.primaryDeep,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
             ),
             const SizedBox(height: KvlSpacing.lg),
-            KvlButton(label: _busy ? 'Verifying…' : 'Login', onPressed: _busy ? null : _login),
+            KvlButton(
+              label: _busy ? 'Verifying…' : 'Login',
+              onPressed: _busy ? null : _login,
+            ),
           ],
           if (_error != null) ...[
             const SizedBox(height: KvlSpacing.sm),
-            Text(_error!,
-                textAlign: TextAlign.center,
-                style: KvlText.caption(11.5).copyWith(color: KvlColors.danger)),
+            Text(
+              _error!,
+              textAlign: TextAlign.center,
+              style: KvlText.caption(11.5).copyWith(color: KvlColors.danger),
+            ),
           ],
           const SizedBox(height: KvlSpacing.lg),
           Center(
             child: GestureDetector(
-              onTap: () => context.go(KvlRoute.createAccount),
+              onTap: () => context.push(KvlRoute.createAccount),
               child: RichText(
                 text: TextSpan(
                   style: KvlText.caption(11.5),
@@ -187,7 +209,10 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
                     const TextSpan(text: "Don't have an account? "),
                     TextSpan(
                       text: 'Create one',
-                      style: TextStyle(color: KvlColors.primaryDeep, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        color: KvlColors.primaryDeep,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),

@@ -26,7 +26,7 @@ class KvlApp extends ConsumerWidget {
     ref.watch(remoteConfigProvider);
 
     return MaterialApp.router(
-      title: 'Koti Vachika Lekhini',
+      title: 'Vaachaka Lekhini',
       debugShowCheckedModeBanner: false,
       theme: buildKvlLightTheme(),
       themeMode: settings.themeMode,

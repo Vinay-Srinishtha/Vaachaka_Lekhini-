@@ -1,8 +1,8 @@
-# KVL Build Roadmap
+# Vaachaka Lekhini Build Roadmap
 
 _Plan written: 2026-05-11_ · companion to `STATUS.md` (current state), `DESIGN.md` (design audit), `MOCKUPS.html` (visual target).
 
-This is the phased plan to take KVL from the current ASR prototype to all 22 screens shown in `MOCKUPS.html`, with **offline storage + dummy auth** now and **cloud/API integration deferred** to the final phase.
+This is the phased plan to take Vaachaka Lekhini from the current ASR prototype to all 22 screens shown in `MOCKUPS.html`, with **offline storage + dummy auth** now and **cloud/API integration deferred** to the final phase.
 
 ---
 
@@ -92,7 +92,7 @@ Each phase ships a runnable build. No phase is "scaffolding only" — every phas
 
 ## Phase 0 — Foundation (design system + shell)
 
-**Outcome:** Empty app that boots, navigates between 5 stub tabs, and looks like KVL.
+**Outcome:** Empty app that boots, navigates between 5 stub tabs, and looks like Vaachaka Lekhini.
 
 - [ ] `pubspec.yaml` — replace deps with the verified version table above
 - [ ] `core/theme/` — color tokens, typography (Lexend + Tiro Devanagari/Telugu/Kannada + Noto fallbacks via `google_fonts`), spacing scale, shadow tokens, light theme (dark theme deferred)

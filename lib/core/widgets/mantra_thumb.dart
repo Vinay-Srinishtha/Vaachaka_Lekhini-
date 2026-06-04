@@ -43,12 +43,10 @@ class MantraThumb extends StatelessWidget {
   List<Color> _gradient(MantraThumbPalette p) => switch (p) {
         MantraThumbPalette.saffron => const [Color(0xFFF4A056), Color(0xFFC97328)],
         MantraThumbPalette.shiva => const [Color(0xFF9C7BC8), Color(0xFF6B4E9B)],
-        MantraThumbPalette.gayatri => const [Color(0xFFFFB54E), Color(0xFFE89614)],
-        MantraThumbPalette.maha => const [Color(0xFF74C7B8), Color(0xFF2A8580)],
-        MantraThumbPalette.hanuman => const [Color(0xFFE97562), Color(0xFFB5402F)],
         MantraThumbPalette.vishnu => const [Color(0xFF5BA0E0), Color(0xFF2E6BAA)],
         MantraThumbPalette.krishna => const [Color(0xFF6A8FCC), Color(0xFF344E8A)],
+        MantraThumbPalette.matre => const [Color(0xFFE06A9C), Color(0xFFAA3070)],
       };
 }
 
-enum MantraThumbPalette { saffron, shiva, gayatri, maha, hanuman, vishnu, krishna }
+enum MantraThumbPalette { saffron, shiva, vishnu, krishna, matre }

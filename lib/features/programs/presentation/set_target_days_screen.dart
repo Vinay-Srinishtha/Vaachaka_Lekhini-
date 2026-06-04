@@ -21,10 +21,15 @@ class SetTargetDaysScreen extends ConsumerStatefulWidget {
   final int? daysHint;
 
   @override
-  ConsumerState<SetTargetDaysScreen> createState() => _SetTargetDaysScreenState();
+  ConsumerState<SetTargetDaysScreen> createState() =>
+      _SetTargetDaysScreenState();
 }
 
 class _SetTargetDaysScreenState extends ConsumerState<SetTargetDaysScreen> {
+  static const _minDays = 1;
+  static const _defaultDays = 180;
+  static const _maxSliderDays = 2000;
+
   static const _presets = [
     (100, 'Fastest', KvlChipVariant.primary),
     (180, 'Balanced', KvlChipVariant.primary),
@@ -32,8 +37,13 @@ class _SetTargetDaysScreenState extends ConsumerState<SetTargetDaysScreen> {
     (500, 'Sustainable', KvlChipVariant.green),
   ];
 
-  late int _days = widget.daysHint ?? 180;
+  late int _days = _normalizeDays(widget.daysHint);
   bool _busy = false;
+
+  static int _normalizeDays(int? days) {
+    final value = days ?? _defaultDays;
+    return value < _minDays ? _minDays : value;
+  }
 
   String _pace(int days) {
     if (days <= 0) return '';
@@ -49,7 +59,9 @@ class _SetTargetDaysScreenState extends ConsumerState<SetTargetDaysScreen> {
     final profile = ref.read(activeProfileProvider).value;
     if (profile == null || _days <= 0 || widget.writings <= 0) return;
     setState(() => _busy = true);
-    await ref.read(programRepositoryProvider).create(
+    await ref
+        .read(programRepositoryProvider)
+        .create(
           profileId: profile.id,
           mantraId: widget.mantraId,
           targetWritings: widget.writings,
@@ -61,6 +73,9 @@ class _SetTargetDaysScreenState extends ConsumerState<SetTargetDaysScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final sliderMax = _days > _maxSliderDays
+        ? _days.toDouble()
+        : _maxSliderDays.toDouble();
     return KvlScaffold(
       title: 'Set Your Practice Target',
       scrollable: true,
@@ -87,34 +102,50 @@ class _SetTargetDaysScreenState extends ConsumerState<SetTargetDaysScreen> {
           ],
           const SizedBox(height: KvlSpacing.sm),
           KvlCard(
-            variant: _presets.any((p) => p.$1 == _days) ? KvlCardVariant.plain : KvlCardVariant.soft,
+            variant: _presets.any((p) => p.$1 == _days)
+                ? KvlCardVariant.plain
+                : KvlCardVariant.soft,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Center(child: Text('Set a Custom Duration', style: KvlText.ui(13, FontWeight.w600))),
+                Center(
+                  child: Text(
+                    'Set a Custom Duration',
+                    style: KvlText.ui(13, FontWeight.w600),
+                  ),
+                ),
                 const SizedBox(height: KvlSpacing.sm),
                 Row(
                   children: [
-                    Expanded(child: Text('Duration', style: KvlText.caption(11.5))),
+                    Expanded(
+                      child: Text('Duration', style: KvlText.caption(11.5)),
+                    ),
                     Text('$_days days', style: KvlText.ui(13, FontWeight.w600)),
                   ],
                 ),
                 Slider(
-                  value: _days.clamp(30, 999).toDouble(),
-                  min: 30,
-                  max: 999,
-                  divisions: 100,
+                  value: _days.clamp(_minDays, sliderMax.toInt()).toDouble(),
+                  min: _minDays.toDouble(),
+                  max: sliderMax,
                   activeColor: KvlColors.primary,
                   inactiveColor: KvlColors.primarySoft,
-                  onChanged: (v) => setState(() => _days = v.round()),
+                  onChanged: (v) => setState(
+                    () => _days = v.round().clamp(_minDays, sliderMax.toInt()),
+                  ),
                 ),
                 Container(
                   padding: const EdgeInsets.all(KvlSpacing.sm),
-                  decoration: BoxDecoration(color: KvlColors.primaryGhost, borderRadius: KvlRadius.brSM),
+                  decoration: BoxDecoration(
+                    color: KvlColors.primaryGhost,
+                    borderRadius: KvlRadius.brSM,
+                  ),
                   child: Center(
                     child: Text(
                       'This means ${_pace(_days)}',
-                      style: KvlText.caption(11).copyWith(color: KvlColors.primaryDeep, fontWeight: FontWeight.w500),
+                      style: KvlText.caption(11).copyWith(
+                        color: KvlColors.primaryDeep,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ),
@@ -122,7 +153,10 @@ class _SetTargetDaysScreenState extends ConsumerState<SetTargetDaysScreen> {
             ),
           ),
           const SizedBox(height: KvlSpacing.lg),
-          KvlButton(label: _busy ? 'Creating…' : 'Confirm & Begin', onPressed: _busy ? null : _confirm),
+          KvlButton(
+            label: _busy ? 'Creating…' : 'Confirm & Begin',
+            onPressed: _busy ? null : _confirm,
+          ),
         ],
       ),
     );
@@ -150,7 +184,9 @@ class _DaysCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return KvlCard(
       variant: selected ? KvlCardVariant.soft : KvlCardVariant.plain,
-      border: selected ? Border.all(color: KvlColors.primary, width: 1.5) : null,
+      border: selected
+          ? Border.all(color: KvlColors.primary, width: 1.5)
+          : null,
       onTap: onTap,
       child: Row(
         children: [
@@ -160,7 +196,10 @@ class _DaysCard extends StatelessWidget {
               children: [
                 Text('$days Days', style: KvlText.ui(13, FontWeight.w600)),
                 const SizedBox(height: 2),
-                Text(subline, style: KvlText.caption(10.5).copyWith(height: 1.3)),
+                Text(
+                  subline,
+                  style: KvlText.caption(10.5).copyWith(height: 1.3),
+                ),
               ],
             ),
           ),

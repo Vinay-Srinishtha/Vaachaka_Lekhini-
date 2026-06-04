@@ -1,0 +1,47 @@
+<script lang="ts">
+	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import Modal from '$lib/components/Modal.svelte';
+	import MantraForm from '$lib/components/MantraForm.svelte';
+
+	let { data, form } = $props();
+
+	const m = $derived(data.mantra);
+	const v = $derived(form?.values ?? {});
+	const tags = $derived<string[]>(form?.tags ?? (m.tags as string[]));
+
+	const value = $derived({
+		id: m.id,
+		slug: m.slug,
+		nameDevanagari: String(v.nameDevanagari ?? m.nameDevanagari),
+		nameRoman: String(v.nameRoman ?? m.nameRoman),
+		nameTelugu:
+			v.nameTelugu !== undefined ? (v.nameTelugu ? String(v.nameTelugu) : null) : m.nameTelugu,
+		nameKannada:
+			v.nameKannada !== undefined ? (v.nameKannada ? String(v.nameKannada) : null) : m.nameKannada,
+		description: String(v.description ?? m.description),
+		deity: v.deity !== undefined ? (v.deity ? String(v.deity) : null) : m.deity,
+		thumbPalette: String(v.thumbPalette ?? m.thumbPalette),
+		tags,
+		recommendedCount: v.recommendedCount ? Number(v.recommendedCount) : m.recommendedCount,
+		recommendedDays: v.recommendedDays ? Number(v.recommendedDays) : m.recommendedDays,
+		pronunciationUrl:
+			v.pronunciationUrl !== undefined
+				? v.pronunciationUrl
+					? String(v.pronunciationUrl)
+					: null
+				: m.pronunciationUrl,
+		isActive: v.isActive !== undefined ? v.isActive === 'on' || v.isActive === 'true' : m.isActive,
+		sortOrder: v.sortOrder ? Number(v.sortOrder) : m.sortOrder
+	});
+
+	function close() {
+		const params = new URLSearchParams(page.url.searchParams);
+		const qs = params.toString();
+		goto(`/mantras${qs ? '?' + qs : ''}`, { keepFocus: true, noScroll: true });
+	}
+</script>
+
+<Modal open title={`Edit · ${m.nameRoman}`} subtitle={`Slug · ${m.slug}`} size="xl" onClose={close}>
+	<MantraForm {value} fieldErrors={form?.fieldErrors ?? {}} submitLabel="Save changes" isEdit />
+</Modal>

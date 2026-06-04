@@ -1,0 +1,38 @@
+<script lang="ts">
+	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import Modal from '$lib/components/Modal.svelte';
+	import MantraForm from '$lib/components/MantraForm.svelte';
+
+	let { form } = $props();
+
+	const v = $derived(form?.values ?? {});
+	const tags = $derived<string[]>(form?.tags ?? []);
+
+	const value = $derived({
+		slug: String(v.slug ?? ''),
+		nameDevanagari: String(v.nameDevanagari ?? ''),
+		nameRoman: String(v.nameRoman ?? ''),
+		nameTelugu: v.nameTelugu ? String(v.nameTelugu) : null,
+		nameKannada: v.nameKannada ? String(v.nameKannada) : null,
+		description: String(v.description ?? ''),
+		deity: v.deity ? String(v.deity) : null,
+		thumbPalette: String(v.thumbPalette ?? 'saffron'),
+		tags,
+		recommendedCount: v.recommendedCount ? Number(v.recommendedCount) : null,
+		recommendedDays: v.recommendedDays ? Number(v.recommendedDays) : null,
+		pronunciationUrl: v.pronunciationUrl ? String(v.pronunciationUrl) : null,
+		isActive: v.isActive !== undefined ? v.isActive === 'on' || v.isActive === 'true' : true,
+		sortOrder: v.sortOrder ? Number(v.sortOrder) : 0
+	});
+
+	function close() {
+		const params = new URLSearchParams(page.url.searchParams);
+		const qs = params.toString();
+		goto(`/mantras${qs ? '?' + qs : ''}`, { keepFocus: true, noScroll: true });
+	}
+</script>
+
+<Modal open title="New mantra" subtitle="Add a mantra to the catalog served to Flutter" size="xl" onClose={close}>
+	<MantraForm {value} fieldErrors={form?.fieldErrors ?? {}} submitLabel="Create mantra" />
+</Modal>

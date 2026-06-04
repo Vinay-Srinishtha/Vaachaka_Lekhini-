@@ -1,0 +1,330 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../app/providers.dart';
+import '../../../app/router.dart';
+import '../../../core/theme/theme.dart';
+import '../../../core/utils/indian_number_format.dart';
+import '../../../core/widgets/widgets.dart';
+import '../domain/friend.dart';
+import '../domain/leaderboard_repository.dart';
+
+class CommunityScreen extends ConsumerStatefulWidget {
+  const CommunityScreen({super.key});
+
+  @override
+  ConsumerState<CommunityScreen> createState() => _CommunityScreenState();
+}
+
+class _CommunityScreenState extends ConsumerState<CommunityScreen> {
+  LeaderboardSort _sort = LeaderboardSort.streak;
+
+  Future<Friend> _buildSelf() async {
+    final profile = ref.read(activeProfileProvider).value;
+    final programs = ref.read(programsForActiveProfileProvider).value ?? const [];
+    var bestStreak = 0;
+    var totalChants = 0;
+    final repo = ref.read(programRepositoryProvider);
+    for (final p in programs) {
+      final s = await repo.currentStreak(p.id);
+      if (s > bestStreak) bestStreak = s;
+      totalChants += p.totalProgress;
+    }
+    return Friend(
+      id: profile?.id ?? 'self',
+      name: profile?.name ?? 'You',
+      streakDays: bestStreak,
+      totalChants: totalChants,
+      isSelf: true,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Friend>(
+      future: _buildSelf(),
+      builder: (_, snap) {
+        final self = snap.data;
+        if (self == null) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        return FutureBuilder<List<Friend>>(
+          future: ref.read(leaderboardRepositoryProvider).leaderboard(sort: _sort, self: self),
+          builder: (_, listSnap) {
+            final list = listSnap.data ?? const <Friend>[];
+            return _Body(
+              list: list,
+              sort: _sort,
+              onSortChanged: (s) => setState(() => _sort = s),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _Body extends StatelessWidget {
+  const _Body({required this.list, required this.sort, required this.onSortChanged});
+  final List<Friend> list;
+  final LeaderboardSort sort;
+  final ValueChanged<LeaderboardSort> onSortChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final podium = list.take(3).toList();
+    final rest = list.skip(3).toList();
+    final selfIndex = list.indexWhere((f) => f.isSelf);
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(KvlSpacing.lg, KvlSpacing.sm, KvlSpacing.lg, KvlSpacing.lg),
+      children: [
+        Text('Streak Leaderboard', style: KvlText.title(17), textAlign: TextAlign.center),
+        Text('${list.length - 1} Friends Joined',
+            style: KvlText.caption(11.5), textAlign: TextAlign.center),
+        const SizedBox(height: KvlSpacing.md),
+        _InviteBanner(),
+        const SizedBox(height: KvlSpacing.md),
+        _SortToggle(sort: sort, onChanged: onSortChanged),
+        const SizedBox(height: KvlSpacing.lg),
+        _Podium(top3: podium, sort: sort),
+        const SizedBox(height: KvlSpacing.md),
+        for (var i = 0; i < rest.length; i++) ...[
+          _RankRow(
+            rank: i + 4,
+            friend: rest[i],
+            sort: sort,
+            highlight: rest[i].isSelf,
+          ),
+          const SizedBox(height: KvlSpacing.sm),
+        ],
+        if (selfIndex == -1) const SizedBox.shrink(),
+        const SizedBox(height: KvlSpacing.md),
+        KvlButton(label: 'Send Encouragement', icon: Icons.favorite_rounded, onPressed: () {}),
+        const SizedBox(height: KvlSpacing.sm),
+        KvlButton(variant: KvlButtonVariant.secondary, label: 'View Group Stats', onPressed: () {}),
+      ],
+    );
+  }
+}
+
+class _InviteBanner extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return KvlCard(
+      variant: KvlCardVariant.soft,
+      gradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [KvlColors.primarySoft, KvlColors.primaryGhost],
+      ),
+      child: Column(
+        children: [
+          Text(
+            'Invite up to ${LeaderboardRepository.maxCircle} friends to your practice circle',
+            textAlign: TextAlign.center,
+            style: KvlText.ui(12.5, FontWeight.w600),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            "Create a community to support each other's spiritual journey.",
+            textAlign: TextAlign.center,
+            style: KvlText.caption(11),
+          ),
+          const SizedBox(height: KvlSpacing.sm),
+          KvlButton(
+            size: KvlButtonSize.tiny,
+            expand: false,
+            label: 'Invite Friends',
+            icon: Icons.person_add_alt_1_rounded,
+            onPressed: () => context.push(KvlRoute.inviteFriends),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SortToggle extends StatelessWidget {
+  const _SortToggle({required this.sort, required this.onChanged});
+  final LeaderboardSort sort;
+  final ValueChanged<LeaderboardSort> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(color: KvlColors.primaryGhost, borderRadius: KvlRadius.brSM),
+      child: Row(
+        children: [
+          _Pill(label: 'Streak Challenge', selected: sort == LeaderboardSort.streak, onTap: () => onChanged(LeaderboardSort.streak)),
+          _Pill(label: 'Total Chants', selected: sort == LeaderboardSort.totalChants, onTap: () => onChanged(LeaderboardSort.totalChants)),
+        ],
+      ),
+    );
+  }
+}
+
+class _Pill extends StatelessWidget {
+  const _Pill({required this.label, required this.selected, required this.onTap});
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: KvlRadius.brMD,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: selected ? KvlColors.primary : Colors.transparent,
+            borderRadius: KvlRadius.brMD,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: KvlText.ui(12, FontWeight.w600).copyWith(color: selected ? Colors.white : KvlColors.inkSoft),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Podium extends StatelessWidget {
+  const _Podium({required this.top3, required this.sort});
+  final List<Friend> top3;
+  final LeaderboardSort sort;
+
+  @override
+  Widget build(BuildContext context) {
+    if (top3.isEmpty) return const SizedBox.shrink();
+    final first = top3[0];
+    final second = top3.length > 1 ? top3[1] : null;
+    final third = top3.length > 2 ? top3[2] : null;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (second != null) _Pod(friend: second, place: 2, sort: sort),
+        const SizedBox(width: 14),
+        _Pod(friend: first, place: 1, sort: sort),
+        const SizedBox(width: 14),
+        if (third != null) _Pod(friend: third, place: 3, sort: sort),
+      ],
+    );
+  }
+}
+
+class _Pod extends StatelessWidget {
+  const _Pod({required this.friend, required this.place, required this.sort});
+  final Friend friend;
+  final int place;
+  final LeaderboardSort sort;
+
+  static const _borders = <int, Color>{
+    1: KvlColors.gold,
+    2: Color(0xFFC7C7C7),
+    3: Color(0xFFCD7F32),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final size = place == 1 ? 60.0 : 52.0;
+    final border = _borders[place]!;
+    final metric = sort == LeaderboardSort.streak
+        ? '${friend.streakDays} Days'
+        : IndianNumberFormat.compact(friend.totalChants);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (place == 1)
+          const Text('👑', style: TextStyle(fontSize: 18))
+        else
+          const SizedBox(height: 18),
+        Container(
+          width: size,
+          height: size,
+          margin: const EdgeInsets.only(top: 2),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: border, width: 3),
+            gradient: LinearGradient(
+              colors: [KvlColors.primary.withValues(alpha: .9), KvlColors.primaryDeep],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          alignment: Alignment.center,
+          child: Text(friend.initials,
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: size / 3)),
+        ),
+        const SizedBox(height: 4),
+        SizedBox(width: 72, child: Text(friend.name, textAlign: TextAlign.center, style: KvlText.caption(10.5).copyWith(fontWeight: FontWeight.w600))),
+        Text(metric, style: KvlText.muted(10)),
+      ],
+    );
+  }
+}
+
+class _RankRow extends StatelessWidget {
+  const _RankRow({required this.rank, required this.friend, required this.sort, required this.highlight});
+  final int rank;
+  final Friend friend;
+  final LeaderboardSort sort;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    final metric = sort == LeaderboardSort.streak
+        ? '${friend.streakDays} Days'
+        : IndianNumberFormat.compact(friend.totalChants);
+    return KvlCard(
+      variant: highlight ? KvlCardVariant.soft : KvlCardVariant.plain,
+      border: highlight ? Border.all(color: KvlColors.primarySoft, width: 1.5) : null,
+      padding: const EdgeInsets.symmetric(horizontal: KvlSpacing.md, vertical: 10),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 22,
+            child: Text(
+              '$rank',
+              style: KvlText.ui(13, FontWeight.w700).copyWith(color: highlight ? KvlColors.primaryDeep : KvlColors.inkSoft),
+            ),
+          ),
+          Container(
+            width: 30,
+            height: 30,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFFFFB572), KvlColors.primary],
+              ),
+            ),
+            alignment: Alignment.center,
+            child: Text(friend.initials, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+          ),
+          const SizedBox(width: KvlSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(highlight ? 'You' : friend.name, style: KvlText.ui(12, FontWeight.w600)),
+                Text(sort == LeaderboardSort.streak ? 'Streak' : 'Total Chants', style: KvlText.muted(10)),
+              ],
+            ),
+          ),
+          Text(metric, style: KvlText.ui(12, FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+}

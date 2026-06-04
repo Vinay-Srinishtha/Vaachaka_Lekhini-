@@ -1,0 +1,388 @@
+// KVL admin — Postgres schema.
+//
+// Domain split:
+//   • Catalog tables (Mantra / StoreItem / FeatureFlag) drive what the
+//     Flutter app shows. Admin-controlled, served at /api/v1/{mantras,store,config}.
+//   • Account-side tables (Account / Member / Program / Session / RewardEvent / ...)
+//     hold user-generated data synced from the Flutter app.
+//   • Admin tables (AdminUser / RevokedToken) gate this dashboard.
+//
+// Naming: an `Account` is one mobile-number login. A `Member` is one
+// person who chants — Netflix-profile model, multiple Members per Account.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Catalog (admin → Flutter, read-only public API)
+// ─────────────────────────────────────────────────────────────────────────
+
+model Mantra {
+  id               String   @id @default(cuid())
+  slug             String   @unique
+  nameDevanagari   String
+  nameRoman        String
+  nameTelugu       String?
+  nameKannada      String?
+  description      String
+  deity            String?
+  thumbPalette     ThumbPalette
+  tags             MantraTag[]
+  recommendedCount Int?
+  recommendedDays  Int?
+  pronunciationUrl String?
+  isActive         Boolean  @default(true)
+  sortOrder        Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  programs           Program[]
+  voiceEnrolments    VoiceEnrolment[]
+  handwritingSamples HandwritingSample[]
+
+  @@index([isActive, sortOrder])
+}
+
+enum ThumbPalette {
+  saffron
+  shiva
+  gayatri
+  maha
+  hanuman
+  vishnu
+  krishna
+}
+
+enum MantraTag {
+  peace
+  righteousness
+  healing
+  protection
+  strength
+  courage
+  wealth
+  prosperity
+  liberation
+  enlightenment
+  wisdom
+  devotion
+}
+
+model StoreItem {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String
+  pointsCost  Int
+  imageUrl    String?
+  stock       Int?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rewardEvents RewardEvent[]
+
+  @@index([isActive, sortOrder])
+}
+
+model FeatureFlag {
+  key         String   @id
+  valueType   FlagType
+  value       Json     @db.JsonB
+  description String?
+  updatedAt   DateTime @updatedAt
+}
+
+enum FlagType {
+  bool
+  int
+  string
+  json
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Account & Member  (Netflix-style: 1 login → many family profiles)
+// ─────────────────────────────────────────────────────────────────────────
+
+/// One mobile-number login. Owns the password, referral code, ban state.
+/// Auth flow: OTP (always available) OR password (set after first login).
+model Account {
+  id              String    @id @default(cuid())
+  mobile          String    @unique
+  countryCode     String    @default("+91")
+  passwordHash    String?   // null until the user sets a password
+  passwordSetAt   DateTime?
+  referralCode    String?   @unique
+  invitedById     String?
+  invitedBy       Account?  @relation("Referrals", fields: [invitedById], references: [id])
+  referrals       Account[] @relation("Referrals")
+  isBanned        Boolean   @default(false)
+  bannedReason    String?
+  createdAt       DateTime  @default(now())
+  lastSeenAt      DateTime?
+
+  members      Member[]
+  devices      Device[]
+  invitesSent  Invite[]   @relation("InviterAccount")
+  invitesGot   Invite[]   @relation("InviteeAccount")
+  otpChallenges OtpChallenge[]
+
+  @@index([isBanned])
+}
+
+/// A family member who chants. Owns programs, sessions, voice fingerprint,
+/// handwriting samples, reward ledger. One Member is `isPrimary` (the
+/// original account holder); deleting that one requires reassigning.
+model Member {
+  id           String    @id @default(cuid())
+  accountId    String
+  account      Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  displayName  String
+  relation     FamilyRelation @default(other)
+  avatarKey    String?
+  language     String    @default("en")
+  birthYear    Int?
+  preferences  Json      @default("{}") @db.JsonB
+  isPrimary    Boolean   @default(false)
+
+  /// Denormalised cache. Source of truth = sum of RewardEvent.amount
+  /// for this member. Recomputed server-side on each ledger write.
+  rewardPointsBalance Int @default(0)
+
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  lastActiveAt DateTime?
+
+  programs           Program[]
+  sessions           Session[]
+  rewardEvents       RewardEvent[]
+  voiceEnrolments    VoiceEnrolment[]
+  handwritingSamples HandwritingSample[]
+
+  @@index([accountId])
+  @@index([accountId, isPrimary])
+}
+
+enum FamilyRelation {
+  self
+  spouse
+  parent
+  child
+  sibling
+  friend
+  other
+}
+
+/// Per-member, per-mantra practice goal + running aggregates.
+/// `totalWritings` / streak fields are denorm caches; sum of Session.countAdded
+/// over this program is the source of truth.
+model Program {
+  id              String   @id @default(cuid())
+  memberId        String
+  member          Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  mantraId        String
+  mantra          Mantra   @relation(fields: [mantraId], references: [id])
+  targetWritings  Int
+  targetDays      Int
+  startedAt       DateTime @default(now())
+  completedAt     DateTime?
+  totalWritings   Int      @default(0)
+  currentStreak   Int      @default(0)
+  longestStreak   Int      @default(0)
+  lastActiveDate  DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  sessions Session[]
+
+  @@index([memberId])
+  @@index([mantraId])
+}
+
+/// One row per chant session — start to finish. Lets us reconstruct totals
+/// if a cache drifts and answer time-of-day analytics.
+model Session {
+  id              String   @id @default(cuid())
+  memberId        String
+  member          Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  programId       String
+  program         Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
+  startedAt       DateTime
+  endedAt         DateTime?
+  durationSec     Int      @default(0)
+  countAdded      Int
+  modality        SessionModality
+  voiceMatchScore Float?
+  createdAt       DateTime @default(now())
+
+  @@index([memberId, startedAt])
+  @@index([programId, startedAt])
+}
+
+enum SessionModality {
+  voice
+  handwriting
+  manual
+}
+
+/// Append-only ledger of reward-point grants and spends. Sum of `amount`
+/// (with `kind` providing sign semantics) = the member's balance.
+model RewardEvent {
+  id          String   @id @default(cuid())
+  memberId    String
+  member      Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  kind        RewardEventKind
+  amount      Int       // always positive; sign comes from `kind`
+  source      String    // free-text key e.g. "session_complete:program:abc"
+  storeItemId String?
+  storeItem   StoreItem? @relation(fields: [storeItemId], references: [id])
+  occurredAt  DateTime  @default(now())
+
+  @@index([memberId, occurredAt])
+}
+
+enum RewardEventKind {
+  earn
+  spend
+  milestone
+  gift
+  refund
+}
+
+/// Voice fingerprint per (member, mantra). Replaces local TFLite ECAPA-TDNN
+/// embedding when a member logs in on a new device.
+model VoiceEnrolment {
+  id           String   @id @default(cuid())
+  memberId     String
+  member       Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  mantraId     String
+  mantra       Mantra   @relation(fields: [mantraId], references: [id])
+  embeddingUrl String   // R2/S3 URL to embedding blob
+  sampleCount  Int      @default(0)
+  qualityScore Float?
+  enrolledAt   DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([memberId, mantraId])
+}
+
+model HandwritingSample {
+  id             String   @id @default(cuid())
+  memberId       String
+  member         Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  mantraId       String
+  mantra         Mantra   @relation(fields: [mantraId], references: [id])
+  mode           HandwritingMode
+  storageUrl     String?  // R2/S3 URL when mode != useDefaultFont
+  isPersonalized Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  @@index([memberId, mantraId])
+}
+
+enum HandwritingMode {
+  writeOnScreen
+  captureCamera
+  uploadGallery
+  useDefaultFont
+}
+
+/// Devices signed in to an account. Used for FCM push routing + "you
+/// logged in on a new phone" awareness.
+model Device {
+  id         String   @id @default(cuid())
+  accountId  String
+  account    Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  /// Last member chosen on this device (so reopening lands on the right profile).
+  lastMemberId String?
+  platform   DevicePlatform
+  appVersion String?
+  pushToken  String?  // FCM token
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  @@index([accountId])
+  @@index([pushToken])
+}
+
+enum DevicePlatform {
+  android
+  ios
+  web
+}
+
+/// Referrals: who invited whom. Reward is granted via a RewardEvent when
+/// the invitee signs up.
+model Invite {
+  id               String   @id @default(cuid())
+  inviterAccountId String
+  inviter          Account  @relation("InviterAccount", fields: [inviterAccountId], references: [id], onDelete: Cascade)
+  inviteeMobile    String?
+  inviteeAccountId String?
+  invitee          Account? @relation("InviteeAccount", fields: [inviteeAccountId], references: [id])
+  status           InviteStatus @default(pending)
+  rewardGranted    Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  acceptedAt       DateTime?
+
+  @@index([inviterAccountId])
+  @@index([inviteeMobile])
+}
+
+enum InviteStatus {
+  pending
+  accepted
+  expired
+}
+
+/// Short-lived OTP challenges. Stored hashed (we never persist the raw code).
+/// Cleaned by a background job — see /api/v1/auth/otp/start.
+model OtpChallenge {
+  id          String   @id @default(cuid())
+  /// Nullable so first-time signup OTPs work before an Account row exists.
+  accountId   String?
+  account     Account? @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  mobile      String
+  codeHash    String   // bcrypt of the 6-digit code
+  attempts    Int      @default(0)
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([mobile, expiresAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Admin dashboard auth
+// ─────────────────────────────────────────────────────────────────────────
+
+model AdminUser {
+  id           String     @id @default(cuid())
+  username     String     @unique
+  email        String?    @unique
+  passwordHash String
+  role         AdminRole  @default(viewer)
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  lastLoginAt  DateTime?
+}
+
+enum AdminRole {
+  super_admin
+  editor
+  viewer
+}
+
+model RevokedToken {
+  jti       String   @id
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}

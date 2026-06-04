@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KVL App — Figma Design Audit</title>
+<style>
+  :root {
+    --bg: #fbf3e2;
+    --surface: #ffffff;
+    --surface-2: #fff8ea;
+    --ink: #2a1f14;
+    --ink-soft: #5a4a3a;
+    --muted: #8a7a68;
+    --primary: #e8893b;
+    --primary-soft: #fde2c5;
+    --accent: #1f6f6b;
+    --border: #ead8b8;
+    --rule: #f0dfbe;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  .page {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 56px 28px 96px;
+  }
+  header.hero {
+    background: linear-gradient(135deg, #f4a056 0%, #e8893b 100%);
+    color: #fff;
+    border-radius: 20px;
+    padding: 36px 32px;
+    margin-bottom: 32px;
+    box-shadow: 0 8px 24px rgba(232,137,59,.18);
+  }
+  header.hero h1 {
+    font: 700 32px/1.2 Georgia, "Times New Roman", serif;
+    margin: 0 0 10px;
+    letter-spacing: -0.01em;
+  }
+  header.hero .meta {
+    font-size: 14px;
+    opacity: .92;
+  }
+  header.hero .tagline {
+    margin-top: 14px;
+    font-style: italic;
+    font-size: 15px;
+    opacity: .95;
+  }
+  h2 {
+    font: 700 24px/1.3 Georgia, serif;
+    margin: 48px 0 14px;
+    color: var(--ink);
+    border-bottom: 2px solid var(--rule);
+    padding-bottom: 8px;
+  }
+  h3 {
+    font: 600 18px/1.35 -apple-system, BlinkMacSystemFont, sans-serif;
+    margin: 28px 0 10px;
+    color: var(--accent);
+  }
+  h4 {
+    font: 600 15px/1.35 -apple-system, BlinkMacSystemFont, sans-serif;
+    margin: 18px 0 6px;
+    color: var(--ink);
+  }
+  p { margin: 0 0 12px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 6px; }
+  li > ul { margin-top: 6px; }
+  strong { color: var(--ink); }
+  em { color: var(--ink-soft); }
+  a { color: var(--primary); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font: 13px/1.4 "SF Mono", Menlo, Consolas, monospace;
+    color: var(--accent);
+  }
+  pre {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--primary);
+    border-radius: 8px;
+    padding: 14px 18px;
+    overflow-x: auto;
+    font: 12.5px/1.5 "SF Mono", Menlo, Consolas, monospace;
+    color: var(--ink);
+    margin: 12px 0 20px;
+  }
+  pre code {
+    background: transparent;
+    border: 0;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+  hr {
+    border: 0;
+    border-top: 1px solid var(--rule);
+    margin: 32px 0;
+  }
+  blockquote, .callout {
+    background: var(--surface-2);
+    border-left: 4px solid var(--primary);
+    padding: 12px 16px;
+    margin: 16px 0;
+    border-radius: 0 8px 8px 0;
+    color: var(--ink-soft);
+  }
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 14px 0 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    font-size: 14.5px;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  thead th {
+    background: var(--primary-soft);
+    color: var(--ink);
+    font-weight: 600;
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:nth-child(even) td { background: var(--surface-2); }
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 22px;
+    margin: 0 0 32px;
+  }
+  .toc h2 {
+    margin: 0 0 10px;
+    border: 0;
+    padding: 0;
+    font-size: 18px;
+  }
+  .toc ol { margin: 0; padding-left: 22px; }
+  .toc li { margin-bottom: 4px; }
+  .tag {
+    display: inline-block;
+    background: var(--primary-soft);
+    color: #8a4a14;
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-right: 6px;
+  }
+  footer {
+    margin-top: 56px;
+    padding-top: 18px;
+    border-top: 1px solid var(--rule);
+    color: var(--muted);
+    font-size: 13px;
+    text-align: center;
+  }
+  @media (max-width: 600px) {
+    .page { padding: 28px 18px 64px; }
+    header.hero { padding: 24px 20px; }
+    header.hero h1 { font-size: 26px; }
+    table { font-size: 13.5px; }
+    th, td { padding: 8px 10px; }
+    pre { font-size: 11.5px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <h1>KVL App — Figma Design Audit</h1>
+  <div class="meta">Source: Figma file <code style="background:rgba(255,255,255,.18);border-color:transparent;color:#fff">KVL-App_14-04-26</code> · 9 frames reviewed 2026-05-11</div>
+  <div class="tagline">Companion to <code style="background:rgba(255,255,255,.18);border-color:transparent;color:#fff">STATUS.md</code> (engineering status). This doc captures what the design says the product <strong style="color:#fff">is</strong>, regardless of current build state.</div>
+  <div class="tagline">App name in design: <strong style="color:#fff">Koti Vachika Lekhini (KVL)</strong> — “Your Personal Spiritual Practice Companion · Write God’s Name with AI | Chant with Purpose | Track with Pride”</div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#scope-shift">Scope shift vs. current memory</a></li>
+    <li><a href="#ia">Information architecture</a></li>
+    <li><a href="#flows">User flows</a></li>
+    <li><a href="#screens">Screens (by frame)</a></li>
+    <li><a href="#visual">Visual / interaction language</a></li>
+    <li><a href="#data">Implied data model</a></li>
+    <li><a href="#online-offline">Online vs. offline split</a></li>
+    <li><a href="#questions">Open questions</a></li>
+    <li><a href="#implications">Implication for engineering plan</a></li>
+  </ol>
+</nav>
+
+<h2 id="scope-shift">1. Scope shift vs. current memory</h2>
+
+<p>Memory currently describes the project as an “offline Flutter mantra counter with Hindi Vosk + speaker verification, Android + iOS, screen-off.” The Figma reveals a substantially larger product:</p>
+
+<table>
+  <thead>
+    <tr><th>Area</th><th>Memory says</th><th>Figma shows</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Auth</td><td>(none — offline)</td><td>Mobile + OTP signup, login by another number, referral codes</td></tr>
+    <tr><td>Profiles</td><td>(single user)</td><td>Family multi-profile (up to 4 members under one mobile)</td></tr>
+    <tr><td>Modality</td><td>Voice only</td><td><strong>Voice chant + Handwriting</strong> (write-on-screen, camera capture, gallery upload, default font)</td></tr>
+    <tr><td>Goals</td><td>(just count)</td><td>Programs with target writings (e.g. 1 crore) over target days, plus per-day pacing</td></tr>
+    <tr><td>Languages</td><td>Hindi</td><td>English + Hindi + Telugu visible; language picker on signup; UI quote shown in Telugu</td></tr>
+    <tr><td>Online vs offline</td><td>Fully offline</td><td>Cloud-backed: rewards, leaderboard, friend invites, social share, “Download Your Data”</td></tr>
+    <tr><td>Mantras</td><td>3 seeded</td><td>At least 9 in mockups (Sri Rama, Om Namah Shivaya, Gayatri, Maha Mrityunjaya, Hanuman Chalisa, Shankara, Jai Sri Krishna, Narayana, Om Namo Bhagavate Vasudevaya) + “mantra by need” recommender</td></tr>
+    <tr><td>Gamification</td><td>(none)</td><td>Reward points, store with redemption, streak leaderboard with friends</td></tr>
+    <tr><td>Counter</td><td>(just increment)</td><td>Streak, today’s count, ring progress vs. lifetime target, session start/pause/finish</td></tr>
+  </tbody>
+</table>
+
+<div class="callout"><strong>Voice counting is one feature, not the product.</strong> This must be reflected in scope, planning, and the memory file.</div>
+
+<h2 id="ia">2. Information architecture</h2>
+
+<p><strong>Bottom nav (5 tabs):</strong> Home · My Programs · Practice · Community · Store</p>
+
+<p><strong>Top-level flows:</strong></p>
+<ol>
+  <li>Onboarding → account → profile select → mantra select → voice train → target → practice</li>
+  <li>Daily loop → home → quick start OR pick program → counter session → finish</li>
+  <li>Growth loop → community (leaderboard, invites) → rewards → store</li>
+  <li>Settings loop → profile → preferences / family / data</li>
+</ol>
+
+<h2 id="flows">3. User flows</h2>
+
+<p>27 unique screens compose into 8 distinct flows. The bottom tab bar (Home · My Programs · Practice · Community · Store), top-right avatar (→ Profile), and top-right gear icon (→ settings) are present across most main screens — only the non-obvious transitions are diagrammed below.</p>
+
+<h3>3.1 First-time onboarding (new user)</h3>
+<pre><code>Welcome
+  └─► Profile selection ── "Create a new account" ──► Create Account (OTP)
+                                                       │
+                                                       ▼
+                                              Quick Start Practice
+                                                       │
+                                                       ▼
+                                                Mantra Selection
+                                       (or "Mantra by Need" link ──► Mantra by Need)
+                                                       │
+                                                       ▼
+                                                Mantra Details
+                                                       │
+                                                       ▼
+                                                Voice Training
+                                          (or "Skip &amp; Use Manual Counter")
+                                                       │
+                                                       ▼
+                                          Submit Your Handwriting (mode picker)
+                                ┌───────────────┬──────┴───────┬──────────────────┐
+                                ▼               ▼              ▼                  ▼
+                         Write on Screen   Capture (cam)   Upload (gallery)   Use Default Font
+                                └───────────────┴──────┬───────┴──────────────────┘
+                                                       ▼
+                                          Set Practice Target — Writings
+                                                       ▼
+                                          Set Practice Target — Days
+                                                       ▼
+                                                     Home
+                                                       │
+                                                       ▼
+                                                Main Counter</code></pre>
+
+<h3>3.2 Returning user — daily session</h3>
+<pre><code>Welcome (auto-pass if logged in)
+   └─► Profile selection ──► Home
+                              │
+              ┌───────────────┼────────────────────┐
+              ▼               ▼                    ▼
+   "Quick Start Practice"   "Select from your   "Create a New Program"
+              │              Programs"             (→ Flow 3.3)
+              │               │
+              ▼               ▼
+       Quick Start Practice  My Programs ──► (pick program)
+                              │
+                              ▼
+                       Main Counter ──► (Finish Session) ──► Home</code></pre>
+
+<h3>3.3 Add another program (existing user)</h3>
+<pre><code>Home  ──►  "Create a New Program"
+            │
+            ▼
+       Mantra Selection ◄──► Mantra by Need
+            │
+            ▼
+       Mantra Details
+            │
+            ▼
+       Voice Training  (or Skip — re-enrol uses prior voice if available)
+            │
+            ▼
+       Set Target Writings ──► Set Target Days ──► Main Counter</code></pre>
+
+<h3>3.4 “Mantra by Need” sub-flow</h3>
+<pre><code>Mantra Selection screen
+   └─► tap "Select mantra based on your need"
+          │
+          ▼
+      Mantra by Need (dropdown of problems → recommended mantra card)
+          │
+          ▼
+      "Start This Practice" ──► Set Target Writings ──► Set Target Days ──► Main Counter</code></pre>
+
+<h3>3.5 Program tracking</h3>
+<pre><code>Bottom nav → My Programs
+   │
+   ├─► KPI dashboard (Total Chants / Complete / Daily Avg / Longest Streak)
+   ├─► "+ Create New Program" ──► Flow 3.3
+   └─► Program card ──► Daily Progress (calendar view)
+                          │
+                          ├─► Dedicate this program
+                          ├─► Edit Program Goal ──► (back to target setup)
+                          └─► Share Program ──► Share on Social Media</code></pre>
+
+<h3>3.6 Community</h3>
+<pre><code>Bottom nav → Community
+   └─► Streak Leaderboard ──── tabs: Streak Challenge | Total Chants
+          │
+          ├─► "Invite Friends" ──► Invite Friends screen ──► Share via WhatsApp/FB/Insta
+          ├─► "Send Encouragement"
+          └─► "View Group Stats"</code></pre>
+
+<h3>3.7 Rewards</h3>
+<pre><code>Bottom nav → Store
+   └─► Reward Store (search / filter / product grid)
+          │
+          ├─► "See History" ──► Reward Points &amp; History (All / Earned / Spent)
+          └─► Redeem ──► (transaction added to history)</code></pre>
+
+<h3>3.8 Profile &amp; settings</h3>
+<pre><code>Home → tap avatar (top right)
+   └─► Profile
+          │
+          ├─► Edit Profile
+          ├─► "Family Members" ──► Add / Manage Family Members
+          ├─► "Invite Friends" ──► Flow 3.6 invite screen
+          ├─► Link Facebook / WhatsApp / Instagram (toggles)
+          ├─► Practice Settings (Reminder Time, Notification Sound)
+          ├─► Voice Settings ──► "Re-train Voice" ──► back to Voice Training
+          ├─► Display Settings (Language, Theme, Font Size)
+          ├─► Support &amp; Privacy ──► Help &amp; FAQs · Report Issue · Share Feedback · Privacy Policy · Download Your Data · About App
+          ├─► Logout
+          └─► Delete Account</code></pre>
+
+<h3>3.9 All unique screens (27)</h3>
+<ul>
+  <li><strong>Auth &amp; profile</strong>: Welcome · Profile selection · Create Account · Login with Another Number · Add Family Members</li>
+  <li><strong>Mantra selection</strong>: Quick Start Practice · Mantra Selection · Mantra by Need · Mantra Details</li>
+  <li><strong>Onboarding (enrolment)</strong>: Voice Training · Submit Your Handwriting (mode picker) · Write on Screen · Capture Handwriting · Upload Handwriting · Set Practice Target (Writings) · Set Practice Target (Days)</li>
+  <li><strong>Daily use</strong>: Home · Main Counter / Practice</li>
+  <li><strong>Programs</strong>: My Programs (Dashboard) · Daily Progress (calendar)</li>
+  <li><strong>Community</strong>: Streak Leaderboard · Invite Friends · Share on Social Media</li>
+  <li><strong>Rewards</strong>: Reward Store · Reward Points &amp; History</li>
+  <li><strong>Settings</strong>: Profile · About App</li>
+  <li><strong>Reusable component (not a standalone screen)</strong>: “Container” — the active/completed program card</li>
+</ul>
+
+<h3>3.10 Gaps — referenced but not yet designed</h3>
+<ul>
+  <li><strong>Share on Social Media</strong> — marked <em>“Need to design this screen”</em> in Figma.</li>
+  <li><strong>About App</strong> — marked <em>“Content need to write”</em>.</li>
+  <li><strong>Edit Profile</strong> — referenced from Profile, no frame.</li>
+  <li><strong>Session Stats</strong> / <strong>View Summary</strong> — referenced from Main Counter and completed program cards, no frames.</li>
+  <li><strong>Help &amp; FAQs / Report Issue / Privacy Policy</strong> — referenced from Profile, no frames.</li>
+</ul>
+
+<h2 id="screens">4. Screens (by frame)</h2>
+
+<h3>4.1 Onboarding &amp; Auth</h3>
+<ul>
+  <li><strong>Welcome</strong> — Brand mark, tagline, “Continue to App”, “Know our App” link.</li>
+  <li><strong>Profile selection</strong> — <em>“Who is Practicing?”</em> avatars (Me / Son / Daughter / Add Member). Links: Manage Profiles, Login with another number, Create a new account.</li>
+  <li><strong>Create Account</strong> — Username, Mobile (+91), Referral Code (optional), Select Language, <strong>Send OTP</strong>, Register. “Already have an account? Login”, “Need help?”.</li>
+  <li><strong>Login with Another Number</strong> — Mobile entry → 6-digit OTP boxes → Resend in 25s → Login.</li>
+</ul>
+
+<h3>4.2 Mantra selection</h3>
+<ul>
+  <li><strong>Quick Start Practice</strong> — Scrollable list of mantras with thumbnail + 1-line description + radio. CTA: <strong>Quick Start</strong>.</li>
+  <li><strong>Mantra Selection</strong> — Same pattern, but bottom shows <em>“Select mantra based on your need”</em> link + <strong>Confirm Selection</strong> CTA.</li>
+  <li><strong>Mantra Details</strong> — Hero image of deity, large mantra name, multi-paragraph description, <strong>Pronunciation Guide</strong> audio card, <strong>Start Practice with [Mantra]</strong> CTA, heart icon (favorites).</li>
+  <li><strong>Mantra for Your Needs</strong> — Dropdown: <em>“Select your need or problem”</em> → recommended mantra card (e.g. <em>Om Namo Bhagavate Vasudevaya</em> for wealth/prosperity) with suggested cadence (“108 times daily / for 40 days”) + Learn More + <strong>Start This Practice</strong>.</li>
+</ul>
+
+<h3>4.3 Voice training</h3>
+<ul>
+  <li><strong>Train Your Voice</strong> — Mic visual, prompt <em>“Say ‘Sri Rama’ Eleven times clearly · Speak naturally at your normal pace and volume”</em>, live waveform + “Recording…” indicator. CTAs: <strong>Start Recording</strong> / <strong>Skip &amp; Use Manual Counter</strong> (manual counter is a first-class fallback).</li>
+</ul>
+
+<h3>4.4 Handwriting (the second modality)</h3>
+<ul>
+  <li><strong>Submit Your Handwriting</strong> — 4 mode cards: <strong>Write on Screen</strong> · <strong>Capture from Camera</strong> · <strong>Upload from Gallery</strong> · <strong>Use Default Font</strong>. <em>“Upload your handwriting for personalized PDF mantra recitations. Our AI will randomly select samples to feature.”</em> → <strong>Confirm selection</strong>.</li>
+  <li><strong>Write Your Mantra Sample</strong> — Full-screen canvas, <em>“Begin writing here…”</em>, toolbar (pen, color, eraser, undo, redo). CTA: <strong>Save Handwriting</strong>. Header: Clear.</li>
+  <li><strong>Capture Your Handwriting</strong> — Camera viewfinder with corner frame guide, gallery picker, shutter button, flip camera.</li>
+  <li><strong>Upload Your Handwriting</strong> — Image grid (3 across), multi-select with check, <em>Deselect All</em>. CTA: <strong>Upload Selected</strong>.</li>
+</ul>
+
+<h3>4.5 Target setup</h3>
+<ul>
+  <li><strong>Set Your Practice Target (Writings)</strong> — Preset cards: <strong>1,00,00,000 writings</strong> (Most Popular), <strong>1,000,000 writings</strong>, <strong>Set a custom target</strong> (Total Writings + Completion Time inputs, with live “≈ 1.5 hours/day” computation). <strong>Confirm Target</strong> / Cancel.</li>
+  <li><strong>Set Your Practice Target (Days)</strong> — Preset cards with tags: 100 Days <span class="tag">Fastest</span> 180 Days <span class="tag">Balanced</span> 365 Days <span class="tag">Gentle</span> 500 Days <span class="tag">Sustainable</span> (each shows chants/day + minutes/day). Plus <strong>Set a Custom Duration</strong> (number + slider with live “≈ 45 minutes/day”). CTA: <strong>Confirm &amp; Begin</strong>.</li>
+</ul>
+
+<h3>4.6 Home &amp; Practice</h3>
+<ul>
+  <li><strong>Home</strong> — “Welcome, Rakesh!”, “You’re doing great! 2 Programs Active”, Total Reward Points 1,250, <strong>Daily Practice Reminder</strong> card (current goal), hero image with Telugu quote, <strong>Quick Start Practice</strong> / <strong>Select from your Programs</strong> / <strong>Create a New Program</strong>.</li>
+  <li><strong>Main Counter / Practice</strong> — Header: date + “Day 15”. Stat strip (scrollable): <strong>Streak 15 Days</strong>, <strong>Today’s Count 5,487</strong>, Daily target …. Big ring counter <code>27,934 / 10,000,000</code>. <strong>START</strong> / <strong>PAUSE</strong> / <strong>Finish Session</strong> (teal). <em>Today’s Progress</em> bar <code>5,487 / 10,000</code>. Footer chips: <strong>Change Mantra</strong> · <strong>Session Stats</strong>.</li>
+</ul>
+
+<h3>4.7 Programs &amp; Progress</h3>
+<ul>
+  <li><strong>My Programs (Dashboard)</strong> — Inspirational quote card, KPI grid: Total Chants 3.1M, Complete 31%, Daily Average 28,500, Longest Streak 67 days. <strong>Overall Progress</strong> ring (31%). <strong>+ Create New Program</strong>. Program list cards (e.g. Sri Rama 50% 500k/1M, Gayatri 100% 108/108 <em>Completed</em>, Maha Mrityunjaya 50% 500k/1M).</li>
+  <li><strong>Program card variants (Container)</strong> — Active card with progress bar + <strong>View Progress</strong>; Completed card with green check + <strong>View Summary</strong>.</li>
+  <li><strong>Daily Progress</strong> — Calendar (month nav), dot per practiced day, selected day highlighted. Day detail card: Daily Target / Actual Achieved (green) / Handwriting Used (Yes/No). Buttons: <strong>Dedicate this program</strong> (primary), <strong>Edit Program Goal</strong> / <strong>Share Program</strong>.</li>
+</ul>
+
+<h3>4.8 Community</h3>
+<ul>
+  <li><strong>Streak Leaderboard</strong> — “5 Friends Joined”, invite-up-to-5 banner, tabs: <strong>Streak Challenge</strong> | <strong>Total Chants</strong>. Podium top-3 with day counts. List with current user row highlighted (“You · 85 Days · #4”). CTAs: <strong>Send Encouragement</strong>, <strong>View Group Stats</strong>.</li>
+  <li><strong>Invite Friends</strong> — Branded illustration, invite link <code>https://kvl.app/invite/JANE123</code> with copy, <strong>Share via WhatsApp / Facebook / Instagram</strong> buttons.</li>
+  <li><strong>Share on Social Media</strong> — Targets: WhatsApp (Status), Facebook, Instagram. CTA: <strong>Share</strong>. <em>(Frame marked “Need to design this screen”.)</em></li>
+</ul>
+
+<h3>4.9 Rewards &amp; Store</h3>
+<ul>
+  <li><strong>Reward Store</strong> — Header shows current points + <strong>See History</strong>. Promo banner (Special Offer · Guided Meditation Series). Search. Filter chips (All / Frames / Books / Tools / Meditation). Product grid (Digital Mala Beads 500 pts, Spiritual E-books 800 pts, Guided Meditations 1000 pts, …) with <strong>Redeem</strong> buttons.</li>
+  <li><strong>Reward Points &amp; History</strong> — Total points hero, <strong>Visit Reward Store</strong>. Tabs (All / Earned / Spent). Transaction list: <em>Daily Mantra Completion +50</em>, <em>Milestone: 10 Lakh Chants +500</em>, <em>Store Redemption: E-book –200</em>, <em>Friend Referral +…</em>, <em>Donation to Charity –50</em>.</li>
+</ul>
+
+<h3>4.10 Profile &amp; Settings</h3>
+<ul>
+  <li><strong>Profile</strong> — Avatar + name + email, KPI tiles (Total Chants 3.1M / Current Streak 15 days / Milestones 3/5). <strong>Reward Points</strong> card with <strong>Visit Store</strong>.
+    <ul>
+      <li><strong>Family &amp; Community</strong>: Family Members, Invite Friends.</li>
+      <li><strong>Link Social</strong>: Facebook, WhatsApp, Instagram (toggles).</li>
+      <li><strong>Practice Settings</strong>: Reminder Time (06:00 AM), Notification Sound (Bell).</li>
+      <li><strong>Voice Settings</strong>: Re-train Voice, Microphone Sensitivity.</li>
+      <li><strong>Display Settings</strong>: Language (English), Theme (System), Font Size (Default).</li>
+      <li><strong>Support &amp; Privacy</strong>: Help &amp; FAQs, Report Issue, Share Feedback, Privacy Policy, <strong>Download Your Data</strong>.</li>
+      <li><strong>Logout</strong> (outlined), <strong>Delete Account</strong> (destructive). Version footer.</li>
+    </ul>
+  </li>
+  <li><strong>Add Family Members</strong> — <em>“Add up to 4 family members under your registered mobile number. Each member will have their own practice counter.”</em> Form: Registered Mobile (read-only), Family Member Name, Relationship dropdown.</li>
+  <li><strong>About App</strong> — <em>Placeholder (Content need to write).</em></li>
+</ul>
+
+<h2 id="visual">5. Visual / interaction language</h2>
+<ul>
+  <li><strong>Palette</strong>: warm cream/ivory background (<code>#FBF3E2</code>-ish), saffron/orange primary CTAs, deep teal for “Finish Session” success state, soft pastel surfaces for cards.</li>
+  <li><strong>Typography</strong>: large serif for mantra/feature names; sans-serif for body &amp; UI.</li>
+  <li><strong>Cards</strong> with generous radius (~16–20 px), subtle shadow, full-width primary CTAs at the bottom.</li>
+  <li><strong>Bottom nav</strong> consistent across main flows; selected item shown with orange icon + label.</li>
+  <li><strong>CTA hierarchy</strong>: filled saffron (primary) → outlined saffron (secondary) → text link.</li>
+  <li><strong>Number formatting</strong>: Indian comma grouping (<code>1,00,00,000</code>, <code>5,487</code>, <code>3.1M</code>).</li>
+  <li><strong>Locale-aware content</strong>: mantras shown in Devanagari + Roman transliteration; sample quote in Telugu — design assumes Hindi + Telugu + English at minimum.</li>
+</ul>
+
+<h2 id="data">6. Implied data model (rough)</h2>
+<ul>
+  <li><strong>User</strong>: id, mobile, username, email?, referral_code, language, created_at.</li>
+  <li><strong>Profile</strong> (family member, child of User): id, name, relationship, avatar; up to 4 per User.</li>
+  <li><strong>Mantra</strong>: id, name (Devanagari, Roman, Telugu?), description, deity_image, pronunciation_audio, recommended_count, recommended_days, need_tags.</li>
+  <li><strong>Program</strong> (per Profile): id, profile_id, mantra_id, target_writings, target_days, started_at, daily_target, status (active/completed), totals (chants, handwriting_used).</li>
+  <li><strong>Session</strong>: id, program_id, started_at, ended_at, count, modality (voice/manual/handwriting), used_handwriting_bool.</li>
+  <li><strong>HandwritingAsset</strong>: id, profile_id, source (screen/camera/gallery/default_font), image_blob/ref, created_at.</li>
+  <li><strong>VoiceModel</strong> (speaker print): per Profile · per Mantra embedding.</li>
+  <li><strong>RewardEvent</strong>: id, profile_id, type (earn/spend), amount, source, created_at.</li>
+  <li><strong>StoreItem</strong>: id, title, category, price_points, image, stock.</li>
+  <li><strong>Friend / Invite</strong>: invite code, joined_friends list, leaderboard entries.</li>
+</ul>
+
+<h2 id="online-offline">7. Online vs. offline split</h2>
+
+<p>The current memory says fully offline. The Figma requires cloud for: OTP auth, family profiles (cross-device), referral codes, rewards points + store redemption, social share/invite, friend leaderboard, “Download Your Data”, and likely AI-generated PDF from handwriting.</p>
+
+<p><strong>Suggested split:</strong></p>
+<ul>
+  <li><strong>Local-first (offline-capable):</strong> voice ASR + speaker verification, session counting, handwriting capture, on-device program progress, daily reminders. Queues sync deltas when online.</li>
+  <li><strong>Cloud-required:</strong> account/OTP, family profiles, rewards ledger, friends/leaderboard, store, social share, AI handwriting PDF generation, data export.</li>
+</ul>
+
+<p>This needs an explicit decision before backend choice (Supabase / Firebase / custom).</p>
+
+<h2 id="questions">8. Open questions surfaced by the design</h2>
+<ol>
+  <li><strong>“AI will randomly select samples to feature”</strong> in handwriting submit — is this generating a printable PDF of <code>N</code> mantra repetitions stylised in the user’s handwriting? Server-side render? Which model?</li>
+  <li><strong>Counter ↔ writings</strong>: does the lifetime target <code>10,000,000</code> count both spoken chants and written instances together, or are they separate program types?</li>
+  <li><strong>Speaker verification scope</strong> — the design says “Skip &amp; Use Manual Counter” is acceptable, so voice match is not mandatory. Confirm fallback behavior.</li>
+  <li><strong>Children’s profiles</strong> — voice training for a 10-year-old vs. an adult: same model? Re-enrol per profile?</li>
+  <li><strong>Multi-language ASR</strong> — Telugu sample present; Vosk small-hi only covers Hindi. Need a model strategy if Telugu / Sanskrit chants are in scope.</li>
+  <li><strong>Backend choice</strong> — Supabase, Firebase, custom Node, or other? Drives auth/OTP, sync model, file storage for handwriting.</li>
+  <li><strong>Reward economy</strong> — earn/spend rates, store inventory source (admin tool needed?), abuse prevention.</li>
+  <li><strong>App Store viability</strong> — iOS background mic + spiritual content rewards may need review-team framing.</li>
+  <li><strong>Privacy of voice &amp; handwriting</strong> — explicit consent + storage policy; “Download Your Data” implies GDPR-style export.</li>
+  <li><strong>Welcome screen</strong> uses both <em>“Koti Vachika Lekhini”</em> and the working title <em>“Vachika Lekhini”</em> — confirm final brand.</li>
+</ol>
+
+<h2 id="implications">9. Implication for engineering plan</h2>
+
+<p>The existing <code>STATUS.md</code> “next step = match logic + counter on the prototype” is still valid as a thin slice — but the <strong>overall plan needs to expand</strong> beyond the offline voice counter:</p>
+
+<ol>
+  <li>Decide online vs. offline split (#6 above) — blocks backend, auth, sync.</li>
+  <li>Pick state architecture for multi-profile + multi-program (Riverpod + local store + sync queue).</li>
+  <li>Re-baseline the build plan around the 5 nav tabs (Home / Programs / Practice / Community / Store), not the prototype screen.</li>
+  <li>Define the handwriting pipeline as a separate workstream from voice — it has its own UX, storage, and (likely) server-side AI work.</li>
+  <li>Treat voice ASR + speaker verification as <strong>one</strong> of three counting modalities (voice / handwriting / manual), not the whole product.</li>
+</ol>
+
+<p>A revised roadmap should live in a new <code>docs/ROADMAP.md</code> once these decisions are made.</p>
+
+<footer>
+  KVL Design Audit · Generated from <code>docs/DESIGN.md</code> · 2026-05-11
+</footer>
+
+</div>
+</body>
+</html>

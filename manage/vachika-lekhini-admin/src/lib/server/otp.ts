@@ -1,0 +1,106 @@
+import bcrypt from 'bcryptjs';
+import { env } from '$env/dynamic/private';
+import { prisma } from './prisma';
+
+/// One-time-password service. Pluggable by `OTP_PROVIDER` env var.
+///   - "dev"   : prints the code to the server log; any 6-digit OTP is
+///               consumed via verify() because we hash + check the real one.
+///   - "msg91" / "twilio" / etc. : implement when ready.
+///
+/// The raw code is NEVER persisted. Only a bcrypt hash lands in the DB.
+export interface OtpService {
+	/// Sends an OTP to [mobile] and persists a hashed challenge.
+	/// Returns the challenge id so the client can echo it back on verify
+	/// (also enforces 1-minute rate limit per mobile).
+	start(mobile: string): Promise<{ challengeId: string }>;
+
+	/// Validates the OTP. Returns null on success; an error string on failure.
+	/// On success the matching OtpChallenge is marked consumed.
+	verify(mobile: string, code: string): Promise<{ ok: true } | { ok: false; error: string }>;
+}
+
+const OTP_TTL_SECONDS = 5 * 60; // 5 min
+const MAX_ATTEMPTS = 5;
+const RESEND_COOLDOWN_SECONDS = 30;
+
+class DevOtpService implements OtpService {
+	async start(mobile: string): Promise<{ challengeId: string }> {
+		// Throttle: refuse if any unconsumed challenge < 30s old exists.
+		const recent = await prisma.otpChallenge.findFirst({
+			where: {
+				mobile,
+				consumedAt: null,
+				createdAt: { gt: new Date(Date.now() - RESEND_COOLDOWN_SECONDS * 1000) }
+			}
+		});
+		if (recent) {
+			// Re-emit a code on cooldown? We just return the existing challenge id.
+			console.log(`[otp:dev] cooldown active for ${mobile}, returning existing challenge`);
+			return { challengeId: recent.id };
+		}
+
+		const code = String(Math.floor(100000 + Math.random() * 900000));
+		const codeHash = await bcrypt.hash(code, 10);
+		const challenge = await prisma.otpChallenge.create({
+			data: {
+				mobile,
+				codeHash,
+				expiresAt: new Date(Date.now() + OTP_TTL_SECONDS * 1000)
+			}
+		});
+		console.log(`[otp:dev] OTP for ${mobile} → ${code}  (challenge ${challenge.id})`);
+		return { challengeId: challenge.id };
+	}
+
+	async verify(
+		mobile: string,
+		code: string
+	): Promise<{ ok: true } | { ok: false; error: string }> {
+		const candidates = await prisma.otpChallenge.findMany({
+			where: {
+				mobile,
+				consumedAt: null,
+				expiresAt: { gt: new Date() }
+			},
+			orderBy: { createdAt: 'desc' },
+			take: 3
+		});
+		if (candidates.length === 0) {
+			return { ok: false, error: 'No active OTP. Request a new one.' };
+		}
+
+		for (const c of candidates) {
+			if (c.attempts >= MAX_ATTEMPTS) continue;
+			const match = await bcrypt.compare(code, c.codeHash);
+			if (match) {
+				await prisma.otpChallenge.update({
+					where: { id: c.id },
+					data: { consumedAt: new Date() }
+				});
+				return { ok: true };
+			}
+			await prisma.otpChallenge.update({
+				where: { id: c.id },
+				data: { attempts: { increment: 1 } }
+			});
+		}
+		return { ok: false, error: 'Incorrect OTP.' };
+	}
+}
+
+let _instance: OtpService | null = null;
+
+export function otpService(): OtpService {
+	if (_instance) return _instance;
+	const provider = env.OTP_PROVIDER ?? 'dev';
+	switch (provider) {
+		case 'dev':
+			_instance = new DevOtpService();
+			break;
+		// case 'msg91': _instance = new Msg91OtpService(...); break;
+		// case 'twilio': _instance = new TwilioOtpService(...); break;
+		default:
+			throw new Error(`Unknown OTP_PROVIDER: ${provider}`);
+	}
+	return _instance;
+}

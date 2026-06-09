@@ -56,7 +56,7 @@ class KvlTopBar extends StatelessWidget implements PreferredSizeWidget {
               height: 64,
               padding: const EdgeInsets.symmetric(horizontal: KvlSpacing.lg),
               decoration: BoxDecoration(
-                color: KvlColors.bg,
+                color: KvlColors.bg.withValues(alpha: .6),
                 border: Border(
                   bottom: BorderSide(
                     color: KvlColors.rule.withValues(alpha: .55),

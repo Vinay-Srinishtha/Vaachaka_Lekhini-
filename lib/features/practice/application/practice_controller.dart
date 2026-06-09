@@ -8,6 +8,7 @@ import '../../../app/providers.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../enrolment/voice/data/voice_enrolment_service.dart';
+import '../../enrolment/voice/domain/voice_enrolment.dart';
 import '../../mantras/domain/mantra.dart';
 import '../../programs/domain/program.dart';
 import '../../programs/domain/program_repository.dart';
@@ -105,7 +106,7 @@ class PracticeController extends AsyncNotifier<PracticeState> {
 
     return PracticeState(
       program: program,
-      modality: SessionModality.manual,
+      modality: SessionModality.voice,
       isRunning: false,
       sessionCount: 0,
       todaysTotal: todaysTotal,
@@ -123,9 +124,29 @@ class PracticeController extends AsyncNotifier<PracticeState> {
     final s = state.value;
     if (s == null || s.isRunning) return;
 
+    // Resuming an already-open session — just restart the audio, keep count.
+    if (s.activeSessionId != null) {
+      state = AsyncData(s.copyWith(isRunning: true, clearError: true));
+      if (s.modality == SessionModality.voice && mantra != null) {
+        _voice = VoiceEnrolmentService();
+        _voiceSub = _voice!.events.listen((e) {
+          if (e.count > 0) _bump(s.sessionCount + e.count);
+        }, onError: (Object err) => _failVoice("Voice recogniser stopped: $err"));
+        try {
+          await _voice!.start(mantra, target: 1 << 30);
+        } catch (e) {
+          _failVoice("Couldn't start the mic. Try again, or switch to Manual.");
+        }
+      }
+      _flushTimer ??= Timer.periodic(const Duration(seconds: 4), (_) => _flush());
+      return;
+    }
+
     // Voice mode requires mic permission. Check up front and surface a
     // friendly state instead of crashing inside the audio stream.
     if (s.modality == SessionModality.voice) {
+      final trained = await _hasCompletedVoiceTraining(s.program.mantraId);
+      if (!trained) return;
       final ok = await _ensureMicReady();
       if (!ok) return;
     }
@@ -186,6 +207,34 @@ class PracticeController extends AsyncNotifier<PracticeState> {
     return false;
   }
 
+  Future<bool> _hasCompletedVoiceTraining(String mantraId) async {
+    final profile = ref.read(activeProfileProvider).value;
+    final s = state.value;
+    if (profile == null) {
+      if (s != null) {
+        state = AsyncData(
+          s.copyWith(
+            errorMessage: 'Select a profile before starting voice practice.',
+          ),
+        );
+      }
+      return false;
+    }
+    final enrolment = await ref
+        .read(voiceEnrolmentRepositoryProvider)
+        .get(profile.id, mantraId);
+    final complete = enrolment != null && enrolment.isComplete;
+    if (!complete && s != null) {
+      state = AsyncData(
+        s.copyWith(
+          errorMessage:
+              'Complete voice training (${VoiceEnrolment.requiredSamples}/${VoiceEnrolment.requiredSamples}) before using voice practice.',
+        ),
+      );
+    }
+    return complete;
+  }
+
   /// Triggered from the UI's "Open Settings" CTA when mic was permanently denied.
   Future<void> openSystemSettings() async {
     await openAppSettings();
@@ -207,6 +256,7 @@ class PracticeController extends AsyncNotifier<PracticeState> {
     if (s == null || !s.isRunning) return;
     if (s.modality != SessionModality.manual) return;
     _bump(s.sessionCount + 1);
+    unawaited(HapticFeedback.selectionClick());
   }
 
   /// VoiceEnrolmentService emits absolute counts; persist each net delta.

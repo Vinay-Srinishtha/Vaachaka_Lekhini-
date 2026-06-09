@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/providers.dart';
+import '../../../l10n/l10n.dart';
 import '../../../app/router.dart';
 import '../../../core/storage/repository.dart';
 import '../../../core/theme/theme.dart';
@@ -75,7 +76,7 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
 
   Future<void> _login() async {
     if (_otp.length != 6) {
-      setState(() => _error = 'Enter the 6-digit code');
+      setState(() => _error = context.l10n.enterSixDigitCode);
       return;
     }
     setState(() {
@@ -114,112 +115,121 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
   @override
   Widget build(BuildContext context) {
     return KvlScaffold(
-      title: 'Login',
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: KvlSpacing.md),
-          Text(
-            'Welcome back',
-            textAlign: TextAlign.center,
-            style: KvlText.title(17),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Enter the mobile number associated with your account.',
-            textAlign: TextAlign.center,
-            style: KvlText.caption(11.5),
-          ),
-          const SizedBox(height: KvlSpacing.lg),
-          Row(
-            children: [
-              SizedBox(
-                width: 78,
-                child: KvlInput(label: 'Code', hint: '+91', readOnly: true),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: KvlInput(
-                  label: 'Mobile',
-                  hint: '98765 43210',
-                  controller: _mobile,
-                  keyboardType: TextInputType.phone,
-                  maxLength: 10,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: KvlSpacing.lg),
-          if (!_otpSent)
-            KvlButton(
-              label: _busy ? 'Sending…' : 'Send OTP',
-              onPressed: _busy ? null : _sendOtp,
-            )
-          else ...[
+      title: context.l10n.loginScreenTitle,
+      scrollable: true,
+      body: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: KvlSpacing.md),
             Text(
-              'Enter the 6-digit code sent to your number.',
+              context.l10n.welcomeBack,
+              textAlign: TextAlign.center,
+              style: KvlText.title(17),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              context.l10n.enterMobileAssociated,
               textAlign: TextAlign.center,
               style: KvlText.caption(11.5),
             ),
-            const SizedBox(height: KvlSpacing.md),
-            PinCodeInput(
-              onChanged: (v) => _otp = v,
-              onCompleted: (_) => _login(),
+            const SizedBox(height: KvlSpacing.lg),
+            Row(
+              children: [
+                SizedBox(
+                  width: 78,
+                  child: KvlInput(label: 'Code', hint: '+91', readOnly: true),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: KvlInput(
+                    label: context.l10n.mobileLabel,
+                    hint: '98765 43210',
+                    controller: _mobile,
+                    keyboardType: TextInputType.phone,
+                    maxLength: 10,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: KvlSpacing.sm),
+            const SizedBox(height: KvlSpacing.lg),
+            if (!_otpSent)
+              KvlButton(
+                label: _busy
+                    ? context.l10n.sendingButton
+                    : context.l10n.sendOtpButton,
+                onPressed: _busy ? null : _sendOtp,
+              )
+            else ...[
+              Text(
+                context.l10n.enterSixDigitCodeSent,
+                textAlign: TextAlign.center,
+                style: KvlText.caption(11.5),
+              ),
+              const SizedBox(height: KvlSpacing.md),
+              PinCodeInput(
+                onChanged: (v) => _otp = v,
+                onCompleted: (_) => _login(),
+              ),
+              const SizedBox(height: KvlSpacing.sm),
+              Center(
+                child: _resendSeconds > 0
+                    ? Text(
+                        context.l10n.resendOtpCountdown(_resendSeconds),
+                        style: KvlText.caption(11),
+                      )
+                    : GestureDetector(
+                        onTap: _sendOtp,
+                        child: Text(
+                          context.l10n.resendOtp,
+                          style: KvlText.caption(11.5).copyWith(
+                            color: KvlColors.primaryDeep,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+              ),
+              const SizedBox(height: KvlSpacing.lg),
+              KvlButton(
+                label: _busy
+                    ? context.l10n.verifyingButton
+                    : context.l10n.loginConfirmButton,
+                onPressed: _busy ? null : _login,
+              ),
+            ],
+            if (_error != null) ...[
+              const SizedBox(height: KvlSpacing.sm),
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: KvlText.caption(11.5).copyWith(color: KvlColors.danger),
+              ),
+            ],
+            const SizedBox(height: KvlSpacing.lg),
             Center(
-              child: _resendSeconds > 0
-                  ? Text(
-                      'Resend OTP in ${_resendSeconds}s',
-                      style: KvlText.caption(11),
-                    )
-                  : GestureDetector(
-                      onTap: _sendOtp,
-                      child: Text(
-                        'Resend OTP',
-                        style: KvlText.caption(11.5).copyWith(
+              child: GestureDetector(
+                onTap: () => context.push(KvlRoute.createAccount),
+                child: RichText(
+                  text: TextSpan(
+                    style: KvlText.caption(11.5),
+                    children: [
+                      TextSpan(text: context.l10n.dontHaveAccount),
+                      TextSpan(
+                        text: context.l10n.createOneLink,
+                        style: TextStyle(
                           color: KvlColors.primaryDeep,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ),
-            ),
-            const SizedBox(height: KvlSpacing.lg),
-            KvlButton(
-              label: _busy ? 'Verifying…' : 'Login',
-              onPressed: _busy ? null : _login,
-            ),
-          ],
-          if (_error != null) ...[
-            const SizedBox(height: KvlSpacing.sm),
-            Text(
-              _error!,
-              textAlign: TextAlign.center,
-              style: KvlText.caption(11.5).copyWith(color: KvlColors.danger),
-            ),
-          ],
-          const SizedBox(height: KvlSpacing.lg),
-          Center(
-            child: GestureDetector(
-              onTap: () => context.push(KvlRoute.createAccount),
-              child: RichText(
-                text: TextSpan(
-                  style: KvlText.caption(11.5),
-                  children: [
-                    const TextSpan(text: "Don't have an account? "),
-                    TextSpan(
-                      text: 'Create one',
-                      style: TextStyle(
-                        color: KvlColors.primaryDeep,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

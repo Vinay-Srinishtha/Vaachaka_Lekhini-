@@ -6,6 +6,7 @@ import '../../../core/storage/repository.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/utils/indian_number_format.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../../l10n/l10n.dart';
 import '../domain/store_item.dart';
 
 class StoreScreen extends ConsumerStatefulWidget {
@@ -34,7 +35,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     switch (result) {
       case Ok():
         messenger.showSnackBar(
-          SnackBar(content: Text('Redeemed ${item.title}')),
+          SnackBar(content: Text(context.l10n.rewardedItemTitle(item.title))),
         );
       case Err(:final failure):
         messenger.showSnackBar(SnackBar(content: Text(failure.message)));
@@ -68,7 +69,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
         _PromoBanner(),
         const SizedBox(height: KvlSpacing.md),
         KvlInput(
-          hint: 'Search for rewards…',
+          hint: context.l10n.searchRewards,
           prefix: const Icon(
             Icons.search_rounded,
             size: 18,
@@ -83,7 +84,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
             scrollDirection: Axis.horizontal,
             children: [
               _SegmentChip(
-                label: 'All',
+                label: context.l10n.allFilter,
                 selected: _filter == null,
                 onTap: () => setState(() => _filter = null),
               ),
@@ -116,7 +117,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
             padding: const EdgeInsets.all(KvlSpacing.lg),
             child: Center(
               child: Text(
-                'No rewards match your search',
+                context.l10n.noRewardsMatch,
                 style: KvlText.muted(12),
               ),
             ),
@@ -147,14 +148,14 @@ class _PromoBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                KvlChip(label: 'SPECIAL OFFER', variant: KvlChipVariant.gold),
+                KvlChip(label: context.l10n.specialOffer, variant: KvlChipVariant.gold),
                 const SizedBox(height: 4),
                 Text(
-                  'Guided Meditation Series',
+                  context.l10n.guidedMeditationSeries,
                   style: KvlText.title(15).copyWith(color: Colors.white),
                 ),
                 Text(
-                  'Unlock peace with our new 7-day series',
+                  context.l10n.unlockPeaceSeries,
                   style: KvlText.caption(
                     10.5,
                   ).copyWith(color: Colors.white.withValues(alpha: .92)),
@@ -273,7 +274,7 @@ class _StoreCard extends StatelessWidget {
                     ),
                     const Spacer(),
                     KvlButton(
-                      label: canAfford ? 'Redeem' : 'Not enough',
+                      label: canAfford ? context.l10n.redeemButton : context.l10n.notEnoughPoints,
                       variant: canAfford
                           ? KvlButtonVariant.primary
                           : KvlButtonVariant.secondary,

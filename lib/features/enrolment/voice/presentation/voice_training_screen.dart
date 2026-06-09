@@ -11,6 +11,7 @@ import '../../../../core/i18n/language_options.dart';
 import '../../../../core/theme/theme.dart';
 import '../../../../core/widgets/widgets.dart';
 import '../../../settings/domain/settings_repository.dart';
+import '../../../../l10n/l10n.dart';
 import '../data/voice_enrolment_service.dart';
 import '../domain/voice_enrolment.dart';
 
@@ -91,12 +92,6 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen> {
     context.go('${KvlRoute.handwritingSubmit}/${widget.mantraId}');
   }
 
-  Future<void> _skipToManual() async {
-    await _service.stop();
-    if (!mounted) return;
-    context.go('${KvlRoute.handwritingSubmit}/${widget.mantraId}');
-  }
-
   @override
   void dispose() {
     _sub?.cancel();
@@ -125,13 +120,13 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen> {
           Center(child: _MicBubble(recording: _recording)),
           const SizedBox(height: KvlSpacing.xl),
           Text(
-            'Train Your Voice',
+            context.l10n.trainYourVoice,
             textAlign: TextAlign.center,
             style: KvlText.title(20),
           ),
           const SizedBox(height: 6),
           Text(
-            'Let me learn your unique chanting pattern for accurate counting.',
+            context.l10n.learnChantingPattern,
             textAlign: TextAlign.center,
             style: KvlText.caption(11.5),
           ),
@@ -144,7 +139,7 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen> {
                   text: TextSpan(
                     style: KvlText.ui(12.5, FontWeight.w600),
                     children: [
-                      const TextSpan(text: 'Say '),
+                      TextSpan(text: context.l10n.sayMantraInstruction),
                       TextSpan(
                         text: mantraText,
                         style: KvlText.mantraByScript(
@@ -152,15 +147,12 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen> {
                           14,
                         ).copyWith(color: KvlColors.primaryDeep),
                       ),
-                      TextSpan(text: ' eleven times clearly'),
+                      TextSpan(text: context.l10n.sayMantraElevenTimes),
                     ],
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  'Speak naturally at your normal pace and volume',
-                  style: KvlText.caption(11),
-                ),
+                Text(context.l10n.speakNaturally, style: KvlText.caption(11)),
               ],
             ),
           ),
@@ -170,8 +162,8 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen> {
           Center(
             child: Text(
               _recording
-                  ? '● Recording  ·  $_count / $_target'
-                  : 'Tap Start to begin',
+                  ? context.l10n.recordingStatus(_count, _target)
+                  : context.l10n.tapStartToBegin,
               style: KvlText.caption(11.5).copyWith(
                 color: _recording ? KvlColors.primaryDeep : KvlColors.muted,
                 fontWeight: FontWeight.w600,
@@ -188,14 +180,10 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen> {
           ],
           const SizedBox(height: KvlSpacing.lg),
           KvlButton(
-            label: _recording ? 'Stop' : 'Start Recording',
+            label: _recording
+                ? context.l10n.stopButton
+                : context.l10n.startRecordingButton,
             onPressed: _recording ? _stop : _start,
-          ),
-          const SizedBox(height: KvlSpacing.sm),
-          KvlButton(
-            variant: KvlButtonVariant.secondary,
-            label: 'Skip & Use Manual Counter',
-            onPressed: _skipToManual,
           ),
         ],
       ),
@@ -254,7 +242,11 @@ class _MicBubbleState extends State<_MicBubble>
             ],
           ),
           alignment: Alignment.center,
-          child: const Icon(Icons.mic_rounded, color: Colors.white, size: 56),
+          child: const SizedBox(
+            width: 72,
+            height: 72,
+            child: CustomPaint(painter: _VoiceMicPainter()),
+          ),
         );
       },
     );
@@ -321,4 +313,74 @@ class _WaveformState extends State<_Waveform>
     final amp = (math.sin(phase * math.pi * 2) + 1) / 2;
     return 6 + amp * 22;
   }
+}
+
+class _VoiceMicPainter extends CustomPainter {
+  const _VoiceMicPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    final fill = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    final strokePaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = size.width * .055
+      ..strokeCap = StrokeCap.round;
+
+    // Capsule body
+    final capsuleW = size.width * .44;
+    final capsuleH = size.height * .52;
+    final capsuleTop = size.height * .03;
+    final capsuleRect = Rect.fromLTWH(
+      cx - capsuleW / 2, capsuleTop, capsuleW, capsuleH,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(capsuleRect, Radius.circular(capsuleW / 2)),
+      fill,
+    );
+
+    // Grille lines
+    final grillePaint = Paint()
+      ..color = KvlColors.primary.withValues(alpha: .55)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = size.width * .035
+      ..strokeCap = StrokeCap.round;
+    final grilleL = cx - capsuleW * .38;
+    final grilleR = cx + capsuleW * .38;
+    final grilleStartY = capsuleTop + capsuleH * .30;
+    for (var i = 0; i < 3; i++) {
+      final y = grilleStartY + i * capsuleH * .18;
+      canvas.drawLine(Offset(grilleL, y), Offset(grilleR, y), grillePaint);
+    }
+
+    // Stand arc
+    final arcCenterY = capsuleTop + capsuleH * .9;
+    canvas.drawArc(
+      Rect.fromCenter(
+        center: Offset(cx, arcCenterY),
+        width: size.width * .72,
+        height: size.height * .38,
+      ),
+      0, 3.14159, false, strokePaint,
+    );
+
+    // Stem + base
+    final stemBot = size.height * .93;
+    canvas.drawLine(
+      Offset(cx, arcCenterY + size.height * .19),
+      Offset(cx, stemBot),
+      strokePaint,
+    );
+    canvas.drawLine(
+      Offset(cx - size.width * .26, stemBot),
+      Offset(cx + size.width * .26, stemBot),
+      strokePaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter old) => false;
 }

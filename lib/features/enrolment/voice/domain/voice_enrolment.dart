@@ -17,21 +17,25 @@ class VoiceEnrolment extends Equatable {
   final int samples;
   final DateTime trainedAt;
 
+  static const requiredSamples = 11;
+
+  bool get isComplete => samples >= requiredSamples;
+
   String get key => '$profileId::$mantraId';
 
   Map<String, dynamic> toJson() => {
-        'profileId': profileId,
-        'mantraId': mantraId,
-        'samples': samples,
-        'trainedAt': trainedAt.toIso8601String(),
-      };
+    'profileId': profileId,
+    'mantraId': mantraId,
+    'samples': samples,
+    'trainedAt': trainedAt.toIso8601String(),
+  };
 
   factory VoiceEnrolment.fromJson(Map<String, dynamic> j) => VoiceEnrolment(
-        profileId: j['profileId'] as String,
-        mantraId: j['mantraId'] as String,
-        samples: (j['samples'] as num).toInt(),
-        trainedAt: DateTime.parse(j['trainedAt'] as String),
-      );
+    profileId: j['profileId'] as String,
+    mantraId: j['mantraId'] as String,
+    samples: (j['samples'] as num).toInt(),
+    trainedAt: DateTime.parse(j['trainedAt'] as String),
+  );
 
   @override
   List<Object?> get props => [profileId, mantraId, samples, trainedAt];

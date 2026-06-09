@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/providers.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../app/router.dart';
 import '../../../../core/theme/theme.dart';
 import '../../../../core/widgets/widgets.dart';
@@ -33,7 +34,7 @@ class _CaptureHandwritingScreenState extends ConsumerState<CaptureHandwritingScr
     try {
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
-        setState(() => _error = 'No camera available on this device');
+        setState(() => _error = context.l10n.noCameraAvailable);
         return;
       }
       final back = cameras.firstWhere(
@@ -83,7 +84,7 @@ class _CaptureHandwritingScreenState extends ConsumerState<CaptureHandwritingScr
   @override
   Widget build(BuildContext context) {
     return KvlScaffold(
-      title: 'Capture Your Handwriting',
+      title: context.l10n.captureHandwritingTitle,
       trailing: IconButton(
         icon: const Icon(Icons.delete_outline_rounded),
         onPressed: () => Navigator.of(context).maybePop(),

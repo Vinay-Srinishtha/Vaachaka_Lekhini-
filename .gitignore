@@ -43,3 +43,24 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# APK & build outputs
+**/*.apk
+**/*.aab
+**/CMakeOutput.log
+**/CMakeError.log
+build/
+
+# Node
+node_modules/
+bun.lock
+package-lock.json
+
+# Reports & docs
+reports/
+*.docx
+*.pdf
+*.xlsx
+
+# macOS
+.DS_Store

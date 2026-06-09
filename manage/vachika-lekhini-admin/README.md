@@ -18,6 +18,7 @@ Everything the Flutter client sees — mantras, store items, feature flags — i
 
 ```sh
 cd manage/vachika-lekhini-admin
+cd "/Users/nitro/Documents/PROJECTS /srinishitha/vachika-lekhini-main/manage/vachika-lekhini-admin"
 bun install
 
 # Create the database

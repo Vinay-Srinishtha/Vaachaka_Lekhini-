@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/theme/theme.dart';
 import '../features/settings/domain/settings_repository.dart';
+import '../l10n/app_localizations.dart';
 import 'providers.dart';
 import 'router.dart';
 
@@ -29,10 +30,11 @@ class KvlApp extends ConsumerWidget {
       title: 'Vaachaka Lekhini',
       debugShowCheckedModeBanner: false,
       theme: buildKvlLightTheme(),
-      themeMode: settings.themeMode,
+      themeMode: ThemeMode.light,
       routerConfig: router,
       locale: Locale(settings.languageCode),
       localizationsDelegates: const [
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,

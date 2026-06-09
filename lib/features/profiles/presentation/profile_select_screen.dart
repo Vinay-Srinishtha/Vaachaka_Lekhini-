@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/providers.dart';
 import '../../../app/router.dart';
 import '../../../core/theme/theme.dart';
+import '../../../l10n/l10n.dart';
 import '../domain/profile.dart';
 
 class ProfileSelectScreen extends ConsumerWidget {
@@ -36,7 +37,7 @@ class ProfileSelectScreen extends ConsumerWidget {
             child: Column(
               children: [
                 Text(
-                  'Who is Practicing?',
+                  context.l10n.whoIsPracticing,
                   style: KvlText.title(
                     20,
                   ).copyWith(color: Colors.white, fontWeight: FontWeight.w600),
@@ -71,17 +72,17 @@ class ProfileSelectScreen extends ConsumerWidget {
                 if (hasSession)
                   _link(
                     context,
-                    'Manage Profiles',
+                    context.l10n.manageProfiles,
                     () => context.go(KvlRoute.profile),
                   ),
                 _link(
                   context,
-                  'Login with another number',
+                  context.l10n.loginWithAnotherNumber,
                   () => context.go(KvlRoute.otpLogin),
                 ),
                 _link(
                   context,
-                  'Create a new account',
+                  context.l10n.createNewAccount,
                   () => context.go(KvlRoute.createAccount),
                 ),
               ],
@@ -298,7 +299,7 @@ class _AddMemberTile extends StatelessWidget {
           ),
           SizedBox(height: compact ? 10 : 14),
           Text(
-            'Add Member',
+            context.l10n.addMemberTile,
             style: KvlText.ui(
               compact ? 15 : 17,
               FontWeight.w500,

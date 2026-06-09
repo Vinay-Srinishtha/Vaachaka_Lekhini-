@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../app/providers.dart';
+import '../../../l10n/l10n.dart';
 import '../../../app/router.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/utils/indian_number_format.dart';
@@ -30,7 +31,7 @@ class _RewardHistoryScreenState extends ConsumerState<RewardHistoryScreen> {
         : ref.watch(rewardRepositoryProvider).watchHistory(profile.id, filter: _filter);
 
     return KvlScaffold(
-      title: 'Reward Points & History',
+      title: context.l10n.rewardPointsHistory,
       scrollable: false,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -39,7 +40,7 @@ class _RewardHistoryScreenState extends ConsumerState<RewardHistoryScreen> {
             padding: const EdgeInsets.symmetric(horizontal: KvlSpacing.md, vertical: KvlSpacing.md),
             child: Column(
               children: [
-                Text('★ Your Total Points', style: KvlText.caption(11.5)),
+                Text(context.l10n.yourTotalPoints, style: KvlText.caption(11.5)),
                 const SizedBox(height: 4),
                 Text(
                   IndianNumberFormat.format(points),
@@ -49,14 +50,14 @@ class _RewardHistoryScreenState extends ConsumerState<RewardHistoryScreen> {
                 KvlButton(
                   size: KvlButtonSize.tiny,
                   expand: false,
-                  label: 'Visit Reward Store',
+                  label: context.l10n.visitRewardStore,
                   onPressed: () => context.go(KvlRoute.store),
                 ),
               ],
             ),
           ),
           const SizedBox(height: KvlSpacing.md),
-          Text('Points History', style: KvlText.title(13)),
+          Text(context.l10n.pointsHistory, style: KvlText.title(13)),
           const SizedBox(height: KvlSpacing.sm),
           _FilterRow(filter: _filter, onChanged: (k) => setState(() => _filter = k)),
           const SizedBox(height: KvlSpacing.sm),
@@ -70,7 +71,7 @@ class _RewardHistoryScreenState extends ConsumerState<RewardHistoryScreen> {
                     child: Padding(
                       padding: const EdgeInsets.all(KvlSpacing.lg),
                       child: Text(
-                        'No reward activity yet.\nFinish a session to earn your first points.',
+                        context.l10n.noRewardActivity,
                         textAlign: TextAlign.center,
                         style: KvlText.muted(12),
                       ),
@@ -100,11 +101,11 @@ class _FilterRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        _Pill(label: 'All', selected: filter == null, onTap: () => onChanged(null)),
+        _Pill(label: context.l10n.filterAll, selected: filter == null, onTap: () => onChanged(null)),
         const SizedBox(width: 6),
-        _Pill(label: 'Earned', selected: filter == RewardKind.earn, onTap: () => onChanged(RewardKind.earn)),
+        _Pill(label: context.l10n.filterEarned, selected: filter == RewardKind.earn, onTap: () => onChanged(RewardKind.earn)),
         const SizedBox(width: 6),
-        _Pill(label: 'Spent', selected: filter == RewardKind.spend, onTap: () => onChanged(RewardKind.spend)),
+        _Pill(label: context.l10n.filterSpent, selected: filter == RewardKind.spend, onTap: () => onChanged(RewardKind.spend)),
       ],
     );
   }

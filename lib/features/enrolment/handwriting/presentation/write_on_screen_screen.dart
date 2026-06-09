@@ -16,6 +16,7 @@ import '../../../../core/utils/indian_number_format.dart';
 import '../../../programs/domain/session.dart';
 import '../../../settings/domain/settings_repository.dart';
 import '../domain/handwriting_asset.dart';
+import '../../../../l10n/l10n.dart';
 
 class WriteOnScreenScreen extends ConsumerStatefulWidget {
   const WriteOnScreenScreen({
@@ -33,12 +34,11 @@ class WriteOnScreenScreen extends ConsumerStatefulWidget {
 }
 
 class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
-  static const int _practiceWritingIncrement = 40;
-
   late SignatureController _controller = _newController(KvlColors.ink);
 
   bool _saving = false;
   Color _penColor = KvlColors.ink;
+  int _writingCount = 0;
 
   SignatureController _newController(Color color, {List<Point>? points}) {
     return SignatureController(
@@ -83,23 +83,35 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
     ]);
   }
 
-  Future<void> _save() async {
+  void _submitOne() {
     if (_controller.isEmpty) return;
+    setState(() {
+      _writingCount++;
+    });
+    _controller.clear();
+  }
+
+  Future<void> _save() async {
+    if (_writingCount == 0 && _controller.isEmpty) return;
+    // Count any pending unsaved drawing
+    final total = _writingCount + (_controller.isEmpty ? 0 : 1);
     setState(() => _saving = true);
     final png = await _controller.toPngBytes();
     final profile = ref.read(activeProfileProvider).value;
-    if (png == null || profile == null) {
+    if (profile == null) {
       setState(() => _saving = false);
       return;
     }
-    await ref
-        .read(handwritingRepositoryProvider)
-        .savePng(
-          profileId: profile.id,
-          mode: HandwritingMode.writeOnScreen,
-          bytes: png,
-          mantraId: widget.mantraId,
-        );
+    if (png != null && _controller.isNotEmpty) {
+      await ref
+          .read(handwritingRepositoryProvider)
+          .savePng(
+            profileId: profile.id,
+            mode: HandwritingMode.writeOnScreen,
+            bytes: png,
+            mantraId: widget.mantraId,
+          );
+    }
     if (!mounted) return;
     final programId = widget.programId;
     if (programId != null) {
@@ -109,17 +121,23 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
         modality: SessionModality.handwriting,
         usedHandwriting: true,
       );
-      await repo.incrementSession(session.id, by: _practiceWritingIncrement);
+      await repo.incrementSession(session.id, by: total);
       await repo.finishSession(session.id);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Handwriting saved · +$_practiceWritingIncrement'),
+          duration: const Duration(milliseconds: 1500),
+          content: Text(context.l10n.handwritingSaved(total)),
           backgroundColor: KvlColors.accent,
           behavior: SnackBarBehavior.floating,
+          action: SnackBarAction(
+            label: '✕',
+            textColor: Colors.white,
+            onPressed: () => ScaffoldMessenger.of(context).clearSnackBars(),
+          ),
         ),
       );
-      context.popOrGo(KvlRoute.practice);
+      context.go('${KvlRoute.practice}/$programId');
       return;
     }
     context.go('${KvlRoute.setTargetWritings}/${widget.mantraId}');
@@ -144,9 +162,9 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
         guideScript: guideScript,
         saving: _saving,
         currentCount: progress,
-        increment: _practiceWritingIncrement,
+        writingCount: _writingCount,
         onBack: () => context.popOrGo(KvlRoute.practice),
-        onStart: _controller.clear,
+        onAdd: _submitOne,
         onFinish: _saving ? null : _save,
         onClear: _controller.clear,
         onUndo: _controller.undo,
@@ -233,7 +251,7 @@ class _SampleLandscapeWriteScaffold extends StatelessWidget {
                 top: topInset + 2,
                 child: Center(
                   child: Text(
-                    'Write Inside the dots',
+                    context.l10n.writeOnScreenInstruction,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: KvlText.ui(
@@ -262,19 +280,19 @@ class _SampleLandscapeWriteScaffold extends StatelessWidget {
                   children: [
                     _SampleFloatingTool(
                       icon: Icons.cleaning_services_rounded,
-                      tooltip: 'Clear',
+                      tooltip: context.l10n.clearTooltip,
                       onTap: onClear,
                     ),
                     SizedBox(width: compact ? 8 : 10),
                     _SampleFloatingTool(
                       icon: Icons.undo_rounded,
-                      tooltip: 'Undo',
+                      tooltip: context.l10n.undoTooltip,
                       onTap: onUndo,
                     ),
                     SizedBox(width: compact ? 8 : 10),
                     _SampleFloatingTool(
                       icon: Icons.redo_rounded,
-                      tooltip: 'Redo',
+                      tooltip: context.l10n.redoTooltip,
                       onTap: onRedo,
                     ),
                   ],
@@ -303,23 +321,23 @@ class _SampleLandscapeCanvas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = compact ? 146.0 : 172.0;
+    final size = compact ? 210.0 : 250.0;
     return Stack(
       fit: StackFit.expand,
       children: [
         Positioned.fill(
-          left: compact ? 36 : 54,
-          right: compact ? 36 : 54,
-          top: compact ? 42 : 52,
-          bottom: compact ? 18 : 28,
+          left: compact ? 8 : 12,
+          right: compact ? 8 : 12,
+          top: compact ? 44 : 54,
+          bottom: compact ? 8 : 12,
           child: Center(
             child: Transform.scale(
-              scale: compact ? 1.16 : 1.1,
+              scale: 1.0,
               child: FittedBox(
                 fit: BoxFit.contain,
                 child: SizedBox(
                   width: compact ? 1060 : 1180,
-                  height: compact ? 210 : 246,
+                  height: compact ? 320 : 340,
                   child: _DottedGuideText(
                     text: guide,
                     script: guideScript,
@@ -391,7 +409,7 @@ class _SampleTopTools extends StatelessWidget {
             ),
             SizedBox(width: compact ? 6 : 8),
             _SampleSaveButton(
-              label: saving ? 'Saving...' : 'Save',
+              label: saving ? context.l10n.savingButton : context.l10n.saveLabel,
               compact: compact,
               onTap: onSave,
             ),
@@ -517,7 +535,7 @@ class _ColorPaletteButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = compact ? 34.0 : 42.0;
     return PopupMenuButton<Color>(
-      tooltip: 'Pen color',
+      tooltip: context.l10n.penColorTooltip,
       onSelected: onColorSelected,
       color: KvlColors.surface,
       elevation: 10,
@@ -545,7 +563,7 @@ class _ColorPaletteButton extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 Text(
-                  _labelForColor(color),
+                  _labelForColor(color, context),
                   style: KvlText.caption(12).copyWith(color: KvlColors.ink),
                 ),
                 const Spacer(),
@@ -595,13 +613,13 @@ class _ColorPaletteButton extends StatelessWidget {
     );
   }
 
-  static String _labelForColor(Color color) {
-    if (color == KvlColors.ink) return 'Brown';
-    if (color == KvlColors.primary) return 'Orange';
-    if (color == KvlColors.accent) return 'Teal';
-    if (color == KvlColors.danger) return 'Red';
-    if (color == const Color(0xFF1D4ED8)) return 'Blue';
-    return 'Black';
+  static String _labelForColor(Color color, BuildContext context) {
+    if (color == KvlColors.ink) return context.l10n.penColorBrown;
+    if (color == KvlColors.primary) return context.l10n.penColorOrange;
+    if (color == KvlColors.accent) return context.l10n.penColorTeal;
+    if (color == KvlColors.danger) return context.l10n.penColorRed;
+    if (color == const Color(0xFF1D4ED8)) return context.l10n.penColorBlue;
+    return context.l10n.penColorBlack;
   }
 }
 
@@ -646,9 +664,9 @@ class _ProtoWriteScaffold extends StatefulWidget {
     required this.guideScript,
     required this.saving,
     required this.currentCount,
-    required this.increment,
+    required this.writingCount,
     required this.onBack,
-    required this.onStart,
+    required this.onAdd,
     required this.onFinish,
     required this.onClear,
     required this.onUndo,
@@ -662,9 +680,9 @@ class _ProtoWriteScaffold extends StatefulWidget {
   final MantraScript guideScript;
   final bool saving;
   final int currentCount;
-  final int increment;
+  final int writingCount;
   final VoidCallback onBack;
-  final VoidCallback onStart;
+  final VoidCallback onAdd;
   final VoidCallback? onFinish;
   final VoidCallback onClear;
   final VoidCallback onUndo;
@@ -678,10 +696,39 @@ class _ProtoWriteScaffold extends StatefulWidget {
 
 class _ProtoWriteScaffoldState extends State<_ProtoWriteScaffold> {
   double _guideScale = 1.0;
+  bool _canvasHasContent = false;
 
   static const double _scaleMin = 0.5;
   static const double _scaleMax = 2.0;
   static const double _scaleStep = 0.25;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_onCanvasChanged);
+  }
+
+  @override
+  void didUpdateWidget(_ProtoWriteScaffold old) {
+    super.didUpdateWidget(old);
+    if (old.controller != widget.controller) {
+      old.controller.removeListener(_onCanvasChanged);
+      widget.controller.addListener(_onCanvasChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onCanvasChanged);
+    super.dispose();
+  }
+
+  void _onCanvasChanged() {
+    final hasContent = widget.controller.isNotEmpty;
+    if (hasContent != _canvasHasContent) {
+      setState(() => _canvasHasContent = hasContent);
+    }
+  }
 
   void _zoomIn() {
     setState(() {
@@ -720,13 +767,24 @@ class _ProtoWriteScaffoldState extends State<_ProtoWriteScaffold> {
               ),
               Positioned(
                 left: compact ? 72 : w * .10,
-                right: compact ? 18 : w * .045,
+                right: compact ? 160 : 200,
                 top: topInset,
                 child: _LandscapeTopBar(
                   globalCount: globalCount,
-                  yours: yours,
-                  increment: widget.increment,
                   compact: compact,
+                ),
+
+              ),
+              Positioned(
+                right: compact ? 12 : 18,
+                top: topInset,
+                child: Padding(
+                  padding: EdgeInsets.only(top: compact ? 4 : 6),
+                  child: _YoursPill(
+                    yours: yours,
+                    increment: widget.writingCount,
+                    compact: compact,
+                  ),
                 ),
               ),
               Positioned(
@@ -745,21 +803,34 @@ class _ProtoWriteScaffoldState extends State<_ProtoWriteScaffold> {
                 child: _LandscapeActionButtons(
                   saving: widget.saving,
                   compact: compact,
-                  onStart: widget.onStart,
+                  canvasHasContent: _canvasHasContent,
+                  onAdd: widget.onAdd,
                   onFinish: widget.onFinish,
                 ),
               ),
               Positioned(
-                right: compact ? 52 : 72,
+                right: compact ? 12 : 18,
                 bottom: compact ? 11 : 18,
                 child: Row(
                   children: [
                     _ProtoRoundTool(
-                      icon: Icons.draw_rounded,
-                      selected: true,
+                      icon: Icons.backspace_rounded,
+                      selected: false,
                       onTap: widget.onClear,
                     ),
-                    SizedBox(width: compact ? 10 : 14),
+                    SizedBox(width: compact ? 6 : 10),
+                    _ProtoRoundTool(
+                      icon: Icons.undo_rounded,
+                      selected: false,
+                      onTap: widget.onUndo,
+                    ),
+                    SizedBox(width: compact ? 6 : 10),
+                    _ProtoRoundTool(
+                      icon: Icons.redo_rounded,
+                      selected: false,
+                      onTap: widget.onRedo,
+                    ),
+                    SizedBox(width: compact ? 6 : 10),
                     _ColorPaletteButton(
                       selectedColor: widget.penColor,
                       compact: compact,
@@ -809,19 +880,19 @@ class _ProtoWritingCanvas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final baseSize = compact ? 132.0 : 158.0;
+    final baseSize = compact ? 200.0 : 240.0;
     final size = baseSize * guideScale;
     return Stack(
       fit: StackFit.expand,
       children: [
         Positioned.fill(
           child: Padding(
-            padding: const EdgeInsets.all(8),
+            padding: EdgeInsets.zero,
             child: FittedBox(
               fit: BoxFit.contain,
               child: SizedBox(
                 width: compact ? 1180 : 1320,
-                height: compact ? 210 : 246,
+                height: compact ? 320 : 340,
                 child: _DottedGuideText(
                   text: guide,
                   script: guideScript,
@@ -864,8 +935,8 @@ class _DottedGuideText extends StatelessWidget {
     };
     final svg =
         '''
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="260" viewBox="0 0 1400 260">
-  <text x="700" y="170" text-anchor="middle"
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="340" viewBox="0 0 1400 340">
+  <text x="700" y="260" text-anchor="middle"
     font-family="$fontFamily"
     font-size="$fontSize"
     font-weight="500"
@@ -875,7 +946,10 @@ class _DottedGuideText extends StatelessWidget {
     stroke-width="2.4"
     stroke-linecap="round"
     stroke-linejoin="round"
-    stroke-dasharray="0.1 8">$escapedText</text>
+    fill="white"
+    fill-opacity="1"
+    paint-order="fill stroke"
+    stroke-dasharray="3 7">$escapedText</text>
 </svg>
 ''';
     return SvgPicture.string(svg, fit: BoxFit.contain);
@@ -885,14 +959,10 @@ class _DottedGuideText extends StatelessWidget {
 class _LandscapeTopBar extends StatelessWidget {
   const _LandscapeTopBar({
     required this.globalCount,
-    required this.yours,
-    required this.increment,
     required this.compact,
   });
 
   final int globalCount;
-  final int yours;
-  final int increment;
   final bool compact;
 
   @override
@@ -904,7 +974,7 @@ class _LandscapeTopBar extends StatelessWidget {
           fit: FlexFit.loose,
           child: _LandscapeModeItem(
             icon: Icons.notifications_off_outlined,
-            label: 'Phone Mode',
+            label: context.l10n.phoneMode,
             iconColor: KvlColors.ink,
             compact: compact,
           ),
@@ -914,7 +984,7 @@ class _LandscapeTopBar extends StatelessWidget {
           fit: FlexFit.loose,
           child: _LandscapeModeItem(
             icon: Icons.music_note_rounded,
-            label: 'Ambience Sound',
+            label: context.l10n.ambienceSound,
             iconColor: KvlColors.ink,
             compact: compact,
           ),
@@ -924,7 +994,7 @@ class _LandscapeTopBar extends StatelessWidget {
           fit: FlexFit.loose,
           child: _LandscapeModeItem(
             icon: Icons.gesture_rounded,
-            label: 'Own writing mode',
+            label: context.l10n.ownWritingModeLabel,
             iconColor: KvlColors.primary,
             compact: compact,
           ),
@@ -936,7 +1006,7 @@ class _LandscapeTopBar extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.only(top: 18),
               child: Text(
-                'Global Mantra Count : ${IndianNumberFormat.format(globalCount)}',
+                context.l10n.countDisplay(IndianNumberFormat.format(globalCount)),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: KvlText.ui(14, FontWeight.w500)
@@ -945,15 +1015,6 @@ class _LandscapeTopBar extends StatelessWidget {
             ),
           ),
         ],
-        const Spacer(),
-        Padding(
-          padding: EdgeInsets.only(top: compact ? 8 : 12),
-          child: _YoursPill(
-            yours: yours,
-            increment: increment,
-            compact: compact,
-          ),
-        ),
       ],
     );
   }
@@ -999,13 +1060,15 @@ class _LandscapeActionButtons extends StatelessWidget {
   const _LandscapeActionButtons({
     required this.saving,
     required this.compact,
-    required this.onStart,
+    required this.canvasHasContent,
+    required this.onAdd,
     required this.onFinish,
   });
 
   final bool saving;
   final bool compact;
-  final VoidCallback onStart;
+  final bool canvasHasContent;
+  final VoidCallback onAdd;
   final VoidCallback? onFinish;
 
   @override
@@ -1013,14 +1076,14 @@ class _LandscapeActionButtons extends StatelessWidget {
     return Row(
       children: [
         _RailButton(
-          label: 'START',
-          color: KvlColors.primary,
+          label: canvasHasContent ? 'SUBMIT' : 'ADD',
+          color: canvasHasContent ? KvlColors.primaryDeep : KvlColors.primary,
           compact: compact,
-          onTap: onStart,
+          onTap: canvasHasContent ? onAdd : null,
         ),
         SizedBox(width: compact ? 14 : 20),
         _RailButton(
-          label: saving ? 'Saving...' : 'Finish',
+          label: saving ? context.l10n.savingButton : context.l10n.finishButton,
           color: KvlColors.accent,
           compact: compact,
           onTap: onFinish,
@@ -1057,7 +1120,7 @@ class _YoursPill extends StatelessWidget {
         fit: BoxFit.scaleDown,
         child: Text.rich(
           TextSpan(
-            text: 'Yours : ',
+            text: context.l10n.yoursDisplay,
             children: [
               TextSpan(
                 text: IndianNumberFormat.format(yours),

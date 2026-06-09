@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/providers.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../app/router.dart';
 import '../../../../core/remote_config/remote_config.dart';
 import '../../../../core/remote_config/remote_config_keys.dart';
@@ -56,10 +57,10 @@ class _HandwritingSubmitScreenState extends ConsumerState<HandwritingSubmitScree
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: KvlSpacing.md),
-          Text('Submit Your Handwriting', textAlign: TextAlign.center, style: KvlText.title(19)),
+          Text(context.l10n.submitHandwritingTitle, textAlign: TextAlign.center, style: KvlText.title(19)),
           const SizedBox(height: 6),
           Text(
-            'Upload your handwriting for personalised PDF mantra recitations. Our AI will randomly select samples to feature.',
+            context.l10n.submitHandwritingDescription,
             textAlign: TextAlign.center,
             style: KvlText.caption(11.5).copyWith(height: 1.5),
           ),
@@ -92,7 +93,7 @@ class _HandwritingSubmitScreenState extends ConsumerState<HandwritingSubmitScree
             );
           }(),
           const SizedBox(height: KvlSpacing.lg),
-          KvlButton(label: 'Confirm selection', onPressed: _selected == null ? null : _confirm),
+          KvlButton(label: context.l10n.confirmSelectionButton, onPressed: _selected == null ? null : _confirm),
         ],
       ),
     );
@@ -132,7 +133,16 @@ class _ModeCard extends StatelessWidget {
             child: Icon(icon, color: KvlColors.primaryDeep, size: 18),
           ),
           const SizedBox(height: 8),
-          Text(mode.label, textAlign: TextAlign.center, style: KvlText.ui(12, FontWeight.w600)),
+          Text(
+            switch (mode) {
+              HandwritingMode.writeOnScreen => context.l10n.modeWriteOnScreenLabel,
+              HandwritingMode.captureCamera => context.l10n.modeCaptureCameraLabel,
+              HandwritingMode.uploadGallery => context.l10n.modeUploadGalleryLabel,
+              HandwritingMode.useDefaultFont => context.l10n.modeDefaultFontLabel,
+            },
+            textAlign: TextAlign.center,
+            style: KvlText.ui(12, FontWeight.w600),
+          ),
           const SizedBox(height: 4),
           Expanded(
             child: Text(sub, textAlign: TextAlign.center, style: KvlText.caption(10).copyWith(height: 1.3)),

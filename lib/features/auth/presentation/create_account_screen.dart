@@ -9,6 +9,7 @@ import '../../../core/storage/repository.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../profiles/domain/profile.dart';
+import '../../../l10n/l10n.dart';
 
 class CreateAccountScreen extends ConsumerStatefulWidget {
   const CreateAccountScreen({super.key});
@@ -102,7 +103,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
   @override
   Widget build(BuildContext context) {
     return KvlScaffold(
-      title: 'Create Account',
+      title: context.l10n.createAccountTitle,
       scrollable: true,
       padding: EdgeInsets.fromLTRB(
         KvlSpacing.lg,
@@ -115,13 +116,13 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
         children: [
           const SizedBox(height: KvlSpacing.md),
           Text(
-            'Begin your spiritual journey',
+            context.l10n.beginSpiritualJourney,
             textAlign: TextAlign.center,
             style: KvlText.title(18),
           ),
           const SizedBox(height: 4),
           Text(
-            'Quick setup · takes 30 seconds',
+            context.l10n.quickSetup,
             textAlign: TextAlign.center,
             style: KvlText.caption(11.5),
           ),
@@ -131,8 +132,8 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 KvlInput(
-                  label: 'Username',
-                  hint: 'Enter your name',
+                  label: context.l10n.usernameLabel,
+                  hint: context.l10n.usernameHint,
                   controller: _username,
                 ),
                 const SizedBox(height: KvlSpacing.md),
@@ -149,8 +150,8 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: KvlInput(
-                        label: 'Mobile Number',
-                        hint: '98765 43210',
+                        label: context.l10n.mobileNumberLabel,
+                        hint: context.l10n.mobileNumberHint,
                         controller: _mobile,
                         keyboardType: TextInputType.phone,
                         maxLength: 10,
@@ -160,8 +161,8 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                 ),
                 const SizedBox(height: KvlSpacing.md),
                 KvlInput(
-                  label: 'Referral Code (Optional)',
-                  hint: 'Enter referral code',
+                  label: context.l10n.referralCodeLabel,
+                  hint: context.l10n.referralCodeHint,
                   controller: _referral,
                 ),
                 const SizedBox(height: KvlSpacing.md),
@@ -172,7 +173,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                 const SizedBox(height: KvlSpacing.lg),
                 if (!_otpSent)
                   KvlButton(
-                    label: _busy ? 'Sending…' : 'Send OTP',
+                    label: _busy ? context.l10n.sendingButton : context.l10n.sendOtpButton,
                     onPressed: _busy ? null : _sendOtp,
                   )
                 else ...[
@@ -188,7 +189,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                   ),
                   const SizedBox(height: KvlSpacing.lg),
                   KvlButton(
-                    label: _busy ? 'Verifying…' : 'Register',
+                    label: _busy ? context.l10n.verifyingButton : context.l10n.registerConfirmButton,
                     onPressed: _busy ? null : _register,
                   ),
                 ],
@@ -213,9 +214,9 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                 text: TextSpan(
                   style: KvlText.caption(11.5),
                   children: [
-                    const TextSpan(text: 'Already have an account? '),
+                    TextSpan(text: context.l10n.alreadyHaveAccount),
                     TextSpan(
-                      text: 'Login',
+                      text: context.l10n.loginLink,
                       style: TextStyle(
                         color: KvlColors.primaryDeep,
                         fontWeight: FontWeight.w600,
@@ -250,7 +251,7 @@ class _LanguagePicker extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Select Language',
+          context.l10n.selectLanguage,
           style: KvlText.caption(
             11.5,
           ).copyWith(color: KvlColors.inkSoft, fontWeight: FontWeight.w500),

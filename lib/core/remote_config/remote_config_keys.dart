@@ -16,6 +16,6 @@ abstract final class RemoteConfigKeys {
 
   /// Minimum handwriting accuracy (0–100 integer) required to accept a
   /// written Japa count. Compared against HandwritingComparator score × 100.
-  /// Default: 40 (40%). Adjustable from admin without an app update.
+  /// Default: 20 (20%). Adjustable from admin without an app update.
   static const minHandwritingAccuracy = 'config.min_handwriting_accuracy';
 }

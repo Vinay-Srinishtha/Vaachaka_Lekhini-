@@ -12,7 +12,7 @@ import 'dart:ui' as ui;
 ///   score = (ink pixels present in BOTH user & reference) / (ink pixels in reference)
 ///
 /// Range: 0.0 (nothing matches) → 1.0 (perfect match).
-/// A score ≥ 0.40 (configurable via RemoteConfig) is considered accepted.
+/// A score ≥ 0.20 (configurable via RemoteConfig) is considered accepted.
 class HandwritingComparator {
   HandwritingComparator._();
 

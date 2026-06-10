@@ -147,7 +147,7 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
       // Threshold from RemoteConfig — default 40 (= 40%)
       final cfg = ref.read(remoteConfigProvider).value ?? RemoteConfig.empty;
       final thresholdPct =
-          cfg.intFlag(RemoteConfigKeys.minHandwritingAccuracy, fallback: 40);
+          cfg.intFlag(RemoteConfigKeys.minHandwritingAccuracy, fallback: 20);
       final threshold = thresholdPct / 100.0;
 
       if (score >= threshold) {

@@ -8,8 +8,13 @@ import 'dart:ui' as ui;
 /// background exports from the signature canvas have alpha=0 for empty
 /// pixels and alpha=255 for drawn strokes).
 ///
-/// Score formula:
-///   score = (ink pixels present in BOTH user & reference) / (ink pixels in reference)
+/// Score formula (Jaccard / IoU):
+///   score = intersection / (userInk + refInk − intersection)
+///
+/// Jaccard penalises BOTH under-writing (low recall) AND over-writing
+/// (filling the canvas black). A user who scribbles the whole canvas will
+/// get userInk ≈ 1024, intersection ≈ refInk, so score ≈ refInk/1024
+/// which is typically well below the acceptance threshold.
 ///
 /// Range: 0.0 (nothing matches) → 1.0 (perfect match).
 /// A score ≥ 0.20 (configurable via RemoteConfig) is considered accepted.
@@ -27,18 +32,23 @@ class HandwritingComparator {
     final userGrid = await _toGrid(userPng);
     final refGrid = await _toGrid(referencePng);
 
+    int userInk = 0;
     int refInk = 0;
     int intersection = 0;
 
     for (int i = 0; i < _gridSize * _gridSize; i++) {
-      if (refGrid[i]) {
-        refInk++;
-        if (userGrid[i]) intersection++;
-      }
+      final u = userGrid[i];
+      final r = refGrid[i];
+      if (u) userInk++;
+      if (r) refInk++;
+      if (u && r) intersection++;
     }
 
-    if (refInk == 0) return 0.0;
-    return intersection / refInk;
+    // Jaccard similarity (IoU): penalises both under- and over-inking.
+    // Union = userInk + refInk - intersection.
+    final union = userInk + refInk - intersection;
+    if (union == 0) return 0.0;
+    return intersection / union;
   }
 
   /// Decodes [png] and downsamples to a [_gridSize]×[_gridSize] boolean grid.

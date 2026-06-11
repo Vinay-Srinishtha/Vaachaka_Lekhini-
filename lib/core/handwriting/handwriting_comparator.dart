@@ -4,31 +4,40 @@ import 'dart:ui' as ui;
 
 /// Compares two handwriting PNG images using a multi-signal approach
 /// that tolerates natural variation in writing style, stroke thickness,
-/// minor positional shifts and proportion differences.
+/// minor positional shifts and proportion differences — while enforcing
+/// that the user wrote the *complete* word/phrase, not just a fragment.
 ///
-/// Three signals are blended:
+/// ## Completeness gates (checked first — return 0.0 on failure)
+///
+/// Before any similarity signal is computed two hard gates are applied:
+///
+/// * **Ink-volume gate**: the user's total ink pixel count must be at least
+///   [_minInkRatio] × the reference's count (default 35 %).  Writing just
+///   one letter of a multi-letter word fails this gate immediately.
+///
+/// * **Spatial-coverage gate**: the number of 8×8 zones where the user has
+///   meaningful ink must cover at least [_minZoneCoverage] × the zones the
+///   reference occupies (default 45 %).  This rejects ink concentrated in
+///   one corner even if the total volume happens to pass.
+///
+/// ## Similarity signals (only reached when both gates pass)
 ///
 /// 1. **Dilated Jaccard** (weight 0.45)
 ///    Both grids are morphologically dilated (each ink pixel expands to its
-///    8-neighbours) before computing IoU.  This makes the comparator blind to
-///    ±1 px positional jitter and stroke-width variation.
+///    8-neighbours) before computing IoU.  Tolerates ±1 px positional jitter
+///    and stroke-width variation.
 ///
 /// 2. **Zone density cosine** (weight 0.35)
-///    The 32×32 grid is divided into a 4×4 array of 8×8-pixel zones.  For
-///    each zone the ink fraction (0–1) is computed, producing a 16-element
-///    density vector.  Cosine similarity between the two vectors captures
-///    "ink in roughly the same regions" without demanding pixel alignment.
-///    This tolerates different letter forms that share the same overall
-///    stroke distribution.
+///    16-element zone-density vectors compared with cosine similarity.
+///    Captures "ink in roughly the same regions" without pixel alignment.
+///    Tolerates different letter forms with similar overall distribution.
 ///
 /// 3. **Coarse Jaccard** (weight 0.20)
-///    Images are additionally decoded at 8×8 resolution.  Jaccard at this
-///    scale represents the overall shape silhouette and catches cases where
-///    the fine-grained signals might agree by coincidence.
+///    8×8 resolution Jaccard for overall shape silhouette match.
 ///
 /// Final score = 0.45 × dilatedJaccard + 0.35 × zoneCosine + 0.20 × coarseJaccard
 ///
-/// Range: 0.0 (nothing matches) → 1.0 (perfect match).
+/// Range: 0.0 (nothing matches / gates failed) → 1.0 (perfect match).
 /// A score ≥ 0.20 (configurable via RemoteConfig) is considered accepted.
 class HandwritingComparator {
   HandwritingComparator._();
@@ -38,23 +47,36 @@ class HandwritingComparator {
   static const int _zoneCount = 4;   // 4×4 zones in the main grid
   static const int _zoneSize = _gridSize ~/ _zoneCount; // 8 px per zone edge
 
-  // Blend weights (must sum to 1.0)
+  // ── Completeness gates ────────────────────────────────────────────────────
+  /// User ink must be ≥ 35 % of reference ink.
+  /// Ensures a partial letter/stroke can't pass as the full word.
+  static const double _minInkRatio = 0.35;
+
+  /// User ink must occupy ≥ 45 % of the zones the reference uses.
+  /// Ensures the writing spans the full spatial extent of the reference.
+  static const double _minZoneCoverage = 0.45;
+
+  /// A zone is considered "occupied" when its ink fraction exceeds this.
+  static const double _zoneOccupiedThreshold = 0.04;
+
+  // ── Blend weights (must sum to 1.0) ──────────────────────────────────────
   static const double _wDilated = 0.45;
   static const double _wZone    = 0.35;
   static const double _wCoarse  = 0.20;
 
   /// Compares [userPng] against [referencePng].
   /// Returns a similarity score from 0.0 to 1.0.
+  /// Returns 0.0 immediately if the completeness gates are not met.
   static Future<double> compare(
     Uint8List userPng,
     Uint8List referencePng,
   ) async {
     // Decode both images at two resolutions in parallel.
     final results = await Future.wait([
-      _toGrid(userPng,  _gridSize),
-      _toGrid(referencePng, _gridSize),
-      _toGrid(userPng,  _coarseSize),
-      _toGrid(referencePng, _coarseSize),
+      _toGrid(userPng,       _gridSize),
+      _toGrid(referencePng,  _gridSize),
+      _toGrid(userPng,       _coarseSize),
+      _toGrid(referencePng,  _coarseSize),
     ]);
 
     final userFine   = results[0];
@@ -62,17 +84,29 @@ class HandwritingComparator {
     final userCoarse = results[2];
     final refCoarse  = results[3];
 
-    // 1. Dilated Jaccard — tolerates positional/thickness variation
-    final dilatedUser = _dilate(userFine,  _gridSize);
-    final dilatedRef  = _dilate(refFine,   _gridSize);
-    final dilatedScore = _jaccard(dilatedUser, dilatedRef);
-
-    // 2. Zone density cosine — tolerates style & proportion differences
+    // ── Zone density (needed by both gates and signal 2) ──────────────────
     final userDensity = _zoneDensity(userFine);
     final refDensity  = _zoneDensity(refFine);
+
+    // ── Gate 1: ink volume ────────────────────────────────────────────────
+    final userInk = userFine.where((p) => p).length;
+    final refInk  = refFine.where((p) => p).length;
+    if (refInk > 0 && userInk < refInk * _minInkRatio) return 0.0;
+
+    // ── Gate 2: spatial coverage ──────────────────────────────────────────
+    final userZones = userDensity.where((d) => d > _zoneOccupiedThreshold).length;
+    final refZones  = refDensity.where((d) => d > _zoneOccupiedThreshold).length;
+    if (refZones > 0 && userZones < refZones * _minZoneCoverage) return 0.0;
+
+    // ── Signal 1: Dilated Jaccard ─────────────────────────────────────────
+    final dilatedUser  = _dilate(userFine, _gridSize);
+    final dilatedRef   = _dilate(refFine,  _gridSize);
+    final dilatedScore = _jaccard(dilatedUser, dilatedRef);
+
+    // ── Signal 2: Zone density cosine ─────────────────────────────────────
     final cosineScore = _cosine(userDensity, refDensity);
 
-    // 3. Coarse Jaccard — overall shape silhouette match
+    // ── Signal 3: Coarse Jaccard ──────────────────────────────────────────
     final coarseScore = _jaccard(userCoarse, refCoarse);
 
     return _wDilated * dilatedScore

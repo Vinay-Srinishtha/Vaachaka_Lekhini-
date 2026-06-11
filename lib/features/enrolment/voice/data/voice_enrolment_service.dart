@@ -11,25 +11,21 @@ import '../../../settings/domain/settings_repository.dart';
 ///
 /// ## Continuous-chanting strategy
 ///
-/// Vosk's built-in silence detector only emits a final result when it hears
-/// a pause.  Rapid, continuous chanting produces no silence → no final → no
-/// count.  We work around this with **timed-window forced finalisation**:
+/// Vosk only emits a final result when it detects silence. Rapid continuous
+/// chanting has no silence → no final → no count. We fix this with
+/// **timed-window forced finalisation**:
 ///
-/// 1. Raw PCM chunks from the mic are accumulated into a byte buffer.
-/// 2. Every [_windowMs] milliseconds a [Timer] fires, forces
-///    `recognizer.finalize()` on the accumulated audio, and resets the
-///    decoder for the next window.
-/// 3. The final-result text is scanned for **occurrences** of the mantra
-///    word(s), so two rapid chants that land in the same window are both
-///    counted.
+/// Every [_windowMs] a [Timer] calls `finalize()` on the recognizer. Vosk's
+/// `getFinalResult()` both returns whatever it has accumulated AND resets its
+/// internal state for the next window — so we never need to recreate the
+/// recognizer (which caused a race condition in a prior version).
 ///
-/// The window is 900 ms — comfortably long enough for one slow chant,
-/// and short enough that a fast chanter loses at most one count to a window
-/// boundary.
+/// A `_finalizing` boolean serialises the two async paths (stream listener
+/// and timer) so they never call into the recognizer concurrently.
 ///
-/// Vosk's normal silence-based final results are also counted (they fire when
-/// there IS a natural pause and the window hasn't expired yet), so deliberate
-/// slow chanting works just as well.
+/// Occurrence counting: the final-result text is scanned for how many times
+/// the mantra phrase appears, so two rapid chants that land in the same
+/// window are both counted.
 class VoiceEnrolmentService {
   VoiceEnrolmentService({
     VoskModelLoader? modelLoader,
@@ -49,10 +45,14 @@ class VoiceEnrolmentService {
 
   int _matches = 0;
   bool _running = false;
+  /// True while the timer is flushing — chunk callbacks skip to avoid
+  /// calling into the recognizer concurrently.
+  bool _finalizing = false;
   int _target = 11;
   Mantra? _mantra;
 
-  // How often (ms) we force a finalisation regardless of silence.
+  /// How often (ms) we force a finalisation regardless of silence.
+  /// 900 ms fits one average-speed chant comfortably.
   static const int _windowMs = 900;
 
   Stream<VoiceTrainingEvent> get events => _events.stream;
@@ -73,6 +73,7 @@ class VoiceEnrolmentService {
   }) async {
     if (_running) return;
     _running = true;
+    _finalizing = false;
     _matches = 0;
     _target = target;
     _mantra = mantra;
@@ -82,14 +83,14 @@ class VoiceEnrolmentService {
 
     final stream = await _audio.start(
       minAmplitude: sensitivity.minAmplitudeThreshold,
-      // 250 ms holdover: brief inter-chant dips are not silenced immediately,
-      // preventing artificial gaps that confuse the decoder.
+      // 250 ms holdover: brief amplitude dips between rapid chants are not
+      // immediately silenced, so the decoder sees natural speech transitions.
       holdoverMs: 250,
     );
 
     // ── Timed-window timer ─────────────────────────────────────────────────
-    // Fires every [_windowMs] ms.  Forces a final result from whatever audio
-    // Vosk has accumulated so far, then resets the decoder for the next window.
+    // Fires every _windowMs. Forces a final result from accumulated audio
+    // then lets Vosk reset itself — no recognizer recreation needed.
     _windowTimer = Timer.periodic(
       const Duration(milliseconds: _windowMs),
       (_) => _forceFinalize(),
@@ -98,46 +99,51 @@ class VoiceEnrolmentService {
     // ── PCM stream → Vosk ──────────────────────────────────────────────────
     _sub = stream.listen(
       (chunk) async {
-        if (!_running) return;
-        final r = await _recognizer!.acceptChunk(chunk);
+        // Skip chunk processing while the timer is flushing to avoid
+        // calling acceptChunk and finalize/getFinalResult concurrently.
+        if (!_running || _finalizing) return;
+
+        final r = await _recognizer?.acceptChunk(chunk);
         if (r == null) return;
 
-        // Vosk fired a natural silence-based final result *before* the window
-        // timer.  Count it immediately (the timer will reset the decoder next).
         if (r.isFinal && r.text.trim().isNotEmpty) {
-          await _handleText(r.text, source: 'natural');
+          // Natural silence-based final — count it immediately.
+          await _handleText(r.text);
         } else if (!r.isFinal && r.text.isNotEmpty) {
           _events.add(VoiceTrainingEvent.partial(_matches, r.text));
         }
       },
-      onError: (Object e) => _events.add(VoiceTrainingEvent.error(_matches, e)),
+      onError: (Object e) =>
+          _events.add(VoiceTrainingEvent.error(_matches, e)),
     );
   }
 
-  /// Forced finalisation: call `getFinalResult`, count occurrences, reset.
+  /// Forced finalisation: flush accumulated audio, count, let Vosk reset.
+  ///
+  /// Vosk's `getFinalResult()` (called inside `finalize()`) both returns
+  /// the best result AND resets the internal decoder state — ready to
+  /// accept audio for the next utterance without any recognizer recreation.
   Future<void> _forceFinalize() async {
-    if (!_running) return;
-    final r = await _recognizer!.finalize();
-    if (r != null && r.text.trim().isNotEmpty) {
-      await _handleText(r.text, source: 'timed');
-    }
-    // Reset the decoder for the next window by re-applying the grammar.
-    // This clears Vosk's internal acoustic state so rapid chants in the next
-    // window are decoded fresh rather than blended with residual state.
-    final mantra = _mantra;
-    if (_running && mantra != null) {
-      await _recognizer!.setGrammar([mantra.name.devanagari]);
+    if (!_running || _finalizing) return;
+    _finalizing = true;
+    try {
+      final r = await _recognizer?.finalize();
+      if (r != null && r.text.trim().isNotEmpty) {
+        await _handleText(r.text);
+      }
+      // Vosk state is now reset — no setGrammar / recreate needed.
+    } finally {
+      _finalizing = false;
     }
   }
 
   /// Count how many times the mantra appears in [text] and emit events.
-  Future<void> _handleText(String text, {required String source}) async {
+  Future<void> _handleText(String text) async {
     final mantra = _mantra;
     if (mantra == null) return;
 
     final count = _countOccurrences(text, mantra);
     if (count == 0) {
-      // Recognised something but it wasn't the mantra.
       _events.add(VoiceTrainingEvent.miss(_matches, text));
       return;
     }
@@ -153,12 +159,8 @@ class VoiceEnrolmentService {
   }
 
   /// Count how many times [mantra]'s Devanagari form appears in [text].
-  ///
-  /// Handles both:
-  ///   - Single-word mantras: exact word boundary match
-  ///   - Multi-word mantras:  search for the full phrase, then slide forward
   int _countOccurrences(String text, Mantra mantra) {
-    final needle = mantra.name.devanagari.trim().toLowerCase();
+    final needle   = mantra.name.devanagari.trim().toLowerCase();
     final haystack = text.trim().toLowerCase();
     if (needle.isEmpty || haystack.isEmpty) return 0;
 
@@ -181,8 +183,11 @@ class VoiceEnrolmentService {
     await _sub?.cancel();
     _sub = null;
     await _audio.stop();
-    final r = _recognizer;
-    if (r != null) await r.finalize();
+    // Flush any final audio left in the buffer.
+    final r = await _recognizer?.finalize();
+    if (r != null && r.text.trim().isNotEmpty) {
+      await _handleText(r.text);
+    }
     _events.add(VoiceTrainingEvent.done(_matches));
   }
 

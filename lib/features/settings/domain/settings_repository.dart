@@ -14,6 +14,15 @@ enum MicSensitivity {
         MicSensitivity.high => 'High',
       };
 
+  /// Minimum PCM amplitude (0–32767) a chunk must exceed to be passed to
+  /// the ASR engine.  Low = lenient (picks up quiet voices / distant mic),
+  /// High = strict (ignores background noise, requires a loud clear chant).
+  double get minAmplitudeThreshold => switch (this) {
+        MicSensitivity.low => 300.0,    // ~−38 dBFS — very quiet voices
+        MicSensitivity.medium => 800.0, // ~−32 dBFS — normal speaking
+        MicSensitivity.high => 2000.0,  // ~−24 dBFS — loud/clear chant
+      };
+
   static MicSensitivity fromName(String? name) =>
       MicSensitivity.values.firstWhere((m) => m.name == name, orElse: () => MicSensitivity.medium);
 }

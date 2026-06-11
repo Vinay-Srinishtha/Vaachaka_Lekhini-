@@ -5,6 +5,7 @@ import '../../../../core/asr/vosk_model_loader.dart';
 import '../../../../core/asr/vosk_recognizer.dart';
 import '../../../../core/audio/audio_capture.dart';
 import '../../../mantras/domain/mantra.dart';
+import '../../../settings/domain/settings_repository.dart';
 
 /// Drives a voice-enrolment session: hooks the mic stream to Vosk,
 /// counts confirmed matches of a chosen mantra, and emits progress.
@@ -37,14 +38,24 @@ class VoiceEnrolmentService {
 
   /// Begin a training session. Emits [VoiceTrainingEvent]s on [events].
   /// Automatically stops itself once [target] matches are observed.
-  Future<void> start(Mantra mantra, {int target = 11}) async {
+  ///
+  /// [sensitivity] controls the amplitude gate — quiet chunks below the
+  /// threshold are silenced before being sent to the ASR engine, preventing
+  /// background noise from triggering false matches.
+  Future<void> start(
+    Mantra mantra, {
+    int target = 11,
+    MicSensitivity sensitivity = MicSensitivity.medium,
+  }) async {
     if (_running) return;
     _running = true;
     _matches = 0;
     await warmUp();
     await _recognizer!.setGrammar([mantra.name.devanagari]);
 
-    final stream = await _audio.start();
+    final stream = await _audio.start(
+      minAmplitude: sensitivity.minAmplitudeThreshold,
+    );
     _sub = stream.listen((chunk) async {
       if (!_running) return;
       final r = await _recognizer!.acceptChunk(chunk);

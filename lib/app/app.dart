@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/theme/theme.dart';
 import '../features/settings/domain/settings_repository.dart';
+import '../l10n/app_localizations.dart';
 import 'providers.dart';
 import 'router.dart';
 
@@ -25,14 +26,37 @@ class KvlApp extends ConsumerWidget {
     ref.watch(mantraRepositoryProvider);
     ref.watch(remoteConfigProvider);
 
+    // CRITICAL: SyncEngine is a lazy provider — nothing else watches it, so
+    // without this line the outbox never drains and nothing reaches Prisma.
+    ref.watch(syncEngineProvider);
+
+    // Reschedule on every cold start (clears the previously scheduled alarm
+    // which Android drops on reboot) and whenever settings change.
+    ref.listen(settingsProvider, (prev, next) {
+      final s = next.value;
+      if (s == null) return;
+      final p = prev?.value;
+      // Always reschedule on first emission (prev == null = cold start).
+      // After that, only reschedule when time or sound actually changed.
+      if (p != null &&
+          p.reminderTime == s.reminderTime &&
+          p.notificationSound == s.notificationSound) {
+        return;
+      }
+      ref
+          .read(notificationSchedulerProvider)
+          .reschedule(s.reminderTime, sound: s.notificationSound);
+    });
+
     return MaterialApp.router(
       title: 'Vaachaka Lekhini',
       debugShowCheckedModeBanner: false,
       theme: buildKvlLightTheme(),
-      themeMode: settings.themeMode,
+      themeMode: ThemeMode.light,
       routerConfig: router,
       locale: Locale(settings.languageCode),
       localizationsDelegates: const [
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,

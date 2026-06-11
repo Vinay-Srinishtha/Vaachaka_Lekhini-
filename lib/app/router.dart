@@ -338,10 +338,12 @@ class _ShellPage extends ConsumerWidget {
             ? null
             : KvlTopBar(
                 title: _buildTitles(context)[shell.currentIndex],
-                showBack: shell.currentIndex == 1,
+                showBack: shell.currentIndex == 1 || isCommunity,
                 onBack: shell.currentIndex == 1
                     ? () => context.popOrGo(KvlRoute.home)
-                    : null,
+                    : isCommunity
+                        ? () => shell.goBranch(0)
+                        : null,
                 topGapColor: isCommunity || isStore ? Colors.black : null,
                 leading: isStore
                     ? _RewardHistoryChip(

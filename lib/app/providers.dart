@@ -5,9 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/api/api_client.dart';
 import '../core/asr/vosk_model_loader.dart';
+import '../core/notifications/notification_scheduler.dart';
 import '../core/auth/auth_service.dart';
 import '../core/auth/auth_storage.dart';
-import '../core/auth/auth_tokens.dart';
 import '../core/remote_config/remote_config.dart';
 import '../core/remote_config/remote_config_keys.dart';
 import '../core/remote_config/remote_config_repository.dart';
@@ -22,12 +22,9 @@ import '../features/auth/domain/session.dart';
 import '../features/enrolment/handwriting/data/handwriting_repository_local.dart';
 import '../features/enrolment/handwriting/domain/handwriting_repository.dart';
 import '../features/community/data/invite_service.dart';
-import '../features/community/data/leaderboard_repository_local.dart';
 import '../features/community/domain/friend.dart';
-import '../features/community/domain/leaderboard_repository.dart';
 import '../features/enrolment/voice/data/voice_enrolment_repository_local.dart';
 import '../features/enrolment/voice/domain/voice_enrolment_repository.dart';
-import '../features/mantras/data/mantra_repository_local.dart';
 import '../features/mantras/data/mantra_repository_remote.dart';
 import '../features/mantras/domain/mantra.dart';
 import '../features/mantras/domain/mantra_repository.dart';
@@ -89,17 +86,10 @@ final authServiceProvider = Provider<AuthService>((ref) {
   return service;
 });
 
-/// Live signed-in account. null = signed out.
-final authAccountProvider = StreamProvider<AuthAccount?>((ref) async* {
-  final service = ref.watch(authServiceProvider);
-  yield service.currentAccount;
-  yield* service.accountStream;
-});
 
 /// Outbox for pending mutations awaiting upload. Backed by Hive.
 final syncOutboxProvider = Provider<SyncOutbox>((ref) => SyncOutbox(outboxBox()));
 
-/// Engine that drains the outbox + pulls /api/v1/me at the right moments.
 final syncEngineProvider = Provider<SyncEngine>((ref) {
   final engine = SyncEngine(
     api: ref.watch(apiClientProvider),
@@ -110,15 +100,10 @@ final syncEngineProvider = Provider<SyncEngine>((ref) {
   return engine;
 });
 
-/// Latest /api/v1/me snapshot. Updates after each successful pull.
-final accountSnapshotProvider = StreamProvider<Map<String, Object?>>((ref) {
-  final engine = ref.watch(syncEngineProvider);
-  return engine.snapshots;
-});
 
 /// Mantra catalog — backed by the admin API with Hive cache fallback.
 /// Reads from `MantraRepositoryRemote.readCache(cacheBox())` at bootstrap
-/// in `main.dart`; if the cache is empty we fall back to `kMantraSeed`.
+/// in `main.dart`; shows empty list until the API responds.
 final mantraRepositoryProvider = Provider<MantraRepository>((ref) {
   final bootstrap = MantraRepositoryRemote.readCache(cacheBox());
   return MantraRepositoryRemote(
@@ -128,8 +113,6 @@ final mantraRepositoryProvider = Provider<MantraRepository>((ref) {
   );
 });
 
-/// Force-local override — useful in tests / for offline-only builds.
-final mantraRepositoryLocalProvider = Provider<MantraRepository>((_) => MantraRepositoryLocal());
 
 final mantraCatalogProvider = Provider<List<Mantra>>(
   (ref) => ref.watch(mantraRepositoryProvider).all(),
@@ -177,8 +160,6 @@ final handwritingRepositoryProvider = Provider<HandwritingRepository>((ref) {
   return HandwritingRepositoryLocal(cacheBox());
 });
 
-final leaderboardRepositoryProvider =
-    Provider<LeaderboardRepository>((ref) => LeaderboardRepositoryLocal());
 
 final inviteServiceProvider = Provider<InviteService>((ref) => InviteService());
 
@@ -202,6 +183,10 @@ final rewardTotalProvider = StreamProvider<int>((ref) async* {
 
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
   return SettingsRepositoryLocal(settingsBox());
+});
+
+final notificationSchedulerProvider = Provider<NotificationScheduler>((ref) {
+  return NotificationScheduler();
 });
 
 final settingsProvider = StreamProvider<KvlSettings>((ref) {
@@ -289,10 +274,12 @@ final activeProfileProvider = StreamProvider<Profile?>((ref) async* {
 });
 
 /// Live store catalogue from /api/v1/store.
-final storeItemsProvider = FutureProvider<List<StoreItem>>((ref) async {
+/// autoDispose so each navigation to the Store tab re-fetches (also enables retry).
+final storeItemsProvider = FutureProvider.autoDispose<List<StoreItem>>((ref) async {
   final api = ref.watch(apiClientProvider);
-  final res = await api.dio.get<Map<String, dynamic>>('/api/v1/store');
-  final list = (res.data?['items'] as List<dynamic>?) ?? [];
+  final res = await api.dio.get<dynamic>('/api/v1/store');
+  final data = res.data;
+  final list = (data is Map ? data['items'] : null) as List<dynamic>? ?? [];
   return list
       .map((e) => StoreItem.fromJson(Map<String, dynamic>.from(e as Map)))
       .toList();
@@ -319,7 +306,8 @@ final globalStatsProvider =
 
 /// Real leaderboard from /api/v1/leaderboard (Bearer required).
 /// Returns [] when unauthenticated or on any network error — never throws.
-final leaderboardProvider = FutureProvider.autoDispose
+/// keepAlive: data is cached across tab switches so switching back is instant.
+final leaderboardProvider = FutureProvider
     .family<List<Friend>, LeaderboardSort>((ref, sort) async {
   try {
     final session = ref.watch(sessionProvider).value;

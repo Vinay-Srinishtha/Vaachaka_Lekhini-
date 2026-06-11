@@ -8,26 +8,31 @@ enum RewardKind {
       RewardKind.values.firstWhere((k) => k.name == name, orElse: () => RewardKind.earn);
 }
 
-/// One line in the user's reward ledger. Signed integers so totals are
-/// `sum(amount * (kind==earn ? +1 : -1))` — convenience helpers below.
+/// One line in the reward ledger — mirrors Prisma `RewardEvent` table.
+/// [memberId] was profileId in v2.
+/// [occurredAt] was createdAt in v2 (Prisma field name).
+/// [storeItemId] nullable — set when kind==spend for a store redemption.
 class RewardEvent extends Equatable {
   const RewardEvent({
     required this.id,
-    required this.profileId,
+    // CHANGED: profileId → memberId
+    required this.memberId,
     required this.kind,
     required this.amount,
     required this.source,
-    required this.createdAt,
+    // CHANGED: createdAt → occurredAt
+    required this.occurredAt,
+    // ADDED: nullable store item link (Prisma field)
+    this.storeItemId,
   });
 
   final String id;
-  final String profileId;
+  final String memberId;
   final RewardKind kind;
   final int amount;
-
-  /// Human-readable source: "Daily Mantra Completion", "Milestone: 10 Lakh", "Store: E-book", "Friend Referral", "Donation to Charity".
   final String source;
-  final DateTime createdAt;
+  final DateTime occurredAt;
+  final String? storeItemId;
 
   int get signedAmount => kind == RewardKind.earn ? amount : -amount;
 

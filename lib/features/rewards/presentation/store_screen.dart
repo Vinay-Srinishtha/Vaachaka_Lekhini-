@@ -6,6 +6,7 @@ import '../../../core/storage/repository.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/utils/indian_number_format.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../../l10n/l10n.dart';
 import '../domain/store_item.dart';
 
 class StoreScreen extends ConsumerStatefulWidget {
@@ -16,7 +17,6 @@ class StoreScreen extends ConsumerStatefulWidget {
 }
 
 class _StoreScreenState extends ConsumerState<StoreScreen> {
-  StoreCategory? _filter;
   String _query = '';
 
   Future<void> _redeem(StoreItem item) async {
@@ -25,7 +25,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     final result = await ref
         .read(rewardRepositoryProvider)
         .spend(
-          profileId: profile.id,
+          memberId: profile.id,
           amount: item.pricePoints,
           source: 'Store: ${item.title}',
         );
@@ -34,7 +34,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     switch (result) {
       case Ok():
         messenger.showSnackBar(
-          SnackBar(content: Text('Redeemed ${item.title}')),
+          SnackBar(content: Text(context.l10n.rewardedItemTitle(item.title))),
         );
       case Err(:final failure):
         messenger.showSnackBar(SnackBar(content: Text(failure.message)));
@@ -45,8 +45,9 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   Widget build(BuildContext context) {
     final pointsAsync = ref.watch(rewardTotalProvider);
     final points = pointsAsync.value ?? 0;
-    final items = kStoreSeed
-        .where((i) => _filter == null || i.category == _filter)
+    final storeAsync = ref.watch(storeItemsProvider);
+    final allItems = storeAsync.value ?? const <StoreItem>[];
+    final items = allItems
         .where(
           (i) =>
               _query.isEmpty ||
@@ -68,7 +69,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
         _PromoBanner(),
         const SizedBox(height: KvlSpacing.md),
         KvlInput(
-          hint: 'Search for rewards…',
+          hint: context.l10n.searchRewards,
           prefix: const Icon(
             Icons.search_rounded,
             size: 18,
@@ -76,51 +77,70 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
           ),
           onChanged: (v) => setState(() => _query = v),
         ),
-        const SizedBox(height: KvlSpacing.sm),
-        SizedBox(
-          height: 38,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              _SegmentChip(
-                label: 'All',
-                selected: _filter == null,
-                onTap: () => setState(() => _filter = null),
-              ),
-              for (final c in StoreCategory.values) ...[
-                const SizedBox(width: 8),
-                _SegmentChip(
-                  label: c.label,
-                  selected: _filter == c,
-                  onTap: () => setState(() => _filter = c),
-                ),
-              ],
-            ],
-          ),
-        ),
         const SizedBox(height: KvlSpacing.md),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 0.62,
-          children: [
-            for (final i in items)
-              _StoreCard(item: i, points: points, onRedeem: () => _redeem(i)),
-          ],
-        ),
-        if (items.isEmpty)
+        if (storeAsync.isLoading)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 48),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (storeAsync.hasError)
           Padding(
-            padding: const EdgeInsets.all(KvlSpacing.lg),
+            padding: const EdgeInsets.symmetric(vertical: 48),
             child: Center(
-              child: Text(
-                'No rewards match your search',
-                style: KvlText.muted(12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Could not load store items.',
+                    style: KvlText.muted(13),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  TextButton(
+                    onPressed: () => ref.invalidate(storeItemsProvider),
+                    child: const Text('Retry'),
+                  ),
+                ],
               ),
             ),
+          )
+        else if (items.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 48),
+            child: Center(
+              child: Text(
+                'No items in the store yet.',
+                style: KvlText.muted(13),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          )
+        else ...[
+          GridView.count(
+            shrinkWrap: true,
+            primary: false,
+            padding: EdgeInsets.zero,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 2,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 0.62,
+            children: [
+              for (final i in items)
+                _StoreCard(item: i, points: points, onRedeem: () => _redeem(i)),
+            ],
           ),
+          if (items.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(KvlSpacing.lg),
+              child: Center(
+                child: Text(
+                  context.l10n.noRewardsMatch,
+                  style: KvlText.muted(12),
+                ),
+              ),
+            ),
+        ],
       ],
     );
   }
@@ -147,14 +167,17 @@ class _PromoBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                KvlChip(label: 'SPECIAL OFFER', variant: KvlChipVariant.gold),
+                KvlChip(
+                  label: context.l10n.specialOffer,
+                  variant: KvlChipVariant.gold,
+                ),
                 const SizedBox(height: 4),
                 Text(
-                  'Guided Meditation Series',
+                  context.l10n.guidedMeditationSeries,
                   style: KvlText.title(15).copyWith(color: Colors.white),
                 ),
                 Text(
-                  'Unlock peace with our new 7-day series',
+                  context.l10n.unlockPeaceSeries,
                   style: KvlText.caption(
                     10.5,
                   ).copyWith(color: Colors.white.withValues(alpha: .92)),
@@ -168,42 +191,22 @@ class _PromoBanner extends StatelessWidget {
   }
 }
 
-/// Rounded-rectangle segment button — same style we use everywhere else
-/// for selectable filters / tabs. (KvlChip stays a pill for read-only tags.)
-class _SegmentChip extends StatelessWidget {
-  const _SegmentChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
+class _ItemPlaceholder extends StatelessWidget {
+  const _ItemPlaceholder({required this.item});
+  final StoreItem item;
+
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: KvlRadius.brMD,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected ? KvlColors.primary : KvlColors.surface,
-          border: Border.all(
-            color: selected ? KvlColors.primary : KvlColors.border,
-            width: 1,
-          ),
-          borderRadius: KvlRadius.brMD,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(item.background.first), Color(item.background.last)],
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: selected ? Colors.white : KvlColors.inkSoft,
-          ),
-        ),
+      ),
+      child: Center(
+        child: Text(item.glyph, style: const TextStyle(fontSize: 36)),
       ),
     );
   }
@@ -235,21 +238,13 @@ class _StoreCard extends StatelessWidget {
           children: [
             AspectRatio(
               aspectRatio: 4 / 3,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(item.background.first),
-                      Color(item.background.last),
-                    ],
-                  ),
-                ),
-                child: Center(
-                  child: Text(item.glyph, style: const TextStyle(fontSize: 36)),
-                ),
-              ),
+              child: item.imageUrl != null
+                  ? Image.network(
+                      item.imageUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, e, s) => _ItemPlaceholder(item: item),
+                    )
+                  : _ItemPlaceholder(item: item),
             ),
             Expanded(
               child: Padding(
@@ -273,7 +268,9 @@ class _StoreCard extends StatelessWidget {
                     ),
                     const Spacer(),
                     KvlButton(
-                      label: canAfford ? 'Redeem' : 'Not enough',
+                      label: canAfford
+                          ? context.l10n.redeemButton
+                          : context.l10n.notEnoughPoints,
                       variant: canAfford
                           ? KvlButtonVariant.primary
                           : KvlButtonVariant.secondary,

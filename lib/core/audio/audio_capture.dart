@@ -15,8 +15,13 @@ class AudioCapture {
 
   /// Peak absolute amplitude of a 16-bit PCM [chunk] (0–32767).
   static double peakAmplitude(Uint8List chunk) {
-    if (chunk.isEmpty) return 0;
-    final samples = chunk.buffer.asInt16List(chunk.offsetInBytes);
+    if (chunk.length < 2) return 0;
+    // The Android `record` plugin delivers Uint8List sub-views whose
+    // offsetInBytes may be odd (e.g. 5), which breaks asInt16List() because
+    // Int16List requires 2-byte alignment.  Copying to a fresh list always
+    // gives offsetInBytes == 0, fixing the RangeError crash.
+    final bytes = Uint8List.fromList(chunk);
+    final samples = bytes.buffer.asInt16List();
     double peak = 0;
     for (final s in samples) {
       final abs = s.abs().toDouble();

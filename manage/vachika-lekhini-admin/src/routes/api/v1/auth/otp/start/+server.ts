@@ -5,7 +5,10 @@ import { snakeJson } from '$lib/server/snake-case';
 import { otpService } from '$lib/server/otp';
 
 const schema = z.object({
-	mobile: z.string().regex(/^\d{10,12}$/, 'Mobile must be 10–12 digits'),
+	mobile: z
+		.string()
+		.regex(/^(\+91)?[6-9]\d{9}$/, 'Invalid Indian mobile number')
+		.transform((m) => m.replace(/^\+91/, '')),
 	country_code: z.string().optional()
 });
 

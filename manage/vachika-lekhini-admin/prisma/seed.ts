@@ -183,28 +183,7 @@ async function main() {
 	});
 	console.log(`  ✔ admin "${username}" ready (password: ${defaultPassword} — change immediately)`);
 
-	console.log('▶ Seeding demo account + members (for local testing only)…');
-	const demoAccount = await prisma.account.upsert({
-		where: { mobile: '9000000000' },
-		create: {
-			mobile: '9000000000',
-			countryCode: '+91',
-			passwordHash: await bcrypt.hash('demo1234', 10),
-			passwordSetAt: new Date(),
-			referralCode: 'KVL-DEMO'
-		},
-		update: {}
-	});
-	const existing = await prisma.member.count({ where: { accountId: demoAccount.id } });
-	if (existing === 0) {
-		await prisma.member.createMany({
-			data: [
-				{ accountId: demoAccount.id, displayName: 'Ravi', relation: 'self', isPrimary: true, language: 'te' },
-				{ accountId: demoAccount.id, displayName: 'Lakshmi', relation: 'spouse', language: 'te' }
-			]
-		});
-	}
-	console.log(`  ✔ demo account 9000000000 / demo1234 (referral: KVL-DEMO)`);
+	// No demo accounts — real users register via the Flutter app.
 }
 
 main()

@@ -4,6 +4,7 @@ import { snakeJson } from '$lib/server/snake-case';
 import { readJsonBody } from '$lib/server/json-input';
 import { requireAccount } from '$lib/server/user-auth';
 import { deviceUpsertSchema } from '$lib/server/sync';
+import { emitChange } from '$lib/server/live';
 
 /// POST /api/v1/devices  (Bearer) — register or update this device.
 /// Client supplies a stable per-install UUID. Used for FCM push routing.
@@ -31,5 +32,6 @@ export const POST: RequestHandler = async (event) => {
 		}
 	});
 
+	emitChange('device');
 	return snakeJson({ device });
 };

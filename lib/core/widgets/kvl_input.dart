@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../theme/colors.dart';
 import '../theme/spacing.dart';
@@ -18,6 +19,11 @@ class KvlInput extends StatelessWidget {
     this.obscureText = false,
     this.readOnly = false,
     this.maxLength,
+    this.autofocus = false,
+    this.focusNode,
+    this.inputFormatters,
+    this.textInputAction,
+    this.onSubmitted,
   });
 
   final String? label;
@@ -30,6 +36,11 @@ class KvlInput extends StatelessWidget {
   final bool obscureText;
   final bool readOnly;
   final int? maxLength;
+  final bool autofocus;
+  final FocusNode? focusNode;
+  final List<TextInputFormatter>? inputFormatters;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onSubmitted;
 
   @override
   Widget build(BuildContext context) {
@@ -42,11 +53,16 @@ class KvlInput extends StatelessWidget {
         ],
         TextField(
           controller: controller,
+          focusNode: focusNode,
+          autofocus: autofocus,
           onChanged: onChanged,
           keyboardType: keyboardType,
           obscureText: obscureText,
           readOnly: readOnly,
           maxLength: maxLength,
+          inputFormatters: inputFormatters,
+          textInputAction: textInputAction,
+          onSubmitted: onSubmitted,
           style: KvlText.ui(13),
           decoration: InputDecoration(
             hintText: hint,

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/providers.dart';
 import '../../../app/router.dart';
@@ -12,6 +16,7 @@ import '../../../core/widgets/widgets.dart';
 import '../domain/program.dart';
 import '../domain/session.dart';
 import '../../settings/domain/settings_repository.dart';
+import '../../../l10n/l10n.dart';
 
 class DailyProgressScreen extends ConsumerStatefulWidget {
   const DailyProgressScreen({super.key, required this.programId});
@@ -71,7 +76,7 @@ class _DailyProgressScreenState extends ConsumerState<DailyProgressScreen> {
                       .displayForLanguage(settings.languageCode) ??
                   '';
         final title = mantraName.isEmpty
-            ? 'Daily Progress'
+            ? context.l10n.dailyProgressTitle
             : '$mantraName Mantra';
 
         return Scaffold(
@@ -172,7 +177,7 @@ class _DailyProgressScreenState extends ConsumerState<DailyProgressScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  'Recitations on ${DateFormat.yMMMd().format(_selected)}',
+                                  context.l10n.recitationsOnDate(DateFormat.yMMMd().format(_selected)),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: KvlText.ui(
@@ -184,7 +189,7 @@ class _DailyProgressScreenState extends ConsumerState<DailyProgressScreen> {
                                   height: tight ? KvlSpacing.xs : KvlSpacing.sm,
                                 ),
                                 _Row(
-                                  label: 'Daily Target',
+                                  label: context.l10n.dailyTarget,
                                   value: s == null
                                       ? '—'
                                       : '${IndianNumberFormat.format(s.dailyTarget)} chants',
@@ -192,7 +197,7 @@ class _DailyProgressScreenState extends ConsumerState<DailyProgressScreen> {
                                 ),
                                 SizedBox(height: tight ? 2 : 4),
                                 _Row(
-                                  label: 'Actual Achieved',
+                                  label: context.l10n.actualAchieved,
                                   value: s == null
                                       ? '—'
                                       : '${IndianNumberFormat.format(s.actualAchieved)} chants',
@@ -203,10 +208,10 @@ class _DailyProgressScreenState extends ConsumerState<DailyProgressScreen> {
                                 ),
                                 SizedBox(height: tight ? 2 : 4),
                                 _Row(
-                                  label: 'Handwriting Used',
+                                  label: context.l10n.handwritingUsed,
                                   value: s == null
                                       ? '—'
-                                      : (s.usedHandwriting ? 'Yes' : 'No'),
+                                      : (s.usedHandwriting ? context.l10n.handwritingUsedYes : context.l10n.handwritingUsedNo),
                                   highlight: s?.usedHandwriting == true
                                       ? KvlColors.success
                                       : null,
@@ -219,8 +224,21 @@ class _DailyProgressScreenState extends ConsumerState<DailyProgressScreen> {
                       ),
                       const Spacer(),
                       KvlButton(
-                        label: 'Dedicate this program',
-                        onPressed: () {},
+                        label: context.l10n.startPractice,
+                        variant: KvlButtonVariant.teal,
+                        icon: Icons.play_arrow_rounded,
+                        onPressed: () => context.go(
+                          '${KvlRoute.practice}/${widget.programId}',
+                        ),
+                      ),
+                      SizedBox(height: tight ? KvlSpacing.sm : KvlSpacing.md),
+                      KvlButton(
+                        label: context.l10n.dedicateProgram,
+                        onPressed: () => _DedicateSheet.show(
+                          context,
+                          programId: widget.programId,
+                          mantraName: mantraName,
+                        ),
                       ),
                       SizedBox(height: tight ? KvlSpacing.sm : KvlSpacing.md),
                       Row(
@@ -228,7 +246,7 @@ class _DailyProgressScreenState extends ConsumerState<DailyProgressScreen> {
                           Expanded(
                             child: KvlButton(
                               variant: KvlButtonVariant.secondary,
-                              label: 'Edit Goal',
+                              label: context.l10n.editGoal,
                               onPressed: () {},
                             ),
                           ),
@@ -236,8 +254,14 @@ class _DailyProgressScreenState extends ConsumerState<DailyProgressScreen> {
                           Expanded(
                             child: KvlButton(
                               variant: KvlButtonVariant.ghost,
-                              label: 'Share Program',
-                              onPressed: () {},
+                              label: context.l10n.shareProgram,
+                              icon: Icons.share_rounded,
+                              onPressed: () => _ShareSheet.show(
+                                context,
+                                mantraName: mantraName,
+                                programId: widget.programId,
+                                progress: program?.totalProgress ?? 0,
+                              ),
                             ),
                           ),
                         ],
@@ -290,7 +314,7 @@ class _ProgressHeader extends StatelessWidget {
             ),
             const SizedBox(height: 3),
             Text(
-              'Daily Progress',
+              context.l10n.dailyProgressTitle,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: KvlText.caption(11).copyWith(color: KvlColors.muted),
@@ -554,6 +578,405 @@ class _Row extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ShareSheet {
+  static void show(
+    BuildContext context, {
+    required String mantraName,
+    required String programId,
+    required int progress,
+  }) {
+    final message =
+        'I am chanting the $mantraName mantra 🙏\n'
+        'I have completed ${IndianNumberFormat.format(progress)} chants so far.\n'
+        'Join me on Vachika Lekhini!';
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ShareSheetContent(message: message),
+    );
+  }
+}
+
+class _ShareSheetContent extends StatelessWidget {
+  const _ShareSheetContent({required this.message});
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: KvlColors.bg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: KvlColors.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text('Share via', style: KvlText.ui(16, FontWeight.w700)),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _ShareOption(
+                label: 'WhatsApp',
+                color: const Color(0xFF25D366),
+                icon: Icons.chat_rounded,
+                onTap: () async {
+                  Navigator.pop(context);
+                  final appUri = Uri(
+                    scheme: 'whatsapp',
+                    host: 'send',
+                    queryParameters: {'text': message},
+                  );
+                  if (await canLaunchUrl(appUri)) {
+                    await launchUrl(appUri, mode: LaunchMode.externalApplication);
+                  } else {
+                    // fallback: web
+                    final webUri = Uri.parse(
+                      'https://wa.me/?text=${Uri.encodeComponent(message)}',
+                    );
+                    await launchUrl(webUri, mode: LaunchMode.externalApplication);
+                  }
+                },
+              ),
+              _ShareOption(
+                label: 'Facebook',
+                color: const Color(0xFF1877F2),
+                icon: Icons.facebook_rounded,
+                onTap: () async {
+                  Navigator.pop(context);
+                  // Try Facebook app deep link first, fall back to Messenger share sheet
+                  final appUri = Uri.parse(
+                    'fb://share?quote=${Uri.encodeComponent(message)}',
+                  );
+                  if (await canLaunchUrl(appUri)) {
+                    await launchUrl(appUri, mode: LaunchMode.externalApplication);
+                  } else {
+                    // Facebook app doesn't support plain-text deep share;
+                    // use system share sheet pre-filtered to Facebook
+                    await SharePlus.instance.share(ShareParams(text: message));
+                  }
+                },
+              ),
+              _ShareOption(
+                label: 'Instagram',
+                color: const Color(0xFFE1306C),
+                icon: Icons.camera_alt_rounded,
+                onTap: () async {
+                  Navigator.pop(context);
+                  await SharePlus.instance.share(ShareParams(text: message));
+                },
+              ),
+              _ShareOption(
+                label: 'More',
+                color: KvlColors.inkSoft,
+                icon: Icons.more_horiz_rounded,
+                onTap: () async {
+                  await SharePlus.instance.share(ShareParams(text: message));
+                  if (context.mounted) Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+}
+
+class _ShareOption extends StatelessWidget {
+  const _ShareOption({
+    required this.label,
+    required this.color,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final Color color;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 58,
+            height: 58,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: .12),
+              shape: BoxShape.circle,
+              border: Border.all(color: color.withValues(alpha: .3), width: 1.5),
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, color: color, size: 28),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: KvlText.caption(11).copyWith(color: KvlColors.inkSoft),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dedicate Program bottom sheet
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _DedicateSheet extends StatefulWidget {
+  const _DedicateSheet({
+    required this.programId,
+    required this.mantraName,
+  });
+
+  final String programId;
+  final String mantraName;
+
+  static Future<void> show(
+    BuildContext context, {
+    required String programId,
+    required String mantraName,
+  }) {
+    return showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _DedicateSheet(
+        programId: programId,
+        mantraName: mantraName,
+      ),
+    );
+  }
+
+  @override
+  State<_DedicateSheet> createState() => _DedicateSheetState();
+}
+
+class _DedicateSheetState extends State<_DedicateSheet> {
+  static String _prefKey(String programId) => 'dedication_$programId';
+
+  final _nameCtrl = TextEditingController();
+  final _noteCtrl = TextEditingController();
+  bool _loading = true;
+  bool _saved = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_prefKey(widget.programId));
+    if (raw != null && raw.contains('||')) {
+      final parts = raw.split('||');
+      _nameCtrl.text = parts[0];
+      _noteCtrl.text = parts.length > 1 ? parts[1] : '';
+      _saved = true;
+    }
+    if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _save() async {
+    final name = _nameCtrl.text.trim();
+    if (name.isEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _prefKey(widget.programId),
+      '$name||${_noteCtrl.text.trim()}',
+    );
+    if (!mounted) return;
+    setState(() => _saved = true);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Dedicated to $name 🙏'),
+        duration: const Duration(milliseconds: 1800),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xFF15803D),
+      ),
+    );
+    Navigator.of(context).pop();
+  }
+
+  Future<void> _clear() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_prefKey(widget.programId));
+    _nameCtrl.clear();
+    _noteCtrl.clear();
+    if (mounted) setState(() => _saved = false);
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _noteCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    return Container(
+      decoration: const BoxDecoration(
+        color: KvlColors.bg,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.fromLTRB(
+        KvlSpacing.lg, KvlSpacing.lg, KvlSpacing.lg,
+        KvlSpacing.lg + bottom,
+      ),
+      child: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Handle bar
+                Center(
+                  child: Container(
+                    width: 40, height: 4,
+                    margin: const EdgeInsets.only(bottom: KvlSpacing.md),
+                    decoration: BoxDecoration(
+                      color: KvlColors.muted.withValues(alpha: .35),
+                      borderRadius: KvlRadius.brPill,
+                    ),
+                  ),
+                ),
+
+                // Header
+                Row(
+                  children: [
+                    const Text('🙏', style: TextStyle(fontSize: 24)),
+                    const SizedBox(width: KvlSpacing.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Dedicate this Program',
+                            style: KvlText.ui(17, FontWeight.w700),
+                          ),
+                          Text(
+                            widget.mantraName.isEmpty
+                                ? 'Offer your chanting practice to someone special'
+                                : 'Offer your ${widget.mantraName} practice to someone special',
+                            style: KvlText.caption(12)
+                                .copyWith(color: KvlColors.muted),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: KvlSpacing.lg),
+
+                // Dedicated to name
+                Text(
+                  'Dedicated to',
+                  style: KvlText.ui(13, FontWeight.w600),
+                ),
+                const SizedBox(height: KvlSpacing.xs),
+                TextField(
+                  controller: _nameCtrl,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: InputDecoration(
+                    hintText: 'e.g. My Mother, Sri Guru, Self',
+                    hintStyle: KvlText.caption(13)
+                        .copyWith(color: KvlColors.muted),
+                    filled: true,
+                    fillColor: KvlColors.surface,
+                    border: OutlineInputBorder(
+                      borderRadius: KvlRadius.brMD,
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: KvlSpacing.md,
+                      vertical: KvlSpacing.sm,
+                    ),
+                  ),
+                  style: KvlText.ui(14, FontWeight.w500),
+                ),
+                const SizedBox(height: KvlSpacing.md),
+
+                // Intention / note
+                Text(
+                  'Intention (optional)',
+                  style: KvlText.ui(13, FontWeight.w600),
+                ),
+                const SizedBox(height: KvlSpacing.xs),
+                TextField(
+                  controller: _noteCtrl,
+                  maxLines: 3,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: InputDecoration(
+                    hintText: 'e.g. For her health and happiness…',
+                    hintStyle: KvlText.caption(13)
+                        .copyWith(color: KvlColors.muted),
+                    filled: true,
+                    fillColor: KvlColors.surface,
+                    border: OutlineInputBorder(
+                      borderRadius: KvlRadius.brMD,
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: KvlSpacing.md,
+                      vertical: KvlSpacing.sm,
+                    ),
+                  ),
+                  style: KvlText.ui(13, FontWeight.w400),
+                ),
+
+                if (_saved) ...[
+                  const SizedBox(height: KvlSpacing.sm),
+                  InkWell(
+                    onTap: _clear,
+                    borderRadius: KvlRadius.brMD,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Text(
+                        'Remove dedication',
+                        textAlign: TextAlign.center,
+                        style: KvlText.caption(12).copyWith(
+                          color: KvlColors.danger,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: KvlSpacing.lg),
+                KvlButton(
+                  label: _saved ? 'Update Dedication' : 'Save Dedication',
+                  onPressed: _save,
+                ),
+              ],
+            ),
     );
   }
 }

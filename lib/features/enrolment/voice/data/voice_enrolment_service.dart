@@ -52,8 +52,19 @@ class VoiceEnrolmentService {
   Mantra? _mantra;
 
   /// How often (ms) we force a finalisation regardless of silence.
-  /// 900 ms fits one average-speed chant comfortably.
-  static const int _windowMs = 900;
+  ///
+  /// 1500 ms is the sweet spot across all chanting speeds:
+  /// • Slow / with gaps  → Vosk's own silence-detection fires first (this timer
+  ///   is just a safety net — it fires on an already-empty buffer, returns "").
+  /// • Medium (~1 s/chant) → timer catches it cleanly within one chant duration.
+  /// • Fast continuous   → two chants can land in one window; _countOccurrences
+  ///   counts both from the same result text.
+  /// • Staccato / jotted → holdover gate keeps inter-chant dips from looking
+  ///   like silence, so the full word accumulates before the window fires.
+  ///
+  /// Do NOT go below 1200 ms — shorter windows risk cutting mid-syllable for
+  /// slower speakers, producing partial-word results that score 0.
+  static const int _windowMs = 1500;
 
   Stream<VoiceTrainingEvent> get events => _events.stream;
 
@@ -83,9 +94,10 @@ class VoiceEnrolmentService {
 
     final stream = await _audio.start(
       minAmplitude: sensitivity.minAmplitudeThreshold,
-      // 250 ms holdover: brief amplitude dips between rapid chants are not
-      // immediately silenced, so the decoder sees natural speech transitions.
-      holdoverMs: 250,
+      // 400 ms holdover: covers brief inter-syllable and inter-chant dips for
+      // all chanting styles (slow, fast, staccato, jotted, continuous).
+      // The decoder sees a smooth audio stream without artificial silence gaps.
+      holdoverMs: 400,
     );
 
     // ── Timed-window timer ─────────────────────────────────────────────────

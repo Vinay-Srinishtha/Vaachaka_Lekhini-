@@ -15,6 +15,7 @@ import '../../mantras/domain/mantra.dart';
 import '../../programs/domain/program.dart';
 import '../../rewards/domain/reward_rules.dart';
 import '../../settings/domain/settings_repository.dart';
+import '../../../l10n/l10n.dart';
 
 class PracticeScreen extends ConsumerStatefulWidget {
   const PracticeScreen({super.key});
@@ -31,7 +32,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
     final dashboard = ref.watch(_practiceDashboardProvider(_selectedProgramId));
     final programs =
         (ref.watch(programsForActiveProfileProvider).value ?? const <Program>[])
-            .where((program) => program.status == ProgramStatus.active)
+            .where((program) => !program.isCompleted)
             .toList();
 
     return dashboard.when(
@@ -199,7 +200,7 @@ class _PracticeDashboardView extends ConsumerState<_PracticeDashboard> {
                           child: _MetricCard(
                             icon: Icons.people_alt_rounded,
                             iconColor: KvlColors.accent,
-                            label: 'Live users',
+                            label: 'Open sessions',
                             value: IndianNumberFormat.format(widget.liveUsers),
                             valueColor: Colors.red,
                             height: metricHeight,
@@ -226,7 +227,7 @@ class _PracticeDashboardView extends ConsumerState<_PracticeDashboard> {
                         Expanded(
                           child: _ActionTile(
                             icon: Icons.bar_chart_rounded,
-                            label: 'Session Stats',
+                            label: context.l10n.sessionStats,
                             height: actionHeight,
                             compact: compact,
                             onTap: () => context.push(
@@ -243,7 +244,7 @@ class _PracticeDashboardView extends ConsumerState<_PracticeDashboard> {
                           child: _SmallStatCard(
                             icon: Icons.calendar_today_outlined,
                             iconColor: KvlColors.accent,
-                            label: "Today's Count",
+                            label: context.l10n.todaysCount,
                             value:
                                 '${IndianNumberFormat.format(widget.state.todaysCount)} / ${IndianNumberFormat.format(program.dailyTarget)}',
                             height: statHeight,
@@ -255,10 +256,10 @@ class _PracticeDashboardView extends ConsumerState<_PracticeDashboard> {
                           child: _SmallStatCard(
                             icon: Icons.celebration_outlined,
                             iconColor: const Color(0xFFFFB572),
-                            label: 'To Milestone',
+                            label: context.l10n.toMilestone,
                             value: milestoneLeft == 0
-                                ? 'Completed'
-                                : '${IndianNumberFormat.format(milestoneLeft)} left',
+                                ? context.l10n.milestoneCompleted
+                                : context.l10n.milestoneLeft(milestoneLeft),
                             height: statHeight,
                             compact: compact,
                           ),
@@ -366,7 +367,7 @@ class _ProgramPickerPanel extends ConsumerWidget {
               ? Padding(
                   padding: const EdgeInsets.all(KvlSpacing.lg),
                   child: Text(
-                    'No active programs',
+                    context.l10n.noActivePrograms,
                     textAlign: TextAlign.center,
                     style: KvlText.body().copyWith(color: KvlColors.inkSoft),
                   ),
@@ -416,14 +417,14 @@ class _ProgramPickerPanel extends ConsumerWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Choose Mantra',
+                                    context.l10n.chooseMantra,
                                     style: KvlText.ui(
                                       16,
                                       FontWeight.w800,
                                     ).copyWith(color: KvlColors.primaryDeep),
                                   ),
                                   Text(
-                                    'Select an active program to update this dashboard.',
+                                    context.l10n.selectActiveProgramDescription,
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                     style: KvlText.caption(
@@ -799,9 +800,9 @@ class _TotalDaysNote extends StatelessWidget {
             FontWeight.w500,
           ).copyWith(color: KvlColors.inkSoft),
           children: [
-            const TextSpan(text: 'Practising for '),
+            TextSpan(text: context.l10n.practisingFor),
             TextSpan(
-              text: '$days ${days == 1 ? 'Day' : 'Days'}',
+              text: days == 1 ? context.l10n.practiceDay(days) : context.l10n.practiceDays(days),
               style: const TextStyle(
                 color: KvlColors.ink,
                 fontWeight: FontWeight.w700,
@@ -963,16 +964,16 @@ class _EmptyPractice extends StatelessWidget {
               size: 56,
             ),
             const SizedBox(height: KvlSpacing.sm),
-            Text('No active practice yet', style: KvlText.title(15)),
+            Text(context.l10n.noActivePractice, style: KvlText.title(15)),
             const SizedBox(height: 4),
             Text(
-              'Pick a mantra and set a target to begin chanting or writing.',
+              context.l10n.pickMantraAndTarget,
               textAlign: TextAlign.center,
               style: KvlText.caption(11.5),
             ),
             const SizedBox(height: KvlSpacing.md),
             KvlButton(
-              label: 'Choose a Mantra',
+              label: context.l10n.chooseAMantra,
               icon: Icons.play_arrow_rounded,
               expand: false,
               onPressed: () => context.go(KvlRoute.mantraSelection),

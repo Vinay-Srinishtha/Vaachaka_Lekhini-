@@ -7,25 +7,36 @@ import 'package:path_provider/path_provider.dart';
 
 part 'app_database.g.dart';
 
-/// One row per program (per profile · per mantra · with a target).
-/// `syncedAt` is null until the row has been pushed to the backend
-/// (added in Phase 9) — useful for delta sync.
+/// One row per program — mirrors Prisma `Program` table exactly.
+/// [memberId] = Prisma Member.id (was profileId in v2).
+/// [completedAt] replaces the old `status` text column — null = active/paused,
+/// non-null = completed (matches Prisma's nullable completedAt timestamp).
+/// [currentStreak] / [longestStreak] are maintained locally and synced;
+/// the backend is the authoritative source on pull.
+/// [dailyTarget] is a local computed field (targetWritings / targetDays) — not
+/// in Prisma but kept here so the UI doesn't recompute on every render.
 @DataClassName('ProgramRow')
 class Programs extends Table {
   TextColumn get id => text()();
-  TextColumn get profileId => text()();
+  // CHANGED: profileId → memberId (Prisma field name)
+  TextColumn get memberId => text()();
   TextColumn get mantraId => text()();
   IntColumn get targetWritings => integer()();
   IntColumn get targetDays => integer()();
   DateTimeColumn get startedAt => dateTime()();
+  DateTimeColumn get createdAt => dateTime()();
+  // Local helper — not in Prisma, kept for UI convenience
   IntColumn get dailyTarget => integer()();
-
-  /// 'active' | 'completed' | 'paused'
-  TextColumn get status => text().withDefault(const Constant('active'))();
-
+  // CHANGED: status text → completedAt nullable (matches Prisma)
+  DateTimeColumn get completedAt => dateTime().nullable()();
+  // ADDED: streak fields (Prisma tracks these on the Program row)
+  IntColumn get currentStreak => integer().withDefault(const Constant(0))();
+  IntColumn get longestStreak => integer().withDefault(const Constant(0))();
+  DateTimeColumn get lastActiveDate => dateTime().nullable()();
+  // totalChants kept locally so voice vs writing is distinguishable in the UI;
+  // only totalWritings (= chants + writings) is sent to Prisma.
   IntColumn get totalChants => integer().withDefault(const Constant(0))();
   IntColumn get totalWritings => integer().withDefault(const Constant(0))();
-
   DateTimeColumn get updatedAt => dateTime()();
   DateTimeColumn get syncedAt => dateTime().nullable()();
 
@@ -33,20 +44,26 @@ class Programs extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
-/// One row per practice session. Sessions accumulate counts during their
-/// lifetime; on Finish, [endedAt] is set and totals are rolled up into [Programs].
+/// One row per practice session — mirrors Prisma `Session` table.
+/// [countAdded] was `count` in v2 (Prisma calls it countAdded).
+/// [memberId] added so we can post to Prisma without a join.
+/// [durationSec] added (Prisma tracks session length).
+/// [usedHandwriting] removed — modality == 'handwriting' covers it.
 @DataClassName('SessionRow')
 class Sessions extends Table {
   TextColumn get id => text()();
   TextColumn get programId => text().customConstraint('NOT NULL REFERENCES programs(id) ON DELETE CASCADE')();
+  // ADDED: memberId (Prisma Session has memberId directly)
+  TextColumn get memberId => text()();
   DateTimeColumn get startedAt => dateTime()();
+  DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get endedAt => dateTime().nullable()();
-  IntColumn get count => integer().withDefault(const Constant(0))();
-
+  // CHANGED: count → countAdded (Prisma field name)
+  IntColumn get countAdded => integer().withDefault(const Constant(0))();
+  // ADDED: session length in seconds (Prisma field)
+  IntColumn get durationSec => integer().withDefault(const Constant(0))();
   /// 'voice' | 'manual' | 'handwriting'
   TextColumn get modality => text()();
-  BoolColumn get usedHandwriting => boolean().withDefault(const Constant(false))();
-
   DateTimeColumn get updatedAt => dateTime()();
   DateTimeColumn get syncedAt => dateTime().nullable()();
 
@@ -54,19 +71,23 @@ class Sessions extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
-/// One line in the user's reward ledger. Earn rows store positive amounts;
-/// spend rows store positive amounts with kind='spend' — the convention
-/// lives in `RewardEvent.signedAmount`.
+/// One line in the reward ledger — mirrors Prisma `RewardEvent` table.
+/// [memberId] was profileId in v2.
+/// [occurredAt] was createdAt in v2 (Prisma field name).
+/// [storeItemId] added (nullable FK to StoreItem in Prisma).
 @DataClassName('RewardEventRow')
 class RewardEvents extends Table {
   TextColumn get id => text()();
-  TextColumn get profileId => text()();
-
+  // CHANGED: profileId → memberId (Prisma field name)
+  TextColumn get memberId => text()();
+  // ADDED: nullable link to the store item that was redeemed
+  TextColumn get storeItemId => text().nullable()();
   /// 'earn' | 'spend'
   TextColumn get kind => text()();
   IntColumn get amount => integer()();
   TextColumn get source => text()();
-  DateTimeColumn get createdAt => dateTime()();
+  // CHANGED: createdAt → occurredAt (Prisma field name)
+  DateTimeColumn get occurredAt => dateTime()();
   DateTimeColumn get syncedAt => dateTime().nullable()();
 
   @override
@@ -81,14 +102,21 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.inMemory() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) async => m.createAll(),
         onUpgrade: (m, from, to) async {
-          if (from < 2) {
-            await m.createTable(rewardEvents);
+          // v2→v3: column renames + new columns across all 3 tables.
+          // SQLite cannot rename columns, so we drop and recreate.
+          // Safe at this dev stage — the sync engine will re-pull data from
+          // the backend after the user signs in.
+          if (from < 3) {
+            await m.drop(sessions);
+            await m.drop(rewardEvents);
+            await m.drop(programs);
+            await m.createAll();
           }
         },
         beforeOpen: (details) async {

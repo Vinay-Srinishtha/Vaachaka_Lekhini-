@@ -8,6 +8,7 @@ import '../../../core/i18n/language_options.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../settings/domain/settings_repository.dart';
+import '../../../l10n/l10n.dart';
 import '../domain/mantra.dart';
 
 class MantraDetailsScreen extends ConsumerWidget {
@@ -19,8 +20,8 @@ class MantraDetailsScreen extends ConsumerWidget {
     final mantra = ref.watch(mantraByIdProvider(mantraId));
     if (mantra == null) {
       return KvlScaffold(
-        title: 'Not found',
-        body: Center(child: Text('Mantra not found', style: KvlText.body())),
+        title: context.l10n.mantraNotFoundTitle,
+        body: Center(child: Text(context.l10n.mantraNotFound, style: KvlText.body())),
       );
     }
     final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
@@ -51,7 +52,7 @@ class MantraDetailsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: KvlSpacing.md),
           KvlButton(
-            label: 'Start Practice with $name Mantra',
+            label: context.l10n.startPracticeWithMantra(name),
             onPressed: () =>
                 context.push('${KvlRoute.voiceTraining}/$mantraId'),
           ),
@@ -146,7 +147,7 @@ class _PronunciationCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Pronunciation Guide',
+                  context.l10n.pronunciationGuide,
                   style: KvlText.ui(11.5, FontWeight.w600),
                 ),
                 Text('$name Mantra', style: KvlText.muted(10.5)),

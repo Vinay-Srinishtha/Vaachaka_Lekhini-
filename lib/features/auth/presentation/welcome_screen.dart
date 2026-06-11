@@ -7,6 +7,7 @@ import '../../../app/router.dart';
 import '../../../core/i18n/language_options.dart';
 import '../../../core/theme/theme.dart';
 import '../../settings/domain/settings_repository.dart';
+import '../../../l10n/l10n.dart';
 
 class WelcomeScreen extends ConsumerWidget {
   const WelcomeScreen({super.key});
@@ -51,21 +52,21 @@ class WelcomeScreen extends ConsumerWidget {
                       _AppMark(size: veryCompact ? 84 : (compact ? 96 : 112)),
                       SizedBox(height: veryCompact ? 10 : 18),
                       _ScaleText(
-                        'Vaachaka Lekhini',
+                        context.l10n.appName,
                         style: KvlText.mantraDevanagari(
                           veryCompact ? 32 : 42,
                         ).copyWith(color: Colors.white, height: 1.05),
                       ),
                       const SizedBox(height: 8),
                       _ScaleText(
-                        'Your Personal Spiritual Practice Companion',
+                        context.l10n.appTagline,
                         style: KvlText.body(
                           veryCompact ? 14 : 17,
                         ).copyWith(color: Colors.white, height: 1.15),
                       ),
                       SizedBox(height: veryCompact ? 10 : 16),
                       _ScaleText(
-                        'Chant with Purpose | Track with Pride',
+                        context.l10n.appMottoChant,
                         style: KvlText.body(
                           veryCompact ? 13.5 : 16,
                         ).copyWith(color: Colors.white, height: 1.15),
@@ -127,7 +128,7 @@ class _LanguageSelector extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Set Language',
+          context.l10n.setLanguage,
           style: KvlText.body(compact ? 16 : 18).copyWith(color: KvlColors.ink),
         ),
         SizedBox(height: compact ? KvlSpacing.md : KvlSpacing.lg),
@@ -203,109 +204,26 @@ class _AppMark extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(size * .28),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFF9F9F9), Color(0xFFBFC1C4)],
-        ),
+        borderRadius: BorderRadius.circular(size * .22),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: .18),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
+            color: Colors.black.withValues(alpha: .22),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: const CustomPaint(painter: _AppMarkPainter()),
-    );
-  }
-}
-
-class _AppMarkPainter extends CustomPainter {
-  const _AppMarkPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final navy = Paint()
-      ..color = const Color(0xFF27205F)
-      ..strokeWidth = 4
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    final orange = Paint()
-      ..color = KvlColors.primary
-      ..strokeWidth = 4
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    final face = Path()
-      ..moveTo(size.width * .30, size.height * .30)
-      ..cubicTo(
-        size.width * .30,
-        size.height * .45,
-        size.width * .48,
-        size.height * .48,
-        size.width * .38,
-        size.height * .58,
-      )
-      ..cubicTo(
-        size.width * .31,
-        size.height * .65,
-        size.width * .21,
-        size.height * .64,
-        size.width * .14,
-        size.height * .57,
-      );
-    canvas.drawPath(face, navy);
-    canvas.drawCircle(
-      Offset(size.width * .31, size.height * .27),
-      2.3,
-      Paint()..color = KvlColors.primary,
-    );
-
-    for (final x in [.45, .52, .59]) {
-      canvas.drawLine(
-        Offset(size.width * x, size.height * .50),
-        Offset(size.width * x, size.height * (.62 - (x - .45))),
-        orange,
-      );
-    }
-
-    final slate = RRect.fromRectAndRadius(
-      Rect.fromLTWH(
-        size.width * .66,
-        size.height * .39,
-        size.width * .22,
-        size.height * .35,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(size * .22),
+        child: Image.asset(
+          'assets/app_icon.png',
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+        ),
       ),
-      const Radius.circular(5),
     );
-    canvas.drawRRect(slate, navy);
-    final pen = Path()
-      ..moveTo(size.width * .74, size.height * .62)
-      ..lineTo(size.width * .87, size.height * .76)
-      ..lineTo(size.width * .76, size.height * .70)
-      ..close();
-    canvas.drawPath(pen, navy);
-
-    final textPaint = Paint()
-      ..color = KvlColors.primary
-      ..strokeWidth = 1.8
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-    for (var i = 0; i < 4; i++) {
-      final y = size.height * (.45 + i * .055);
-      canvas.drawLine(
-        Offset(size.width * .70, y),
-        Offset(size.width * .84, y),
-        textPaint,
-      );
-    }
   }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _AuthActions extends StatelessWidget {
@@ -324,8 +242,8 @@ class _AuthActions extends StatelessWidget {
       children: [
         Expanded(
           child: _AuthButton(
-            eyebrow: 'Existing user?',
-            label: 'Login',
+            eyebrow: context.l10n.existingUser,
+            label: context.l10n.loginButton,
             compact: compact,
             onTap: onLogin,
           ),
@@ -333,8 +251,8 @@ class _AuthActions extends StatelessWidget {
         SizedBox(width: compact ? KvlSpacing.md : KvlSpacing.xl),
         Expanded(
           child: _AuthButton(
-            eyebrow: 'New user?',
-            label: 'Register',
+            eyebrow: context.l10n.newUser,
+            label: context.l10n.registerButton,
             compact: compact,
             onTap: onRegister,
           ),
@@ -408,7 +326,7 @@ class _KnowAppButton extends StatelessWidget {
         border: Border.all(color: Colors.white, width: 1.4),
       ),
       child: Text(
-        'Know our App',
+        context.l10n.knowOurApp,
         textAlign: TextAlign.center,
         style: KvlText.body(16).copyWith(color: Colors.white, height: 1.1),
       ),

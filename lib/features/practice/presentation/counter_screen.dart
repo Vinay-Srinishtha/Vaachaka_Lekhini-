@@ -6,7 +6,6 @@ import '../../../app/providers.dart';
 import '../../../l10n/l10n.dart';
 import '../../../app/router.dart';
 import '../../../core/i18n/language_options.dart';
-import '../../../core/navigation/back_navigation.dart';
 import '../../../core/phone/phone_mode_service.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/utils/indian_number_format.dart';
@@ -575,7 +574,7 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
 
   @override
   void dispose() {
-    for (final c in _pool) c.dispose();
+    for (final c in _pool) { c.dispose(); }
     _textCtrl.dispose();
     super.dispose();
   }

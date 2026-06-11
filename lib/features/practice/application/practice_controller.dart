@@ -13,7 +13,6 @@ import '../../mantras/domain/mantra.dart';
 import '../../programs/domain/program.dart';
 import '../../programs/domain/program_repository.dart';
 import '../../programs/domain/session.dart';
-import '../../rewards/domain/reward_repository.dart';
 import '../../rewards/domain/reward_rules.dart';
 import '../../settings/domain/settings_repository.dart';
 
@@ -92,7 +91,6 @@ class PracticeController extends AsyncNotifier<PracticeState> {
   int _pendingFlush = 0;
 
   ProgramRepository get _programs => ref.read(programRepositoryProvider);
-  RewardRepository get _rewards => ref.read(rewardRepositoryProvider);
 
   @override
   Future<PracticeState> build() async {
@@ -310,24 +308,14 @@ class PracticeController extends AsyncNotifier<PracticeState> {
     final streak = await _programs.currentStreak(s.program.id);
     final today = await _programs.countForDay(s.program.id, DateTime.now());
 
-    // Award points: daily-target completion + any milestone crossed.
-    // CHANGED: profileId → memberId
+    // Haptic feedback for daily-target and milestone crossings.
+    // Points are awarded server-side in /api/v1/sessions after session
+    // ingestion — Flutter must never call earn() for rule-based bonuses.
     final after = program.totalChants + program.totalWritings;
-    if (today >= program.dailyTarget && (s.todaysTotal < program.dailyTarget)) {
-      await _rewards.earn(
-        memberId: program.memberId,
-        amount: RewardRules.dailyTarget,
-        source: 'Daily Mantra Completion',
-      );
+    if (today >= program.dailyTarget && s.todaysTotal < program.dailyTarget) {
       unawaited(HapticFeedback.mediumImpact());
     }
-    final milestone = RewardRules.milestoneCrossedLabel(before, after);
-    if (milestone != null) {
-      await _rewards.earn(
-        memberId: program.memberId,
-        amount: RewardRules.milestoneCross,
-        source: 'Milestone: $milestone',
-      );
+    if (RewardRules.milestoneCrossedLabel(before, after) != null) {
       unawaited(HapticFeedback.heavyImpact());
     }
 

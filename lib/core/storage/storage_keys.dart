@@ -12,6 +12,9 @@ abstract final class KvlKeys {
   static const currentSession = 'current';
   static const activeProfileId = 'activeProfileId';
 
+  // device (stored in session box — stable per install)
+  static const deviceId = 'deviceId';
+
   // settings box
   static const languageCode = 'languageCode';
   static const themeMode = 'themeMode';

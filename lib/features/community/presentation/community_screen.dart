@@ -51,11 +51,22 @@ class _Body extends StatelessWidget {
   Widget build(BuildContext context) {
     final topInset = MediaQuery.viewPaddingOf(context).top.clamp(36.0, 48.0);
 
-    // Loading state
+    // Loading state — only show spinner on true first load (no cached data yet).
     if (loading && list.isEmpty) {
       return Padding(
-        padding: EdgeInsets.only(top: topInset + 84),
-        child: const Center(child: CircularProgressIndicator()),
+        padding: EdgeInsets.fromLTRB(
+          KvlSpacing.lg,
+          topInset + 84,
+          KvlSpacing.lg,
+          KvlSpacing.lg,
+        ),
+        child: Column(
+          children: [
+            _InviteBanner(),
+            const SizedBox(height: KvlSpacing.xl),
+            const CircularProgressIndicator(),
+          ],
+        ),
       );
     }
 

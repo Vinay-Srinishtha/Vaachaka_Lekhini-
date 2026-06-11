@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/providers.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../../l10n/l10n.dart';
 
 class InviteFriendsScreen extends ConsumerWidget {
   const InviteFriendsScreen({super.key});
@@ -24,12 +25,12 @@ class InviteFriendsScreen extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Invite link copied')));
+        ).showSnackBar(SnackBar(content: Text(context.l10n.inviteLinkCopied)));
       }
     }
 
     return KvlScaffold(
-      title: 'Invite Friends',
+      title: context.l10n.inviteFriendsTitle,
       scrollable: true,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -53,13 +54,13 @@ class InviteFriendsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: KvlSpacing.lg),
           Text(
-            'Share the journey of\nspiritual growth',
+            context.l10n.shareJourneyTitle,
             textAlign: TextAlign.center,
             style: KvlText.title(18).copyWith(height: 1.3),
           ),
           const SizedBox(height: 6),
           Text(
-            'Invite friends to join Vaachaka Lekhini and earn reward points.',
+            context.l10n.inviteEarnPoints,
             textAlign: TextAlign.center,
             style: KvlText.caption(11.5).copyWith(height: 1.5),
           ),
@@ -102,21 +103,21 @@ class InviteFriendsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: KvlSpacing.md),
           _ShareTile(
-            label: 'Share via WhatsApp',
+            label: context.l10n.shareViaWhatsApp,
             color: const Color(0xFF25D366),
             icon: Icons.chat_bubble_rounded,
             onTap: doShare,
           ),
           const SizedBox(height: KvlSpacing.sm),
           _ShareTile(
-            label: 'Share via Facebook',
+            label: context.l10n.shareViaFacebook,
             color: const Color(0xFF1877F2),
             icon: Icons.facebook_rounded,
             onTap: doShare,
           ),
           const SizedBox(height: KvlSpacing.sm),
           _ShareTile(
-            label: 'Share via Instagram',
+            label: context.l10n.shareViaInstagram,
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -128,7 +129,7 @@ class InviteFriendsScreen extends ConsumerWidget {
           const SizedBox(height: KvlSpacing.md),
           Center(
             child: Text(
-              'All channels open your device share sheet.',
+              context.l10n.allChannelsShareSheet,
               style: KvlText.muted(10),
             ),
           ),

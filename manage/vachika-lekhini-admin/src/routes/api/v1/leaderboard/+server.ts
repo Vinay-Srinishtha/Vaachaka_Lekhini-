@@ -11,7 +11,8 @@ import { requireAccount } from '$lib/server/user-auth';
 ///   id           — member id
 ///   name         — display name
 ///   total_chants — sum of all Session.countAdded for that member
-///   streak_days  — longest single-program daysElapsed
+///   streak_days  — highest Program.currentStreak across all member programs
+///                  (server-authoritative consecutive-day streak, not calendar days)
 ///   is_self      — true if the member belongs to the calling account
 export const GET: RequestHandler = async (event) => {
 	const account = await requireAccount(event);
@@ -26,7 +27,7 @@ export const GET: RequestHandler = async (event) => {
 			accountId: true,
 			programs: {
 				select: {
-					daysElapsed: true,
+					currentStreak: true,
 					sessions: { select: { countAdded: true } }
 				}
 			}
@@ -38,8 +39,11 @@ export const GET: RequestHandler = async (event) => {
 		const totalChants = m.programs
 			.flatMap((p) => p.sessions)
 			.reduce((s, sess) => s + sess.countAdded, 0);
+		// currentStreak is a server-computed consecutive-day streak stored on
+		// the Program row. daysElapsed is a Flutter client-side computed getter
+		// that is not a Prisma field — it would always resolve to undefined here.
 		const streakDays = m.programs.reduce(
-			(max, p) => (p.daysElapsed > max ? p.daysElapsed : max),
+			(max, p) => (p.currentStreak > max ? p.currentStreak : max),
 			0
 		);
 		return {

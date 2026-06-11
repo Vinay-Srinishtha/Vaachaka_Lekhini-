@@ -10,6 +10,7 @@ import '../../../core/i18n/language_options.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/utils/indian_number_format.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../../l10n/l10n.dart';
 import '../../settings/domain/settings_repository.dart';
 import '../domain/program.dart';
 
@@ -72,7 +73,7 @@ class _Body extends ConsumerWidget {
             children: [
               Text(
                 programs.isEmpty
-                    ? 'Every journey begins with a single step.'
+                    ? context.l10n.everyJourneyBegins
                     : '"Every chant is a step closer to the divine. Keep going!"',
                 style: KvlText.body(13).copyWith(
                   color: Colors.white,
@@ -86,22 +87,22 @@ class _Body extends ConsumerWidget {
                 runSpacing: KvlSpacing.sm,
                 children: [
                   _Kpi(
-                    label: 'Total Chants',
+                    label: context.l10n.totalChants,
                     value: IndianNumberFormat.compact(totalChants),
                     onDark: true,
                   ),
                   _Kpi(
-                    label: 'Complete',
+                    label: context.l10n.complete,
                     value: '${(overallProgress * 100).round()}%',
                     onDark: true,
                   ),
                   _Kpi(
-                    label: 'Days Practising',
+                    label: context.l10n.daysPractising,
                     value: '$daysAvg',
                     onDark: true,
                   ),
                   _Kpi(
-                    label: 'Programs',
+                    label: context.l10n.programs,
                     value: '${programs.length}',
                     onDark: true,
                   ),
@@ -114,12 +115,12 @@ class _Body extends ConsumerWidget {
         Center(child: _OverallRing(progress: overallProgress)),
         const SizedBox(height: KvlSpacing.md),
         KvlButton(
-          label: 'Create New Program',
+          label: context.l10n.createNewProgramButton,
           icon: Icons.add,
           onPressed: () => context.push(KvlRoute.mantraSelection),
         ),
         const SizedBox(height: KvlSpacing.md),
-        Text('My Recitation Programs', style: KvlText.title(16)),
+        Text(context.l10n.myRecitationPrograms, style: KvlText.title(16)),
         const SizedBox(height: KvlSpacing.sm),
         if (programs.isEmpty)
           KvlCard(
@@ -131,10 +132,10 @@ class _Body extends ConsumerWidget {
                   size: 36,
                 ),
                 const SizedBox(height: 8),
-                Text('No programs yet', style: KvlText.title(13)),
+                Text(context.l10n.noProgramsYet, style: KvlText.title(13)),
                 const SizedBox(height: 4),
                 Text(
-                  'Pick a mantra and set a target to start your first program.',
+                  context.l10n.pickMantraAndTargetToStart,
                   textAlign: TextAlign.center,
                   style: KvlText.caption(11.5),
                 ),
@@ -206,7 +207,7 @@ class _OverallRing extends StatelessWidget {
                 '${(progress * 100).round()}%',
                 style: KvlText.bigNumber(20),
               ),
-              Text('Overall Progress', style: KvlText.muted(9.5)),
+              Text(context.l10n.overallProgress, style: KvlText.muted(9.5)),
             ],
           ),
         ],
@@ -265,7 +266,7 @@ class _ProgramCard extends ConsumerWidget {
         mantra?.name.displayForLanguage(settings.languageCode) ??
         program.mantraId;
     final pct = (program.progressFraction * 100).round();
-    final complete = program.status == ProgramStatus.completed;
+    final complete = program.isCompleted;
     return KvlCard(
       onTap: () => context.push('${KvlRoute.dailyProgress}/${program.id}'),
       child: Row(
@@ -305,7 +306,7 @@ class _ProgramCard extends ConsumerWidget {
                 const SizedBox(height: 2),
                 Text(
                   complete
-                      ? '${IndianNumberFormat.format(program.totalProgress)} / ${IndianNumberFormat.format(program.targetWritings)} · Completed ✓'
+                      ? '${IndianNumberFormat.format(program.totalProgress)} / ${IndianNumberFormat.format(program.targetWritings)} · ${context.l10n.completedWithCheck}'
                       : '${IndianNumberFormat.format(program.totalProgress)} / ${IndianNumberFormat.format(program.targetWritings)}',
                   style: KvlText.muted(12).copyWith(
                     color: complete ? KvlColors.success : KvlColors.muted,

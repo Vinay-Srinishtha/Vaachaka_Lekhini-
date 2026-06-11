@@ -19,6 +19,7 @@ class MantraDto {
     this.recommendedCount,
     this.recommendedDays,
     this.pronunciationUrl,
+    this.imageUrl,
   });
 
   final String slug;
@@ -33,6 +34,7 @@ class MantraDto {
   final int? recommendedCount;
   final int? recommendedDays;
   final String? pronunciationUrl;
+  final String? imageUrl;
 
   factory MantraDto.fromJson(Map<String, Object?> json) => MantraDto(
         slug: json['slug'] as String,
@@ -49,6 +51,7 @@ class MantraDto {
         recommendedCount: (json['recommended_count'] as num?)?.toInt(),
         recommendedDays: (json['recommended_days'] as num?)?.toInt(),
         pronunciationUrl: json['pronunciation_url'] as String?,
+        imageUrl: json['image_url'] as String?,
       );
 
   Map<String, Object?> toJson() => {
@@ -64,6 +67,7 @@ class MantraDto {
         'recommended_count': recommendedCount,
         'recommended_days': recommendedDays,
         'pronunciation_url': pronunciationUrl,
+        'image_url': imageUrl,
       };
 
   /// Convert to the domain object the rest of the app already knows about.
@@ -87,6 +91,7 @@ class MantraDto {
         recommendedCount: recommendedCount,
         recommendedDays: recommendedDays,
         pronunciationAsset: pronunciationUrl,
+        imageUrl: imageUrl,
       );
 }
 

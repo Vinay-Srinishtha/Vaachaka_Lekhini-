@@ -25,3 +25,4 @@ Future<void> main() async {
   await initHive();
   runApp(const ProviderScope(child: KvlApp()));
 }
+

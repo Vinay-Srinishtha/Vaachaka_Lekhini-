@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/providers.dart';
+import '../../../l10n/l10n.dart';
 import '../../../app/router.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/utils/indian_number_format.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../enrolment/voice/domain/voice_enrolment.dart';
 
 class SetTargetDaysScreen extends ConsumerStatefulWidget {
   const SetTargetDaysScreen({
@@ -58,11 +60,30 @@ class _SetTargetDaysScreenState extends ConsumerState<SetTargetDaysScreen> {
   Future<void> _confirm() async {
     final profile = ref.read(activeProfileProvider).value;
     if (profile == null || _days <= 0 || widget.writings <= 0) return;
+    final enrolment = await ref
+        .read(voiceEnrolmentRepositoryProvider)
+        .get(profile.id, widget.mantraId);
+    if (!mounted) return;
+    if (enrolment == null || !enrolment.isComplete) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 5),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: KvlColors.primaryDeep,
+          content: Text(
+            'Complete voice training (${VoiceEnrolment.requiredSamples}/${VoiceEnrolment.requiredSamples}) before creating a voice program.',
+            style: KvlText.caption(12).copyWith(color: Colors.white),
+          ),
+        ),
+      );
+      context.go('${KvlRoute.voiceTraining}/${widget.mantraId}');
+      return;
+    }
     setState(() => _busy = true);
     await ref
         .read(programRepositoryProvider)
         .create(
-          profileId: profile.id,
+          memberId: profile.id,
           mantraId: widget.mantraId,
           targetWritings: widget.writings,
           targetDays: _days,
@@ -77,22 +98,30 @@ class _SetTargetDaysScreenState extends ConsumerState<SetTargetDaysScreen> {
         ? _days.toDouble()
         : _maxSliderDays.toDouble();
     return KvlScaffold(
-      title: 'Set Your Practice Target',
+      title: context.l10n.setYourPracticeTarget,
       scrollable: true,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: KvlSpacing.md),
           Text(
-            'Choose how many days you want to spread ${IndianNumberFormat.format(widget.writings)} across.',
+            context.l10n.chooseDaysSpread(
+              IndianNumberFormat.format(widget.writings),
+            ),
             textAlign: TextAlign.center,
             style: KvlText.caption(11.5).copyWith(height: 1.5),
           ),
           const SizedBox(height: KvlSpacing.lg),
-          for (final (days, label, chipVariant) in _presets) ...[
+          for (final (days, labelKey, chipVariant) in _presets) ...[
             _DaysCard(
               days: days,
-              label: label,
+              label: labelKey == 'Fastest'
+                  ? context.l10n.presetFastest
+                  : labelKey == 'Balanced'
+                  ? context.l10n.presetBalanced
+                  : labelKey == 'Gentle'
+                  ? context.l10n.presetGentle
+                  : context.l10n.presetSustainable,
               chipVariant: chipVariant,
               selected: _days == days,
               subline: _pace(days),
@@ -110,7 +139,7 @@ class _SetTargetDaysScreenState extends ConsumerState<SetTargetDaysScreen> {
               children: [
                 Center(
                   child: Text(
-                    'Set a Custom Duration',
+                    context.l10n.setCustomDuration,
                     style: KvlText.ui(13, FontWeight.w600),
                   ),
                 ),
@@ -118,9 +147,15 @@ class _SetTargetDaysScreenState extends ConsumerState<SetTargetDaysScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: Text('Duration', style: KvlText.caption(11.5)),
+                      child: Text(
+                        context.l10n.durationLabel,
+                        style: KvlText.caption(11.5),
+                      ),
                     ),
-                    Text('$_days days', style: KvlText.ui(13, FontWeight.w600)),
+                    Text(
+                      context.l10n.daysValue(_days),
+                      style: KvlText.ui(13, FontWeight.w600),
+                    ),
                   ],
                 ),
                 Slider(
@@ -141,7 +176,7 @@ class _SetTargetDaysScreenState extends ConsumerState<SetTargetDaysScreen> {
                   ),
                   child: Center(
                     child: Text(
-                      'This means ${_pace(_days)}',
+                      context.l10n.thisMeansPace(_pace(_days)),
                       style: KvlText.caption(11).copyWith(
                         color: KvlColors.primaryDeep,
                         fontWeight: FontWeight.w500,
@@ -154,7 +189,9 @@ class _SetTargetDaysScreenState extends ConsumerState<SetTargetDaysScreen> {
           ),
           const SizedBox(height: KvlSpacing.lg),
           KvlButton(
-            label: _busy ? 'Creating…' : 'Confirm & Begin',
+            label: _busy
+                ? context.l10n.creatingButton
+                : context.l10n.confirmAndBegin,
             onPressed: _busy ? null : _confirm,
           ),
         ],
@@ -194,7 +231,10 @@ class _DaysCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('$days Days', style: KvlText.ui(13, FontWeight.w600)),
+                Text(
+                  context.l10n.daysValue(days),
+                  style: KvlText.ui(13, FontWeight.w600),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   subline,

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/providers.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../../l10n/l10n.dart';
 import '../domain/profile.dart';
 
 class AddFamilyScreen extends ConsumerStatefulWidget {
@@ -30,7 +31,7 @@ class _AddFamilyScreenState extends ConsumerState<AddFamilyScreen> {
     if (session == null) return;
     final name = _name.text.trim();
     if (name.isEmpty) {
-      setState(() => _error = 'Enter a name');
+      setState(() => _error = context.l10n.enterNameError);
       return;
     }
     setState(() {
@@ -61,27 +62,27 @@ class _AddFamilyScreenState extends ConsumerState<AddFamilyScreen> {
     final remaining = (cap - profiles.length).clamp(0, cap);
 
     return KvlScaffold(
-      title: 'Add Family Members',
+      title: context.l10n.addFamilyTitle,
       scrollable: true,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: KvlSpacing.md),
           Text(
-            'Add up to $cap family members under your registered mobile number. Each member has their own practice counter.',
+            context.l10n.addFamilyDescription(cap),
             textAlign: TextAlign.center,
             style: KvlText.caption(11.5).copyWith(height: 1.5),
           ),
           const SizedBox(height: 4),
           Text(
-            'Slots remaining: $remaining',
+            context.l10n.slotsRemaining(remaining),
             textAlign: TextAlign.center,
             style: KvlText.caption(11).copyWith(color: KvlColors.primaryDeep, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: KvlSpacing.lg),
 
           if (profiles.isNotEmpty) ...[
-            Text('Existing members', style: KvlText.title(13)),
+            Text(context.l10n.existingMembersLabel, style: KvlText.title(13)),
             const SizedBox(height: KvlSpacing.sm),
             for (final p in profiles) ...[
               KvlCard(
@@ -123,7 +124,7 @@ class _AddFamilyScreenState extends ConsumerState<AddFamilyScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('Registered Mobile',
+                  Text(context.l10n.registeredMobileLabel,
                       style: KvlText.caption(11.5).copyWith(color: KvlColors.inkSoft, fontWeight: FontWeight.w500)),
                   const SizedBox(height: 4),
                   Container(
@@ -132,9 +133,9 @@ class _AddFamilyScreenState extends ConsumerState<AddFamilyScreen> {
                     child: Text(session?.mobile ?? '+91 ', style: KvlText.ui(13).copyWith(color: KvlColors.inkSoft)),
                   ),
                   const SizedBox(height: KvlSpacing.md),
-                  KvlInput(label: 'Family Member Name', hint: 'e.g., Ananya Sharma', controller: _name),
+                  KvlInput(label: context.l10n.familyMemberNameLabel, hint: context.l10n.familyMemberNameHint, controller: _name),
                   const SizedBox(height: KvlSpacing.sm),
-                  Text('Relationship',
+                  Text(context.l10n.relationshipDropdownLabel,
                       style: KvlText.caption(11.5).copyWith(color: KvlColors.inkSoft, fontWeight: FontWeight.w500)),
                   const SizedBox(height: 4),
                   Container(
@@ -161,9 +162,9 @@ class _AddFamilyScreenState extends ConsumerState<AddFamilyScreen> {
               ),
             ),
             const SizedBox(height: KvlSpacing.md),
-            KvlButton(label: _busy ? 'Saving…' : 'Save Member', onPressed: _busy ? null : _save),
+            KvlButton(label: _busy ? context.l10n.savingButton : context.l10n.saveMemberButton, onPressed: _busy ? null : _save),
           ] else
-            Center(child: Text('You have reached the maximum number of family members.', style: KvlText.muted(12))),
+            Center(child: Text(context.l10n.maxFamilyMembersReached, style: KvlText.muted(12))),
         ],
       ),
     );

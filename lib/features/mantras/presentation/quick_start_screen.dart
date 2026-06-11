@@ -6,6 +6,7 @@ import '../../../app/providers.dart';
 import '../../../app/router.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../../l10n/l10n.dart';
 import 'widgets/mantra_row.dart';
 
 class QuickStartScreen extends ConsumerStatefulWidget {
@@ -25,7 +26,7 @@ class _QuickStartScreenState extends ConsumerState<QuickStartScreen> {
     _selectedId ??= catalog.isNotEmpty ? catalog.first.id : null;
 
     return KvlScaffold(
-      title: 'Quick Start Practice',
+      title: context.l10n.quickStartTitle,
       scrollable: false,
       body: Column(
         children: [
@@ -44,7 +45,7 @@ class _QuickStartScreenState extends ConsumerState<QuickStartScreen> {
             ),
           ),
           KvlButton(
-            label: 'Quick Start',
+            label: context.l10n.quickStartButton,
             onPressed: _selectedId == null
                 ? null
                 : () => context.push('${KvlRoute.mantraDetails}/$_selectedId'),

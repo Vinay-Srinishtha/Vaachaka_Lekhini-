@@ -1,9 +1,8 @@
 import '../domain/mantra.dart';
 import '../domain/mantra_repository.dart';
-import 'mantra_seed.dart';
 
 class MantraRepositoryLocal implements MantraRepository {
-  MantraRepositoryLocal({List<Mantra>? seed}) : _all = seed ?? kMantraSeed;
+  MantraRepositoryLocal({List<Mantra>? seed}) : _all = seed ?? const [];
 
   final List<Mantra> _all;
   late final Map<String, Mantra> _byId = {for (final m in _all) m.id: m};

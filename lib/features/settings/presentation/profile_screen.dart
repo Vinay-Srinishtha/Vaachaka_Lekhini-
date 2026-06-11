@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -8,6 +9,10 @@ import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../app/providers.dart';
+import '../../../core/storage/repository.dart';
+import '../../auth/domain/auth_repository.dart';
+import '../../auth/domain/session.dart';
+import '../../auth/presentation/auth_shared_widgets.dart';
 import '../../programs/domain/program.dart';
 import '../../rewards/domain/reward_rules.dart';
 import '../../../l10n/l10n.dart';
@@ -44,7 +49,7 @@ class ProfileScreen extends ConsumerWidget {
     return KvlScaffold(
       title: context.l10n.profileTitle,
       trailing: TextButton(
-        onPressed: () {},
+        onPressed: () => _EditProfileSheet.show(context, ref),
         child: Text(
           context.l10n.editButton,
           style: KvlText.ui(
@@ -1397,6 +1402,474 @@ class _MantraPickerTile extends StatelessWidget {
                 color: KvlColors.muted,
                 size: 22,
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Edit Profile Sheet
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _EditProfileSheet {
+  static void show(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _EditProfileSheetBody(ref: ref),
+    );
+  }
+}
+
+class _EditProfileSheetBody extends ConsumerStatefulWidget {
+  const _EditProfileSheetBody({required this.ref});
+  final WidgetRef ref;
+
+  @override
+  ConsumerState<_EditProfileSheetBody> createState() =>
+      _EditProfileSheetBodyState();
+}
+
+class _EditProfileSheetBodyState extends ConsumerState<_EditProfileSheetBody> {
+  late final TextEditingController _nameCtrl;
+  bool _nameBusy = false;
+  String? _nameError;
+
+  @override
+  void initState() {
+    super.initState();
+    final session = widget.ref.read(sessionProvider).value;
+    _nameCtrl = TextEditingController(text: session?.username ?? '');
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveName() async {
+    final name = _nameCtrl.text.trim();
+    if (name.isEmpty) {
+      setState(() => _nameError = 'Name cannot be empty.');
+      return;
+    }
+    setState(() { _nameBusy = true; _nameError = null; });
+    final res = await ref.read(authRepositoryProvider).updateName(name);
+    if (!mounted) return;
+    switch (res) {
+      case Ok():
+        // Also update the "me" profile if present.
+        final profile = ref.read(activeProfileProvider).value;
+        if (profile != null) {
+          await ref.read(profileRepositoryProvider).update(
+            profile.copyWith(name: name),
+          );
+        }
+        setState(() => _nameBusy = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Name updated successfully.')),
+          );
+        }
+      case Err(:final failure):
+        setState(() { _nameBusy = false; _nameError = failure.message; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final session = ref.watch(sessionProvider).value;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: Container(
+        decoration: BoxDecoration(
+          color: KvlColors.bg,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: const EdgeInsets.fromLTRB(
+          KvlSpacing.lg,
+          KvlSpacing.sm,
+          KvlSpacing.lg,
+          KvlSpacing.lg,
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Drag handle
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: KvlColors.border,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              ),
+              const SizedBox(height: KvlSpacing.md),
+
+              // Header
+              Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: KvlColors.primaryGhost,
+                      borderRadius: KvlRadius.brMD,
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.person_outline_rounded,
+                      color: KvlColors.primaryDeep,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: KvlSpacing.sm),
+                  Expanded(
+                    child: Text('Edit Profile', style: KvlText.title(16)),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: KvlSpacing.md),
+
+              // Name field
+              KvlInput(
+                label: 'Display Name',
+                hint: 'Your name',
+                controller: _nameCtrl,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _saveName(),
+              ),
+              if (_nameError != null) ...[
+                const SizedBox(height: KvlSpacing.xs),
+                Text(
+                  _nameError!,
+                  style: KvlText.caption(11).copyWith(color: KvlColors.danger),
+                ),
+              ],
+              const SizedBox(height: KvlSpacing.sm),
+              KvlButton(
+                label: _nameBusy ? 'Saving…' : 'Save Name',
+                onPressed: _nameBusy ? null : _saveName,
+              ),
+
+              const SizedBox(height: KvlSpacing.lg),
+              const Divider(),
+              const SizedBox(height: KvlSpacing.sm),
+
+              // Mobile number section
+              Row(
+                children: [
+                  const Icon(
+                    Icons.smartphone_rounded,
+                    size: 18,
+                    color: KvlColors.primaryDeep,
+                  ),
+                  const SizedBox(width: 8),
+                  Text('Mobile Number', style: KvlText.ui(13, FontWeight.w600)),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                session?.mobile ?? '—',
+                style: KvlText.muted(12),
+              ),
+              const SizedBox(height: KvlSpacing.sm),
+              KvlButton(
+                variant: KvlButtonVariant.ghost,
+                label: 'Change Mobile Number',
+                icon: Icons.edit_rounded,
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (_) => _ChangeMobileSheet(parentRef: ref),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Change Mobile Sheet (two-step: enter new number → OTP)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ChangeMobileSheet extends ConsumerStatefulWidget {
+  const _ChangeMobileSheet({required this.parentRef});
+  final WidgetRef parentRef;
+
+  @override
+  ConsumerState<_ChangeMobileSheet> createState() => _ChangeMobileSheetState();
+}
+
+class _ChangeMobileSheetState extends ConsumerState<_ChangeMobileSheet> {
+  final _mobileCtrl = TextEditingController();
+  String _otp = '';
+  bool _otpSent = false;
+  bool _busy = false;
+  String? _error;
+  int _resendSeconds = 0;
+  Timer? _timer;
+
+  // Cached before any async gap to avoid unmounted-ref crash.
+  late final AuthRepository _authRepo;
+  String? _currentMobile;
+
+  @override
+  void initState() {
+    super.initState();
+    // Cache the repository reference immediately — safe here since the widget is mounted.
+    _authRepo = ref.read(authRepositoryProvider);
+    _currentMobile = ref.read(sessionProvider).value?.mobile;
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _mobileCtrl.dispose();
+    super.dispose();
+  }
+
+  String get _digits => _mobileCtrl.text.replaceAll(RegExp(r'\D'), '');
+  String get _e164 => '+91$_digits';
+  bool get _mobileOk => _validateMobile() == null;
+
+  String? _validateMobile() {
+    if (_digits.isEmpty) return 'Please enter a mobile number.';
+    if (_digits.length != 10) return 'Enter a valid 10-digit mobile number.';
+    if (!RegExp(r'^[6-9]\d{9}$').hasMatch(_digits)) {
+      return 'Enter a valid Indian mobile number (starts with 6–9).';
+    }
+    if (_e164 == _currentMobile) {
+      return 'This is already your current mobile number.';
+    }
+    return null;
+  }
+
+  void _startCountdown() {
+    _resendSeconds = 30;
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) { t.cancel(); return; }
+      setState(() { if (--_resendSeconds <= 0) t.cancel(); });
+    });
+  }
+
+  Future<void> _sendOtp() async {
+    final validationError = _validateMobile();
+    if (validationError != null) {
+      setState(() => _error = validationError);
+      return;
+    }
+
+    setState(() { _busy = true; _error = null; });
+    // Use cached repo — never touch `ref` after an await.
+    final res = await _authRepo.sendOtp(_e164);
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      if (res is Ok<void>) {
+        _otpSent = true;
+        _otp = '';
+        _startCountdown();
+      } else if (res is Err<void>) {
+        _error = res.failure.message;
+      }
+    });
+  }
+
+  Future<void> _verify() async {
+    if (_otp.length != 6) {
+      setState(() => _error = 'Please enter the 6-digit code.');
+      return;
+    }
+    setState(() { _busy = true; _error = null; });
+    final res = await _authRepo.updateMobile(
+      newMobile: _e164,
+      otp: _otp,
+    );
+    if (!mounted) return;
+    if (res is Ok<Session>) {
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Mobile number updated successfully.')),
+      );
+    } else if (res is Err<Session>) {
+      setState(() { _busy = false; _error = res.failure.message; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: Container(
+        decoration: BoxDecoration(
+          color: KvlColors.bg,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: const EdgeInsets.fromLTRB(
+          KvlSpacing.lg,
+          KvlSpacing.sm,
+          KvlSpacing.lg,
+          KvlSpacing.lg,
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Drag handle
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: KvlColors.border,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              ),
+              const SizedBox(height: KvlSpacing.md),
+
+              // Header
+              Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: KvlColors.primaryGhost,
+                      borderRadius: KvlRadius.brMD,
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.smartphone_rounded,
+                      color: KvlColors.primaryDeep,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: KvlSpacing.sm),
+                  Expanded(
+                    child: Text('Change Mobile Number', style: KvlText.title(16)),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: KvlSpacing.md),
+
+              if (!_otpSent) ...[
+                Text(
+                  'Enter your new mobile number. We will send a verification code to confirm.',
+                  style: KvlText.caption(12).copyWith(color: KvlColors.inkSoft),
+                ),
+                const SizedBox(height: KvlSpacing.md),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 78,
+                      child: KvlInput(label: 'Code', hint: '+91', readOnly: true),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: KvlInput(
+                        label: 'New Mobile',
+                        hint: '98765 43210',
+                        controller: _mobileCtrl,
+                        keyboardType: TextInputType.phone,
+                        autofocus: true,
+                        inputFormatters: [AuthMobileFormatter()],
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) { if (_mobileOk) _sendOtp(); },
+                      ),
+                    ),
+                  ],
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: KvlSpacing.xs),
+                  AuthErrorBar(_error!),
+                ],
+                const SizedBox(height: KvlSpacing.md),
+                KvlButton(
+                  label: _busy ? 'Sending…' : 'Send OTP',
+                  onPressed: (_busy || !_mobileOk) ? null : _sendOtp,
+                ),
+              ] else ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.sms_outlined, size: 14, color: KvlColors.inkSoft),
+                    const SizedBox(width: 5),
+                    Text(
+                      'Enter the 6-digit code sent to +91$_digits',
+                      style: KvlText.caption(11.5).copyWith(color: KvlColors.inkSoft),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: KvlSpacing.md),
+                PinCodeInput(
+                  onChanged: (v) => setState(() => _otp = v),
+                  onCompleted: (_) => _verify(),
+                ),
+                const SizedBox(height: KvlSpacing.sm),
+                Center(
+                  child: _resendSeconds > 0
+                      ? Text(
+                          'Resend code in ${_resendSeconds}s',
+                          style: KvlText.caption(11).copyWith(color: KvlColors.inkSoft),
+                        )
+                      : GestureDetector(
+                          onTap: _busy ? null : () {
+                            setState(() { _otp = ''; _error = null; });
+                            _sendOtp();
+                          },
+                          child: Text(
+                            'Resend code',
+                            style: KvlText.caption(11.5).copyWith(
+                              color: KvlColors.primaryDeep,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: KvlSpacing.sm),
+                  AuthErrorBar(_error!),
+                ],
+                const SizedBox(height: KvlSpacing.lg),
+                KvlButton(
+                  label: _busy ? 'Verifying…' : 'Confirm New Number',
+                  onPressed: (_busy || _otp.length != 6) ? null : _verify,
+                ),
+              ],
             ],
           ),
         ),

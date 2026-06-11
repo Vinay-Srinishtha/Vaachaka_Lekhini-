@@ -57,7 +57,7 @@ class KvlSettings {
     themeMode: ThemeMode.system,
     fontScale: 1.0,
     reminderTime: TimeOfDay(hour: 6, minute: 0),
-    notificationSound: 'Bell',
+    notificationSound: 'bell',
     micSensitivity: MicSensitivity.medium,
     linkFacebook: false,
     linkWhatsApp: false,

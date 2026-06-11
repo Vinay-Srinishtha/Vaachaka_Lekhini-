@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/providers.dart';
+import '../../../l10n/l10n.dart';
 import '../../../app/router.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/widgets.dart';
@@ -24,7 +25,7 @@ class _MantraSelectionScreenState extends ConsumerState<MantraSelectionScreen> {
     _selectedId ??= catalog.isNotEmpty ? catalog.first.id : null;
 
     return KvlScaffold(
-      title: 'Mantra Selection',
+      title: context.l10n.mantraSelectionTitle,
       scrollable: false,
       body: Column(
         children: [
@@ -45,12 +46,12 @@ class _MantraSelectionScreenState extends ConsumerState<MantraSelectionScreen> {
           const SizedBox(height: KvlSpacing.sm),
           KvlButton(
             variant: KvlButtonVariant.ghost,
-            label: 'Select mantra based on your need →',
+            label: context.l10n.selectMantraByNeed,
             onPressed: () => context.push(KvlRoute.mantraByNeed),
           ),
           const SizedBox(height: KvlSpacing.sm),
           KvlButton(
-            label: 'Confirm Selection',
+            label: context.l10n.confirmSelection,
             onPressed: _selectedId == null
                 ? null
                 : () => context.push('${KvlRoute.mantraDetails}/$_selectedId'),

@@ -67,7 +67,7 @@ bool _isUnauthed(String path) {
       path == '/api/v1/mantras' ||
       path == '/api/v1/store' ||
       path == '/api/v1/config' ||
-      path == '/api/v1/stats'; // public — no Bearer needed
+      path == '/api/v1/stats';
 }
 
 class _AuthInterceptor extends Interceptor {

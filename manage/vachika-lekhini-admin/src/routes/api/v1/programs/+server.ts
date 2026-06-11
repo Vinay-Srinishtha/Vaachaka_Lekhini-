@@ -6,6 +6,7 @@ import { snakeJson } from '$lib/server/snake-case';
 import { readJsonBody } from '$lib/server/json-input';
 import { requireAccount } from '$lib/server/user-auth';
 import { assertOwnsMembers, programUpsertSchema } from '$lib/server/sync';
+import { emitChange } from '$lib/server/live';
 
 const bodySchema = z.object({
 	programs: z.array(programUpsertSchema).min(1).max(50)
@@ -39,16 +40,25 @@ export const POST: RequestHandler = async (event) => {
 	const results = await prisma.$transaction(
 		body.programs.map((p) => {
 			const mantraDbId = mantraMap.get(p.mantra_id)!;
+			// NOTE: currentStreak / longestStreak are intentionally excluded from
+			// the update block — the server recomputes them from the Session table
+			// in /api/v1/sessions after each batch insert. Accepting client-supplied
+			// values here would let a tampered client claim an arbitrary streak.
+			const totalWritings = p.total_writings ?? 0;
+			// completedAt is only honoured when the server-supplied totalWritings
+			// has actually reached targetWritings. A client cannot mark a program
+			// complete by sending a completedAt timestamp alone.
+			const serverAllowsCompletion = totalWritings >= p.target_writings;
+			const completedAt =
+				serverAllowsCompletion && p.completed_at ? new Date(p.completed_at) : null;
 			const baseData = {
 				memberId: p.member_id,
 				mantraId: mantraDbId,
 				targetWritings: p.target_writings,
 				targetDays: p.target_days,
 				startedAt: p.started_at ? new Date(p.started_at) : undefined,
-				completedAt: p.completed_at ? new Date(p.completed_at) : null,
-				totalWritings: p.total_writings ?? 0,
-				currentStreak: p.current_streak ?? 0,
-				longestStreak: p.longest_streak ?? 0,
+				completedAt,
+				totalWritings,
 				lastActiveDate: p.last_active_date ? new Date(p.last_active_date) : null
 			};
 			return prisma.program.upsert({
@@ -58,14 +68,16 @@ export const POST: RequestHandler = async (event) => {
 					targetWritings: baseData.targetWritings,
 					targetDays: baseData.targetDays,
 					completedAt: baseData.completedAt,
-					totalWritings: baseData.totalWritings,
-					currentStreak: baseData.currentStreak,
-					longestStreak: baseData.longestStreak,
+					// totalWritings is intentionally omitted — the server recomputes it
+					// from the Session table in /api/v1/sessions (Issue #3). Accepting
+					// client-supplied totals here would allow Flutter's local arithmetic
+					// to overwrite the authoritative server aggregate.
 					lastActiveDate: baseData.lastActiveDate
 				}
 			});
 		})
 	);
 
+	emitChange('program');
 	return snakeJson({ programs: results });
 };

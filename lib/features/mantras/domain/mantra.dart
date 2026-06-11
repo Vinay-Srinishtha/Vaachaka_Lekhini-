@@ -77,6 +77,7 @@ class Mantra extends Equatable {
     required this.thumbPalette,
     required this.tags,
     this.deity,
+    this.imageUrl,
     this.pronunciationAsset,
     this.recommendedCount,
     this.recommendedDays,
@@ -91,7 +92,10 @@ class Mantra extends Equatable {
   /// Optional name of the deity invoked — drives the hero image colour.
   final String? deity;
 
-  /// Bundled pronunciation audio path (asset key). Optional.
+  /// Remote image URL for this mantra (served from the admin CDN).
+  final String? imageUrl;
+
+  /// Pronunciation audio URL (remote) or asset path (legacy).
   final String? pronunciationAsset;
 
   /// Suggested per-day recitations / total days (only set for "by need" mantras).
@@ -99,5 +103,5 @@ class Mantra extends Equatable {
   final int? recommendedDays;
 
   @override
-  List<Object?> get props => [id];
+  List<Object?> get props => [id, imageUrl];
 }

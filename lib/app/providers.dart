@@ -16,13 +16,14 @@ import '../core/storage/app_database.dart';
 import '../core/storage/hive_setup.dart';
 import '../core/sync/sync_engine.dart';
 import '../core/sync/sync_outbox.dart';
-import '../features/auth/data/auth_repository_local.dart';
+import '../features/auth/data/auth_repository_remote.dart';
 import '../features/auth/domain/auth_repository.dart';
 import '../features/auth/domain/session.dart';
 import '../features/enrolment/handwriting/data/handwriting_repository_local.dart';
 import '../features/enrolment/handwriting/domain/handwriting_repository.dart';
 import '../features/community/data/invite_service.dart';
 import '../features/community/data/leaderboard_repository_local.dart';
+import '../features/community/domain/friend.dart';
 import '../features/community/domain/leaderboard_repository.dart';
 import '../features/enrolment/voice/data/voice_enrolment_repository_local.dart';
 import '../features/enrolment/voice/domain/voice_enrolment_repository.dart';
@@ -35,6 +36,7 @@ import '../features/programs/domain/program.dart';
 import '../features/programs/domain/program_repository.dart';
 import '../features/rewards/data/reward_repository_drift.dart';
 import '../features/rewards/domain/reward_repository.dart';
+import '../features/rewards/domain/store_item.dart';
 import '../features/settings/data/settings_repository_local.dart';
 import '../features/settings/domain/settings_repository.dart';
 import '../features/profiles/data/profile_repository_local.dart';
@@ -48,13 +50,18 @@ import '../features/profiles/domain/profile_repository.dart';
 /// interface and doesn't care.
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return AuthRepositoryLocal(sessionBox());
+  return AuthRepositoryRemote(
+    authService: ref.watch(authServiceProvider),
+    sessionBox: sessionBox(),
+  );
 });
 
 final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
   return ProfileRepositoryLocal(
     profilesBox: profilesBox(),
     sessionBox: sessionBox(),
+    // ADDED: outbox so create/update enqueue members.upsert → Prisma
+    outbox: ref.watch(syncOutboxProvider),
   );
 });
 
@@ -114,15 +121,11 @@ final accountSnapshotProvider = StreamProvider<Map<String, Object?>>((ref) {
 /// in `main.dart`; if the cache is empty we fall back to `kMantraSeed`.
 final mantraRepositoryProvider = Provider<MantraRepository>((ref) {
   final bootstrap = MantraRepositoryRemote.readCache(cacheBox());
-  final repo = MantraRepositoryRemote(
+  return MantraRepositoryRemote(
     api: ref.watch(apiClientProvider),
     cache: cacheBox(),
     bootstrap: bootstrap,
   );
-  // Re-emit the catalog provider when the remote refresh lands.
-  final sub = repo.stream.listen((_) => ref.invalidateSelf());
-  ref.onDispose(sub.cancel);
-  return repo;
 });
 
 /// Force-local override — useful in tests / for offline-only builds.
@@ -180,7 +183,11 @@ final leaderboardRepositoryProvider =
 final inviteServiceProvider = Provider<InviteService>((ref) => InviteService());
 
 final rewardRepositoryProvider = Provider<RewardRepository>((ref) {
-  return RewardRepositoryDrift(ref.watch(appDatabaseProvider));
+  // ADDED: outbox so earn/spend auto-queue to Prisma
+  return RewardRepositoryDrift(
+    ref.watch(appDatabaseProvider),
+    ref.watch(syncOutboxProvider),
+  );
 });
 
 final rewardTotalProvider = StreamProvider<int>((ref) async* {
@@ -189,6 +196,7 @@ final rewardTotalProvider = StreamProvider<int>((ref) async* {
     yield 0;
     return;
   }
+  // profile.id IS the memberId (Prisma Member.id)
   yield* ref.watch(rewardRepositoryProvider).watchTotalPoints(profile.id);
 });
 
@@ -229,20 +237,25 @@ final appDatabaseProvider = Provider<AppDatabase>((ref) {
 });
 
 final programRepositoryProvider = Provider<ProgramRepository>((ref) {
-  return ProgramRepositoryDrift(ref.watch(appDatabaseProvider));
+  // ADDED: outbox so create/update/finish auto-queue to Prisma
+  return ProgramRepositoryDrift(
+    ref.watch(appDatabaseProvider),
+    ref.watch(syncOutboxProvider),
+  );
 });
 
-/// Programs belonging to the active profile. Empty when no profile is selected.
+/// Programs belonging to the active member. Empty when no profile is selected.
 final programsForActiveProfileProvider = StreamProvider<List<Program>>((ref) async* {
   final profile = ref.watch(activeProfileProvider).value;
   if (profile == null) {
     yield const [];
     return;
   }
+  // profile.id IS the memberId (Prisma Member.id)
   yield* ref.watch(programRepositoryProvider).watchForProfile(profile.id);
 });
 
-/// Most-recently-active program for the current profile (or null).
+/// Most-recently-active program for the current member (or null).
 final mostRecentProgramProvider = FutureProvider<Program?>((ref) async {
   ref.watch(programsForActiveProfileProvider);
   final profile = ref.watch(activeProfileProvider).value;
@@ -273,4 +286,53 @@ final activeProfileProvider = StreamProvider<Profile?>((ref) async* {
   // Re-emit when session changes (logout clears active).
   ref.watch(sessionProvider);
   yield* ref.watch(profileRepositoryProvider).watchActive();
+});
+
+/// Live store catalogue from /api/v1/store.
+final storeItemsProvider = FutureProvider<List<StoreItem>>((ref) async {
+  final api = ref.watch(apiClientProvider);
+  final res = await api.dio.get<Map<String, dynamic>>('/api/v1/store');
+  final list = (res.data?['items'] as List<dynamic>?) ?? [];
+  return list
+      .map((e) => StoreItem.fromJson(Map<String, dynamic>.from(e as Map)))
+      .toList();
+});
+
+/// Global community statistics from /api/v1/stats.
+/// No auth required. Returns {globalChantCount, memberCount}.
+/// Refreshes every 60 seconds automatically via autoDispose + keepAlive.
+final globalStatsProvider =
+    FutureProvider.autoDispose<({int globalChantCount, int memberCount})>(
+        (ref) async {
+  final api = ref.watch(apiClientProvider);
+  final res = await api.dio.get<Map<String, dynamic>>('/api/v1/stats');
+  final data = res.data ?? {};
+  return (
+    globalChantCount: (data['global_chant_count'] as num?)?.toInt() ?? 0,
+    memberCount: (data['member_count'] as num?)?.toInt() ?? 0,
+  );
+});
+
+/// Real leaderboard from /api/v1/leaderboard (Bearer required).
+/// Falls back to an empty list when the user is not authenticated.
+final leaderboardProvider = FutureProvider.autoDispose
+    .family<List<Friend>, LeaderboardSort>((ref, sort) async {
+  final session = ref.watch(sessionProvider).value;
+  if (session == null) return [];
+  final api = ref.watch(apiClientProvider);
+  final sortParam =
+      sort == LeaderboardSort.streak ? 'streak' : 'total_chants';
+  final res = await api.dio
+      .get<Map<String, dynamic>>('/api/v1/leaderboard?sort=$sortParam');
+  final entries = (res.data?['entries'] as List<dynamic>?) ?? [];
+  return entries.map((e) {
+    final m = Map<String, dynamic>.from(e as Map);
+    return Friend(
+      id: m['id'] as String,
+      name: m['name'] as String,
+      streakDays: (m['streak_days'] as num?)?.toInt() ?? 0,
+      totalChants: (m['total_chants'] as num?)?.toInt() ?? 0,
+      isSelf: m['is_self'] == true,
+    );
+  }).toList();
 });

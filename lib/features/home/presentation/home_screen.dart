@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../app/providers.dart';
 import '../../../app/router.dart';
 import '../../../core/i18n/language_options.dart';
+import '../../../core/remote_config/remote_config.dart';
+import '../../../core/remote_config/remote_config_keys.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/utils/indian_number_format.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../programs/domain/program.dart';
 import '../../settings/domain/settings_repository.dart';
+import '../../../l10n/l10n.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -19,12 +23,17 @@ class HomeScreen extends ConsumerWidget {
     final profile = ref.watch(activeProfileProvider).value;
     final programsAsync = ref.watch(programsForActiveProfileProvider);
     final programs = programsAsync.value ?? const <Program>[];
-    final recent = programs.isEmpty ? null : programs.first;
+    final activePrograms = programs
+        .where((program) => !program.isCompleted)
+        .toList();
+    final recent = activePrograms.isEmpty ? null : activePrograms.first;
 
-    final greeting = profile == null ? 'Welcome' : 'Welcome, ${profile.name}!';
-    final subline = programs.isEmpty
+    final greeting = profile == null
+        ? context.l10n.welcomeGreeting
+        : context.l10n.welcomeGreetingUser(profile.name);
+    final subline = activePrograms.isEmpty
         ? 'Start your spiritual journey'
-        : "You're doing great! ${programs.length} ${programs.length == 1 ? 'Program' : 'Programs'} Active";
+        : "You're doing great! ${activePrograms.length} ${activePrograms.length == 1 ? 'Program' : 'Programs'} Active";
     final points = ref.watch(rewardTotalProvider).value ?? 0;
 
     return SafeArea(
@@ -67,8 +76,10 @@ class HomeScreen extends ConsumerWidget {
                 ),
                 SizedBox(height: headerGap),
                 _RewardPointsTile(points: points, compact: compact),
-                SizedBox(height: gap),
-                _DailyReminder(program: recent, compact: compact),
+                if (recent != null) ...[
+                  SizedBox(height: gap),
+                  _DailyReminder(program: recent, compact: compact),
+                ],
                 SizedBox(height: gap),
                 Expanded(
                   child: _HeroQuote(compact: compact, tight: tight),
@@ -76,8 +87,8 @@ class HomeScreen extends ConsumerWidget {
                 SizedBox(height: gap),
                 _HomeActionButton(
                   label: recent == null
-                      ? 'Quick Start Practice'
-                      : 'Continue Practice',
+                      ? context.l10n.quickStartPractice
+                      : context.l10n.continuePractice,
                   icon: Icons.play_circle_outline_rounded,
                   primary: true,
                   height: actionHeight,
@@ -92,8 +103,8 @@ class HomeScreen extends ConsumerWidget {
                 SizedBox(height: gap),
                 _HomeActionButton(
                   label: programs.isEmpty
-                      ? 'Browse Mantras'
-                      : 'Select from your Programs',
+                      ? context.l10n.browseMantras
+                      : context.l10n.selectFromPrograms,
                   height: actionHeight,
                   onPressed: () => context.go(
                     programs.isEmpty
@@ -103,7 +114,7 @@ class HomeScreen extends ConsumerWidget {
                 ),
                 SizedBox(height: gap),
                 _HomeActionButton(
-                  label: 'Create a New Program',
+                  label: context.l10n.createNewProgram,
                   height: actionHeight,
                   onPressed: () => context.push(KvlRoute.mantraSelection),
                 ),
@@ -239,7 +250,7 @@ class _RewardPointsTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Reward Points',
+                    context.l10n.rewardPoints,
                     style: KvlText.caption(
                       compact ? 10.5 : 12,
                     ).copyWith(color: KvlColors.inkSoft),
@@ -270,7 +281,7 @@ class _RewardPointsTile extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Store',
+                    context.l10n.storeButton,
                     style: KvlText.caption(12.5).copyWith(
                       color: KvlColors.primaryDeep,
                       fontWeight: FontWeight.w600,
@@ -294,14 +305,12 @@ class _RewardPointsTile extends StatelessWidget {
 
 class _DailyReminder extends ConsumerWidget {
   const _DailyReminder({required this.program, required this.compact});
-  final Program? program;
+  final Program program;
   final bool compact;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final mantra = program == null
-        ? null
-        : ref.watch(mantraByIdProvider(program!.mantraId));
+    final mantra = ref.watch(mantraByIdProvider(program.mantraId));
     final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
     return KvlCard(
       variant: KvlCardVariant.warm,
@@ -325,7 +334,7 @@ class _DailyReminder extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'DAILY PRACTICE',
+                  context.l10n.dailyPractice,
                   style: KvlText.caption(11.5).copyWith(
                     color: KvlColors.primaryDeep,
                     fontWeight: FontWeight.w700,
@@ -345,9 +354,7 @@ class _DailyReminder extends ConsumerWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  program == null
-                      ? 'Start your first goal today'
-                      : 'Continue your ${program!.targetDays}-day goal',
+                  context.l10n.continueGoal(program.targetDays),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: KvlText.caption(13).copyWith(color: KvlColors.muted),
@@ -377,14 +384,19 @@ class _DailyReminder extends ConsumerWidget {
   }
 }
 
-class _HeroQuote extends StatelessWidget {
+class _HeroQuote extends ConsumerWidget {
   const _HeroQuote({required this.compact, required this.tight});
 
   final bool compact;
   final bool tight;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cfg = ref.watch(remoteConfigProvider).value ?? RemoteConfig.empty;
+    final quote = cfg.stringFlag(
+      RemoteConfigKeys.dailyQuoteTelugu,
+      fallback: 'ధర్మో రక్షతి రక్షితః',
+    );
     return KvlCard(
       variant: KvlCardVariant.warm,
       padding: EdgeInsets.zero,
@@ -431,7 +443,7 @@ class _HeroQuote extends StatelessWidget {
                           child: FittedBox(
                             fit: BoxFit.scaleDown,
                             child: Text(
-                              '"దుష్టులను క్షమించడం ధర్మం కాదు."',
+                              '"$quote"',
                               maxLines: 1,
                               textAlign: TextAlign.center,
                               style: KvlText.mantraTelugu(
@@ -451,7 +463,14 @@ class _HeroQuote extends StatelessWidget {
                     ),
                   ),
                   InkWell(
-                    onTap: () {},
+                    onTap: () {
+                      SharePlus.instance.share(
+                        ShareParams(
+                          text:
+                              '"దుష్టులను క్షమించడం ధర్మం కాదు."\n— Ramayana\n\nShared via Vachika Lekhini 🙏',
+                        ),
+                      );
+                    },
                     borderRadius: BorderRadius.circular(18),
                     child: Container(
                       width: 36,

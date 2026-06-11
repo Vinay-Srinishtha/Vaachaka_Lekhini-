@@ -8,6 +8,7 @@ import '../../../core/theme/theme.dart';
 import '../../../core/utils/indian_number_format.dart';
 import '../../../core/widgets/widgets.dart';
 import '../domain/friend.dart';
+import '../../../l10n/l10n.dart';
 import '../domain/leaderboard_repository.dart';
 
 class CommunityScreen extends ConsumerStatefulWidget {
@@ -20,50 +21,16 @@ class CommunityScreen extends ConsumerStatefulWidget {
 class _CommunityScreenState extends ConsumerState<CommunityScreen> {
   LeaderboardSort _sort = LeaderboardSort.streak;
 
-  Future<Friend> _buildSelf() async {
-    final profile = ref.read(activeProfileProvider).value;
-    final programs =
-        ref.read(programsForActiveProfileProvider).value ?? const [];
-    var bestStreak = 0;
-    var totalChants = 0;
-    final repo = ref.read(programRepositoryProvider);
-    for (final p in programs) {
-      final s = await repo.currentStreak(p.id);
-      if (s > bestStreak) bestStreak = s;
-      totalChants += p.totalProgress;
-    }
-    return Friend(
-      id: profile?.id ?? 'self',
-      name: profile?.name ?? 'You',
-      streakDays: bestStreak,
-      totalChants: totalChants,
-      isSelf: true,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Friend>(
-      future: _buildSelf(),
-      builder: (_, snap) {
-        final self = snap.data;
-        if (self == null) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        return FutureBuilder<List<Friend>>(
-          future: ref
-              .read(leaderboardRepositoryProvider)
-              .leaderboard(sort: _sort, self: self),
-          builder: (_, listSnap) {
-            final list = listSnap.data ?? const <Friend>[];
-            return _Body(
-              list: list,
-              sort: _sort,
-              onSortChanged: (s) => setState(() => _sort = s),
-            );
-          },
-        );
-      },
+    // Real leaderboard from /api/v1/leaderboard — no mock friends.
+    final leaderboardAsync = ref.watch(leaderboardProvider(_sort));
+    final list = leaderboardAsync.value ?? const <Friend>[];
+    return _Body(
+      list: list,
+      sort: _sort,
+      onSortChanged: (s) => setState(() => _sort = s),
+      loading: leaderboardAsync.isLoading,
     );
   }
 }
@@ -73,13 +40,18 @@ class _Body extends StatelessWidget {
     required this.list,
     required this.sort,
     required this.onSortChanged,
+    this.loading = false,
   });
   final List<Friend> list;
   final LeaderboardSort sort;
   final ValueChanged<LeaderboardSort> onSortChanged;
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
+    if (loading && list.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
     final podium = list.take(3).toList();
     final rest = list.skip(3).toList();
     final selfIndex = list.indexWhere((f) => f.isSelf);
@@ -111,14 +83,14 @@ class _Body extends StatelessWidget {
         if (selfIndex == -1) const SizedBox.shrink(),
         const SizedBox(height: KvlSpacing.md),
         KvlButton(
-          label: 'Send Encouragement',
+          label: context.l10n.sendEncouragement,
           icon: Icons.favorite_rounded,
           onPressed: () {},
         ),
         const SizedBox(height: KvlSpacing.sm),
         KvlButton(
           variant: KvlButtonVariant.secondary,
-          label: 'View Group Stats',
+          label: context.l10n.viewGroupStats,
           onPressed: () {},
         ),
       ],
@@ -139,13 +111,13 @@ class _InviteBanner extends ConsumerWidget {
       child: Column(
         children: [
           Text(
-            'Invite up to ${LeaderboardRepository.maxCircle} friends to your practice circle',
+            context.l10n.communityInviteBanner(LeaderboardRepository.maxCircle),
             textAlign: TextAlign.center,
             style: KvlText.ui(12.5, FontWeight.w600),
           ),
           const SizedBox(height: 4),
           Text(
-            "Create a community to support each other's spiritual journey.",
+            context.l10n.communityInviteSubline,
             textAlign: TextAlign.center,
             style: KvlText.caption(11),
           ),
@@ -153,7 +125,7 @@ class _InviteBanner extends ConsumerWidget {
           KvlButton(
             size: KvlButtonSize.tiny,
             expand: false,
-            label: 'Invite Friends',
+            label: context.l10n.inviteFriendsButton,
             icon: Icons.person_add_alt_1_rounded,
             onPressed: () => context.push(KvlRoute.inviteFriends),
           ),
@@ -179,12 +151,12 @@ class _SortToggle extends StatelessWidget {
       child: Row(
         children: [
           _Pill(
-            label: 'Streak Challenge',
+            label: context.l10n.streakChallenge,
             selected: sort == LeaderboardSort.streak,
             onTap: () => onChanged(LeaderboardSort.streak),
           ),
           _Pill(
-            label: 'Total Chants',
+            label: context.l10n.totalChantsSort,
             selected: sort == LeaderboardSort.totalChants,
             onTap: () => onChanged(LeaderboardSort.totalChants),
           ),
@@ -388,11 +360,11 @@ class _RankRow extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  highlight ? 'You' : friend.name,
+                  highlight ? context.l10n.youLabel : friend.name,
                   style: KvlText.ui(12, FontWeight.w600),
                 ),
                 Text(
-                  sort == LeaderboardSort.streak ? 'Streak' : 'Total Chants',
+                  sort == LeaderboardSort.streak ? context.l10n.streakLabel : context.l10n.totalChantsSort,
                   style: KvlText.muted(10),
                 ),
               ],

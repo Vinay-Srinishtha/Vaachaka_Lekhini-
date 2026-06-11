@@ -3,15 +3,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/providers.dart';
+import '../../../l10n/l10n.dart';
 import '../../../app/router.dart';
 import '../../../core/i18n/language_options.dart';
 import '../../../core/navigation/back_navigation.dart';
+import '../../../core/phone/phone_mode_service.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/utils/indian_number_format.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../programs/domain/session.dart';
 import '../../settings/domain/settings_repository.dart';
 import '../application/practice_controller.dart';
+
+final _phoneModeEnabledProvider = FutureProvider.autoDispose<bool>((ref) {
+  return PhoneModeService().isEnabled();
+});
 
 class CounterScreen extends ConsumerWidget {
   const CounterScreen({super.key, required this.programId});
@@ -43,8 +49,14 @@ class _Body extends ConsumerWidget {
     final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
     final profile = ref.watch(activeProfileProvider).value;
     final controller = ref.read(practiceControllerProvider(programId).notifier);
-    final current = state.program.totalProgress + state.sessionCount;
-    final globalCount = 10000000 + current;
+    final phoneModeEnabled =
+        ref.watch(_phoneModeEnabledProvider).value ?? false;
+    final baseProgress = state.program.totalProgress;
+    // Real global count = community total from DB + the user's current session
+    // (session hasn't synced yet, so we add it locally for a live feel).
+    final statsAsync = ref.watch(globalStatsProvider);
+    final globalCount =
+        (statsAsync.value?.globalChantCount ?? 0) + state.sessionCount;
     final title =
         mantra?.name.displayForLanguage(settings.languageCode) ??
         'Sri Rama lekhanam';
@@ -60,9 +72,9 @@ class _Body extends ConsumerWidget {
           builder: (context, c) {
             final h = c.maxHeight;
             final compact = h < 760;
-            final micSize = compact ? 152.0 : 192.0;
-            final bottomPad = MediaQuery.of(context).padding.bottom +
-                (compact ? 8.0 : 14.0);
+            final micSize = compact ? 76.0 : 96.0;
+            final bottomPad =
+                MediaQuery.of(context).padding.bottom + (compact ? 8.0 : 14.0);
 
             return Padding(
               padding: EdgeInsets.fromLTRB(
@@ -76,7 +88,7 @@ class _Body extends ConsumerWidget {
                   _TopBar(
                     title: title,
                     initial: profile?.initials ?? '?',
-                    onBack: () => context.popOrGo(KvlRoute.practice),
+                    onBack: () => context.pop(),
                     onProfileTap: () => context.push(KvlRoute.profile),
                   ),
                   SizedBox(height: compact ? 10 : 16),
@@ -87,7 +99,8 @@ class _Body extends ConsumerWidget {
                       '${KvlRoute.handwritingWrite}/${state.program.mantraId}?programId=$programId',
                     ),
                     onAmbience: () {},
-                    onPhoneMode: () {},
+                    phoneModeEnabled: phoneModeEnabled,
+                    onPhoneMode: () => _togglePhoneMode(ref),
                   ),
                   SizedBox(height: compact ? 10 : 16),
                   Expanded(
@@ -95,12 +108,18 @@ class _Body extends ConsumerWidget {
                       micSize: micSize,
                       mantraLabel: mantraLabel,
                       compact: compact,
+                      isRunning: state.isRunning,
+                      isVoiceMode: state.modality == SessionModality.voice,
+                      sessionCount: state.sessionCount,
+                      onTap: state.isRunning
+                          ? controller.pause
+                          : () => controller.start(mantra: mantra),
                     ),
                   ),
                   SizedBox(height: compact ? 4 : 6),
                   _Counts(
                     globalCount: globalCount,
-                    yours: current,
+                    yours: baseProgress,
                     added: state.sessionCount,
                     compact: compact,
                   ),
@@ -108,10 +127,10 @@ class _Body extends ConsumerWidget {
                   _ActionRow(
                     compact: compact,
                     startLabel: state.activeSessionId == null
-                        ? 'START'
+                        ? context.l10n.startButton
                         : state.isRunning
-                        ? 'PAUSE'
-                        : 'RESUME',
+                        ? context.l10n.pauseButton
+                        : context.l10n.resumeButton,
                     startIcon: state.isRunning
                         ? Icons.pause_rounded
                         : Icons.play_arrow_rounded,
@@ -126,21 +145,79 @@ class _Body extends ConsumerWidget {
                             if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(
-                                  'Session saved · +${IndianNumberFormat.format(saved)} chants',
-                                ),
-                                backgroundColor: KvlColors.accent,
+                                duration: const Duration(milliseconds: 1500),
                                 behavior: SnackBarBehavior.floating,
+                                backgroundColor: const Color(0xFF15803D),
+                                elevation: 10,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: KvlRadius.brMD,
+                                ),
+                                content: Row(
+                                  children: [
+                                    Container(
+                                      width: 30,
+                                      height: 30,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(
+                                          alpha: .16,
+                                        ),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: const Icon(
+                                        Icons.check_rounded,
+                                        color: Colors.white,
+                                        size: 19,
+                                      ),
+                                    ),
+                                    const SizedBox(width: KvlSpacing.sm),
+                                    Expanded(
+                                      child: Text(
+                                        'Session saved · +${IndianNumberFormat.format(saved)} chants',
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: KvlText.ui(
+                                          13,
+                                          FontWeight.w600,
+                                        ).copyWith(color: Colors.white),
+                                      ),
+                                    ),
+                                    GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTap: () {
+                                        final messenger = ScaffoldMessenger.maybeOf(context);
+                                        messenger?.clearSnackBars();
+                                      },
+                                      child: const Padding(
+                                        padding: EdgeInsets.all(6),
+                                        child: Icon(
+                                          Icons.close,
+                                          color: Colors.white,
+                                          size: 20,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             );
-                            if (context.canPop()) context.pop();
+                            if (!context.mounted) return;
+                            // Navigate to daily progress to show session summary.
+                            // Use go() so the user can't swipe back to an active session.
+                            context.go('${KvlRoute.dailyProgress}/$programId');
                           },
                   ),
                   if (state.errorMessage != null) ...[
                     const SizedBox(height: 8),
                     _MicErrorCard(
                       message: state.errorMessage!,
+                      requiresTraining: state.errorMessage!.startsWith(
+                        'Complete voice training',
+                      ),
                       showOpenSettings: state.micPermanentlyDenied,
+                      onTrainVoice: () => context.go(
+                        '${KvlRoute.voiceTraining}/${state.program.mantraId}',
+                      ),
                       onOpenSettings: controller.openSystemSettings,
                       onSwitchManual: () {
                         controller.setModality(SessionModality.manual);
@@ -160,6 +237,11 @@ class _Body extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _togglePhoneMode(WidgetRef ref) async {
+    await PhoneModeService().toggle();
+    ref.invalidate(_phoneModeEnabledProvider);
   }
 }
 
@@ -229,12 +311,14 @@ class _ToolRow extends StatelessWidget {
     required this.onChangeMantra,
     required this.onWritingMode,
     required this.onAmbience,
+    required this.phoneModeEnabled,
     required this.onPhoneMode,
   });
   final bool compact;
   final VoidCallback onChangeMantra;
   final VoidCallback onWritingMode;
   final VoidCallback onAmbience;
+  final bool phoneModeEnabled;
   final VoidCallback onPhoneMode;
 
   @override
@@ -252,7 +336,7 @@ class _ToolRow extends StatelessWidget {
         Expanded(
           child: _Tool(
             icon: Icons.draw_outlined,
-            label: 'Writing mode',
+            label: context.l10n.ownWritingModeLabel,
             onTap: onWritingMode,
             compact: compact,
           ),
@@ -260,17 +344,20 @@ class _ToolRow extends StatelessWidget {
         Expanded(
           child: _Tool(
             icon: Icons.music_note_rounded,
-            label: 'Ambience Sound',
+            label: context.l10n.ambienceSound,
             onTap: onAmbience,
             compact: compact,
           ),
         ),
         Expanded(
           child: _Tool(
-            icon: Icons.notifications_off_outlined,
-            label: 'Phone Mode',
+            icon: phoneModeEnabled
+                ? Icons.notifications_off_rounded
+                : Icons.notifications_none_rounded,
+            label: context.l10n.phoneMode,
             onTap: onPhoneMode,
             compact: compact,
+            active: phoneModeEnabled,
           ),
         ),
       ],
@@ -284,23 +371,71 @@ class _Tool extends StatelessWidget {
     required this.label,
     required this.onTap,
     required this.compact,
+    this.active = false,
   });
   final IconData icon;
   final String label;
   final VoidCallback onTap;
   final bool compact;
+  final bool active;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: KvlRadius.brSM,
+      borderRadius: KvlRadius.brMD,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
         child: Column(
           children: [
-            Icon(icon, size: compact ? 29 : 34, color: const Color(0xFF252525)),
-            const SizedBox(height: 6),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: compact ? 38 : 44,
+              height: compact ? 38 : 44,
+              decoration: BoxDecoration(
+                color: active ? KvlColors.primaryGhost : Colors.transparent,
+                borderRadius: KvlRadius.brMD,
+                border: active
+                    ? Border.all(color: KvlColors.primarySoft)
+                    : null,
+              ),
+              alignment: Alignment.center,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(
+                    icon,
+                    size: compact ? 27 : 31,
+                    color: active
+                        ? KvlColors.primaryDeep
+                        : const Color(0xFF252525),
+                  ),
+                  if (active)
+                    Positioned(
+                      right: -10,
+                      top: -8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: KvlColors.primary,
+                          borderRadius: KvlRadius.brPill,
+                        ),
+                        child: Text(
+                          'ON',
+                          style: KvlText.caption(7).copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 4),
             SizedBox(
               height: compact ? 15 : 18,
               child: FittedBox(
@@ -308,9 +443,10 @@ class _Tool extends StatelessWidget {
                 child: Text(
                   label,
                   maxLines: 1,
-                  style: KvlText.caption(
-                    compact ? 11.5 : 13,
-                  ).copyWith(color: KvlColors.inkSoft),
+                  style: KvlText.caption(compact ? 11.5 : 13).copyWith(
+                    color: active ? KvlColors.primaryDeep : KvlColors.inkSoft,
+                    fontWeight: active ? FontWeight.w700 : FontWeight.w400,
+                  ),
                 ),
               ),
             ),
@@ -321,60 +457,253 @@ class _Tool extends StatelessWidget {
   }
 }
 
-class _HeroMic extends StatelessWidget {
+class _HeroMic extends StatefulWidget {
   const _HeroMic({
     required this.micSize,
     required this.mantraLabel,
     required this.compact,
+    required this.isRunning,
+    required this.isVoiceMode,
+    required this.onTap,
+    required this.sessionCount,
   });
   final double micSize;
   final String mantraLabel;
   final bool compact;
+  final bool isRunning;
+  final bool isVoiceMode;
+  final VoidCallback onTap;
+  final int sessionCount;
+
+  @override
+  State<_HeroMic> createState() => _HeroMicState();
+}
+
+class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
+  // Pool of 6 outward ripple slots — fired round-robin on each count
+  static const _poolSize = 6;
+
+  // Warm ring colours
+  static const _ringColors = [
+    Color(0xFFFF8C42),
+    Color(0xFFFFB572),
+    Color(0xFFE8622A),
+    Color(0xFFFFD4A3),
+    Color(0xFFFF6B35),
+    Color(0xFFFFCA8A),
+  ];
+
+  late List<AnimationController> _pool;
+  // Which slot fires next
+  int _nextSlot = 0;
+  // Track last-count time to compute rate → intensity
+  DateTime? _lastCountTime;
+  // Intensity 0..1: 1 = fast counts, 0 = slow
+  final List<double> _slotIntensity = List.filled(_poolSize, 0.5);
+
+  late AnimationController _textCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _pool = List.generate(
+      _poolSize,
+      (_) => AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 2200),
+      ),
+    );
+    _textCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    _textCtrl.addStatusListener((status) {
+      if (status == AnimationStatus.completed && mounted) {
+        Future.delayed(const Duration(milliseconds: 200), () {
+          if (mounted) _textCtrl.reset();
+        });
+      }
+    });
+    if (widget.isRunning) _textCtrl.reset();
+  }
+
+  @override
+  void didUpdateWidget(_HeroMic old) {
+    super.didUpdateWidget(old);
+    if (widget.isRunning && !old.isRunning) {
+      _textCtrl.reset();
+    } else if (!widget.isRunning && old.isRunning) {
+      _stopAll();
+    }
+    if (widget.sessionCount != old.sessionCount && widget.isRunning) {
+      // Ripples only when mic is actively capturing voice
+      if (widget.isVoiceMode) _fireRipple();
+      _textCtrl.forward(from: 0);
+    }
+  }
+
+  void _fireRipple() {
+    // Compute intensity from time between counts (fast = 1.0, slow = 0.2)
+    final now = DateTime.now();
+    double intensity = 0.5;
+    if (_lastCountTime != null) {
+      final ms = now.difference(_lastCountTime!).inMilliseconds;
+      // Clamp: <300ms = very fast, >3000ms = slow
+      intensity = (1.0 - ((ms - 300) / 2700)).clamp(0.2, 1.0);
+    }
+    _lastCountTime = now;
+
+    final slot = _nextSlot % _poolSize;
+    _nextSlot++;
+    _slotIntensity[slot] = intensity;
+
+    // Adjust duration: faster counts = quicker ripple
+    _pool[slot].duration = Duration(
+      milliseconds: (2200 - intensity * 700).round(),
+    );
+    _pool[slot].forward(from: 0);
+  }
+
+  void _stopAll() {
+    for (final c in _pool) {
+      c.stop();
+      c.reset();
+    }
+    _textCtrl.stop();
+    _textCtrl.reset();
+  }
+
+  @override
+  void dispose() {
+    for (final c in _pool) c.dispose();
+    _textCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
-      builder: (context, constraints) {
-        final h = constraints.maxHeight;
+      builder: (ctx, constraints) {
+        // Ripples expand from mic outward to well beyond screen edges
+        final micDiam = widget.micSize * 1.4;
+        final maxDiam = constraints.biggest.longestSide * 3.2;
+
         return Stack(
+          clipBehavior: Clip.none,
           alignment: Alignment.center,
           children: [
-            Positioned(
-              top: compact ? 0 : 8,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Consumer(
-                    builder: (context, ref, _) {
-                      final settings =
-                          ref.watch(settingsProvider).value ??
-                          KvlSettings.fallback;
-                      final script =
-                          settings.languageCode.mantraScriptForLanguage;
-                      return Text(
-                        mantraLabel,
-                        maxLines: 1,
-                        style: KvlText.mantraByScript(script, compact ? 64 : 84)
-                            .copyWith(
-                              color: const Color(
-                                0xFFB8B3A2,
-                              ).withValues(alpha: .24),
-                              fontWeight: FontWeight.w400,
-                            ),
-                      );
-                    },
-                  ),
+            // ── Soft static background circle (always visible) ────
+            Container(
+              width: widget.micSize * 2.6,
+              height: widget.micSize * 2.6,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFFFFB572).withValues(alpha: widget.isRunning ? 0.18 : 0.08),
+                    const Color(0xFFFF8C42).withValues(alpha: widget.isRunning ? 0.08 : 0.03),
+                    KvlColors.primary.withValues(alpha: 0.0),
+                  ],
+                  stops: const [0.0, 0.6, 1.0],
                 ),
               ),
             ),
-            Transform.translate(
-              offset: Offset(0, h * .14),
-              child: SizedBox(
-                width: micSize,
-                height: micSize,
-                child: const CustomPaint(painter: _MicPainter()),
+
+            // ── Outward ripples — fired on each voice count ───────
+            for (var i = 0; i < _poolSize; i++)
+              AnimatedBuilder(
+                animation: _pool[i],
+                builder: (ctx2, _) {
+                  final raw = _pool[i].value;
+                  if (raw == 0.0) return const SizedBox.shrink();
+                  final t = Curves.easeOut.transform(raw);
+                  final intensity = _slotIntensity[i];
+
+                  // Diameter expands from mic outward — intensity scales max reach
+                  final reach = micDiam + (maxDiam - micDiam) * intensity;
+                  final diam = micDiam + (reach - micDiam) * t;
+
+                  // Fade: visible early, fades by end
+                  final opacity = ((1.0 - t) * 0.52 * intensity).clamp(0.0, 0.52);
+
+                  final color = _ringColors[i % _ringColors.length];
+                  return Container(
+                    width: diam,
+                    height: diam,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          color.withValues(alpha: 0.0),
+                          color.withValues(alpha: opacity * 0.3),
+                          color.withValues(alpha: opacity),
+                        ],
+                        stops: const [0.0, 0.60, 1.0],
+                      ),
+                    ),
+                  );
+                },
+              ),
+
+            // ── Mantra text: visible from session start, shrinks on +1 ─
+            if (widget.isRunning)
+              AnimatedBuilder(
+                animation: _textCtrl,
+                builder: (ctx2, _) {
+                  final t = Curves.easeIn.transform(_textCtrl.value);
+                  final maxFs = (constraints.maxWidth * 0.42).clamp(32.0, 96.0);
+                  final minFs = widget.compact ? 12.0 : 14.0;
+                  final fontSize = maxFs - (maxFs - minFs) * t;
+                  final opacity = t < 0.75
+                      ? 1.0
+                      : ((1.0 - t) / 0.25).clamp(0.0, 1.0);
+                  final textColor = Color.lerp(
+                    const Color(0xFFCC7A3A),
+                    const Color(0xFF4A1A02),
+                    t,
+                  )!;
+                  return SizedBox(
+                    width: constraints.maxWidth * 0.88,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        widget.mantraLabel,
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontSize: fontSize.clamp(minFs, maxFs),
+                          fontWeight: t > 0.65 ? FontWeight.w800 : FontWeight.w600,
+                          letterSpacing: ((1.0 - t) * 3.0).clamp(0.0, 3.0),
+                          color: textColor.withValues(alpha: opacity * 0.80),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+
+            // ── Mic icon: shrinks + moves to bottom when running ─────
+            Positioned(
+              // When running: sit near the bottom of the available area
+              // When stopped: center (Positioned with all nulls = centered in Stack)
+              bottom: widget.isRunning ? constraints.maxHeight * 0.04 : null,
+              child: GestureDetector(
+                onTap: widget.onTap,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 500),
+                  curve: Curves.easeInOut,
+                  width: widget.isRunning ? widget.micSize * 1.6 : widget.micSize * 2.4,
+                  height: widget.isRunning ? widget.micSize * 1.6 : widget.micSize * 2.4,
+                  color: Colors.transparent,
+                  alignment: Alignment.center,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 500),
+                    curve: Curves.easeInOut,
+                    width: widget.isRunning ? widget.micSize * 0.75 : widget.micSize * 1.35,
+                    height: widget.isRunning ? widget.micSize * 0.75 : widget.micSize * 1.35,
+                    child: const CustomPaint(painter: _MicPainter()),
+                  ),
+                ),
               ),
             ),
           ],
@@ -382,54 +711,83 @@ class _HeroMic extends StatelessWidget {
       },
     );
   }
+
+  bool get compact => widget.compact;
 }
 
 class _MicPainter extends CustomPainter {
   const _MicPainter();
 
+
+
   @override
   void paint(Canvas canvas, Size size) {
-    final stroke = Paint()
-      ..color = const Color(0xFF202020)
+    final cx = size.width / 2;
+    final fill = Paint()
+      ..color = const Color(0xFF3A3D42)
+      ..style = PaintingStyle.fill;
+    final strokePaint = Paint()
+      ..color = const Color(0xFF3A3D42)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = size.width * .024
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    final centerX = size.width / 2;
-    final capsule = RRect.fromRectAndRadius(
-      Rect.fromCenter(
-        center: Offset(centerX, size.height * .36),
-        width: size.width * .31,
-        height: size.height * .49,
-      ),
-      Radius.circular(size.width * .17),
+      ..strokeWidth = size.width * .055
+      ..strokeCap = StrokeCap.round;
+
+    // ── Capsule body (filled) ──────────────────────────────────────
+    final capsuleW = size.width * .44;
+    final capsuleH = size.height * .52;
+    final capsuleTop = size.height * .03;
+    final capsuleRect = Rect.fromLTWH(
+      cx - capsuleW / 2,
+      capsuleTop,
+      capsuleW,
+      capsuleH,
     );
-    canvas.drawRRect(capsule, stroke);
-    canvas.drawArc(
-      Rect.fromCenter(
-        center: Offset(centerX, size.height * .47),
-        width: size.width * .74,
-        height: size.height * .65,
-      ),
-      0,
-      3.14159,
-      false,
-      stroke,
+    final capsuleRRect = RRect.fromRectAndRadius(
+      capsuleRect,
+      Radius.circular(capsuleW / 2),
     );
+    canvas.drawRRect(capsuleRRect, fill);
+
+    // ── Grille lines (3 white horizontal lines on the capsule) ────
+    final grillePaint = Paint()
+      ..color = Colors.white.withValues(alpha: .55)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = size.width * .035
+      ..strokeCap = StrokeCap.round;
+    final grilleL = cx - capsuleW * .38;
+    final grilleR = cx + capsuleW * .38;
+    final grilleStartY = capsuleTop + capsuleH * .30;
+    const grilleRows = 3;
+    final grilleSpacing = capsuleH * .18;
+    for (var i = 0; i < grilleRows; i++) {
+      final y = grilleStartY + i * grilleSpacing;
+      canvas.drawLine(Offset(grilleL, y), Offset(grilleR, y), grillePaint);
+    }
+
+    // ── Stand arc ─────────────────────────────────────────────────
+    final arcCenterY = capsuleTop + capsuleH * .9;
+    final arcRect = Rect.fromCenter(
+      center: Offset(cx, arcCenterY),
+      width: size.width * .72,
+      height: size.height * .38,
+    );
+    canvas.drawArc(arcRect, 0, 3.14159, false, strokePaint);
+
+    // ── Vertical stem ─────────────────────────────────────────────
+    final stemTop = arcCenterY + arcRect.height / 2;
+    final stemBot = size.height * .93;
+    canvas.drawLine(Offset(cx, stemTop), Offset(cx, stemBot), strokePaint);
+
+    // ── Horizontal base ───────────────────────────────────────────
     canvas.drawLine(
-      Offset(centerX, size.height * .77),
-      Offset(centerX, size.height * .96),
-      stroke,
-    );
-    canvas.drawLine(
-      Offset(size.width * .34, size.height * .96),
-      Offset(size.width * .66, size.height * .96),
-      stroke,
+      Offset(cx - size.width * .26, stemBot),
+      Offset(cx + size.width * .26, stemBot),
+      strokePaint,
     );
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant CustomPainter old) => false;
 }
 
 class _Counts extends StatelessWidget {
@@ -453,7 +811,7 @@ class _Counts extends StatelessWidget {
           child: FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(
-              'Global Mantra Count : ${IndianNumberFormat.format(globalCount)}',
+              context.l10n.countDisplay(IndianNumberFormat.format(globalCount)),
               textAlign: TextAlign.center,
               maxLines: 1,
               style: KvlText.ui(
@@ -484,7 +842,7 @@ class _Counts extends StatelessWidget {
                     FontWeight.w700,
                   ).copyWith(color: KvlColors.ink),
                   children: [
-                    const TextSpan(text: 'Yours : '),
+                    TextSpan(text: context.l10n.yoursDisplay),
                     TextSpan(
                       text: IndianNumberFormat.format(yours),
                       style: const TextStyle(color: Color(0xFFE02020)),
@@ -535,7 +893,7 @@ class _ActionRow extends StatelessWidget {
         const SizedBox(width: KvlSpacing.md),
         Expanded(
           child: _ActionButton(
-            label: 'Finish',
+            label: context.l10n.finishButton,
             color: KvlColors.accent,
             onTap: onFinish,
             compact: compact,
@@ -665,13 +1023,17 @@ class _ProgressCard extends StatelessWidget {
 class _MicErrorCard extends StatelessWidget {
   const _MicErrorCard({
     required this.message,
+    required this.requiresTraining,
     required this.showOpenSettings,
+    required this.onTrainVoice,
     required this.onOpenSettings,
     required this.onSwitchManual,
     required this.onDismiss,
   });
   final String message;
+  final bool requiresTraining;
   final bool showOpenSettings;
+  final VoidCallback onTrainVoice;
   final VoidCallback onOpenSettings;
   final VoidCallback onSwitchManual;
   final VoidCallback onDismiss;
@@ -719,6 +1081,13 @@ class _MicErrorCard extends StatelessWidget {
                     onPressed: onOpenSettings,
                   ),
                 )
+              else if (requiresTraining)
+                Expanded(
+                  child: KvlButton(
+                    label: 'Train Voice',
+                    onPressed: onTrainVoice,
+                  ),
+                )
               else
                 Expanded(
                   child: KvlButton(
@@ -726,14 +1095,16 @@ class _MicErrorCard extends StatelessWidget {
                     onPressed: onDismiss,
                   ),
                 ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: KvlButton(
-                  variant: KvlButtonVariant.secondary,
-                  label: 'Use Manual',
-                  onPressed: onSwitchManual,
+              if (!requiresTraining) ...[
+                const SizedBox(width: 8),
+                Expanded(
+                  child: KvlButton(
+                    variant: KvlButtonVariant.secondary,
+                    label: 'Use Manual',
+                    onPressed: onSwitchManual,
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ],

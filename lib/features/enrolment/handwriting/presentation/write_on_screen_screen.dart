@@ -303,12 +303,17 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
       final progress = programs
           .where((p) => p.id == widget.programId)
           .fold<int>(0, (total, p) => total + p.totalProgress);
+      // Real global count: community DB total + unsaved session writings.
+      final globalStats = ref.watch(globalStatsProvider).value;
+      final globalCount =
+          (globalStats?.globalChantCount ?? 0) + _writingCount;
       return _ProtoWriteScaffold(
         controller: _controller,
         guide: guide,
         guideScript: guideScript,
         saving: _saving,
         currentCount: progress,
+        globalCount: globalCount,
         writingCount: _writingCount,
         onBack: () => context.popOrGo(KvlRoute.practice),
         onAdd: _submitOne,
@@ -811,6 +816,7 @@ class _ProtoWriteScaffold extends StatefulWidget {
     required this.guideScript,
     required this.saving,
     required this.currentCount,
+    required this.globalCount,
     required this.writingCount,
     required this.onBack,
     required this.onAdd,
@@ -827,6 +833,7 @@ class _ProtoWriteScaffold extends StatefulWidget {
   final MantraScript guideScript;
   final bool saving;
   final int currentCount;
+  final int globalCount;
   final int writingCount;
   final VoidCallback onBack;
   final VoidCallback onAdd;
@@ -892,7 +899,7 @@ class _ProtoWriteScaffoldState extends State<_ProtoWriteScaffold> {
   @override
   Widget build(BuildContext context) {
     final yours = widget.currentCount;
-    final globalCount = 10000000 + yours;
+    final globalCount = widget.globalCount;
     return Scaffold(
       backgroundColor: KvlColors.bg,
       body: LayoutBuilder(

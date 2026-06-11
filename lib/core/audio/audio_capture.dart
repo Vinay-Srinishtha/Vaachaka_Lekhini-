@@ -41,7 +41,17 @@ class AudioCapture {
   /// are replaced with silence (all-zero bytes) before being forwarded.
   /// Use [MicSensitivity.minAmplitudeThreshold] to convert the setting.
   /// Defaults to 0 (no gate — every chunk passes through).
-  Future<Stream<Uint8List>> start({double minAmplitude = 0}) async {
+  /// Start the mic stream.
+  ///
+  /// [minAmplitude] — amplitude gate threshold (0 = disabled).
+  /// [holdoverMs] — how many consecutive milliseconds of sub-threshold audio
+  /// must be seen before a chunk is replaced with silence.  Defaults to 250 ms,
+  /// which prevents the brief amplitude dip *between* rapid chants from being
+  /// treated as silence by the ASR decoder.
+  Future<Stream<Uint8List>> start({
+    double minAmplitude = 0,
+    int holdoverMs = 250,
+  }) async {
     if (!await ensurePermission()) {
       throw StateError('Microphone permission denied');
     }
@@ -53,14 +63,34 @@ class AudioCapture {
       echoCancel: false,
     ));
     _out = StreamController<Uint8List>.broadcast();
+
+    // Holdover gate state: track how long the signal has been quiet.
+    int quietMs = 0;
+
     _sub = stream.listen(
       (chunk) {
-        // Amplitude gate: if the chunk is too quiet, send silence instead.
-        // This stops ASR from mis-firing on background noise.
-        final gated = minAmplitude > 0 && peakAmplitude(chunk) < minAmplitude
-            ? Uint8List(chunk.length) // all-zero = silence
-            : chunk;
-        _out!.add(gated);
+        if (minAmplitude <= 0) {
+          _out!.add(chunk);
+          return;
+        }
+        // Estimate chunk duration in ms (16-bit = 2 bytes/sample, mono).
+        final chunkDurationMs =
+            ((chunk.lengthInBytes / 2) / sampleRate * 1000).round();
+
+        if (peakAmplitude(chunk) >= minAmplitude) {
+          quietMs = 0; // signal is loud enough — reset holdover
+          _out!.add(chunk);
+        } else {
+          quietMs += chunkDurationMs;
+          // Only silence the chunk once the signal has been quiet long enough.
+          // Within the holdover window we still pass real audio so the ASR
+          // engine does not see artificial silence between rapid chants.
+          if (quietMs >= holdoverMs) {
+            _out!.add(Uint8List(chunk.length)); // all-zero = silence
+          } else {
+            _out!.add(chunk);
+          }
+        }
       },
       onError: _out!.addError,
       onDone: _out!.close,

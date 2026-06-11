@@ -283,7 +283,7 @@ class ProfileScreen extends ConsumerWidget {
                   if (activePrograms.isEmpty) return;
                   if (activePrograms.length == 1) {
                     context.push(
-                      '${KvlRoute.handwritingSubmit}/${activePrograms.first.mantraId}',
+                      '${KvlRoute.handwritingSubmit}/${activePrograms.first.mantraId}?retrain=1',
                     );
                     return;
                   }
@@ -1219,7 +1219,7 @@ class _RetrainWritingPicker {
         programs: programs,
         onPicked: (mantraId) {
           Navigator.pop(sheetCtx);
-          context.push('${KvlRoute.handwritingSubmit}/$mantraId');
+          context.push('${KvlRoute.handwritingSubmit}/$mantraId?retrain=1');
         },
       ),
     );

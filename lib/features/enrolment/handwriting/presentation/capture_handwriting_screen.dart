@@ -4,14 +4,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/providers.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../app/router.dart';
 import '../../../../core/theme/theme.dart';
 import '../../../../core/widgets/widgets.dart';
 import '../domain/handwriting_asset.dart';
 
 class CaptureHandwritingScreen extends ConsumerStatefulWidget {
-  const CaptureHandwritingScreen({super.key, required this.mantraId});
+  const CaptureHandwritingScreen({
+    super.key,
+    required this.mantraId,
+    this.isRetrain = false,
+  });
   final String mantraId;
+  final bool isRetrain;
 
   @override
   ConsumerState<CaptureHandwritingScreen> createState() => _CaptureHandwritingScreenState();
@@ -33,7 +39,7 @@ class _CaptureHandwritingScreenState extends ConsumerState<CaptureHandwritingScr
     try {
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
-        setState(() => _error = 'No camera available on this device');
+        setState(() => _error = context.l10n.noCameraAvailable);
         return;
       }
       final back = cameras.firstWhere(
@@ -64,7 +70,12 @@ class _CaptureHandwritingScreenState extends ConsumerState<CaptureHandwritingScr
             );
       }
       if (!mounted) return;
-      context.go('${KvlRoute.setTargetWritings}/${widget.mantraId}');
+      if (widget.isRetrain) {
+        context.pop();
+        if (mounted && context.canPop()) context.pop();
+      } else {
+        context.go('${KvlRoute.setTargetWritings}/${widget.mantraId}');
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -83,7 +94,7 @@ class _CaptureHandwritingScreenState extends ConsumerState<CaptureHandwritingScr
   @override
   Widget build(BuildContext context) {
     return KvlScaffold(
-      title: 'Capture Your Handwriting',
+      title: context.l10n.captureHandwritingTitle,
       trailing: IconButton(
         icon: const Icon(Icons.delete_outline_rounded),
         onPressed: () => Navigator.of(context).maybePop(),
@@ -132,7 +143,10 @@ class _CaptureHandwritingScreenState extends ConsumerState<CaptureHandwritingScr
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               IconButton(
-                onPressed: () => context.go('${KvlRoute.handwritingUpload}/${widget.mantraId}'),
+                onPressed: () {
+                  final suffix = widget.isRetrain ? '?retrain=1' : '';
+                  context.go('${KvlRoute.handwritingUpload}/${widget.mantraId}$suffix');
+                },
                 icon: const Icon(Icons.image_outlined),
                 iconSize: 28,
               ),

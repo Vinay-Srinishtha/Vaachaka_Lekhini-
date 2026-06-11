@@ -35,6 +35,7 @@ import '../features/programs/presentation/set_target_days_screen.dart';
 import '../features/programs/presentation/set_target_writings_screen.dart';
 import '../features/rewards/presentation/reward_history_screen.dart';
 import '../features/rewards/presentation/store_screen.dart';
+import '../l10n/l10n.dart';
 import 'providers.dart';
 
 /// Route names. Path params are appended on the call site:
@@ -144,6 +145,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '${KvlRoute.handwritingSubmit}/:mantraId',
         builder: (_, state) => HandwritingSubmitScreen(
           mantraId: state.pathParameters['mantraId']!,
+          isRetrain: state.uri.queryParameters['retrain'] == '1',
         ),
       ),
       GoRoute(
@@ -151,18 +153,21 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, state) => WriteOnScreenScreen(
           mantraId: state.pathParameters['mantraId']!,
           programId: state.uri.queryParameters['programId'],
+          isRetrain: state.uri.queryParameters['retrain'] == '1',
         ),
       ),
       GoRoute(
         path: '${KvlRoute.handwritingCapture}/:mantraId',
         builder: (_, state) => CaptureHandwritingScreen(
           mantraId: state.pathParameters['mantraId']!,
+          isRetrain: state.uri.queryParameters['retrain'] == '1',
         ),
       ),
       GoRoute(
         path: '${KvlRoute.handwritingUpload}/:mantraId',
         builder: (_, state) => UploadHandwritingScreen(
           mantraId: state.pathParameters['mantraId']!,
+          isRetrain: state.uri.queryParameters['retrain'] == '1',
         ),
       ),
 
@@ -277,12 +282,12 @@ class _ShellPage extends ConsumerWidget {
   const _ShellPage({required this.shell});
   final StatefulNavigationShell shell;
 
-  static const _titles = [
-    'Home',
-    'My Programs',
-    'Practice',
-    'Streak Leaderboard',
-    'Reward Store',
+  List<String> _buildTitles(BuildContext context) => [
+    context.l10n.navHome,
+    context.l10n.navPrograms,
+    context.l10n.navPractice,
+    context.l10n.navCommunity,
+    context.l10n.navStore,
   ];
 
   /// Tab indices in [kvlNavItems] for the feature-flag-gated tabs.
@@ -304,35 +309,58 @@ class _ShellPage extends ConsumerWidget {
       if (!cfg.boolFlag(RemoteConfigKeys.storeTab, fallback: true)) _storeTab,
     };
     final usesCustomHeader = shell.currentIndex == 0 || shell.currentIndex == 2;
-    return Scaffold(
-      backgroundColor: KvlColors.bg,
-      extendBodyBehindAppBar: true,
-      appBar: usesCustomHeader
-          ? null
-          : KvlTopBar(
-              title: _titles[shell.currentIndex],
-              showBack: shell.currentIndex == 1,
-              onBack: shell.currentIndex == 1
-                  ? () => context.popOrGo(KvlRoute.home)
-                  : null,
-              topGapColor: isCommunity || isStore ? Colors.black : null,
-              leading: isStore
-                  ? _RewardHistoryChip(
-                      points: points,
-                      onTap: () => context.push(KvlRoute.rewardHistory),
-                    )
-                  : null,
-              trailing: _AvatarChip(
-                initial: initial,
-                onTap: () => context.push(KvlRoute.profile),
-              ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (shell.currentIndex != 0) {
+          shell.goBranch(0);
+          return;
+        }
+        if (context.canPop()) {
+          context.pop();
+          return;
+        }
+        ScaffoldMessenger.of(context)
+          ..clearSnackBars()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('You are already on Home'),
+              behavior: SnackBarBehavior.floating,
+              duration: Duration(seconds: 2),
             ),
-      body: shell,
-      bottomNavigationBar: KvlBottomNav(
-        currentIndex: shell.currentIndex,
-        onTap: (i) =>
-            shell.goBranch(i, initialLocation: i == shell.currentIndex),
-        hiddenIndices: hidden,
+          );
+      },
+      child: Scaffold(
+        backgroundColor: KvlColors.bg,
+        extendBodyBehindAppBar: true,
+        appBar: usesCustomHeader
+            ? null
+            : KvlTopBar(
+                title: _buildTitles(context)[shell.currentIndex],
+                showBack: shell.currentIndex == 1,
+                onBack: shell.currentIndex == 1
+                    ? () => context.popOrGo(KvlRoute.home)
+                    : null,
+                topGapColor: isCommunity || isStore ? Colors.black : null,
+                leading: isStore
+                    ? _RewardHistoryChip(
+                        points: points,
+                        onTap: () => context.push(KvlRoute.rewardHistory),
+                      )
+                    : null,
+                trailing: _AvatarChip(
+                  initial: initial,
+                  onTap: () => context.push(KvlRoute.profile),
+                ),
+              ),
+        body: shell,
+        bottomNavigationBar: KvlBottomNav(
+          currentIndex: shell.currentIndex,
+          onTap: (i) =>
+              shell.goBranch(i, initialLocation: i == shell.currentIndex),
+          hiddenIndices: hidden,
+        ),
       ),
     );
   }
@@ -374,7 +402,7 @@ class _RewardHistoryChip extends StatelessWidget {
               ],
             ),
             Text(
-              'See History',
+              context.l10n.seeHistory,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: KvlText.caption(9.5).copyWith(

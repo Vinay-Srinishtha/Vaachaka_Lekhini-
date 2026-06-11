@@ -9,11 +9,17 @@ import '../../../../app/providers.dart';
 import '../../../../app/router.dart';
 import '../../../../core/theme/theme.dart';
 import '../../../../core/widgets/widgets.dart';
+import '../../../../l10n/l10n.dart';
 import '../domain/handwriting_asset.dart';
 
 class UploadHandwritingScreen extends ConsumerStatefulWidget {
-  const UploadHandwritingScreen({super.key, required this.mantraId});
+  const UploadHandwritingScreen({
+    super.key,
+    required this.mantraId,
+    this.isRetrain = false,
+  });
   final String mantraId;
+  final bool isRetrain;
 
   @override
   ConsumerState<UploadHandwritingScreen> createState() => _UploadHandwritingScreenState();
@@ -53,19 +59,24 @@ class _UploadHandwritingScreenState extends ConsumerState<UploadHandwritingScree
       );
     }
     if (!mounted) return;
-    context.go('${KvlRoute.setTargetWritings}/${widget.mantraId}');
+    if (widget.isRetrain) {
+      context.pop();
+      if (mounted && context.canPop()) context.pop();
+    } else {
+      context.go('${KvlRoute.setTargetWritings}/${widget.mantraId}');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return KvlScaffold(
-      title: 'Upload Your Handwriting',
+      title: context.l10n.uploadHandwritingTitle,
       trailing: IconButton(
         onPressed: _picked.isEmpty
             ? null
             : () => setState(_selected.clear),
         icon: Text(
-          'Deselect All',
+          context.l10n.deselectAll,
           style: KvlText.caption(11).copyWith(
             color: _picked.isEmpty ? KvlColors.muted : KvlColors.primaryDeep,
             fontWeight: FontWeight.w600,
@@ -79,7 +90,7 @@ class _UploadHandwritingScreenState extends ConsumerState<UploadHandwritingScree
             Padding(
               padding: const EdgeInsets.symmetric(vertical: KvlSpacing.sm),
               child: Text(
-                'Select an image of your handwriting',
+                context.l10n.selectImageHint,
                 style: KvlText.caption(11.5),
               ),
             ),
@@ -91,11 +102,11 @@ class _UploadHandwritingScreenState extends ConsumerState<UploadHandwritingScree
                       children: [
                         const Icon(Icons.image_search_outlined, color: KvlColors.muted, size: 48),
                         const SizedBox(height: 8),
-                        Text('No images yet', style: KvlText.muted(13)),
+                        Text(context.l10n.noImagesYet, style: KvlText.muted(13)),
                         const SizedBox(height: 16),
                         KvlButton(
                           variant: KvlButtonVariant.secondary,
-                          label: _busy ? 'Opening…' : 'Pick from Gallery',
+                          label: _busy ? context.l10n.openingButton : context.l10n.pickFromGallery,
                           onPressed: _busy ? null : _pickFromGallery,
                           expand: false,
                         ),
@@ -124,12 +135,12 @@ class _UploadHandwritingScreenState extends ConsumerState<UploadHandwritingScree
               padding: const EdgeInsets.only(bottom: KvlSpacing.sm),
               child: KvlButton(
                 variant: KvlButtonVariant.secondary,
-                label: 'Pick more',
+                label: context.l10n.pickMore,
                 onPressed: _busy ? null : _pickFromGallery,
               ),
             ),
           KvlButton(
-            label: 'Upload Selected (${_selected.length})',
+            label: context.l10n.uploadSelected(_selected.length),
             onPressed: _selected.isEmpty || _busy ? null : _upload,
           ),
         ],

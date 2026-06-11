@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/providers.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../app/router.dart';
 import '../../../../core/remote_config/remote_config.dart';
 import '../../../../core/remote_config/remote_config_keys.dart';
@@ -11,8 +12,14 @@ import '../../../../core/widgets/widgets.dart';
 import '../domain/handwriting_asset.dart';
 
 class HandwritingSubmitScreen extends ConsumerStatefulWidget {
-  const HandwritingSubmitScreen({super.key, required this.mantraId});
+  const HandwritingSubmitScreen({
+    super.key,
+    required this.mantraId,
+    this.isRetrain = false,
+  });
   final String mantraId;
+  /// When true: skip program creation, just save the sample and pop back.
+  final bool isRetrain;
 
   @override
   ConsumerState<HandwritingSubmitScreen> createState() => _HandwritingSubmitScreenState();
@@ -31,10 +38,11 @@ class _HandwritingSubmitScreenState extends ConsumerState<HandwritingSubmitScree
       HandwritingMode.useDefaultFont => null,
     };
     if (route != null) {
-      context.push('$route/${widget.mantraId}');
+      final suffix = widget.isRetrain ? '?retrain=1' : '';
+      context.push('$route/${widget.mantraId}$suffix');
       return;
     }
-    // Default font — just record the choice and proceed to home (target setup is Phase 3).
+    // Default font — just record the choice.
     final profile = ref.read(activeProfileProvider).value;
     if (profile != null) {
       await ref.read(handwritingRepositoryProvider).recordDefaultFontChoice(
@@ -43,7 +51,11 @@ class _HandwritingSubmitScreenState extends ConsumerState<HandwritingSubmitScree
           );
     }
     if (!mounted) return;
-    context.go('${KvlRoute.setTargetWritings}/${widget.mantraId}');
+    if (widget.isRetrain) {
+      context.pop();
+    } else {
+      context.go('${KvlRoute.setTargetWritings}/${widget.mantraId}');
+    }
   }
 
   @override
@@ -56,10 +68,10 @@ class _HandwritingSubmitScreenState extends ConsumerState<HandwritingSubmitScree
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: KvlSpacing.md),
-          Text('Submit Your Handwriting', textAlign: TextAlign.center, style: KvlText.title(19)),
+          Text(context.l10n.submitHandwritingTitle, textAlign: TextAlign.center, style: KvlText.title(19)),
           const SizedBox(height: 6),
           Text(
-            'Upload your handwriting for personalised PDF mantra recitations. Our AI will randomly select samples to feature.',
+            context.l10n.submitHandwritingDescription,
             textAlign: TextAlign.center,
             style: KvlText.caption(11.5).copyWith(height: 1.5),
           ),
@@ -71,7 +83,9 @@ class _HandwritingSubmitScreenState extends ConsumerState<HandwritingSubmitScree
             final modes = [
               for (final m in HandwritingMode.values)
                 if ((m != HandwritingMode.captureCamera || cameraEnabled) &&
-                    (m != HandwritingMode.uploadGallery || galleryEnabled))
+                    (m != HandwritingMode.uploadGallery || galleryEnabled) &&
+                    // In retrain mode the default-font option is irrelevant
+                    (m != HandwritingMode.useDefaultFont || !widget.isRetrain))
                   m,
             ];
             return GridView.count(
@@ -92,7 +106,7 @@ class _HandwritingSubmitScreenState extends ConsumerState<HandwritingSubmitScree
             );
           }(),
           const SizedBox(height: KvlSpacing.lg),
-          KvlButton(label: 'Confirm selection', onPressed: _selected == null ? null : _confirm),
+          KvlButton(label: context.l10n.confirmSelectionButton, onPressed: _selected == null ? null : _confirm),
         ],
       ),
     );
@@ -132,7 +146,16 @@ class _ModeCard extends StatelessWidget {
             child: Icon(icon, color: KvlColors.primaryDeep, size: 18),
           ),
           const SizedBox(height: 8),
-          Text(mode.label, textAlign: TextAlign.center, style: KvlText.ui(12, FontWeight.w600)),
+          Text(
+            switch (mode) {
+              HandwritingMode.writeOnScreen => context.l10n.modeWriteOnScreenLabel,
+              HandwritingMode.captureCamera => context.l10n.modeCaptureCameraLabel,
+              HandwritingMode.uploadGallery => context.l10n.modeUploadGalleryLabel,
+              HandwritingMode.useDefaultFont => context.l10n.modeDefaultFontLabel,
+            },
+            textAlign: TextAlign.center,
+            style: KvlText.ui(12, FontWeight.w600),
+          ),
           const SizedBox(height: 4),
           Expanded(
             child: Text(sub, textAlign: TextAlign.center, style: KvlText.caption(10).copyWith(height: 1.3)),

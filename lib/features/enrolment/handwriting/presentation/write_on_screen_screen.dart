@@ -28,10 +28,13 @@ class WriteOnScreenScreen extends ConsumerStatefulWidget {
     super.key,
     required this.mantraId,
     this.programId,
+    this.isRetrain = false,
   });
 
   final String mantraId;
   final String? programId;
+  /// When true: after saving, pop back instead of going to setTargetWritings.
+  final bool isRetrain;
 
   @override
   ConsumerState<WriteOnScreenScreen> createState() =>
@@ -284,10 +287,18 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
           onPressed: () => ScaffoldMessenger.of(context).clearSnackBars(),
         ),
       ));
-      context.go('${KvlRoute.practice}/$programId');
+      // Pop back to the practice counter screen (it pushed us here).
+      context.pop();
       return;
     }
-    context.go('${KvlRoute.setTargetWritings}/${widget.mantraId}');
+    if (widget.isRetrain) {
+      // Pop back through: write screen → submit screen → profile.
+      // Two pops: write → submit, submit → profile.
+      context.pop();
+      if (mounted && context.canPop()) context.pop();
+    } else {
+      context.go('${KvlRoute.setTargetWritings}/${widget.mantraId}');
+    }
   }
 
   @override

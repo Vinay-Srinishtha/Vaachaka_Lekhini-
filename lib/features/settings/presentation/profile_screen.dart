@@ -1,11 +1,16 @@
-import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../app/providers.dart';
+import '../../programs/domain/program.dart';
+import '../../rewards/domain/reward_rules.dart';
+import '../../../l10n/l10n.dart';
 import '../../../app/router.dart';
 import '../../../core/i18n/language_options.dart';
 import '../../../core/storage/hive_setup.dart';
@@ -37,11 +42,11 @@ class ProfileScreen extends ConsumerWidget {
         : programs.map((p) => p.daysElapsed).reduce((a, b) => a > b ? a : b);
 
     return KvlScaffold(
-      title: 'Profile',
+      title: context.l10n.profileTitle,
       trailing: TextButton(
         onPressed: () {},
         child: Text(
-          'Edit',
+          context.l10n.editButton,
           style: KvlText.ui(
             12,
             FontWeight.w600,
@@ -94,19 +99,22 @@ class ProfileScreen extends ConsumerWidget {
               Expanded(
                 child: _Kpi(
                   value: IndianNumberFormat.compact(totalChants),
-                  label: 'Total Chants',
+                  label: context.l10n.totalChantsKpi,
                 ),
               ),
               const SizedBox(width: 6),
               Expanded(
-                child: _Kpi(value: '$longestStreak', label: 'Current Streak'),
+                child: _Kpi(
+                  value: '$longestStreak',
+                  label: context.l10n.currentStreak,
+                ),
               ),
               const SizedBox(width: 6),
               Expanded(
                 child: _Kpi(
                   value:
                       '${programs.where((p) => p.totalProgress > 0).length}/5',
-                  label: 'Milestones',
+                  label: context.l10n.milestones,
                 ),
               ),
             ],
@@ -144,7 +152,7 @@ class ProfileScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'REWARD POINTS',
+                        context.l10n.rewardPointsLabel,
                         style: KvlText.caption(10).copyWith(
                           color: const Color(0xFF8a6900),
                           fontWeight: FontWeight.w700,
@@ -162,7 +170,7 @@ class ProfileScreen extends ConsumerWidget {
                 KvlButton(
                   size: KvlButtonSize.tiny,
                   expand: false,
-                  label: 'Visit Store',
+                  label: context.l10n.visitStore,
                   onPressed: () => context.go(KvlRoute.store),
                 ),
               ],
@@ -170,31 +178,31 @@ class ProfileScreen extends ConsumerWidget {
           ),
 
           SettingsSection(
-            title: 'FAMILY & COMMUNITY',
+            title: context.l10n.familyCommunitySection,
             children: [
               SettingRow(
                 icon: Icons.group_outlined,
-                label: 'Family Members',
+                label: context.l10n.familyMembers,
                 onTap: () => context.push(KvlRoute.addFamily),
               ),
               SettingRow(
                 icon: Icons.person_add_alt_1_outlined,
-                label: 'Invite Friends',
+                label: context.l10n.inviteFriends,
                 onTap: () => context.push(KvlRoute.inviteFriends),
               ),
             ],
           ),
 
           SettingsSection(
-            title: 'PRACTICE SETTINGS',
+            title: context.l10n.practiceSettingsSection,
             children: [
               SettingRow(
                 icon: Icons.alarm_rounded,
-                label: 'Reminder Time',
+                label: context.l10n.reminderTime,
                 value: settings.reminderTime.format(context),
                 onTap: () async {
-                  final t = await showTimePicker(
-                    context: context,
+                  final t = await _pickReminderTime(
+                    context,
                     initialTime: settings.reminderTime,
                   );
                   if (t != null) await settingsRepo.setReminderTime(t);
@@ -202,12 +210,18 @@ class ProfileScreen extends ConsumerWidget {
               ),
               SettingRow(
                 icon: Icons.music_note_rounded,
-                label: 'Notification Sound',
+                label: context.l10n.notificationSound,
                 value: settings.notificationSound,
                 onTap: () => _pickFromList(
                   context,
-                  title: 'Notification Sound',
-                  options: const ['Bell', 'Conch', 'Bowl', 'Chime', 'None'],
+                  title: context.l10n.notificationSound,
+                  options: [
+                    context.l10n.notificationSoundBell,
+                    context.l10n.notificationSoundConch,
+                    context.l10n.notificationSoundBowl,
+                    context.l10n.notificationSoundChime,
+                    context.l10n.notificationSoundNone,
+                  ],
                   current: settings.notificationSound,
                   onPicked: settingsRepo.setNotificationSound,
                 ),
@@ -216,27 +230,32 @@ class ProfileScreen extends ConsumerWidget {
           ),
 
           SettingsSection(
-            title: 'VOICE SETTINGS',
+            title: context.l10n.voiceSettingsSection,
             children: [
               SettingRow(
                 icon: Icons.mic_rounded,
-                label: 'Re-train Voice',
+                label: context.l10n.reTrainVoice,
                 onTap: () {
-                  final recent = programs.isEmpty
-                      ? null
-                      : programs.first.mantraId;
-                  if (recent != null) {
-                    context.push('${KvlRoute.voiceTraining}/$recent');
+                  final activePrograms = programs
+                      .where((p) => !p.isCompleted)
+                      .toList();
+                  if (activePrograms.isEmpty) return;
+                  if (activePrograms.length == 1) {
+                    context.push(
+                      '${KvlRoute.voiceTraining}/${activePrograms.first.mantraId}',
+                    );
+                    return;
                   }
+                  _RetrainMantraPicker.show(context, ref, activePrograms);
                 },
               ),
               SettingRow(
                 icon: Icons.tune_rounded,
-                label: 'Microphone Sensitivity',
+                label: context.l10n.microphoneSensitivity,
                 value: settings.micSensitivity.label,
                 onTap: () => _pickFromList(
                   context,
-                  title: 'Microphone Sensitivity',
+                  title: context.l10n.microphoneSensitivity,
                   options: MicSensitivity.values.map((m) => m.label).toList(),
                   current: settings.micSensitivity.label,
                   onPicked: (v) async {
@@ -252,11 +271,34 @@ class ProfileScreen extends ConsumerWidget {
           ),
 
           SettingsSection(
-            title: 'DISPLAY',
+            title: 'Writing Style',
+            children: [
+              SettingRow(
+                icon: Icons.edit_rounded,
+                label: 'Retrain Writing Style',
+                onTap: () {
+                  final activePrograms = programs
+                      .where((p) => !p.isCompleted)
+                      .toList();
+                  if (activePrograms.isEmpty) return;
+                  if (activePrograms.length == 1) {
+                    context.push(
+                      '${KvlRoute.handwritingSubmit}/${activePrograms.first.mantraId}',
+                    );
+                    return;
+                  }
+                  _RetrainWritingPicker.show(context, ref, activePrograms);
+                },
+              ),
+            ],
+          ),
+
+          SettingsSection(
+            title: context.l10n.displaySection,
             children: [
               SettingRow(
                 icon: Icons.language_rounded,
-                label: 'Language',
+                label: context.l10n.languageSetting,
                 value: KvlLanguage.byCode(settings.languageCode).nativeLabel,
                 onTap: () => _pickLanguage(
                   context,
@@ -267,25 +309,30 @@ class ProfileScreen extends ConsumerWidget {
               ),
               SettingRow(
                 icon: Icons.brightness_6_rounded,
-                label: 'Theme',
+                label: context.l10n.themeSetting,
                 value: switch (settings.themeMode) {
-                  ThemeMode.light => 'Light',
-                  ThemeMode.dark => 'Dark',
-                  ThemeMode.system => 'System',
+                  ThemeMode.light => context.l10n.themeLight,
+                  ThemeMode.dark => context.l10n.themeDark,
+                  ThemeMode.system => context.l10n.themeSystem,
                 },
                 onTap: () => _pickFromList(
                   context,
-                  title: 'Theme',
-                  options: const ['System', 'Light', 'Dark'],
+                  title: context.l10n.themeSetting,
+                  options: [
+                    context.l10n.themeSystem,
+                    context.l10n.themeLight,
+                    context.l10n.themeDark,
+                  ],
                   current: switch (settings.themeMode) {
-                    ThemeMode.light => 'Light',
-                    ThemeMode.dark => 'Dark',
-                    ThemeMode.system => 'System',
+                    ThemeMode.light => context.l10n.themeLight,
+                    ThemeMode.dark => context.l10n.themeDark,
+                    ThemeMode.system => context.l10n.themeSystem,
                   },
                   onPicked: (label) async {
                     await settingsRepo.setThemeMode(switch (label) {
-                      'Light' => ThemeMode.light,
-                      'Dark' => ThemeMode.dark,
+                      _ when label == context.l10n.themeLight =>
+                        ThemeMode.light,
+                      _ when label == context.l10n.themeDark => ThemeMode.dark,
                       _ => ThemeMode.system,
                     });
                   },
@@ -293,25 +340,27 @@ class ProfileScreen extends ConsumerWidget {
               ),
               SettingRow(
                 icon: Icons.text_fields_rounded,
-                label: 'Font Size',
+                label: context.l10n.fontSizeSetting,
                 value: settings.fontScale == 1.0
-                    ? 'Default'
+                    ? context.l10n.fontSizeDefaultPct
                     : '${(settings.fontScale * 100).round()}%',
                 onTap: () => _pickFromList(
                   context,
-                  title: 'Font Size',
-                  options: const [
-                    'Small (90%)',
-                    'Default (100%)',
-                    'Large (115%)',
-                    'Extra Large (130%)',
+                  title: context.l10n.fontSizeSetting,
+                  options: [
+                    context.l10n.fontSizeSmall,
+                    context.l10n.fontSizeDefaultPct,
+                    context.l10n.fontSizeLarge,
+                    context.l10n.fontSizeExtraLarge,
                   ],
-                  current: settings.fontScale == 1.0 ? 'Default (100%)' : null,
+                  current: settings.fontScale == 1.0
+                      ? context.l10n.fontSizeDefaultPct
+                      : null,
                   onPicked: (label) async {
                     final scale = switch (label) {
-                      'Small (90%)' => 0.9,
-                      'Large (115%)' => 1.15,
-                      'Extra Large (130%)' => 1.3,
+                      _ when label == context.l10n.fontSizeSmall => 0.9,
+                      _ when label == context.l10n.fontSizeLarge => 1.15,
+                      _ when label == context.l10n.fontSizeExtraLarge => 1.3,
                       _ => 1.0,
                     };
                     await settingsRepo.setFontScale(scale);
@@ -322,11 +371,11 @@ class ProfileScreen extends ConsumerWidget {
           ),
 
           SettingsSection(
-            title: 'LINK SOCIAL',
+            title: context.l10n.linkSocialSection,
             children: [
               SettingRow(
                 icon: Icons.facebook_rounded,
-                label: 'Link Facebook',
+                label: context.l10n.linkFacebook,
                 trailing: KvlSwitch(
                   value: settings.linkFacebook,
                   onChanged: settingsRepo.setLinkFacebook,
@@ -334,7 +383,7 @@ class ProfileScreen extends ConsumerWidget {
               ),
               SettingRow(
                 icon: Icons.chat_bubble_rounded,
-                label: 'Link WhatsApp',
+                label: context.l10n.linkWhatsApp,
                 trailing: KvlSwitch(
                   value: settings.linkWhatsApp,
                   onChanged: settingsRepo.setLinkWhatsApp,
@@ -342,7 +391,7 @@ class ProfileScreen extends ConsumerWidget {
               ),
               SettingRow(
                 icon: Icons.camera_alt_rounded,
-                label: 'Link Instagram',
+                label: context.l10n.linkInstagram,
                 trailing: KvlSwitch(
                   value: settings.linkInstagram,
                   onChanged: settingsRepo.setLinkInstagram,
@@ -352,36 +401,36 @@ class ProfileScreen extends ConsumerWidget {
           ),
 
           SettingsSection(
-            title: 'SUPPORT & PRIVACY',
+            title: context.l10n.supportPrivacySection,
             children: [
               SettingRow(
                 icon: Icons.help_outline_rounded,
-                label: 'Help & FAQs',
+                label: context.l10n.helpFaqs,
                 onTap: () => _openInfo(context, 'help'),
               ),
               SettingRow(
                 icon: Icons.flag_outlined,
-                label: 'Report Issue',
+                label: context.l10n.reportIssue,
                 onTap: () => _openInfo(context, 'report'),
               ),
               SettingRow(
                 icon: Icons.feedback_outlined,
-                label: 'Share Feedback',
+                label: context.l10n.shareFeedback,
                 onTap: () => _openInfo(context, 'feedback'),
               ),
               SettingRow(
                 icon: Icons.lock_outline_rounded,
-                label: 'Privacy Policy',
+                label: context.l10n.privacyPolicy,
                 onTap: () => _openInfo(context, 'privacy'),
               ),
               SettingRow(
                 icon: Icons.cloud_download_outlined,
-                label: 'Download Your Data',
+                label: context.l10n.downloadYourData,
                 onTap: () => _downloadData(ref),
               ),
               SettingRow(
                 icon: Icons.info_outline_rounded,
-                label: 'About App',
+                label: context.l10n.aboutApp,
                 onTap: () => _openInfo(context, 'about'),
               ),
             ],
@@ -390,19 +439,33 @@ class ProfileScreen extends ConsumerWidget {
           const SizedBox(height: KvlSpacing.lg),
           KvlButton(
             variant: KvlButtonVariant.outlineDanger,
-            label: 'Logout',
+            label: context.l10n.logoutButton,
             onPressed: () => _confirmLogout(context, ref),
           ),
           const SizedBox(height: KvlSpacing.sm),
           KvlButton(
             variant: KvlButtonVariant.danger,
-            label: 'Delete Account',
+            label: context.l10n.deleteAccount,
             onPressed: () => _confirmDelete(context, ref),
           ),
           const SizedBox(height: KvlSpacing.sm),
-          Center(child: Text('Version 0.1.0', style: KvlText.muted(10))),
+          Center(
+            child: Text(context.l10n.versionNumber, style: KvlText.muted(10)),
+          ),
         ],
       ),
+    );
+  }
+
+  Future<TimeOfDay?> _pickReminderTime(
+    BuildContext context, {
+    required TimeOfDay initialTime,
+  }) {
+    return showModalBottomSheet<TimeOfDay>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ReminderTimePickerSheet(initialTime: initialTime),
     );
   }
 
@@ -463,7 +526,10 @@ class ProfileScreen extends ConsumerWidget {
             children: [
               Padding(
                 padding: const EdgeInsets.all(KvlSpacing.md),
-                child: Text('Language', style: KvlText.title(15)),
+                child: Text(
+                  context.l10n.languagePickerTitle,
+                  style: KvlText.title(15),
+                ),
               ),
               for (final lang in languages)
                 ListTile(
@@ -493,61 +559,196 @@ class ProfileScreen extends ConsumerWidget {
     final profile = ref.read(activeProfileProvider).value;
     final session = ref.read(sessionProvider).value;
     final settings = await ref.read(settingsRepositoryProvider).snapshot();
-    final programs =
-        ref.read(programsForActiveProfileProvider).value ?? const [];
-    final dump = {
-      'exportedAt': DateTime.now().toIso8601String(),
-      'session': session == null
-          ? null
-          : {
-              'mobile': session.mobile,
-              'username': session.username,
-              'language': session.language,
-            },
-      'profile': profile == null
-          ? null
-          : {'name': profile.name, 'relation': profile.relation.name},
-      'settings': {
-        'languageCode': settings.languageCode,
-        'themeMode': settings.themeMode.name,
-        'fontScale': settings.fontScale,
-        'reminderTime':
-            '${settings.reminderTime.hour}:${settings.reminderTime.minute}',
-        'notificationSound': settings.notificationSound,
-        'micSensitivity': settings.micSensitivity.name,
-      },
-      'programs': [
-        for (final p in programs)
-          {
-            'mantraId': p.mantraId,
-            'targetWritings': p.targetWritings,
-            'targetDays': p.targetDays,
-            'totalChants': p.totalChants,
-            'startedAt': p.startedAt.toIso8601String(),
-            'status': p.status.name,
-          },
-      ],
-    };
-    final text = const JsonEncoder.withIndent('  ').convert(dump);
+    final programs = ref.read(programsForActiveProfileProvider).value ?? const [];
+    final programRepo = ref.read(programRepositoryProvider);
+    final rewardRepo = ref.read(rewardRepositoryProvider);
+    final prefs = await SharedPreferences.getInstance();
+
+    final now = DateTime.now();
+    final buf = StringBuffer();
+
+    // ─── Header ──────────────────────────────────────────────────────────────
+    buf.writeln('╔══════════════════════════════════════════════════════╗');
+    buf.writeln('║          VACHIKA LEKHINI  –  DATA EXPORT             ║');
+    buf.writeln('╚══════════════════════════════════════════════════════╝');
+    buf.writeln('Exported on : ${_fmt(now)}');
+    buf.writeln();
+
+    // ─── Profile & Account ───────────────────────────────────────────────────
+    buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    buf.writeln('  PROFILE & ACCOUNT');
+    buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    buf.writeln('  Name      : ${profile?.name ?? '—'}');
+    buf.writeln('  Relation  : ${profile?.relation.name ?? '—'}');
+    buf.writeln('  Mobile    : ${session?.mobile ?? '—'}');
+    buf.writeln('  Username  : ${session?.username ?? '—'}');
+    buf.writeln('  Language  : ${settings.languageCode}');
+    buf.writeln();
+
+    // Reward points
+    if (profile != null) {
+      final totalPts = await rewardRepo.totalPoints(profile.id);
+      final rewardHistory = await rewardRepo.history(profile.id);
+      buf.writeln('  Reward Points : $totalPts pts');
+      buf.writeln();
+      if (rewardHistory.isNotEmpty) {
+        buf.writeln('  Reward History:');
+        for (final e in rewardHistory) {
+          final sign = e.signedAmount >= 0 ? '+' : '';
+          buf.writeln('    ${_fmt(e.occurredAt)}  $sign${e.signedAmount} pts  —  ${e.source}');
+        }
+      }
+    }
+    buf.writeln();
+
+    // ─── Settings ────────────────────────────────────────────────────────────
+    buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    buf.writeln('  SETTINGS');
+    buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    buf.writeln('  Theme           : ${settings.themeMode.name}');
+    buf.writeln('  Font Scale      : ${settings.fontScale}x');
+    buf.writeln('  Reminder Time   : ${settings.reminderTime.hour.toString().padLeft(2, "0")}:${settings.reminderTime.minute.toString().padLeft(2, "0")}');
+    buf.writeln('  Notification    : ${settings.notificationSound}');
+    buf.writeln('  Mic Sensitivity : ${settings.micSensitivity.name}');
+    buf.writeln();
+
+    // ─── Programs ────────────────────────────────────────────────────────────
+    buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    buf.writeln('  MANTRA PROGRAMS  (${programs.length} total)');
+    buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+    for (int pi = 0; pi < programs.length; pi++) {
+      final p = programs[pi];
+      final mantra = ref.read(mantraByIdProvider(p.mantraId));
+      final mantraName = mantra != null
+          ? '${mantra.name.devanagari}  (${mantra.name.roman})'
+          : p.mantraId;
+
+      // Streaks
+      final curStreak = await programRepo.currentStreak(p.id);
+      final longestStreak = await programRepo.longestStreak(p.id);
+
+      // Daily target
+      final dailyTarget = (p.targetDays > 0)
+          ? (p.targetWritings / p.targetDays).ceil()
+          : 0;
+
+      // Progress percentage
+      final progressPct = p.targetWritings > 0
+          ? ((p.totalChants / p.targetWritings) * 100).clamp(0, 100).toStringAsFixed(1)
+          : '0.0';
+
+      // Next milestone
+      int? nextMilestone;
+      for (final t in RewardRules.milestoneThresholds) {
+        if (p.totalChants < t) { nextMilestone = t; break; }
+      }
+
+      // Dedication
+      final dedKey = 'dedication_${p.id}';
+      final dedRaw = prefs.getString(dedKey);
+      String dedicationLine = 'Not set';
+      if (dedRaw != null && dedRaw.contains('||')) {
+        final parts = dedRaw.split('||');
+        final name = parts[0].trim();
+        final note = parts.length > 1 ? parts[1].trim() : '';
+        dedicationLine = note.isNotEmpty ? '$name  ($note)' : name;
+      }
+
+      // Last 90 days daily counts
+      final from90 = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 89));
+      final countsByDay = await programRepo.sessionCountsByDay(
+        programId: p.id,
+        from: from90,
+        to: now,
+      );
+
+      buf.writeln();
+      buf.writeln('  ┌─ Program ${pi + 1} ─────────────────────────────────');
+      buf.writeln('  │  Mantra      : $mantraName');
+      buf.writeln('  │  Started     : ${_fmtDate(p.startedAt)}');
+      buf.writeln('  │  Status      : ${p.isCompleted ? "completed" : "active"}');
+      buf.writeln('  │  Target      : ${_fmtNum(p.targetWritings)} chants over ${p.targetDays} days');
+      buf.writeln('  │  Daily Goal  : ${_fmtNum(dailyTarget)} chants/day');
+      buf.writeln('  │  Completed   : ${_fmtNum(p.totalChants)} chants  ($progressPct%)');
+      buf.writeln('  │  Remaining   : ${_fmtNum((p.targetWritings - p.totalChants).clamp(0, p.targetWritings))} chants');
+      buf.writeln('  │  Current Streak   : $curStreak days 🔥');
+      buf.writeln('  │  Longest Streak   : $longestStreak days');
+      if (nextMilestone != null) {
+        final toMilestone = nextMilestone - p.totalChants;
+        buf.writeln('  │  Next Milestone   : ${_fmtNum(nextMilestone)}  (${_fmtNum(toMilestone)} to go)');
+      } else {
+        buf.writeln('  │  Milestones  : All crossed ✨');
+      }
+      buf.writeln('  │  Dedicated To: $dedicationLine');
+
+      // Session history
+      if (countsByDay.isNotEmpty) {
+        buf.writeln('  │');
+        buf.writeln('  │  Daily Practice (last 90 days, active days only):');
+        final sortedDays = countsByDay.keys.toList()..sort();
+        for (final day in sortedDays) {
+          final cnt = countsByDay[day] ?? 0;
+          if (cnt > 0) {
+            final bar = '█' * (cnt ~/ (dailyTarget > 0 ? (dailyTarget / 10).ceil() : 10)).clamp(1, 20);
+            final metGoal = dailyTarget > 0 && cnt >= dailyTarget ? ' ✓' : '';
+            buf.writeln('  │    ${_fmtDate(day)}  ${_fmtNum(cnt).padLeft(7)} chants  $bar$metGoal');
+          }
+        }
+      }
+      buf.writeln('  └──────────────────────────────────────────────────');
+    }
+
+    buf.writeln();
+    buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    buf.writeln('  Generated by Vachika Lekhini 🙏');
+    buf.writeln('  May your practice bring peace and purpose.');
+    buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+    // Write to a temp .txt file and share
+    final dir = await getTemporaryDirectory();
+    final stamp = now.toIso8601String().replaceAll(':', '-').substring(0, 19);
+    final file = File('${dir.path}/vachika_lekhini_export_$stamp.txt');
+    await file.writeAsString(buf.toString(), flush: true);
+
     await SharePlus.instance.share(
-      ShareParams(text: text, subject: 'Vaachaka Lekhini data export'),
+      ShareParams(
+        files: [XFile(file.path, mimeType: 'text/plain')],
+        subject: 'Vachika Lekhini – My Practice Report',
+        text: 'My mantra practice data from Vachika Lekhini 🙏',
+      ),
     );
+  }
+
+  static String _fmt(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')}-${d.month.toString().padLeft(2, '0')}-${d.year}  '
+      '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+
+  static String _fmtDate(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')}-${d.month.toString().padLeft(2, '0')}-${d.year}';
+
+  static String _fmtNum(int n) {
+    // Simple Indian-style number formatting
+    if (n >= 10000000) return '${(n / 10000000).toStringAsFixed(2)} Cr';
+    if (n >= 100000) return '${(n / 100000).toStringAsFixed(2)} L';
+    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}k';
+    return n.toString();
   }
 
   Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Logout?'),
-        content: const Text('Your local data stays on this device.'),
+        title: Text(context.l10n.logoutDialogTitle),
+        content: Text(context.l10n.logoutDialogContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.logoutDialogCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Logout'),
+            child: Text(context.l10n.logoutDialogConfirm),
           ),
         ],
       ),
@@ -561,14 +762,12 @@ class ProfileScreen extends ConsumerWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Delete account?'),
-        content: const Text(
-          'This wipes all programs, sessions, rewards, and profiles on this device. This action cannot be undone.',
-        ),
+        title: Text(context.l10n.deleteDialogTitle),
+        content: Text(context.l10n.deleteDialogContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.deleteDialogCancel),
           ),
           FilledButton.tonal(
             style: FilledButton.styleFrom(
@@ -576,7 +775,7 @@ class ProfileScreen extends ConsumerWidget {
               foregroundColor: Colors.white,
             ),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete everything'),
+            child: Text(context.l10n.deleteDialogConfirm),
           ),
         ],
       ),
@@ -593,6 +792,379 @@ class ProfileScreen extends ConsumerWidget {
       await b.clear();
     }
     await ref.read(authRepositoryProvider).logout();
+  }
+}
+
+class _ReminderTimePickerSheet extends StatefulWidget {
+  const _ReminderTimePickerSheet({required this.initialTime});
+
+  final TimeOfDay initialTime;
+
+  @override
+  State<_ReminderTimePickerSheet> createState() =>
+      _ReminderTimePickerSheetState();
+}
+
+class _ReminderTimePickerSheetState extends State<_ReminderTimePickerSheet> {
+  late int _hour;
+  late int _minute;
+  late bool _isPm;
+
+  @override
+  void initState() {
+    super.initState();
+    final h = widget.initialTime.hour;
+    _isPm = h >= 12;
+    _hour = h % 12 == 0 ? 12 : h % 12;
+    _minute = widget.initialTime.minute;
+  }
+
+  TimeOfDay get _time => TimeOfDay(
+    hour: _isPm ? (_hour == 12 ? 12 : _hour + 12) : (_hour == 12 ? 0 : _hour),
+    minute: _minute,
+  );
+
+  String get _hourLabel => _hour.toString().padLeft(2, '0');
+  String get _minuteLabel => _minute.toString().padLeft(2, '0');
+
+  void _changeHour(int delta) {
+    setState(() {
+      _hour = ((_hour - 1 + delta) % 12) + 1;
+      if (_hour <= 0) _hour += 12;
+    });
+  }
+
+  void _changeMinute(int delta) {
+    setState(() {
+      _minute = (_minute + delta) % 60;
+      if (_minute < 0) _minute += 60;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final labels = MaterialLocalizations.of(context);
+
+    return SafeArea(
+      top: false,
+      child: Container(
+        decoration: const BoxDecoration(
+          color: KvlColors.bg,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            KvlSpacing.lg,
+            KvlSpacing.sm,
+            KvlSpacing.lg,
+            KvlSpacing.lg + MediaQuery.viewInsetsOf(context).bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: KvlColors.border,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              ),
+              const SizedBox(height: KvlSpacing.md),
+              Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: KvlColors.primaryGhost,
+                      borderRadius: KvlRadius.brMD,
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.alarm_rounded,
+                      color: KvlColors.primaryDeep,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: KvlSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      context.l10n.reminderTime,
+                      style: KvlText.title(16),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+              const SizedBox(height: KvlSpacing.md),
+              KvlCard(
+                variant: KvlCardVariant.warm,
+                border: Border.all(color: KvlColors.primarySoft),
+                padding: const EdgeInsets.all(KvlSpacing.md),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '$_hourLabel:$_minuteLabel',
+                        style: KvlText.bigNumber(
+                          34,
+                        ).copyWith(color: KvlColors.ink),
+                      ),
+                    ),
+                    _PeriodToggle(
+                      isPm: _isPm,
+                      onChanged: (value) => setState(() => _isPm = value),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: KvlSpacing.md),
+              Row(
+                children: [
+                  Expanded(
+                    child: _TimeStepper(
+                      label: 'Hour',
+                      value: _hourLabel,
+                      onDecrease: () => _changeHour(-1),
+                      onIncrease: () => _changeHour(1),
+                    ),
+                  ),
+                  const SizedBox(width: KvlSpacing.sm),
+                  Expanded(
+                    child: _TimeStepper(
+                      label: 'Minute',
+                      value: _minuteLabel,
+                      onDecrease: () => _changeMinute(-5),
+                      onIncrease: () => _changeMinute(5),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: KvlSpacing.sm),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final minute in const [0, 15, 30, 45])
+                    _MinuteChip(
+                      minute: minute,
+                      selected: _minute == minute,
+                      onTap: () => setState(() => _minute = minute),
+                    ),
+                ],
+              ),
+              const SizedBox(height: KvlSpacing.lg),
+              Row(
+                children: [
+                  Expanded(
+                    child: KvlButton(
+                      label: labels.cancelButtonLabel,
+                      variant: KvlButtonVariant.ghost,
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+                  const SizedBox(width: KvlSpacing.sm),
+                  Expanded(
+                    child: KvlButton(
+                      label: labels.okButtonLabel,
+                      onPressed: () => Navigator.of(context).pop(_time),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PeriodToggle extends StatelessWidget {
+  const _PeriodToggle({required this.isPm, required this.onChanged});
+
+  final bool isPm;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: .72),
+        borderRadius: KvlRadius.brMD,
+        border: Border.all(color: KvlColors.primarySoft),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _PeriodPill(
+            label: 'AM',
+            selected: !isPm,
+            onTap: () => onChanged(false),
+          ),
+          _PeriodPill(
+            label: 'PM',
+            selected: isPm,
+            onTap: () => onChanged(true),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PeriodPill extends StatelessWidget {
+  const _PeriodPill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: KvlRadius.brSM,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? KvlColors.primary : Colors.transparent,
+          borderRadius: KvlRadius.brSM,
+        ),
+        child: Text(
+          label,
+          style: KvlText.caption(11).copyWith(
+            color: selected ? Colors.white : KvlColors.muted,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TimeStepper extends StatelessWidget {
+  const _TimeStepper({
+    required this.label,
+    required this.value,
+    required this.onDecrease,
+    required this.onIncrease,
+  });
+
+  final String label;
+  final String value;
+  final VoidCallback onDecrease;
+  final VoidCallback onIncrease;
+
+  @override
+  Widget build(BuildContext context) {
+    return KvlCard(
+      variant: KvlCardVariant.flat,
+      padding: const EdgeInsets.symmetric(
+        horizontal: KvlSpacing.sm,
+        vertical: KvlSpacing.sm,
+      ),
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: KvlText.caption(
+              10,
+            ).copyWith(color: KvlColors.muted, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              _StepIconButton(icon: Icons.remove_rounded, onTap: onDecrease),
+              Expanded(
+                child: Text(
+                  value,
+                  textAlign: TextAlign.center,
+                  style: KvlText.bigNumber(24).copyWith(color: KvlColors.ink),
+                ),
+              ),
+              _StepIconButton(icon: Icons.add_rounded, onTap: onIncrease),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StepIconButton extends StatelessWidget {
+  const _StepIconButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: const BoxDecoration(
+          color: KvlColors.primaryGhost,
+          shape: BoxShape.circle,
+        ),
+        alignment: Alignment.center,
+        child: Icon(icon, color: KvlColors.primaryDeep, size: 19),
+      ),
+    );
+  }
+}
+
+class _MinuteChip extends StatelessWidget {
+  const _MinuteChip({
+    required this.minute,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final int minute;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: KvlRadius.brSM,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          color: selected ? KvlColors.primary : KvlColors.primaryGhost,
+          borderRadius: KvlRadius.brSM,
+          border: Border.all(
+            color: selected ? KvlColors.primary : KvlColors.primarySoft,
+          ),
+        ),
+        child: Text(
+          ':${minute.toString().padLeft(2, '0')}',
+          style: KvlText.caption(11.5).copyWith(
+            color: selected ? Colors.white : KvlColors.primaryDeep,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -617,6 +1189,217 @@ class _Kpi extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _RetrainMantraPicker {
+  static void show(BuildContext context, WidgetRef ref, List<Program> programs) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) => _RetrainPickerSheet(
+        programs: programs,
+        onPicked: (mantraId) {
+          Navigator.pop(sheetCtx);
+          context.push('${KvlRoute.voiceTraining}/$mantraId');
+        },
+      ),
+    );
+  }
+}
+
+class _RetrainWritingPicker {
+  static void show(BuildContext context, WidgetRef ref, List<Program> programs) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) => _RetrainWritingPickerSheet(
+        programs: programs,
+        onPicked: (mantraId) {
+          Navigator.pop(sheetCtx);
+          context.push('${KvlRoute.handwritingSubmit}/$mantraId');
+        },
+      ),
+    );
+  }
+}
+
+class _RetrainWritingPickerSheet extends ConsumerWidget {
+  const _RetrainWritingPickerSheet({
+    required this.programs,
+    required this.onPicked,
+  });
+
+  final List<Program> programs;
+  final ValueChanged<String> onPicked;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: KvlColors.bg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: KvlColors.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Retrain writing for which mantra?',
+            style: KvlText.ui(16, FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Choose from your active programs',
+            style: KvlText.caption(12).copyWith(color: KvlColors.muted),
+          ),
+          const SizedBox(height: 16),
+          ...programs.map((p) {
+            final mantra = ref.watch(mantraByIdProvider(p.mantraId));
+            final name =
+                mantra?.name.displayForLanguage(settings.languageCode) ??
+                p.mantraId;
+            return _MantraPickerTile(
+              name: name,
+              onTap: () => onPicked(p.mantraId),
+            );
+          }),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+}
+
+class _RetrainPickerSheet extends ConsumerWidget {
+  const _RetrainPickerSheet({
+    required this.programs,
+    required this.onPicked,
+  });
+
+  final List<Program> programs;
+  final ValueChanged<String> onPicked;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: KvlColors.bg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: KvlColors.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Retrain voice for which mantra?',
+            style: KvlText.ui(16, FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Choose from your active programs',
+            style: KvlText.caption(12).copyWith(color: KvlColors.muted),
+          ),
+          const SizedBox(height: 16),
+          ...programs.map((p) {
+            final mantra = ref.watch(mantraByIdProvider(p.mantraId));
+            final name = mantra?.name.displayForLanguage(settings.languageCode)
+                ?? p.mantraId;
+            return _MantraPickerTile(
+              name: name,
+              onTap: () => onPicked(p.mantraId),
+            );
+          }),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+}
+
+class _MantraPickerTile extends StatelessWidget {
+  const _MantraPickerTile({required this.name, required this.onTap});
+
+  final String name;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: KvlColors.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: KvlColors.border.withValues(alpha: .6)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: KvlColors.primarySoft,
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: const Icon(
+                  Icons.mic_rounded,
+                  color: KvlColors.primaryDeep,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  name,
+                  style: KvlText.ui(14, FontWeight.w600),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: KvlColors.muted,
+                size: 22,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

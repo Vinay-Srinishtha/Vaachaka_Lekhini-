@@ -168,71 +168,73 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
     }
   }
 
+  /// Dismiss any current snackbar then show [snackBar].
+  /// Prevents queueing — each new alert instantly replaces the previous one.
+  void _showSnack(SnackBar snackBar) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(snackBar);
+  }
+
   /// Shown when no enrolled handwriting sample exists for this mantra.
   void _showNoReferenceBanner() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        duration: const Duration(seconds: 4),
-        backgroundColor: KvlColors.danger,
-        behavior: SnackBarBehavior.floating,
-        content: const Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
-            SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'No handwriting sample found for this mantra.\n'
-                'Please complete handwriting setup first.',
-                style: TextStyle(color: Colors.white, fontSize: 13, height: 1.4),
-              ),
+    _showSnack(SnackBar(
+      duration: const Duration(seconds: 4),
+      backgroundColor: KvlColors.danger,
+      behavior: SnackBarBehavior.floating,
+      content: const Row(
+        children: [
+          Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'No handwriting sample found for this mantra.\n'
+              'Please complete handwriting setup first.',
+              style: TextStyle(color: Colors.white, fontSize: 13, height: 1.4),
             ),
-          ],
-        ),
-        action: SnackBarAction(
-          label: '✕',
-          textColor: Colors.white,
-          onPressed: () => ScaffoldMessenger.of(context).clearSnackBars(),
-        ),
+          ),
+        ],
       ),
-    );
+      action: SnackBarAction(
+        label: '✕',
+        textColor: Colors.white,
+        onPressed: () => ScaffoldMessenger.of(context).clearSnackBars(),
+      ),
+    ));
   }
 
   /// Shown when the writing scores below the acceptance threshold.
   void _showRejectedFeedback(double score, int thresholdPct) {
     final got = (score * 100).toStringAsFixed(0);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        duration: const Duration(seconds: 2),
-        backgroundColor: Colors.orange.shade700,
-        behavior: SnackBarBehavior.floating,
-        content: Text(
-          'Writing matched $got% — needs $thresholdPct%. Try again.',
-          style: const TextStyle(color: Colors.white, fontSize: 13),
-        ),
-        action: SnackBarAction(
-          label: '✕',
-          textColor: Colors.white,
-          onPressed: () => ScaffoldMessenger.of(context).clearSnackBars(),
-        ),
+    _showSnack(SnackBar(
+      duration: const Duration(seconds: 2),
+      backgroundColor: Colors.orange.shade700,
+      behavior: SnackBarBehavior.floating,
+      content: Text(
+        'Writing matched $got% — needs $thresholdPct%. Try again.',
+        style: const TextStyle(color: Colors.white, fontSize: 13),
       ),
-    );
+      action: SnackBarAction(
+        label: '✕',
+        textColor: Colors.white,
+        onPressed: () => ScaffoldMessenger.of(context).clearSnackBars(),
+      ),
+    ));
   }
 
-  /// Brief green toast when a marginal-but-passing score is achieved (40–60%).
+  /// Brief green toast when a marginal-but-passing score is achieved.
   /// Silent on clearly good scores to avoid interrupting the practice flow.
   void _showAcceptedFeedback(double score, double threshold) {
     if (score < threshold + 0.20) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          duration: const Duration(milliseconds: 1400),
-          backgroundColor: KvlColors.success,
-          behavior: SnackBarBehavior.floating,
-          content: Text(
-            '✓  ${(score * 100).toStringAsFixed(0)}% — accepted',
-            style: const TextStyle(color: Colors.white, fontSize: 13),
-          ),
+      _showSnack(SnackBar(
+        duration: const Duration(milliseconds: 1400),
+        backgroundColor: KvlColors.success,
+        behavior: SnackBarBehavior.floating,
+        content: Text(
+          '✓  ${(score * 100).toStringAsFixed(0)}% — accepted',
+          style: const TextStyle(color: Colors.white, fontSize: 13),
         ),
-      );
+      ));
     }
   }
 
@@ -271,19 +273,17 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
       await repo.incrementSession(session.id, by: total);
       await repo.finishSession(session.id);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          duration: const Duration(milliseconds: 1500),
-          content: Text(context.l10n.handwritingSaved(total)),
-          backgroundColor: KvlColors.accent,
-          behavior: SnackBarBehavior.floating,
-          action: SnackBarAction(
-            label: '✕',
-            textColor: Colors.white,
-            onPressed: () => ScaffoldMessenger.of(context).clearSnackBars(),
-          ),
+      _showSnack(SnackBar(
+        duration: const Duration(milliseconds: 1500),
+        content: Text(context.l10n.handwritingSaved(total)),
+        backgroundColor: KvlColors.accent,
+        behavior: SnackBarBehavior.floating,
+        action: SnackBarAction(
+          label: '✕',
+          textColor: Colors.white,
+          onPressed: () => ScaffoldMessenger.of(context).clearSnackBars(),
         ),
-      );
+      ));
       context.go('${KvlRoute.practice}/$programId');
       return;
     }

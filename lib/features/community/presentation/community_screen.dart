@@ -49,18 +49,61 @@ class _Body extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final topInset = MediaQuery.viewPaddingOf(context).top.clamp(36.0, 48.0);
+
+    // Loading state
     if (loading && list.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return Padding(
+        padding: EdgeInsets.only(top: topInset + 84),
+        child: const Center(child: CircularProgressIndicator()),
+      );
     }
+
+    // Empty state — no community members yet
+    if (!loading && list.isEmpty) {
+      return Padding(
+        padding: EdgeInsets.fromLTRB(
+          KvlSpacing.lg,
+          topInset + 84,
+          KvlSpacing.lg,
+          KvlSpacing.lg,
+        ),
+        child: Column(
+          children: [
+            _InviteBanner(),
+            const SizedBox(height: KvlSpacing.xl),
+            const Icon(Icons.group_off_outlined, size: 48, color: KvlColors.muted),
+            const SizedBox(height: KvlSpacing.md),
+            Text(
+              'No one here yet',
+              style: KvlText.title(16),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: KvlSpacing.xs),
+            Text(
+              'Invite friends to see the leaderboard',
+              style: KvlText.muted(13),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: KvlSpacing.lg),
+            KvlButton(
+              label: context.l10n.inviteFriendsButton,
+              icon: Icons.person_add_alt_1_outlined,
+              onPressed: () => context.push(KvlRoute.inviteFriends),
+            ),
+          ],
+        ),
+      );
+    }
+
     final podium = list.take(3).toList();
     final rest = list.skip(3).toList();
-    final selfIndex = list.indexWhere((f) => f.isSelf);
-    final topInset = MediaQuery.viewPaddingOf(context).top.clamp(36.0, 48.0);
+    final topInset2 = topInset; // alias for use inside ListView builder
 
     return ListView(
       padding: EdgeInsets.fromLTRB(
         KvlSpacing.lg,
-        topInset + 84,
+        topInset2 + 84,
         KvlSpacing.lg,
         KvlSpacing.lg,
       ),
@@ -80,7 +123,6 @@ class _Body extends StatelessWidget {
           ),
           const SizedBox(height: KvlSpacing.sm),
         ],
-        if (selfIndex == -1) const SizedBox.shrink(),
         const SizedBox(height: KvlSpacing.md),
         KvlButton(
           label: context.l10n.sendEncouragement,

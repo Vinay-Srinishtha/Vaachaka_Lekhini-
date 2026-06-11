@@ -66,7 +66,8 @@ bool _isUnauthed(String path) {
   return path.startsWith('/api/v1/auth/') ||
       path == '/api/v1/mantras' ||
       path == '/api/v1/store' ||
-      path == '/api/v1/config';
+      path == '/api/v1/config' ||
+      path == '/api/v1/stats'; // public — no Bearer needed
 }
 
 class _AuthInterceptor extends Interceptor {

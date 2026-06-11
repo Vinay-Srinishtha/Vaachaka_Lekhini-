@@ -38,7 +38,7 @@ class KvlTopBar extends StatelessWidget implements PreferredSizeWidget {
             ? const SizedBox(width: 36)
             : _CircleIconButton(
                 icon: Icons.arrow_back_ios_new_rounded,
-                onTap: onBack ?? () => context.popOrGo('/'),
+                onTap: onBack ?? () => context.popOrGo(Navigator.defaultRouteName),
               ));
 
     final topGap = MediaQuery.viewPaddingOf(context).top.clamp(36.0, 48.0);
@@ -56,17 +56,19 @@ class KvlTopBar extends StatelessWidget implements PreferredSizeWidget {
               height: 64,
               padding: const EdgeInsets.symmetric(horizontal: KvlSpacing.lg),
               decoration: BoxDecoration(
-                color: KvlColors.bg,
+                color: KvlColors.bg.withValues(alpha: .6),
                 border: Border(
                   bottom: BorderSide(
                     color: KvlColors.rule.withValues(alpha: .55),
                   ),
                 ),
               ),
-              child: Row(
+              child: Stack(
+                alignment: Alignment.center,
                 children: [
-                  back,
-                  Expanded(
+                  // Title — always screen-centred regardless of leading/trailing widths.
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 52),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       mainAxisSize: MainAxisSize.min,
@@ -92,7 +94,11 @@ class KvlTopBar extends StatelessWidget implements PreferredSizeWidget {
                       ],
                     ),
                   ),
-                  trailing ?? const SizedBox(width: 36),
+                  Align(alignment: Alignment.centerLeft, child: back),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: trailing ?? const SizedBox(width: 36),
+                  ),
                 ],
               ),
             ),

@@ -298,41 +298,49 @@ final storeItemsProvider = FutureProvider<List<StoreItem>>((ref) async {
       .toList();
 });
 
-/// Global community statistics from /api/v1/stats.
-/// No auth required. Returns {globalChantCount, memberCount}.
-/// Refreshes every 60 seconds automatically via autoDispose + keepAlive.
+/// Global community statistics from /api/v1/stats (public, no auth).
+/// Never throws — returns zeros on any network/server error so the UI
+/// always has a safe value to display.
 final globalStatsProvider =
     FutureProvider.autoDispose<({int globalChantCount, int memberCount})>(
         (ref) async {
-  final api = ref.watch(apiClientProvider);
-  final res = await api.dio.get<Map<String, dynamic>>('/api/v1/stats');
-  final data = res.data ?? {};
-  return (
-    globalChantCount: (data['global_chant_count'] as num?)?.toInt() ?? 0,
-    memberCount: (data['member_count'] as num?)?.toInt() ?? 0,
-  );
+  try {
+    final api = ref.watch(apiClientProvider);
+    final res = await api.dio.get<Map<String, dynamic>>('/api/v1/stats');
+    final data = res.data ?? {};
+    return (
+      globalChantCount: (data['global_chant_count'] as num?)?.toInt() ?? 0,
+      memberCount: (data['member_count'] as num?)?.toInt() ?? 0,
+    );
+  } catch (_) {
+    return (globalChantCount: 0, memberCount: 0);
+  }
 });
 
 /// Real leaderboard from /api/v1/leaderboard (Bearer required).
-/// Falls back to an empty list when the user is not authenticated.
+/// Returns [] when unauthenticated or on any network error — never throws.
 final leaderboardProvider = FutureProvider.autoDispose
     .family<List<Friend>, LeaderboardSort>((ref, sort) async {
-  final session = ref.watch(sessionProvider).value;
-  if (session == null) return [];
-  final api = ref.watch(apiClientProvider);
-  final sortParam =
-      sort == LeaderboardSort.streak ? 'streak' : 'total_chants';
-  final res = await api.dio
-      .get<Map<String, dynamic>>('/api/v1/leaderboard?sort=$sortParam');
-  final entries = (res.data?['entries'] as List<dynamic>?) ?? [];
-  return entries.map((e) {
-    final m = Map<String, dynamic>.from(e as Map);
-    return Friend(
-      id: m['id'] as String,
-      name: m['name'] as String,
-      streakDays: (m['streak_days'] as num?)?.toInt() ?? 0,
-      totalChants: (m['total_chants'] as num?)?.toInt() ?? 0,
-      isSelf: m['is_self'] == true,
-    );
-  }).toList();
+  try {
+    final session = ref.watch(sessionProvider).value;
+    if (session == null) return [];
+    final api = ref.watch(apiClientProvider);
+    final sortParam =
+        sort == LeaderboardSort.streak ? 'streak' : 'total_chants';
+    final res = await api.dio
+        .get<Map<String, dynamic>>('/api/v1/leaderboard?sort=$sortParam');
+    final entries = (res.data?['entries'] as List<dynamic>?) ?? [];
+    return entries.map((e) {
+      final m = Map<String, dynamic>.from(e as Map);
+      return Friend(
+        id: m['id'] as String,
+        name: m['name'] as String,
+        streakDays: (m['streak_days'] as num?)?.toInt() ?? 0,
+        totalChants: (m['total_chants'] as num?)?.toInt() ?? 0,
+        isSelf: m['is_self'] == true,
+      );
+    }).toList();
+  } catch (_) {
+    return [];
+  }
 });

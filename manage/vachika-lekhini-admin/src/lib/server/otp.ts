@@ -56,6 +56,12 @@ class DevOtpService implements OtpService {
 		mobile: string,
 		code: string
 	): Promise<{ ok: true } | { ok: false; error: string }> {
+		// Dev default — 123456 always works, no challenge needed.
+		if (code === '123456') {
+			console.log(`[otp:dev] accepted default OTP for ${mobile}`);
+			return { ok: true };
+		}
+
 		const candidates = await prisma.otpChallenge.findMany({
 			where: {
 				mobile,
@@ -88,6 +94,86 @@ class DevOtpService implements OtpService {
 	}
 }
 
+class TwoFactorOtpService implements OtpService {
+	constructor(private apiKey: string, private templateName?: string) {}
+
+	async start(mobile: string): Promise<{ challengeId: string }> {
+		const digits = mobile.replace(/^\+91/, '').replace(/\D/g, '');
+
+		const recent = await prisma.otpChallenge.findFirst({
+			where: {
+				mobile,
+				consumedAt: null,
+				createdAt: { gt: new Date(Date.now() - RESEND_COOLDOWN_SECONDS * 1000) }
+			}
+		});
+		if (recent) {
+			console.log(`[otp:2factor] cooldown active for ${mobile}, reusing challenge`);
+			return { challengeId: recent.id };
+		}
+
+		// Append template name if set — forces SMS delivery.
+		// Use TWO_FACTOR_TEMPLATE=OTPONLY for the 2factor built-in SMS-only template.
+		const template = this.templateName ? `/${this.templateName}` : '';
+		const res = await fetch(
+			`https://2factor.in/API/V1/${this.apiKey}/SMS/${digits}/AUTOGEN${template}`
+		);
+		const data = await res.json();
+		if (data.Status !== 'Success') {
+			throw new Error(`2factor.in error: ${data.Details}`);
+		}
+
+		// Store 2factor session_id in codeHash (repurposed — no bcrypt here)
+		const challenge = await prisma.otpChallenge.create({
+			data: {
+				mobile,
+				codeHash: data.Details,
+				expiresAt: new Date(Date.now() + OTP_TTL_SECONDS * 1000)
+			}
+		});
+		console.log(`[otp:2factor] OTP sent to ${mobile}, session ${data.Details}`);
+		return { challengeId: challenge.id };
+	}
+
+	async verify(
+		mobile: string,
+		code: string
+	): Promise<{ ok: true } | { ok: false; error: string }> {
+		const candidates = await prisma.otpChallenge.findMany({
+			where: { mobile, consumedAt: null, expiresAt: { gt: new Date() } },
+			orderBy: { createdAt: 'desc' },
+			take: 3
+		});
+		if (candidates.length === 0) {
+			return { ok: false, error: 'No active OTP. Request a new one.' };
+		}
+
+		const c = candidates[0];
+		if (c.attempts >= MAX_ATTEMPTS) {
+			return { ok: false, error: 'Too many attempts. Request a new OTP.' };
+		}
+
+		const res = await fetch(
+			`https://2factor.in/API/V1/${this.apiKey}/SMS/VERIFY/${c.codeHash}/${code}`
+		);
+		const data = await res.json();
+
+		if (data.Status === 'Success') {
+			await prisma.otpChallenge.update({
+				where: { id: c.id },
+				data: { consumedAt: new Date() }
+			});
+			return { ok: true };
+		}
+
+		await prisma.otpChallenge.update({
+			where: { id: c.id },
+			data: { attempts: { increment: 1 } }
+		});
+		return { ok: false, error: 'Incorrect OTP.' };
+	}
+}
+
 let _instance: OtpService | null = null;
 
 export function otpService(): OtpService {
@@ -97,8 +183,10 @@ export function otpService(): OtpService {
 		case 'dev':
 			_instance = new DevOtpService();
 			break;
-		// case 'msg91': _instance = new Msg91OtpService(...); break;
-		// case 'twilio': _instance = new TwilioOtpService(...); break;
+		case '2factor':
+			if (!env.TWO_FACTOR_API_KEY) throw new Error('TWO_FACTOR_API_KEY is not set in .env');
+			_instance = new TwoFactorOtpService(env.TWO_FACTOR_API_KEY, env.TWO_FACTOR_TEMPLATE);
+			break;
 		default:
 			throw new Error(`Unknown OTP_PROVIDER: ${provider}`);
 	}

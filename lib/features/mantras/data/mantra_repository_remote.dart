@@ -9,8 +9,6 @@ import '../../../core/storage/storage_keys.dart';
 import '../domain/mantra.dart';
 import '../domain/mantra_repository.dart';
 import 'mantra_dto.dart';
-import 'mantra_seed.dart';
-
 /// Hive cache key holding the last successful API payload (JSON map).
 /// Stored as a JSON-encodable structure so it survives schema additions.
 extension MantraCacheKeys on KvlKeys {
@@ -21,10 +19,8 @@ extension MantraCacheKeys on KvlKeys {
 /// Repository backed by the admin API at `/api/v1/mantras`.
 ///
 /// Synchronous read API is preserved (existing call sites depend on it).
-/// On construction the in-memory list is the *best* of:
-///   1. an explicit `bootstrap` (cached from Hive on app launch)
-///   2. the bundled seed
-///
+/// On construction the in-memory list is seeded from the Hive cache
+/// (last successful API response), or empty until the first fetch succeeds.
 /// A background refresh fires on construction and on `refresh()`. Listeners
 /// can subscribe to [stream] to react to fresh data.
 class MantraRepositoryRemote implements MantraRepository {
@@ -34,7 +30,7 @@ class MantraRepositoryRemote implements MantraRepository {
     List<Mantra>? bootstrap,
   })  : _api = api,
         _cache = cache,
-        _mantras = List.unmodifiable(bootstrap?.isNotEmpty == true ? bootstrap! : kMantraSeed) {
+        _mantras = List.unmodifiable(bootstrap ?? const []) {
     _byId = {for (final m in _mantras) m.id: m};
     unawaited(refresh());
   }

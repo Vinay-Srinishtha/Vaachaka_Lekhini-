@@ -7,7 +7,7 @@
 </script>
 
 <svelte:head>
-	<title>Sign in · KVL Admin</title>
+	<title>Sign in · Vaachaka Lekhini Admin</title>
 </svelte:head>
 
 <div class="min-h-screen grid place-items-center px-4 bg-gradient-to-br from-brand-50 to-orange-100">
@@ -16,8 +16,8 @@
 			<div class="w-14 h-14 rounded-2xl bg-brand-600 text-white grid place-items-center text-2xl font-bold shadow-lg">
 				ॐ
 			</div>
-			<h1 class="mt-4 text-2xl font-bold text-gray-900">KVL Admin</h1>
-			<p class="text-sm text-gray-600">Sign in to manage Vachika Lekhini</p>
+			<h1 class="mt-4 text-2xl font-bold text-gray-900">Vaachaka Lekhini Admin</h1>
+			<p class="text-sm text-gray-600">Sign in to manage Vaachaka Lekhini</p>
 		</div>
 
 		<div class="card p-6">

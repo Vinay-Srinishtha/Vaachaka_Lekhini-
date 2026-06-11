@@ -1,4 +1,4 @@
-# KVL — Project Status
+# Vaachaka Lekhini — Project Status
 
 _Last updated: 2026-05-12._
 _Companion docs: `DESIGN.md` (design audit) · `MOCKUPS.html` (visual reference) · `ROADMAP.md` (phase plan)._

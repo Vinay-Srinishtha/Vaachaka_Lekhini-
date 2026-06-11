@@ -1,4 +1,4 @@
-# Vachika Lekhini — Project Status
+# Vaachaka Lekhini — Project Status
 
 _Last updated: 2026-05-11_
 

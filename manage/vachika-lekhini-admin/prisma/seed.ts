@@ -17,7 +17,7 @@ const mantras = [
 		nameTelugu: 'శ్రీ రామ',
 		nameKannada: 'ಶ್ರೀ ರಾಮ',
 		description:
-			'The Sri Rama mantra is a sacred chant that invokes the divine energy of Lord Rama, an incarnation of Vishnu. It is revered for its power to bestow peace, righteousness, and spiritual liberation. Chanting this mantra helps purify the mind, body, and soul, and is a cornerstone of the Koti Vachika Lekhini practice, guiding devotees on their spiritual journey.',
+			'The Sri Rama mantra is a sacred chant that invokes the divine energy of Lord Rama, an incarnation of Vishnu. It is revered for its power to bestow peace, righteousness, and spiritual liberation. Chanting this mantra helps purify the mind, body, and soul, and is a cornerstone of the Vaachaka Lekhini practice, guiding devotees on their spiritual journey.',
 		deity: 'Rama',
 		thumbPalette: 'saffron' as const,
 		tags: ['peace', 'righteousness', 'liberation'] as const
@@ -183,28 +183,7 @@ async function main() {
 	});
 	console.log(`  ✔ admin "${username}" ready (password: ${defaultPassword} — change immediately)`);
 
-	console.log('▶ Seeding demo account + members (for local testing only)…');
-	const demoAccount = await prisma.account.upsert({
-		where: { mobile: '9000000000' },
-		create: {
-			mobile: '9000000000',
-			countryCode: '+91',
-			passwordHash: await bcrypt.hash('demo1234', 10),
-			passwordSetAt: new Date(),
-			referralCode: 'KVL-DEMO'
-		},
-		update: {}
-	});
-	const existing = await prisma.member.count({ where: { accountId: demoAccount.id } });
-	if (existing === 0) {
-		await prisma.member.createMany({
-			data: [
-				{ accountId: demoAccount.id, displayName: 'Ravi', relation: 'self', isPrimary: true, language: 'te' },
-				{ accountId: demoAccount.id, displayName: 'Lakshmi', relation: 'spouse', language: 'te' }
-			]
-		});
-	}
-	console.log(`  ✔ demo account 9000000000 / demo1234 (referral: KVL-DEMO)`);
+	// No demo accounts — real users register via the Flutter app.
 }
 
 main()

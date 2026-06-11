@@ -11,6 +11,9 @@ abstract class AuthRepository {
   /// Watch the session over time (emits whenever it changes).
   Stream<Session?> sessionChanges();
 
+  /// Returns true if an account already exists for [mobile].
+  Future<Result<bool>> checkMobileRegistered(String mobile);
+
   /// Trigger an OTP send for [mobile]. In Phase 1 this is a no-op that
   /// returns immediately; in Phase 9 it calls the backend SMS service.
   Future<Result<void>> sendOtp(String mobile);
@@ -26,6 +29,16 @@ abstract class AuthRepository {
     String? language,
   });
 
+  /// Update the display name on the current session (and "me" profile).
+  Future<Result<Session>> updateName(String name);
+
+  /// Update the mobile number on the current session after OTP verification.
+  /// The [otp] must have been sent to [newMobile] via [sendOtp] first.
+  Future<Result<Session>> updateMobile({
+    required String newMobile,
+    required String otp,
+  });
+
   /// Drop the current session.
   Future<void> logout();
 }
@@ -35,11 +48,46 @@ class AuthFailure extends Failure {
   const AuthFailure(super.message, {super.code, super.cause});
 
   factory AuthFailure.invalidOtp() =>
-      const AuthFailure('Incorrect verification code', code: 'invalid_otp');
+      const AuthFailure('Wrong verification code. Please try again.', code: 'invalid_otp');
 
   factory AuthFailure.invalidMobile() =>
-      const AuthFailure('Please enter a valid mobile number', code: 'invalid_mobile');
+      const AuthFailure('Please enter a valid 10-digit mobile number.', code: 'invalid_mobile');
+
+  factory AuthFailure.accountNotFound() => const AuthFailure(
+        'No account found for this number. Please create an account first.',
+        code: 'account_not_found',
+      );
+
+  factory AuthFailure.accountAlreadyExists() => const AuthFailure(
+        'An account already exists for this number. Please log in instead.',
+        code: 'account_exists',
+      );
+
+  factory AuthFailure.serverUnavailable() => const AuthFailure(
+        'Server is unreachable. Please check your connection and try again.',
+        code: 'server_unavailable',
+      );
+
+  factory AuthFailure.noInternet() => const AuthFailure(
+        'No internet connection. Please check your network and try again.',
+        code: 'no_internet',
+      );
+
+  factory AuthFailure.otpExpired() => const AuthFailure(
+        'Verification code has expired. Please request a new one.',
+        code: 'otp_expired',
+      );
+
+  factory AuthFailure.serverError() => const AuthFailure(
+        'Server error. Please try again in a moment.',
+        code: 'server_error',
+      );
+
+  factory AuthFailure.tooManyAttempts() => const AuthFailure(
+        'Too many attempts. Please wait a moment before trying again.',
+        code: 'too_many_attempts',
+      );
 
   factory AuthFailure.unknown(Object? cause) =>
-      AuthFailure('Something went wrong', code: 'unknown', cause: cause);
+      AuthFailure('Something went wrong. Please try again.', code: 'unknown', cause: cause);
 }

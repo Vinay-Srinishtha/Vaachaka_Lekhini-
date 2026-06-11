@@ -40,6 +40,15 @@ class AuthService {
     _accountController.add(_account);
   }
 
+  /// Returns true if an active account exists for [mobile] (10-digit, no prefix).
+  Future<bool> checkMobileExists(String mobile) async {
+    final res = await _api.dio.post<Map<String, Object?>>(
+      '/api/v1/auth/check',
+      data: {'mobile': mobile},
+    );
+    return (res.data?['exists'] as bool?) ?? false;
+  }
+
   Future<void> startOtp(String mobile, {String countryCode = '+91'}) async {
     await _api.dio.post<Map<String, Object?>>(
       '/api/v1/auth/otp/start',
@@ -51,27 +60,19 @@ class AuthService {
     required String mobile,
     required String code,
     String countryCode = '+91',
+    String? username,
   }) async {
     final res = await _api.dio.post<Map<String, Object?>>(
       '/api/v1/auth/otp/verify',
-      data: {'mobile': mobile, 'code': code, 'country_code': countryCode},
+      data: {
+        'mobile': mobile,
+        'code': code,
+        'country_code': countryCode,
+        if (username != null && username.trim().isNotEmpty)
+          'username': username.trim(),
+      },
     );
     return _persistFrom(res.data!);
-  }
-
-  Future<AuthAccount> passwordLogin({required String mobile, required String password}) async {
-    final res = await _api.dio.post<Map<String, Object?>>(
-      '/api/v1/auth/password/login',
-      data: {'mobile': mobile, 'password': password},
-    );
-    return _persistFrom(res.data!);
-  }
-
-  Future<void> setPassword(String password) async {
-    await _api.dio.post<Map<String, Object?>>(
-      '/api/v1/auth/password/set',
-      data: {'password': password},
-    );
   }
 
   /// Best-effort refresh. Returns the new tokens on success or null on

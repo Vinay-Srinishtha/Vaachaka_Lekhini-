@@ -18,12 +18,12 @@ class $ProgramsTable extends Programs
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _profileIdMeta = const VerificationMeta(
-    'profileId',
+  static const VerificationMeta _memberIdMeta = const VerificationMeta(
+    'memberId',
   );
   @override
-  late final GeneratedColumn<String> profileId = GeneratedColumn<String>(
-    'profile_id',
+  late final GeneratedColumn<String> memberId = GeneratedColumn<String>(
+    'member_id',
     aliasedName,
     false,
     type: DriftSqlType.string,
@@ -73,6 +73,17 @@ class $ProgramsTable extends Programs
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _dailyTargetMeta = const VerificationMeta(
     'dailyTarget',
   );
@@ -84,16 +95,53 @@ class $ProgramsTable extends Programs
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  static const VerificationMeta _completedAtMeta = const VerificationMeta(
+    'completedAt',
+  );
   @override
-  late final GeneratedColumn<String> status = GeneratedColumn<String>(
-    'status',
+  late final GeneratedColumn<DateTime> completedAt = GeneratedColumn<DateTime>(
+    'completed_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _currentStreakMeta = const VerificationMeta(
+    'currentStreak',
+  );
+  @override
+  late final GeneratedColumn<int> currentStreak = GeneratedColumn<int>(
+    'current_streak',
     aliasedName,
     false,
-    type: DriftSqlType.string,
+    type: DriftSqlType.int,
     requiredDuringInsert: false,
-    defaultValue: const Constant('active'),
+    defaultValue: const Constant(0),
   );
+  static const VerificationMeta _longestStreakMeta = const VerificationMeta(
+    'longestStreak',
+  );
+  @override
+  late final GeneratedColumn<int> longestStreak = GeneratedColumn<int>(
+    'longest_streak',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _lastActiveDateMeta = const VerificationMeta(
+    'lastActiveDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastActiveDate =
+      GeneratedColumn<DateTime>(
+        'last_active_date',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _totalChantsMeta = const VerificationMeta(
     'totalChants',
   );
@@ -143,13 +191,17 @@ class $ProgramsTable extends Programs
   @override
   List<GeneratedColumn> get $columns => [
     id,
-    profileId,
+    memberId,
     mantraId,
     targetWritings,
     targetDays,
     startedAt,
+    createdAt,
     dailyTarget,
-    status,
+    completedAt,
+    currentStreak,
+    longestStreak,
+    lastActiveDate,
     totalChants,
     totalWritings,
     updatedAt,
@@ -172,13 +224,13 @@ class $ProgramsTable extends Programs
     } else if (isInserting) {
       context.missing(_idMeta);
     }
-    if (data.containsKey('profile_id')) {
+    if (data.containsKey('member_id')) {
       context.handle(
-        _profileIdMeta,
-        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+        _memberIdMeta,
+        memberId.isAcceptableOrUnknown(data['member_id']!, _memberIdMeta),
       );
     } else if (isInserting) {
-      context.missing(_profileIdMeta);
+      context.missing(_memberIdMeta);
     }
     if (data.containsKey('mantra_id')) {
       context.handle(
@@ -215,6 +267,14 @@ class $ProgramsTable extends Programs
     } else if (isInserting) {
       context.missing(_startedAtMeta);
     }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
     if (data.containsKey('daily_target')) {
       context.handle(
         _dailyTargetMeta,
@@ -226,10 +286,40 @@ class $ProgramsTable extends Programs
     } else if (isInserting) {
       context.missing(_dailyTargetMeta);
     }
-    if (data.containsKey('status')) {
+    if (data.containsKey('completed_at')) {
       context.handle(
-        _statusMeta,
-        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+        _completedAtMeta,
+        completedAt.isAcceptableOrUnknown(
+          data['completed_at']!,
+          _completedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('current_streak')) {
+      context.handle(
+        _currentStreakMeta,
+        currentStreak.isAcceptableOrUnknown(
+          data['current_streak']!,
+          _currentStreakMeta,
+        ),
+      );
+    }
+    if (data.containsKey('longest_streak')) {
+      context.handle(
+        _longestStreakMeta,
+        longestStreak.isAcceptableOrUnknown(
+          data['longest_streak']!,
+          _longestStreakMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_active_date')) {
+      context.handle(
+        _lastActiveDateMeta,
+        lastActiveDate.isAcceptableOrUnknown(
+          data['last_active_date']!,
+          _lastActiveDateMeta,
+        ),
       );
     }
     if (data.containsKey('total_chants')) {
@@ -277,9 +367,9 @@ class $ProgramsTable extends Programs
         DriftSqlType.string,
         data['${effectivePrefix}id'],
       )!,
-      profileId: attachedDatabase.typeMapping.read(
+      memberId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}profile_id'],
+        data['${effectivePrefix}member_id'],
       )!,
       mantraId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -297,14 +387,30 @@ class $ProgramsTable extends Programs
         DriftSqlType.dateTime,
         data['${effectivePrefix}started_at'],
       )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
       dailyTarget: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}daily_target'],
       )!,
-      status: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}status'],
+      completedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}completed_at'],
+      ),
+      currentStreak: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}current_streak'],
       )!,
+      longestStreak: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}longest_streak'],
+      )!,
+      lastActiveDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_active_date'],
+      ),
       totalChants: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}total_chants'],
@@ -332,28 +438,34 @@ class $ProgramsTable extends Programs
 
 class ProgramRow extends DataClass implements Insertable<ProgramRow> {
   final String id;
-  final String profileId;
+  final String memberId;
   final String mantraId;
   final int targetWritings;
   final int targetDays;
   final DateTime startedAt;
+  final DateTime createdAt;
   final int dailyTarget;
-
-  /// 'active' | 'completed' | 'paused'
-  final String status;
+  final DateTime? completedAt;
+  final int currentStreak;
+  final int longestStreak;
+  final DateTime? lastActiveDate;
   final int totalChants;
   final int totalWritings;
   final DateTime updatedAt;
   final DateTime? syncedAt;
   const ProgramRow({
     required this.id,
-    required this.profileId,
+    required this.memberId,
     required this.mantraId,
     required this.targetWritings,
     required this.targetDays,
     required this.startedAt,
+    required this.createdAt,
     required this.dailyTarget,
-    required this.status,
+    this.completedAt,
+    required this.currentStreak,
+    required this.longestStreak,
+    this.lastActiveDate,
     required this.totalChants,
     required this.totalWritings,
     required this.updatedAt,
@@ -363,13 +475,21 @@ class ProgramRow extends DataClass implements Insertable<ProgramRow> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
-    map['profile_id'] = Variable<String>(profileId);
+    map['member_id'] = Variable<String>(memberId);
     map['mantra_id'] = Variable<String>(mantraId);
     map['target_writings'] = Variable<int>(targetWritings);
     map['target_days'] = Variable<int>(targetDays);
     map['started_at'] = Variable<DateTime>(startedAt);
+    map['created_at'] = Variable<DateTime>(createdAt);
     map['daily_target'] = Variable<int>(dailyTarget);
-    map['status'] = Variable<String>(status);
+    if (!nullToAbsent || completedAt != null) {
+      map['completed_at'] = Variable<DateTime>(completedAt);
+    }
+    map['current_streak'] = Variable<int>(currentStreak);
+    map['longest_streak'] = Variable<int>(longestStreak);
+    if (!nullToAbsent || lastActiveDate != null) {
+      map['last_active_date'] = Variable<DateTime>(lastActiveDate);
+    }
     map['total_chants'] = Variable<int>(totalChants);
     map['total_writings'] = Variable<int>(totalWritings);
     map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -382,13 +502,21 @@ class ProgramRow extends DataClass implements Insertable<ProgramRow> {
   ProgramsCompanion toCompanion(bool nullToAbsent) {
     return ProgramsCompanion(
       id: Value(id),
-      profileId: Value(profileId),
+      memberId: Value(memberId),
       mantraId: Value(mantraId),
       targetWritings: Value(targetWritings),
       targetDays: Value(targetDays),
       startedAt: Value(startedAt),
+      createdAt: Value(createdAt),
       dailyTarget: Value(dailyTarget),
-      status: Value(status),
+      completedAt: completedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(completedAt),
+      currentStreak: Value(currentStreak),
+      longestStreak: Value(longestStreak),
+      lastActiveDate: lastActiveDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastActiveDate),
       totalChants: Value(totalChants),
       totalWritings: Value(totalWritings),
       updatedAt: Value(updatedAt),
@@ -405,13 +533,17 @@ class ProgramRow extends DataClass implements Insertable<ProgramRow> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return ProgramRow(
       id: serializer.fromJson<String>(json['id']),
-      profileId: serializer.fromJson<String>(json['profileId']),
+      memberId: serializer.fromJson<String>(json['memberId']),
       mantraId: serializer.fromJson<String>(json['mantraId']),
       targetWritings: serializer.fromJson<int>(json['targetWritings']),
       targetDays: serializer.fromJson<int>(json['targetDays']),
       startedAt: serializer.fromJson<DateTime>(json['startedAt']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       dailyTarget: serializer.fromJson<int>(json['dailyTarget']),
-      status: serializer.fromJson<String>(json['status']),
+      completedAt: serializer.fromJson<DateTime?>(json['completedAt']),
+      currentStreak: serializer.fromJson<int>(json['currentStreak']),
+      longestStreak: serializer.fromJson<int>(json['longestStreak']),
+      lastActiveDate: serializer.fromJson<DateTime?>(json['lastActiveDate']),
       totalChants: serializer.fromJson<int>(json['totalChants']),
       totalWritings: serializer.fromJson<int>(json['totalWritings']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
@@ -423,13 +555,17 @@ class ProgramRow extends DataClass implements Insertable<ProgramRow> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
-      'profileId': serializer.toJson<String>(profileId),
+      'memberId': serializer.toJson<String>(memberId),
       'mantraId': serializer.toJson<String>(mantraId),
       'targetWritings': serializer.toJson<int>(targetWritings),
       'targetDays': serializer.toJson<int>(targetDays),
       'startedAt': serializer.toJson<DateTime>(startedAt),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
       'dailyTarget': serializer.toJson<int>(dailyTarget),
-      'status': serializer.toJson<String>(status),
+      'completedAt': serializer.toJson<DateTime?>(completedAt),
+      'currentStreak': serializer.toJson<int>(currentStreak),
+      'longestStreak': serializer.toJson<int>(longestStreak),
+      'lastActiveDate': serializer.toJson<DateTime?>(lastActiveDate),
       'totalChants': serializer.toJson<int>(totalChants),
       'totalWritings': serializer.toJson<int>(totalWritings),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
@@ -439,26 +575,36 @@ class ProgramRow extends DataClass implements Insertable<ProgramRow> {
 
   ProgramRow copyWith({
     String? id,
-    String? profileId,
+    String? memberId,
     String? mantraId,
     int? targetWritings,
     int? targetDays,
     DateTime? startedAt,
+    DateTime? createdAt,
     int? dailyTarget,
-    String? status,
+    Value<DateTime?> completedAt = const Value.absent(),
+    int? currentStreak,
+    int? longestStreak,
+    Value<DateTime?> lastActiveDate = const Value.absent(),
     int? totalChants,
     int? totalWritings,
     DateTime? updatedAt,
     Value<DateTime?> syncedAt = const Value.absent(),
   }) => ProgramRow(
     id: id ?? this.id,
-    profileId: profileId ?? this.profileId,
+    memberId: memberId ?? this.memberId,
     mantraId: mantraId ?? this.mantraId,
     targetWritings: targetWritings ?? this.targetWritings,
     targetDays: targetDays ?? this.targetDays,
     startedAt: startedAt ?? this.startedAt,
+    createdAt: createdAt ?? this.createdAt,
     dailyTarget: dailyTarget ?? this.dailyTarget,
-    status: status ?? this.status,
+    completedAt: completedAt.present ? completedAt.value : this.completedAt,
+    currentStreak: currentStreak ?? this.currentStreak,
+    longestStreak: longestStreak ?? this.longestStreak,
+    lastActiveDate: lastActiveDate.present
+        ? lastActiveDate.value
+        : this.lastActiveDate,
     totalChants: totalChants ?? this.totalChants,
     totalWritings: totalWritings ?? this.totalWritings,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -467,7 +613,7 @@ class ProgramRow extends DataClass implements Insertable<ProgramRow> {
   ProgramRow copyWithCompanion(ProgramsCompanion data) {
     return ProgramRow(
       id: data.id.present ? data.id.value : this.id,
-      profileId: data.profileId.present ? data.profileId.value : this.profileId,
+      memberId: data.memberId.present ? data.memberId.value : this.memberId,
       mantraId: data.mantraId.present ? data.mantraId.value : this.mantraId,
       targetWritings: data.targetWritings.present
           ? data.targetWritings.value
@@ -476,10 +622,22 @@ class ProgramRow extends DataClass implements Insertable<ProgramRow> {
           ? data.targetDays.value
           : this.targetDays,
       startedAt: data.startedAt.present ? data.startedAt.value : this.startedAt,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       dailyTarget: data.dailyTarget.present
           ? data.dailyTarget.value
           : this.dailyTarget,
-      status: data.status.present ? data.status.value : this.status,
+      completedAt: data.completedAt.present
+          ? data.completedAt.value
+          : this.completedAt,
+      currentStreak: data.currentStreak.present
+          ? data.currentStreak.value
+          : this.currentStreak,
+      longestStreak: data.longestStreak.present
+          ? data.longestStreak.value
+          : this.longestStreak,
+      lastActiveDate: data.lastActiveDate.present
+          ? data.lastActiveDate.value
+          : this.lastActiveDate,
       totalChants: data.totalChants.present
           ? data.totalChants.value
           : this.totalChants,
@@ -495,13 +653,17 @@ class ProgramRow extends DataClass implements Insertable<ProgramRow> {
   String toString() {
     return (StringBuffer('ProgramRow(')
           ..write('id: $id, ')
-          ..write('profileId: $profileId, ')
+          ..write('memberId: $memberId, ')
           ..write('mantraId: $mantraId, ')
           ..write('targetWritings: $targetWritings, ')
           ..write('targetDays: $targetDays, ')
           ..write('startedAt: $startedAt, ')
+          ..write('createdAt: $createdAt, ')
           ..write('dailyTarget: $dailyTarget, ')
-          ..write('status: $status, ')
+          ..write('completedAt: $completedAt, ')
+          ..write('currentStreak: $currentStreak, ')
+          ..write('longestStreak: $longestStreak, ')
+          ..write('lastActiveDate: $lastActiveDate, ')
           ..write('totalChants: $totalChants, ')
           ..write('totalWritings: $totalWritings, ')
           ..write('updatedAt: $updatedAt, ')
@@ -513,13 +675,17 @@ class ProgramRow extends DataClass implements Insertable<ProgramRow> {
   @override
   int get hashCode => Object.hash(
     id,
-    profileId,
+    memberId,
     mantraId,
     targetWritings,
     targetDays,
     startedAt,
+    createdAt,
     dailyTarget,
-    status,
+    completedAt,
+    currentStreak,
+    longestStreak,
+    lastActiveDate,
     totalChants,
     totalWritings,
     updatedAt,
@@ -530,13 +696,17 @@ class ProgramRow extends DataClass implements Insertable<ProgramRow> {
       identical(this, other) ||
       (other is ProgramRow &&
           other.id == this.id &&
-          other.profileId == this.profileId &&
+          other.memberId == this.memberId &&
           other.mantraId == this.mantraId &&
           other.targetWritings == this.targetWritings &&
           other.targetDays == this.targetDays &&
           other.startedAt == this.startedAt &&
+          other.createdAt == this.createdAt &&
           other.dailyTarget == this.dailyTarget &&
-          other.status == this.status &&
+          other.completedAt == this.completedAt &&
+          other.currentStreak == this.currentStreak &&
+          other.longestStreak == this.longestStreak &&
+          other.lastActiveDate == this.lastActiveDate &&
           other.totalChants == this.totalChants &&
           other.totalWritings == this.totalWritings &&
           other.updatedAt == this.updatedAt &&
@@ -545,13 +715,17 @@ class ProgramRow extends DataClass implements Insertable<ProgramRow> {
 
 class ProgramsCompanion extends UpdateCompanion<ProgramRow> {
   final Value<String> id;
-  final Value<String> profileId;
+  final Value<String> memberId;
   final Value<String> mantraId;
   final Value<int> targetWritings;
   final Value<int> targetDays;
   final Value<DateTime> startedAt;
+  final Value<DateTime> createdAt;
   final Value<int> dailyTarget;
-  final Value<String> status;
+  final Value<DateTime?> completedAt;
+  final Value<int> currentStreak;
+  final Value<int> longestStreak;
+  final Value<DateTime?> lastActiveDate;
   final Value<int> totalChants;
   final Value<int> totalWritings;
   final Value<DateTime> updatedAt;
@@ -559,13 +733,17 @@ class ProgramsCompanion extends UpdateCompanion<ProgramRow> {
   final Value<int> rowid;
   const ProgramsCompanion({
     this.id = const Value.absent(),
-    this.profileId = const Value.absent(),
+    this.memberId = const Value.absent(),
     this.mantraId = const Value.absent(),
     this.targetWritings = const Value.absent(),
     this.targetDays = const Value.absent(),
     this.startedAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
     this.dailyTarget = const Value.absent(),
-    this.status = const Value.absent(),
+    this.completedAt = const Value.absent(),
+    this.currentStreak = const Value.absent(),
+    this.longestStreak = const Value.absent(),
+    this.lastActiveDate = const Value.absent(),
     this.totalChants = const Value.absent(),
     this.totalWritings = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -574,35 +752,44 @@ class ProgramsCompanion extends UpdateCompanion<ProgramRow> {
   });
   ProgramsCompanion.insert({
     required String id,
-    required String profileId,
+    required String memberId,
     required String mantraId,
     required int targetWritings,
     required int targetDays,
     required DateTime startedAt,
+    required DateTime createdAt,
     required int dailyTarget,
-    this.status = const Value.absent(),
+    this.completedAt = const Value.absent(),
+    this.currentStreak = const Value.absent(),
+    this.longestStreak = const Value.absent(),
+    this.lastActiveDate = const Value.absent(),
     this.totalChants = const Value.absent(),
     this.totalWritings = const Value.absent(),
     required DateTime updatedAt,
     this.syncedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
-       profileId = Value(profileId),
+       memberId = Value(memberId),
        mantraId = Value(mantraId),
        targetWritings = Value(targetWritings),
        targetDays = Value(targetDays),
        startedAt = Value(startedAt),
+       createdAt = Value(createdAt),
        dailyTarget = Value(dailyTarget),
        updatedAt = Value(updatedAt);
   static Insertable<ProgramRow> custom({
     Expression<String>? id,
-    Expression<String>? profileId,
+    Expression<String>? memberId,
     Expression<String>? mantraId,
     Expression<int>? targetWritings,
     Expression<int>? targetDays,
     Expression<DateTime>? startedAt,
+    Expression<DateTime>? createdAt,
     Expression<int>? dailyTarget,
-    Expression<String>? status,
+    Expression<DateTime>? completedAt,
+    Expression<int>? currentStreak,
+    Expression<int>? longestStreak,
+    Expression<DateTime>? lastActiveDate,
     Expression<int>? totalChants,
     Expression<int>? totalWritings,
     Expression<DateTime>? updatedAt,
@@ -611,13 +798,17 @@ class ProgramsCompanion extends UpdateCompanion<ProgramRow> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (profileId != null) 'profile_id': profileId,
+      if (memberId != null) 'member_id': memberId,
       if (mantraId != null) 'mantra_id': mantraId,
       if (targetWritings != null) 'target_writings': targetWritings,
       if (targetDays != null) 'target_days': targetDays,
       if (startedAt != null) 'started_at': startedAt,
+      if (createdAt != null) 'created_at': createdAt,
       if (dailyTarget != null) 'daily_target': dailyTarget,
-      if (status != null) 'status': status,
+      if (completedAt != null) 'completed_at': completedAt,
+      if (currentStreak != null) 'current_streak': currentStreak,
+      if (longestStreak != null) 'longest_streak': longestStreak,
+      if (lastActiveDate != null) 'last_active_date': lastActiveDate,
       if (totalChants != null) 'total_chants': totalChants,
       if (totalWritings != null) 'total_writings': totalWritings,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -628,13 +819,17 @@ class ProgramsCompanion extends UpdateCompanion<ProgramRow> {
 
   ProgramsCompanion copyWith({
     Value<String>? id,
-    Value<String>? profileId,
+    Value<String>? memberId,
     Value<String>? mantraId,
     Value<int>? targetWritings,
     Value<int>? targetDays,
     Value<DateTime>? startedAt,
+    Value<DateTime>? createdAt,
     Value<int>? dailyTarget,
-    Value<String>? status,
+    Value<DateTime?>? completedAt,
+    Value<int>? currentStreak,
+    Value<int>? longestStreak,
+    Value<DateTime?>? lastActiveDate,
     Value<int>? totalChants,
     Value<int>? totalWritings,
     Value<DateTime>? updatedAt,
@@ -643,13 +838,17 @@ class ProgramsCompanion extends UpdateCompanion<ProgramRow> {
   }) {
     return ProgramsCompanion(
       id: id ?? this.id,
-      profileId: profileId ?? this.profileId,
+      memberId: memberId ?? this.memberId,
       mantraId: mantraId ?? this.mantraId,
       targetWritings: targetWritings ?? this.targetWritings,
       targetDays: targetDays ?? this.targetDays,
       startedAt: startedAt ?? this.startedAt,
+      createdAt: createdAt ?? this.createdAt,
       dailyTarget: dailyTarget ?? this.dailyTarget,
-      status: status ?? this.status,
+      completedAt: completedAt ?? this.completedAt,
+      currentStreak: currentStreak ?? this.currentStreak,
+      longestStreak: longestStreak ?? this.longestStreak,
+      lastActiveDate: lastActiveDate ?? this.lastActiveDate,
       totalChants: totalChants ?? this.totalChants,
       totalWritings: totalWritings ?? this.totalWritings,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -664,8 +863,8 @@ class ProgramsCompanion extends UpdateCompanion<ProgramRow> {
     if (id.present) {
       map['id'] = Variable<String>(id.value);
     }
-    if (profileId.present) {
-      map['profile_id'] = Variable<String>(profileId.value);
+    if (memberId.present) {
+      map['member_id'] = Variable<String>(memberId.value);
     }
     if (mantraId.present) {
       map['mantra_id'] = Variable<String>(mantraId.value);
@@ -679,11 +878,23 @@ class ProgramsCompanion extends UpdateCompanion<ProgramRow> {
     if (startedAt.present) {
       map['started_at'] = Variable<DateTime>(startedAt.value);
     }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
     if (dailyTarget.present) {
       map['daily_target'] = Variable<int>(dailyTarget.value);
     }
-    if (status.present) {
-      map['status'] = Variable<String>(status.value);
+    if (completedAt.present) {
+      map['completed_at'] = Variable<DateTime>(completedAt.value);
+    }
+    if (currentStreak.present) {
+      map['current_streak'] = Variable<int>(currentStreak.value);
+    }
+    if (longestStreak.present) {
+      map['longest_streak'] = Variable<int>(longestStreak.value);
+    }
+    if (lastActiveDate.present) {
+      map['last_active_date'] = Variable<DateTime>(lastActiveDate.value);
     }
     if (totalChants.present) {
       map['total_chants'] = Variable<int>(totalChants.value);
@@ -707,13 +918,17 @@ class ProgramsCompanion extends UpdateCompanion<ProgramRow> {
   String toString() {
     return (StringBuffer('ProgramsCompanion(')
           ..write('id: $id, ')
-          ..write('profileId: $profileId, ')
+          ..write('memberId: $memberId, ')
           ..write('mantraId: $mantraId, ')
           ..write('targetWritings: $targetWritings, ')
           ..write('targetDays: $targetDays, ')
           ..write('startedAt: $startedAt, ')
+          ..write('createdAt: $createdAt, ')
           ..write('dailyTarget: $dailyTarget, ')
-          ..write('status: $status, ')
+          ..write('completedAt: $completedAt, ')
+          ..write('currentStreak: $currentStreak, ')
+          ..write('longestStreak: $longestStreak, ')
+          ..write('lastActiveDate: $lastActiveDate, ')
           ..write('totalChants: $totalChants, ')
           ..write('totalWritings: $totalWritings, ')
           ..write('updatedAt: $updatedAt, ')
@@ -751,12 +966,34 @@ class $SessionsTable extends Sessions
     requiredDuringInsert: true,
     $customConstraints: 'NOT NULL REFERENCES programs(id) ON DELETE CASCADE',
   );
+  static const VerificationMeta _memberIdMeta = const VerificationMeta(
+    'memberId',
+  );
+  @override
+  late final GeneratedColumn<String> memberId = GeneratedColumn<String>(
+    'member_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _startedAtMeta = const VerificationMeta(
     'startedAt',
   );
   @override
   late final GeneratedColumn<DateTime> startedAt = GeneratedColumn<DateTime>(
     'started_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
     aliasedName,
     false,
     type: DriftSqlType.dateTime,
@@ -773,10 +1010,24 @@ class $SessionsTable extends Sessions
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _countMeta = const VerificationMeta('count');
+  static const VerificationMeta _countAddedMeta = const VerificationMeta(
+    'countAdded',
+  );
   @override
-  late final GeneratedColumn<int> count = GeneratedColumn<int>(
-    'count',
+  late final GeneratedColumn<int> countAdded = GeneratedColumn<int>(
+    'count_added',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _durationSecMeta = const VerificationMeta(
+    'durationSec',
+  );
+  @override
+  late final GeneratedColumn<int> durationSec = GeneratedColumn<int>(
+    'duration_sec',
     aliasedName,
     false,
     type: DriftSqlType.int,
@@ -793,21 +1044,6 @@ class $SessionsTable extends Sessions
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
-  );
-  static const VerificationMeta _usedHandwritingMeta = const VerificationMeta(
-    'usedHandwriting',
-  );
-  @override
-  late final GeneratedColumn<bool> usedHandwriting = GeneratedColumn<bool>(
-    'used_handwriting',
-    aliasedName,
-    false,
-    type: DriftSqlType.bool,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("used_handwriting" IN (0, 1))',
-    ),
-    defaultValue: const Constant(false),
   );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
@@ -835,11 +1071,13 @@ class $SessionsTable extends Sessions
   List<GeneratedColumn> get $columns => [
     id,
     programId,
+    memberId,
     startedAt,
+    createdAt,
     endedAt,
-    count,
+    countAdded,
+    durationSec,
     modality,
-    usedHandwriting,
     updatedAt,
     syncedAt,
   ];
@@ -868,6 +1106,14 @@ class $SessionsTable extends Sessions
     } else if (isInserting) {
       context.missing(_programIdMeta);
     }
+    if (data.containsKey('member_id')) {
+      context.handle(
+        _memberIdMeta,
+        memberId.isAcceptableOrUnknown(data['member_id']!, _memberIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_memberIdMeta);
+    }
     if (data.containsKey('started_at')) {
       context.handle(
         _startedAtMeta,
@@ -876,16 +1122,33 @@ class $SessionsTable extends Sessions
     } else if (isInserting) {
       context.missing(_startedAtMeta);
     }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
     if (data.containsKey('ended_at')) {
       context.handle(
         _endedAtMeta,
         endedAt.isAcceptableOrUnknown(data['ended_at']!, _endedAtMeta),
       );
     }
-    if (data.containsKey('count')) {
+    if (data.containsKey('count_added')) {
       context.handle(
-        _countMeta,
-        count.isAcceptableOrUnknown(data['count']!, _countMeta),
+        _countAddedMeta,
+        countAdded.isAcceptableOrUnknown(data['count_added']!, _countAddedMeta),
+      );
+    }
+    if (data.containsKey('duration_sec')) {
+      context.handle(
+        _durationSecMeta,
+        durationSec.isAcceptableOrUnknown(
+          data['duration_sec']!,
+          _durationSecMeta,
+        ),
       );
     }
     if (data.containsKey('modality')) {
@@ -895,15 +1158,6 @@ class $SessionsTable extends Sessions
       );
     } else if (isInserting) {
       context.missing(_modalityMeta);
-    }
-    if (data.containsKey('used_handwriting')) {
-      context.handle(
-        _usedHandwritingMeta,
-        usedHandwriting.isAcceptableOrUnknown(
-          data['used_handwriting']!,
-          _usedHandwritingMeta,
-        ),
-      );
     }
     if (data.containsKey('updated_at')) {
       context.handle(
@@ -936,25 +1190,33 @@ class $SessionsTable extends Sessions
         DriftSqlType.string,
         data['${effectivePrefix}program_id'],
       )!,
+      memberId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}member_id'],
+      )!,
       startedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}started_at'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
       )!,
       endedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}ended_at'],
       ),
-      count: attachedDatabase.typeMapping.read(
+      countAdded: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
-        data['${effectivePrefix}count'],
+        data['${effectivePrefix}count_added'],
+      )!,
+      durationSec: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}duration_sec'],
       )!,
       modality: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}modality'],
-      )!,
-      usedHandwriting: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}used_handwriting'],
       )!,
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
@@ -976,23 +1238,27 @@ class $SessionsTable extends Sessions
 class SessionRow extends DataClass implements Insertable<SessionRow> {
   final String id;
   final String programId;
+  final String memberId;
   final DateTime startedAt;
+  final DateTime createdAt;
   final DateTime? endedAt;
-  final int count;
+  final int countAdded;
+  final int durationSec;
 
   /// 'voice' | 'manual' | 'handwriting'
   final String modality;
-  final bool usedHandwriting;
   final DateTime updatedAt;
   final DateTime? syncedAt;
   const SessionRow({
     required this.id,
     required this.programId,
+    required this.memberId,
     required this.startedAt,
+    required this.createdAt,
     this.endedAt,
-    required this.count,
+    required this.countAdded,
+    required this.durationSec,
     required this.modality,
-    required this.usedHandwriting,
     required this.updatedAt,
     this.syncedAt,
   });
@@ -1001,13 +1267,15 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['program_id'] = Variable<String>(programId);
+    map['member_id'] = Variable<String>(memberId);
     map['started_at'] = Variable<DateTime>(startedAt);
+    map['created_at'] = Variable<DateTime>(createdAt);
     if (!nullToAbsent || endedAt != null) {
       map['ended_at'] = Variable<DateTime>(endedAt);
     }
-    map['count'] = Variable<int>(count);
+    map['count_added'] = Variable<int>(countAdded);
+    map['duration_sec'] = Variable<int>(durationSec);
     map['modality'] = Variable<String>(modality);
-    map['used_handwriting'] = Variable<bool>(usedHandwriting);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || syncedAt != null) {
       map['synced_at'] = Variable<DateTime>(syncedAt);
@@ -1019,13 +1287,15 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
     return SessionsCompanion(
       id: Value(id),
       programId: Value(programId),
+      memberId: Value(memberId),
       startedAt: Value(startedAt),
+      createdAt: Value(createdAt),
       endedAt: endedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(endedAt),
-      count: Value(count),
+      countAdded: Value(countAdded),
+      durationSec: Value(durationSec),
       modality: Value(modality),
-      usedHandwriting: Value(usedHandwriting),
       updatedAt: Value(updatedAt),
       syncedAt: syncedAt == null && nullToAbsent
           ? const Value.absent()
@@ -1041,11 +1311,13 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
     return SessionRow(
       id: serializer.fromJson<String>(json['id']),
       programId: serializer.fromJson<String>(json['programId']),
+      memberId: serializer.fromJson<String>(json['memberId']),
       startedAt: serializer.fromJson<DateTime>(json['startedAt']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       endedAt: serializer.fromJson<DateTime?>(json['endedAt']),
-      count: serializer.fromJson<int>(json['count']),
+      countAdded: serializer.fromJson<int>(json['countAdded']),
+      durationSec: serializer.fromJson<int>(json['durationSec']),
       modality: serializer.fromJson<String>(json['modality']),
-      usedHandwriting: serializer.fromJson<bool>(json['usedHandwriting']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       syncedAt: serializer.fromJson<DateTime?>(json['syncedAt']),
     );
@@ -1056,11 +1328,13 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'programId': serializer.toJson<String>(programId),
+      'memberId': serializer.toJson<String>(memberId),
       'startedAt': serializer.toJson<DateTime>(startedAt),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
       'endedAt': serializer.toJson<DateTime?>(endedAt),
-      'count': serializer.toJson<int>(count),
+      'countAdded': serializer.toJson<int>(countAdded),
+      'durationSec': serializer.toJson<int>(durationSec),
       'modality': serializer.toJson<String>(modality),
-      'usedHandwriting': serializer.toJson<bool>(usedHandwriting),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'syncedAt': serializer.toJson<DateTime?>(syncedAt),
     };
@@ -1069,21 +1343,25 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
   SessionRow copyWith({
     String? id,
     String? programId,
+    String? memberId,
     DateTime? startedAt,
+    DateTime? createdAt,
     Value<DateTime?> endedAt = const Value.absent(),
-    int? count,
+    int? countAdded,
+    int? durationSec,
     String? modality,
-    bool? usedHandwriting,
     DateTime? updatedAt,
     Value<DateTime?> syncedAt = const Value.absent(),
   }) => SessionRow(
     id: id ?? this.id,
     programId: programId ?? this.programId,
+    memberId: memberId ?? this.memberId,
     startedAt: startedAt ?? this.startedAt,
+    createdAt: createdAt ?? this.createdAt,
     endedAt: endedAt.present ? endedAt.value : this.endedAt,
-    count: count ?? this.count,
+    countAdded: countAdded ?? this.countAdded,
+    durationSec: durationSec ?? this.durationSec,
     modality: modality ?? this.modality,
-    usedHandwriting: usedHandwriting ?? this.usedHandwriting,
     updatedAt: updatedAt ?? this.updatedAt,
     syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
   );
@@ -1091,13 +1369,17 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
     return SessionRow(
       id: data.id.present ? data.id.value : this.id,
       programId: data.programId.present ? data.programId.value : this.programId,
+      memberId: data.memberId.present ? data.memberId.value : this.memberId,
       startedAt: data.startedAt.present ? data.startedAt.value : this.startedAt,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       endedAt: data.endedAt.present ? data.endedAt.value : this.endedAt,
-      count: data.count.present ? data.count.value : this.count,
+      countAdded: data.countAdded.present
+          ? data.countAdded.value
+          : this.countAdded,
+      durationSec: data.durationSec.present
+          ? data.durationSec.value
+          : this.durationSec,
       modality: data.modality.present ? data.modality.value : this.modality,
-      usedHandwriting: data.usedHandwriting.present
-          ? data.usedHandwriting.value
-          : this.usedHandwriting,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
     );
@@ -1108,11 +1390,13 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
     return (StringBuffer('SessionRow(')
           ..write('id: $id, ')
           ..write('programId: $programId, ')
+          ..write('memberId: $memberId, ')
           ..write('startedAt: $startedAt, ')
+          ..write('createdAt: $createdAt, ')
           ..write('endedAt: $endedAt, ')
-          ..write('count: $count, ')
+          ..write('countAdded: $countAdded, ')
+          ..write('durationSec: $durationSec, ')
           ..write('modality: $modality, ')
-          ..write('usedHandwriting: $usedHandwriting, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('syncedAt: $syncedAt')
           ..write(')'))
@@ -1123,11 +1407,13 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
   int get hashCode => Object.hash(
     id,
     programId,
+    memberId,
     startedAt,
+    createdAt,
     endedAt,
-    count,
+    countAdded,
+    durationSec,
     modality,
-    usedHandwriting,
     updatedAt,
     syncedAt,
   );
@@ -1137,11 +1423,13 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
       (other is SessionRow &&
           other.id == this.id &&
           other.programId == this.programId &&
+          other.memberId == this.memberId &&
           other.startedAt == this.startedAt &&
+          other.createdAt == this.createdAt &&
           other.endedAt == this.endedAt &&
-          other.count == this.count &&
+          other.countAdded == this.countAdded &&
+          other.durationSec == this.durationSec &&
           other.modality == this.modality &&
-          other.usedHandwriting == this.usedHandwriting &&
           other.updatedAt == this.updatedAt &&
           other.syncedAt == this.syncedAt);
 }
@@ -1149,22 +1437,26 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
 class SessionsCompanion extends UpdateCompanion<SessionRow> {
   final Value<String> id;
   final Value<String> programId;
+  final Value<String> memberId;
   final Value<DateTime> startedAt;
+  final Value<DateTime> createdAt;
   final Value<DateTime?> endedAt;
-  final Value<int> count;
+  final Value<int> countAdded;
+  final Value<int> durationSec;
   final Value<String> modality;
-  final Value<bool> usedHandwriting;
   final Value<DateTime> updatedAt;
   final Value<DateTime?> syncedAt;
   final Value<int> rowid;
   const SessionsCompanion({
     this.id = const Value.absent(),
     this.programId = const Value.absent(),
+    this.memberId = const Value.absent(),
     this.startedAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
     this.endedAt = const Value.absent(),
-    this.count = const Value.absent(),
+    this.countAdded = const Value.absent(),
+    this.durationSec = const Value.absent(),
     this.modality = const Value.absent(),
-    this.usedHandwriting = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.syncedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1172,27 +1464,33 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
   SessionsCompanion.insert({
     required String id,
     required String programId,
+    required String memberId,
     required DateTime startedAt,
+    required DateTime createdAt,
     this.endedAt = const Value.absent(),
-    this.count = const Value.absent(),
+    this.countAdded = const Value.absent(),
+    this.durationSec = const Value.absent(),
     required String modality,
-    this.usedHandwriting = const Value.absent(),
     required DateTime updatedAt,
     this.syncedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        programId = Value(programId),
+       memberId = Value(memberId),
        startedAt = Value(startedAt),
+       createdAt = Value(createdAt),
        modality = Value(modality),
        updatedAt = Value(updatedAt);
   static Insertable<SessionRow> custom({
     Expression<String>? id,
     Expression<String>? programId,
+    Expression<String>? memberId,
     Expression<DateTime>? startedAt,
+    Expression<DateTime>? createdAt,
     Expression<DateTime>? endedAt,
-    Expression<int>? count,
+    Expression<int>? countAdded,
+    Expression<int>? durationSec,
     Expression<String>? modality,
-    Expression<bool>? usedHandwriting,
     Expression<DateTime>? updatedAt,
     Expression<DateTime>? syncedAt,
     Expression<int>? rowid,
@@ -1200,11 +1498,13 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (programId != null) 'program_id': programId,
+      if (memberId != null) 'member_id': memberId,
       if (startedAt != null) 'started_at': startedAt,
+      if (createdAt != null) 'created_at': createdAt,
       if (endedAt != null) 'ended_at': endedAt,
-      if (count != null) 'count': count,
+      if (countAdded != null) 'count_added': countAdded,
+      if (durationSec != null) 'duration_sec': durationSec,
       if (modality != null) 'modality': modality,
-      if (usedHandwriting != null) 'used_handwriting': usedHandwriting,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (syncedAt != null) 'synced_at': syncedAt,
       if (rowid != null) 'rowid': rowid,
@@ -1214,11 +1514,13 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
   SessionsCompanion copyWith({
     Value<String>? id,
     Value<String>? programId,
+    Value<String>? memberId,
     Value<DateTime>? startedAt,
+    Value<DateTime>? createdAt,
     Value<DateTime?>? endedAt,
-    Value<int>? count,
+    Value<int>? countAdded,
+    Value<int>? durationSec,
     Value<String>? modality,
-    Value<bool>? usedHandwriting,
     Value<DateTime>? updatedAt,
     Value<DateTime?>? syncedAt,
     Value<int>? rowid,
@@ -1226,11 +1528,13 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
     return SessionsCompanion(
       id: id ?? this.id,
       programId: programId ?? this.programId,
+      memberId: memberId ?? this.memberId,
       startedAt: startedAt ?? this.startedAt,
+      createdAt: createdAt ?? this.createdAt,
       endedAt: endedAt ?? this.endedAt,
-      count: count ?? this.count,
+      countAdded: countAdded ?? this.countAdded,
+      durationSec: durationSec ?? this.durationSec,
       modality: modality ?? this.modality,
-      usedHandwriting: usedHandwriting ?? this.usedHandwriting,
       updatedAt: updatedAt ?? this.updatedAt,
       syncedAt: syncedAt ?? this.syncedAt,
       rowid: rowid ?? this.rowid,
@@ -1246,20 +1550,26 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
     if (programId.present) {
       map['program_id'] = Variable<String>(programId.value);
     }
+    if (memberId.present) {
+      map['member_id'] = Variable<String>(memberId.value);
+    }
     if (startedAt.present) {
       map['started_at'] = Variable<DateTime>(startedAt.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
     }
     if (endedAt.present) {
       map['ended_at'] = Variable<DateTime>(endedAt.value);
     }
-    if (count.present) {
-      map['count'] = Variable<int>(count.value);
+    if (countAdded.present) {
+      map['count_added'] = Variable<int>(countAdded.value);
+    }
+    if (durationSec.present) {
+      map['duration_sec'] = Variable<int>(durationSec.value);
     }
     if (modality.present) {
       map['modality'] = Variable<String>(modality.value);
-    }
-    if (usedHandwriting.present) {
-      map['used_handwriting'] = Variable<bool>(usedHandwriting.value);
     }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
@@ -1278,11 +1588,13 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
     return (StringBuffer('SessionsCompanion(')
           ..write('id: $id, ')
           ..write('programId: $programId, ')
+          ..write('memberId: $memberId, ')
           ..write('startedAt: $startedAt, ')
+          ..write('createdAt: $createdAt, ')
           ..write('endedAt: $endedAt, ')
-          ..write('count: $count, ')
+          ..write('countAdded: $countAdded, ')
+          ..write('durationSec: $durationSec, ')
           ..write('modality: $modality, ')
-          ..write('usedHandwriting: $usedHandwriting, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('syncedAt: $syncedAt, ')
           ..write('rowid: $rowid')
@@ -1306,16 +1618,27 @@ class $RewardEventsTable extends RewardEvents
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _profileIdMeta = const VerificationMeta(
-    'profileId',
+  static const VerificationMeta _memberIdMeta = const VerificationMeta(
+    'memberId',
   );
   @override
-  late final GeneratedColumn<String> profileId = GeneratedColumn<String>(
-    'profile_id',
+  late final GeneratedColumn<String> memberId = GeneratedColumn<String>(
+    'member_id',
     aliasedName,
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
+  );
+  static const VerificationMeta _storeItemIdMeta = const VerificationMeta(
+    'storeItemId',
+  );
+  @override
+  late final GeneratedColumn<String> storeItemId = GeneratedColumn<String>(
+    'store_item_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _kindMeta = const VerificationMeta('kind');
   @override
@@ -1344,12 +1667,12 @@ class $RewardEventsTable extends RewardEvents
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _createdAtMeta = const VerificationMeta(
-    'createdAt',
+  static const VerificationMeta _occurredAtMeta = const VerificationMeta(
+    'occurredAt',
   );
   @override
-  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
-    'created_at',
+  late final GeneratedColumn<DateTime> occurredAt = GeneratedColumn<DateTime>(
+    'occurred_at',
     aliasedName,
     false,
     type: DriftSqlType.dateTime,
@@ -1369,11 +1692,12 @@ class $RewardEventsTable extends RewardEvents
   @override
   List<GeneratedColumn> get $columns => [
     id,
-    profileId,
+    memberId,
+    storeItemId,
     kind,
     amount,
     source,
-    createdAt,
+    occurredAt,
     syncedAt,
   ];
   @override
@@ -1393,13 +1717,22 @@ class $RewardEventsTable extends RewardEvents
     } else if (isInserting) {
       context.missing(_idMeta);
     }
-    if (data.containsKey('profile_id')) {
+    if (data.containsKey('member_id')) {
       context.handle(
-        _profileIdMeta,
-        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+        _memberIdMeta,
+        memberId.isAcceptableOrUnknown(data['member_id']!, _memberIdMeta),
       );
     } else if (isInserting) {
-      context.missing(_profileIdMeta);
+      context.missing(_memberIdMeta);
+    }
+    if (data.containsKey('store_item_id')) {
+      context.handle(
+        _storeItemIdMeta,
+        storeItemId.isAcceptableOrUnknown(
+          data['store_item_id']!,
+          _storeItemIdMeta,
+        ),
+      );
     }
     if (data.containsKey('kind')) {
       context.handle(
@@ -1425,13 +1758,13 @@ class $RewardEventsTable extends RewardEvents
     } else if (isInserting) {
       context.missing(_sourceMeta);
     }
-    if (data.containsKey('created_at')) {
+    if (data.containsKey('occurred_at')) {
       context.handle(
-        _createdAtMeta,
-        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+        _occurredAtMeta,
+        occurredAt.isAcceptableOrUnknown(data['occurred_at']!, _occurredAtMeta),
       );
     } else if (isInserting) {
-      context.missing(_createdAtMeta);
+      context.missing(_occurredAtMeta);
     }
     if (data.containsKey('synced_at')) {
       context.handle(
@@ -1452,10 +1785,14 @@ class $RewardEventsTable extends RewardEvents
         DriftSqlType.string,
         data['${effectivePrefix}id'],
       )!,
-      profileId: attachedDatabase.typeMapping.read(
+      memberId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}profile_id'],
+        data['${effectivePrefix}member_id'],
       )!,
+      storeItemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}store_item_id'],
+      ),
       kind: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}kind'],
@@ -1468,9 +1805,9 @@ class $RewardEventsTable extends RewardEvents
         DriftSqlType.string,
         data['${effectivePrefix}source'],
       )!,
-      createdAt: attachedDatabase.typeMapping.read(
+      occurredAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
-        data['${effectivePrefix}created_at'],
+        data['${effectivePrefix}occurred_at'],
       )!,
       syncedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
@@ -1487,32 +1824,37 @@ class $RewardEventsTable extends RewardEvents
 
 class RewardEventRow extends DataClass implements Insertable<RewardEventRow> {
   final String id;
-  final String profileId;
+  final String memberId;
+  final String? storeItemId;
 
   /// 'earn' | 'spend'
   final String kind;
   final int amount;
   final String source;
-  final DateTime createdAt;
+  final DateTime occurredAt;
   final DateTime? syncedAt;
   const RewardEventRow({
     required this.id,
-    required this.profileId,
+    required this.memberId,
+    this.storeItemId,
     required this.kind,
     required this.amount,
     required this.source,
-    required this.createdAt,
+    required this.occurredAt,
     this.syncedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
-    map['profile_id'] = Variable<String>(profileId);
+    map['member_id'] = Variable<String>(memberId);
+    if (!nullToAbsent || storeItemId != null) {
+      map['store_item_id'] = Variable<String>(storeItemId);
+    }
     map['kind'] = Variable<String>(kind);
     map['amount'] = Variable<int>(amount);
     map['source'] = Variable<String>(source);
-    map['created_at'] = Variable<DateTime>(createdAt);
+    map['occurred_at'] = Variable<DateTime>(occurredAt);
     if (!nullToAbsent || syncedAt != null) {
       map['synced_at'] = Variable<DateTime>(syncedAt);
     }
@@ -1522,11 +1864,14 @@ class RewardEventRow extends DataClass implements Insertable<RewardEventRow> {
   RewardEventsCompanion toCompanion(bool nullToAbsent) {
     return RewardEventsCompanion(
       id: Value(id),
-      profileId: Value(profileId),
+      memberId: Value(memberId),
+      storeItemId: storeItemId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(storeItemId),
       kind: Value(kind),
       amount: Value(amount),
       source: Value(source),
-      createdAt: Value(createdAt),
+      occurredAt: Value(occurredAt),
       syncedAt: syncedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(syncedAt),
@@ -1540,11 +1885,12 @@ class RewardEventRow extends DataClass implements Insertable<RewardEventRow> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return RewardEventRow(
       id: serializer.fromJson<String>(json['id']),
-      profileId: serializer.fromJson<String>(json['profileId']),
+      memberId: serializer.fromJson<String>(json['memberId']),
+      storeItemId: serializer.fromJson<String?>(json['storeItemId']),
       kind: serializer.fromJson<String>(json['kind']),
       amount: serializer.fromJson<int>(json['amount']),
       source: serializer.fromJson<String>(json['source']),
-      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      occurredAt: serializer.fromJson<DateTime>(json['occurredAt']),
       syncedAt: serializer.fromJson<DateTime?>(json['syncedAt']),
     );
   }
@@ -1553,40 +1899,48 @@ class RewardEventRow extends DataClass implements Insertable<RewardEventRow> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
-      'profileId': serializer.toJson<String>(profileId),
+      'memberId': serializer.toJson<String>(memberId),
+      'storeItemId': serializer.toJson<String?>(storeItemId),
       'kind': serializer.toJson<String>(kind),
       'amount': serializer.toJson<int>(amount),
       'source': serializer.toJson<String>(source),
-      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'occurredAt': serializer.toJson<DateTime>(occurredAt),
       'syncedAt': serializer.toJson<DateTime?>(syncedAt),
     };
   }
 
   RewardEventRow copyWith({
     String? id,
-    String? profileId,
+    String? memberId,
+    Value<String?> storeItemId = const Value.absent(),
     String? kind,
     int? amount,
     String? source,
-    DateTime? createdAt,
+    DateTime? occurredAt,
     Value<DateTime?> syncedAt = const Value.absent(),
   }) => RewardEventRow(
     id: id ?? this.id,
-    profileId: profileId ?? this.profileId,
+    memberId: memberId ?? this.memberId,
+    storeItemId: storeItemId.present ? storeItemId.value : this.storeItemId,
     kind: kind ?? this.kind,
     amount: amount ?? this.amount,
     source: source ?? this.source,
-    createdAt: createdAt ?? this.createdAt,
+    occurredAt: occurredAt ?? this.occurredAt,
     syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
   );
   RewardEventRow copyWithCompanion(RewardEventsCompanion data) {
     return RewardEventRow(
       id: data.id.present ? data.id.value : this.id,
-      profileId: data.profileId.present ? data.profileId.value : this.profileId,
+      memberId: data.memberId.present ? data.memberId.value : this.memberId,
+      storeItemId: data.storeItemId.present
+          ? data.storeItemId.value
+          : this.storeItemId,
       kind: data.kind.present ? data.kind.value : this.kind,
       amount: data.amount.present ? data.amount.value : this.amount,
       source: data.source.present ? data.source.value : this.source,
-      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      occurredAt: data.occurredAt.present
+          ? data.occurredAt.value
+          : this.occurredAt,
       syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
     );
   }
@@ -1595,83 +1949,98 @@ class RewardEventRow extends DataClass implements Insertable<RewardEventRow> {
   String toString() {
     return (StringBuffer('RewardEventRow(')
           ..write('id: $id, ')
-          ..write('profileId: $profileId, ')
+          ..write('memberId: $memberId, ')
+          ..write('storeItemId: $storeItemId, ')
           ..write('kind: $kind, ')
           ..write('amount: $amount, ')
           ..write('source: $source, ')
-          ..write('createdAt: $createdAt, ')
+          ..write('occurredAt: $occurredAt, ')
           ..write('syncedAt: $syncedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, profileId, kind, amount, source, createdAt, syncedAt);
+  int get hashCode => Object.hash(
+    id,
+    memberId,
+    storeItemId,
+    kind,
+    amount,
+    source,
+    occurredAt,
+    syncedAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is RewardEventRow &&
           other.id == this.id &&
-          other.profileId == this.profileId &&
+          other.memberId == this.memberId &&
+          other.storeItemId == this.storeItemId &&
           other.kind == this.kind &&
           other.amount == this.amount &&
           other.source == this.source &&
-          other.createdAt == this.createdAt &&
+          other.occurredAt == this.occurredAt &&
           other.syncedAt == this.syncedAt);
 }
 
 class RewardEventsCompanion extends UpdateCompanion<RewardEventRow> {
   final Value<String> id;
-  final Value<String> profileId;
+  final Value<String> memberId;
+  final Value<String?> storeItemId;
   final Value<String> kind;
   final Value<int> amount;
   final Value<String> source;
-  final Value<DateTime> createdAt;
+  final Value<DateTime> occurredAt;
   final Value<DateTime?> syncedAt;
   final Value<int> rowid;
   const RewardEventsCompanion({
     this.id = const Value.absent(),
-    this.profileId = const Value.absent(),
+    this.memberId = const Value.absent(),
+    this.storeItemId = const Value.absent(),
     this.kind = const Value.absent(),
     this.amount = const Value.absent(),
     this.source = const Value.absent(),
-    this.createdAt = const Value.absent(),
+    this.occurredAt = const Value.absent(),
     this.syncedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   RewardEventsCompanion.insert({
     required String id,
-    required String profileId,
+    required String memberId,
+    this.storeItemId = const Value.absent(),
     required String kind,
     required int amount,
     required String source,
-    required DateTime createdAt,
+    required DateTime occurredAt,
     this.syncedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
-       profileId = Value(profileId),
+       memberId = Value(memberId),
        kind = Value(kind),
        amount = Value(amount),
        source = Value(source),
-       createdAt = Value(createdAt);
+       occurredAt = Value(occurredAt);
   static Insertable<RewardEventRow> custom({
     Expression<String>? id,
-    Expression<String>? profileId,
+    Expression<String>? memberId,
+    Expression<String>? storeItemId,
     Expression<String>? kind,
     Expression<int>? amount,
     Expression<String>? source,
-    Expression<DateTime>? createdAt,
+    Expression<DateTime>? occurredAt,
     Expression<DateTime>? syncedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (profileId != null) 'profile_id': profileId,
+      if (memberId != null) 'member_id': memberId,
+      if (storeItemId != null) 'store_item_id': storeItemId,
       if (kind != null) 'kind': kind,
       if (amount != null) 'amount': amount,
       if (source != null) 'source': source,
-      if (createdAt != null) 'created_at': createdAt,
+      if (occurredAt != null) 'occurred_at': occurredAt,
       if (syncedAt != null) 'synced_at': syncedAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -1679,21 +2048,23 @@ class RewardEventsCompanion extends UpdateCompanion<RewardEventRow> {
 
   RewardEventsCompanion copyWith({
     Value<String>? id,
-    Value<String>? profileId,
+    Value<String>? memberId,
+    Value<String?>? storeItemId,
     Value<String>? kind,
     Value<int>? amount,
     Value<String>? source,
-    Value<DateTime>? createdAt,
+    Value<DateTime>? occurredAt,
     Value<DateTime?>? syncedAt,
     Value<int>? rowid,
   }) {
     return RewardEventsCompanion(
       id: id ?? this.id,
-      profileId: profileId ?? this.profileId,
+      memberId: memberId ?? this.memberId,
+      storeItemId: storeItemId ?? this.storeItemId,
       kind: kind ?? this.kind,
       amount: amount ?? this.amount,
       source: source ?? this.source,
-      createdAt: createdAt ?? this.createdAt,
+      occurredAt: occurredAt ?? this.occurredAt,
       syncedAt: syncedAt ?? this.syncedAt,
       rowid: rowid ?? this.rowid,
     );
@@ -1705,8 +2076,11 @@ class RewardEventsCompanion extends UpdateCompanion<RewardEventRow> {
     if (id.present) {
       map['id'] = Variable<String>(id.value);
     }
-    if (profileId.present) {
-      map['profile_id'] = Variable<String>(profileId.value);
+    if (memberId.present) {
+      map['member_id'] = Variable<String>(memberId.value);
+    }
+    if (storeItemId.present) {
+      map['store_item_id'] = Variable<String>(storeItemId.value);
     }
     if (kind.present) {
       map['kind'] = Variable<String>(kind.value);
@@ -1717,8 +2091,8 @@ class RewardEventsCompanion extends UpdateCompanion<RewardEventRow> {
     if (source.present) {
       map['source'] = Variable<String>(source.value);
     }
-    if (createdAt.present) {
-      map['created_at'] = Variable<DateTime>(createdAt.value);
+    if (occurredAt.present) {
+      map['occurred_at'] = Variable<DateTime>(occurredAt.value);
     }
     if (syncedAt.present) {
       map['synced_at'] = Variable<DateTime>(syncedAt.value);
@@ -1733,11 +2107,12 @@ class RewardEventsCompanion extends UpdateCompanion<RewardEventRow> {
   String toString() {
     return (StringBuffer('RewardEventsCompanion(')
           ..write('id: $id, ')
-          ..write('profileId: $profileId, ')
+          ..write('memberId: $memberId, ')
+          ..write('storeItemId: $storeItemId, ')
           ..write('kind: $kind, ')
           ..write('amount: $amount, ')
           ..write('source: $source, ')
-          ..write('createdAt: $createdAt, ')
+          ..write('occurredAt: $occurredAt, ')
           ..write('syncedAt: $syncedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -1775,13 +2150,17 @@ abstract class _$AppDatabase extends GeneratedDatabase {
 typedef $$ProgramsTableCreateCompanionBuilder =
     ProgramsCompanion Function({
       required String id,
-      required String profileId,
+      required String memberId,
       required String mantraId,
       required int targetWritings,
       required int targetDays,
       required DateTime startedAt,
+      required DateTime createdAt,
       required int dailyTarget,
-      Value<String> status,
+      Value<DateTime?> completedAt,
+      Value<int> currentStreak,
+      Value<int> longestStreak,
+      Value<DateTime?> lastActiveDate,
       Value<int> totalChants,
       Value<int> totalWritings,
       required DateTime updatedAt,
@@ -1791,13 +2170,17 @@ typedef $$ProgramsTableCreateCompanionBuilder =
 typedef $$ProgramsTableUpdateCompanionBuilder =
     ProgramsCompanion Function({
       Value<String> id,
-      Value<String> profileId,
+      Value<String> memberId,
       Value<String> mantraId,
       Value<int> targetWritings,
       Value<int> targetDays,
       Value<DateTime> startedAt,
+      Value<DateTime> createdAt,
       Value<int> dailyTarget,
-      Value<String> status,
+      Value<DateTime?> completedAt,
+      Value<int> currentStreak,
+      Value<int> longestStreak,
+      Value<DateTime?> lastActiveDate,
       Value<int> totalChants,
       Value<int> totalWritings,
       Value<DateTime> updatedAt,
@@ -1842,8 +2225,8 @@ class $$ProgramsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get profileId => $composableBuilder(
-    column: $table.profileId,
+  ColumnFilters<String> get memberId => $composableBuilder(
+    column: $table.memberId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1867,13 +2250,33 @@ class $$ProgramsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<int> get dailyTarget => $composableBuilder(
     column: $table.dailyTarget,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get status => $composableBuilder(
-    column: $table.status,
+  ColumnFilters<DateTime> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get currentStreak => $composableBuilder(
+    column: $table.currentStreak,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get longestStreak => $composableBuilder(
+    column: $table.longestStreak,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastActiveDate => $composableBuilder(
+    column: $table.lastActiveDate,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1937,8 +2340,8 @@ class $$ProgramsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get profileId => $composableBuilder(
-    column: $table.profileId,
+  ColumnOrderings<String> get memberId => $composableBuilder(
+    column: $table.memberId,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -1962,13 +2365,33 @@ class $$ProgramsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get dailyTarget => $composableBuilder(
     column: $table.dailyTarget,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get status => $composableBuilder(
-    column: $table.status,
+  ColumnOrderings<DateTime> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get currentStreak => $composableBuilder(
+    column: $table.currentStreak,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get longestStreak => $composableBuilder(
+    column: $table.longestStreak,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastActiveDate => $composableBuilder(
+    column: $table.lastActiveDate,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -2005,8 +2428,8 @@ class $$ProgramsTableAnnotationComposer
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<String> get profileId =>
-      $composableBuilder(column: $table.profileId, builder: (column) => column);
+  GeneratedColumn<String> get memberId =>
+      $composableBuilder(column: $table.memberId, builder: (column) => column);
 
   GeneratedColumn<String> get mantraId =>
       $composableBuilder(column: $table.mantraId, builder: (column) => column);
@@ -2024,13 +2447,33 @@ class $$ProgramsTableAnnotationComposer
   GeneratedColumn<DateTime> get startedAt =>
       $composableBuilder(column: $table.startedAt, builder: (column) => column);
 
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
   GeneratedColumn<int> get dailyTarget => $composableBuilder(
     column: $table.dailyTarget,
     builder: (column) => column,
   );
 
-  GeneratedColumn<String> get status =>
-      $composableBuilder(column: $table.status, builder: (column) => column);
+  GeneratedColumn<DateTime> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get currentStreak => $composableBuilder(
+    column: $table.currentStreak,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get longestStreak => $composableBuilder(
+    column: $table.longestStreak,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get lastActiveDate => $composableBuilder(
+    column: $table.lastActiveDate,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get totalChants => $composableBuilder(
     column: $table.totalChants,
@@ -2103,13 +2546,17 @@ class $$ProgramsTableTableManager
           updateCompanionCallback:
               ({
                 Value<String> id = const Value.absent(),
-                Value<String> profileId = const Value.absent(),
+                Value<String> memberId = const Value.absent(),
                 Value<String> mantraId = const Value.absent(),
                 Value<int> targetWritings = const Value.absent(),
                 Value<int> targetDays = const Value.absent(),
                 Value<DateTime> startedAt = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
                 Value<int> dailyTarget = const Value.absent(),
-                Value<String> status = const Value.absent(),
+                Value<DateTime?> completedAt = const Value.absent(),
+                Value<int> currentStreak = const Value.absent(),
+                Value<int> longestStreak = const Value.absent(),
+                Value<DateTime?> lastActiveDate = const Value.absent(),
                 Value<int> totalChants = const Value.absent(),
                 Value<int> totalWritings = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -2117,13 +2564,17 @@ class $$ProgramsTableTableManager
                 Value<int> rowid = const Value.absent(),
               }) => ProgramsCompanion(
                 id: id,
-                profileId: profileId,
+                memberId: memberId,
                 mantraId: mantraId,
                 targetWritings: targetWritings,
                 targetDays: targetDays,
                 startedAt: startedAt,
+                createdAt: createdAt,
                 dailyTarget: dailyTarget,
-                status: status,
+                completedAt: completedAt,
+                currentStreak: currentStreak,
+                longestStreak: longestStreak,
+                lastActiveDate: lastActiveDate,
                 totalChants: totalChants,
                 totalWritings: totalWritings,
                 updatedAt: updatedAt,
@@ -2133,13 +2584,17 @@ class $$ProgramsTableTableManager
           createCompanionCallback:
               ({
                 required String id,
-                required String profileId,
+                required String memberId,
                 required String mantraId,
                 required int targetWritings,
                 required int targetDays,
                 required DateTime startedAt,
+                required DateTime createdAt,
                 required int dailyTarget,
-                Value<String> status = const Value.absent(),
+                Value<DateTime?> completedAt = const Value.absent(),
+                Value<int> currentStreak = const Value.absent(),
+                Value<int> longestStreak = const Value.absent(),
+                Value<DateTime?> lastActiveDate = const Value.absent(),
                 Value<int> totalChants = const Value.absent(),
                 Value<int> totalWritings = const Value.absent(),
                 required DateTime updatedAt,
@@ -2147,13 +2602,17 @@ class $$ProgramsTableTableManager
                 Value<int> rowid = const Value.absent(),
               }) => ProgramsCompanion.insert(
                 id: id,
-                profileId: profileId,
+                memberId: memberId,
                 mantraId: mantraId,
                 targetWritings: targetWritings,
                 targetDays: targetDays,
                 startedAt: startedAt,
+                createdAt: createdAt,
                 dailyTarget: dailyTarget,
-                status: status,
+                completedAt: completedAt,
+                currentStreak: currentStreak,
+                longestStreak: longestStreak,
+                lastActiveDate: lastActiveDate,
                 totalChants: totalChants,
                 totalWritings: totalWritings,
                 updatedAt: updatedAt,
@@ -2216,11 +2675,13 @@ typedef $$SessionsTableCreateCompanionBuilder =
     SessionsCompanion Function({
       required String id,
       required String programId,
+      required String memberId,
       required DateTime startedAt,
+      required DateTime createdAt,
       Value<DateTime?> endedAt,
-      Value<int> count,
+      Value<int> countAdded,
+      Value<int> durationSec,
       required String modality,
-      Value<bool> usedHandwriting,
       required DateTime updatedAt,
       Value<DateTime?> syncedAt,
       Value<int> rowid,
@@ -2229,11 +2690,13 @@ typedef $$SessionsTableUpdateCompanionBuilder =
     SessionsCompanion Function({
       Value<String> id,
       Value<String> programId,
+      Value<String> memberId,
       Value<DateTime> startedAt,
+      Value<DateTime> createdAt,
       Value<DateTime?> endedAt,
-      Value<int> count,
+      Value<int> countAdded,
+      Value<int> durationSec,
       Value<String> modality,
-      Value<bool> usedHandwriting,
       Value<DateTime> updatedAt,
       Value<DateTime?> syncedAt,
       Value<int> rowid,
@@ -2275,8 +2738,18 @@ class $$SessionsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get memberId => $composableBuilder(
+    column: $table.memberId,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<DateTime> get startedAt => $composableBuilder(
     column: $table.startedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2285,18 +2758,18 @@ class $$SessionsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get count => $composableBuilder(
-    column: $table.count,
+  ColumnFilters<int> get countAdded => $composableBuilder(
+    column: $table.countAdded,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get durationSec => $composableBuilder(
+    column: $table.durationSec,
     builder: (column) => ColumnFilters(column),
   );
 
   ColumnFilters<String> get modality => $composableBuilder(
     column: $table.modality,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<bool> get usedHandwriting => $composableBuilder(
-    column: $table.usedHandwriting,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2348,8 +2821,18 @@ class $$SessionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get memberId => $composableBuilder(
+    column: $table.memberId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get startedAt => $composableBuilder(
     column: $table.startedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -2358,18 +2841,18 @@ class $$SessionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get count => $composableBuilder(
-    column: $table.count,
+  ColumnOrderings<int> get countAdded => $composableBuilder(
+    column: $table.countAdded,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get durationSec => $composableBuilder(
+    column: $table.durationSec,
     builder: (column) => ColumnOrderings(column),
   );
 
   ColumnOrderings<String> get modality => $composableBuilder(
     column: $table.modality,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<bool> get usedHandwriting => $composableBuilder(
-    column: $table.usedHandwriting,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -2419,22 +2902,30 @@ class $$SessionsTableAnnotationComposer
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
+  GeneratedColumn<String> get memberId =>
+      $composableBuilder(column: $table.memberId, builder: (column) => column);
+
   GeneratedColumn<DateTime> get startedAt =>
       $composableBuilder(column: $table.startedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
   GeneratedColumn<DateTime> get endedAt =>
       $composableBuilder(column: $table.endedAt, builder: (column) => column);
 
-  GeneratedColumn<int> get count =>
-      $composableBuilder(column: $table.count, builder: (column) => column);
+  GeneratedColumn<int> get countAdded => $composableBuilder(
+    column: $table.countAdded,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get durationSec => $composableBuilder(
+    column: $table.durationSec,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get modality =>
       $composableBuilder(column: $table.modality, builder: (column) => column);
-
-  GeneratedColumn<bool> get usedHandwriting => $composableBuilder(
-    column: $table.usedHandwriting,
-    builder: (column) => column,
-  );
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
@@ -2496,22 +2987,26 @@ class $$SessionsTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> programId = const Value.absent(),
+                Value<String> memberId = const Value.absent(),
                 Value<DateTime> startedAt = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> endedAt = const Value.absent(),
-                Value<int> count = const Value.absent(),
+                Value<int> countAdded = const Value.absent(),
+                Value<int> durationSec = const Value.absent(),
                 Value<String> modality = const Value.absent(),
-                Value<bool> usedHandwriting = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<DateTime?> syncedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SessionsCompanion(
                 id: id,
                 programId: programId,
+                memberId: memberId,
                 startedAt: startedAt,
+                createdAt: createdAt,
                 endedAt: endedAt,
-                count: count,
+                countAdded: countAdded,
+                durationSec: durationSec,
                 modality: modality,
-                usedHandwriting: usedHandwriting,
                 updatedAt: updatedAt,
                 syncedAt: syncedAt,
                 rowid: rowid,
@@ -2520,22 +3015,26 @@ class $$SessionsTableTableManager
               ({
                 required String id,
                 required String programId,
+                required String memberId,
                 required DateTime startedAt,
+                required DateTime createdAt,
                 Value<DateTime?> endedAt = const Value.absent(),
-                Value<int> count = const Value.absent(),
+                Value<int> countAdded = const Value.absent(),
+                Value<int> durationSec = const Value.absent(),
                 required String modality,
-                Value<bool> usedHandwriting = const Value.absent(),
                 required DateTime updatedAt,
                 Value<DateTime?> syncedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SessionsCompanion.insert(
                 id: id,
                 programId: programId,
+                memberId: memberId,
                 startedAt: startedAt,
+                createdAt: createdAt,
                 endedAt: endedAt,
-                count: count,
+                countAdded: countAdded,
+                durationSec: durationSec,
                 modality: modality,
-                usedHandwriting: usedHandwriting,
                 updatedAt: updatedAt,
                 syncedAt: syncedAt,
                 rowid: rowid,
@@ -2610,22 +3109,24 @@ typedef $$SessionsTableProcessedTableManager =
 typedef $$RewardEventsTableCreateCompanionBuilder =
     RewardEventsCompanion Function({
       required String id,
-      required String profileId,
+      required String memberId,
+      Value<String?> storeItemId,
       required String kind,
       required int amount,
       required String source,
-      required DateTime createdAt,
+      required DateTime occurredAt,
       Value<DateTime?> syncedAt,
       Value<int> rowid,
     });
 typedef $$RewardEventsTableUpdateCompanionBuilder =
     RewardEventsCompanion Function({
       Value<String> id,
-      Value<String> profileId,
+      Value<String> memberId,
+      Value<String?> storeItemId,
       Value<String> kind,
       Value<int> amount,
       Value<String> source,
-      Value<DateTime> createdAt,
+      Value<DateTime> occurredAt,
       Value<DateTime?> syncedAt,
       Value<int> rowid,
     });
@@ -2644,8 +3145,13 @@ class $$RewardEventsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get profileId => $composableBuilder(
-    column: $table.profileId,
+  ColumnFilters<String> get memberId => $composableBuilder(
+    column: $table.memberId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get storeItemId => $composableBuilder(
+    column: $table.storeItemId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2664,8 +3170,8 @@ class $$RewardEventsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
-    column: $table.createdAt,
+  ColumnFilters<DateTime> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2689,8 +3195,13 @@ class $$RewardEventsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get profileId => $composableBuilder(
-    column: $table.profileId,
+  ColumnOrderings<String> get memberId => $composableBuilder(
+    column: $table.memberId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get storeItemId => $composableBuilder(
+    column: $table.storeItemId,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -2709,8 +3220,8 @@ class $$RewardEventsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
-    column: $table.createdAt,
+  ColumnOrderings<DateTime> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -2732,8 +3243,13 @@ class $$RewardEventsTableAnnotationComposer
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<String> get profileId =>
-      $composableBuilder(column: $table.profileId, builder: (column) => column);
+  GeneratedColumn<String> get memberId =>
+      $composableBuilder(column: $table.memberId, builder: (column) => column);
+
+  GeneratedColumn<String> get storeItemId => $composableBuilder(
+    column: $table.storeItemId,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get kind =>
       $composableBuilder(column: $table.kind, builder: (column) => column);
@@ -2744,8 +3260,10 @@ class $$RewardEventsTableAnnotationComposer
   GeneratedColumn<String> get source =>
       $composableBuilder(column: $table.source, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+  GeneratedColumn<DateTime> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get syncedAt =>
       $composableBuilder(column: $table.syncedAt, builder: (column) => column);
@@ -2783,40 +3301,44 @@ class $$RewardEventsTableTableManager
           updateCompanionCallback:
               ({
                 Value<String> id = const Value.absent(),
-                Value<String> profileId = const Value.absent(),
+                Value<String> memberId = const Value.absent(),
+                Value<String?> storeItemId = const Value.absent(),
                 Value<String> kind = const Value.absent(),
                 Value<int> amount = const Value.absent(),
                 Value<String> source = const Value.absent(),
-                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> occurredAt = const Value.absent(),
                 Value<DateTime?> syncedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RewardEventsCompanion(
                 id: id,
-                profileId: profileId,
+                memberId: memberId,
+                storeItemId: storeItemId,
                 kind: kind,
                 amount: amount,
                 source: source,
-                createdAt: createdAt,
+                occurredAt: occurredAt,
                 syncedAt: syncedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
               ({
                 required String id,
-                required String profileId,
+                required String memberId,
+                Value<String?> storeItemId = const Value.absent(),
                 required String kind,
                 required int amount,
                 required String source,
-                required DateTime createdAt,
+                required DateTime occurredAt,
                 Value<DateTime?> syncedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RewardEventsCompanion.insert(
                 id: id,
-                profileId: profileId,
+                memberId: memberId,
+                storeItemId: storeItemId,
                 kind: kind,
                 amount: amount,
                 source: source,
-                createdAt: createdAt,
+                occurredAt: occurredAt,
                 syncedAt: syncedAt,
                 rowid: rowid,
               ),

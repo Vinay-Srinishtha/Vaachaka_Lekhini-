@@ -1,0 +1,7 @@
+otp api keys : bb3e7633-6335-11f1-8f15-0200cd936042
+
+
+git token : <REDACTED — store in ~/.zshrc or a password manager>
+
+
+# alias kvl='cd "/Users/nitro/Documents/PROJECTS /srinishitha/vachika-lekhini-main/manage/vachika-lekhini-admin" && bun run dev > /tmp/kvl-backend.log 2>&1 & bunx prisma studio'

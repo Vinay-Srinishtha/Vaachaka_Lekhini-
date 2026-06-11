@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../../l10n/l10n.dart';
 
 /// One screen for the small "content TBD" placeholders surfaced from Profile:
 /// About App, Help & FAQs, Report Issue, Share Feedback, Privacy Policy.
@@ -11,7 +12,7 @@ class InfoScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = _topicFor(topic);
+    final t = _topicFor(context, topic);
     return KvlScaffold(
       title: t.title,
       scrollable: true,
@@ -22,52 +23,58 @@ class InfoScreen extends StatelessWidget {
           Container(
             width: 64,
             height: 64,
-            decoration: const BoxDecoration(color: KvlColors.primaryGhost, shape: BoxShape.circle),
+            decoration: const BoxDecoration(
+              color: KvlColors.primaryGhost,
+              shape: BoxShape.circle,
+            ),
             alignment: Alignment.center,
             child: Icon(t.icon, color: KvlColors.primaryDeep, size: 28),
           ),
           const SizedBox(height: KvlSpacing.md),
           Center(child: Text(t.title, style: KvlText.title(17))),
           const SizedBox(height: KvlSpacing.sm),
-          Text(t.body, textAlign: TextAlign.center, style: KvlText.body(12).copyWith(height: 1.6)),
+          Text(
+            t.body,
+            textAlign: TextAlign.center,
+            style: KvlText.body(12).copyWith(height: 1.6),
+          ),
         ],
       ),
     );
   }
 
-  _Topic _topicFor(String key) {
+  _Topic _topicFor(BuildContext context, String key) {
     switch (key) {
       case 'help':
-        return const _Topic(
-          title: 'Help & FAQs',
+        return _Topic(
+          title: context.l10n.infoHelpTitle,
           icon: Icons.help_outline_rounded,
-          body: 'Common questions and how-to guides will be published here. For urgent issues, please use Report Issue.',
+          body: context.l10n.infoHelpBody,
         );
       case 'report':
-        return const _Topic(
-          title: 'Report Issue',
+        return _Topic(
+          title: context.l10n.infoReportTitle,
           icon: Icons.flag_outlined,
-          body: 'Tell us what went wrong and we will look into it. Email integration is being set up.',
+          body: context.l10n.infoReportBody,
         );
       case 'feedback':
-        return const _Topic(
-          title: 'Share Feedback',
+        return _Topic(
+          title: context.l10n.infoFeedbackTitle,
           icon: Icons.feedback_outlined,
-          body: 'We listen to every suggestion. Let us know what feels right or what needs to change.',
+          body: context.l10n.infoFeedbackBody,
         );
       case 'privacy':
-        return const _Topic(
-          title: 'Privacy Policy',
+        return _Topic(
+          title: context.l10n.infoPrivacyTitle,
           icon: Icons.lock_outline_rounded,
-          body: 'Your practice data lives on your device until you choose to sync it. Voice and handwriting samples never leave this device in version 1.',
+          body: context.l10n.infoPrivacyBody,
         );
       case 'about':
       default:
-        return const _Topic(
-          title: 'About Koti Vachika Lekhini',
+        return _Topic(
+          title: context.l10n.infoAboutTitle,
           icon: Icons.self_improvement_rounded,
-          body:
-              'Koti Vachika Lekhini is your personal spiritual practice companion. Chant or write your chosen mantras, track your progress, and grow your discipline — together with your family.\n\nVersion 0.1.0',
+          body: context.l10n.infoAboutBody,
         );
     }
   }

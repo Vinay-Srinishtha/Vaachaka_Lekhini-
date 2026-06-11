@@ -1,46 +1,57 @@
 import 'package:equatable/equatable.dart';
 
-enum ProgramStatus {
-  active,
-  completed,
-  paused;
-
-  static ProgramStatus fromName(String name) =>
-      ProgramStatus.values.firstWhere((s) => s.name == name, orElse: () => ProgramStatus.active);
-}
-
-/// A user's commitment to chant/write a mantra a target number of times
-/// over a target number of days, with one row per profile · per mantra.
+/// Mirrors Prisma `Program` table.
+/// [memberId] = Prisma Member.id (was profileId).
+/// [completedAt] replaces the old status enum — null means active/in-progress.
+/// [currentStreak] / [longestStreak] are kept in sync with the backend;
+/// the backend is authoritative on pull.
+/// [dailyTarget] is a local convenience field (targetWritings / targetDays),
+/// not stored in Prisma.
 class Program extends Equatable {
   const Program({
     required this.id,
-    required this.profileId,
+    // CHANGED: profileId → memberId
+    required this.memberId,
     required this.mantraId,
     required this.targetWritings,
     required this.targetDays,
     required this.dailyTarget,
     required this.startedAt,
-    required this.status,
-    required this.totalChants,
-    required this.totalWritings,
+    required this.createdAt,
     required this.updatedAt,
+    // CHANGED: status enum → completedAt nullable timestamp
+    this.completedAt,
+    // ADDED: streak fields (Prisma tracks these)
+    this.currentStreak = 0,
+    this.longestStreak = 0,
+    this.lastActiveDate,
+    this.totalChants = 0,
+    this.totalWritings = 0,
   });
 
   final String id;
-  final String profileId;
+  final String memberId;
   final String mantraId;
   final int targetWritings;
   final int targetDays;
   final int dailyTarget;
   final DateTime startedAt;
-  final ProgramStatus status;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? completedAt;
+  final int currentStreak;
+  final int longestStreak;
+  final DateTime? lastActiveDate;
   final int totalChants;
   final int totalWritings;
-  final DateTime updatedAt;
+
+  // Derived helpers used by UI — same logic as before
+
+  /// true when admin or user has marked this program done.
+  bool get isCompleted => completedAt != null;
 
   int get totalProgress => totalChants + totalWritings;
 
-  /// 0.0 — 1.0
   double get progressFraction =>
       targetWritings <= 0 ? 0 : (totalProgress / targetWritings).clamp(0, 1).toDouble();
 
@@ -52,8 +63,34 @@ class Program extends Equatable {
 
   int get daysRemaining => (targetDays - daysElapsed).clamp(0, targetDays);
 
-  /// "1.5 hours/day" pacing estimate at 1 second per chant.
   Duration get estimatedDailyTime => Duration(seconds: dailyTarget);
+
+  Program copyWith({
+    DateTime? completedAt,
+    int? currentStreak,
+    int? longestStreak,
+    DateTime? lastActiveDate,
+    int? totalChants,
+    int? totalWritings,
+    DateTime? updatedAt,
+  }) =>
+      Program(
+        id: id,
+        memberId: memberId,
+        mantraId: mantraId,
+        targetWritings: targetWritings,
+        targetDays: targetDays,
+        dailyTarget: dailyTarget,
+        startedAt: startedAt,
+        createdAt: createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+        completedAt: completedAt ?? this.completedAt,
+        currentStreak: currentStreak ?? this.currentStreak,
+        longestStreak: longestStreak ?? this.longestStreak,
+        lastActiveDate: lastActiveDate ?? this.lastActiveDate,
+        totalChants: totalChants ?? this.totalChants,
+        totalWritings: totalWritings ?? this.totalWritings,
+      );
 
   @override
   List<Object?> get props => [id];

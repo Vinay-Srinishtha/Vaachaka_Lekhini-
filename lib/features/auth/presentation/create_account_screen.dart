@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,7 +10,13 @@ import '../../../app/router.dart';
 import '../../../core/storage/repository.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../../l10n/l10n.dart';
 import '../../profiles/domain/profile.dart';
+import 'auth_shared_widgets.dart';
+
+// ─────────────────────────────────────────────
+// Screen
+// ─────────────────────────────────────────────
 
 class CreateAccountScreen extends ConsumerStatefulWidget {
   const CreateAccountScreen({super.key});
@@ -27,25 +35,55 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
   bool _otpSent = false;
   bool _busy = false;
   String? _error;
+  String? _errorCode;
+  int _resendSeconds = 0;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _username.addListener(() => setState(() {}));
+    _mobile.addListener(() => setState(() {}));
+  }
 
   @override
   void dispose() {
+    _timer?.cancel();
     _username.dispose();
     _mobile.dispose();
     _referral.dispose();
     super.dispose();
   }
 
-  String get _e164Mobile {
-    final digits = _mobile.text.replaceAll(RegExp(r'\D'), '');
-    return '+91$digits';
+  String get _rawDigits => _mobile.text.replaceAll(RegExp(r'\D'), '');
+  String get _e164Mobile => '+91$_rawDigits';
+  bool get _mobileValid => _rawDigits.length == 10;
+  bool get _nameValid => _username.text.trim().isNotEmpty;
+  bool get _formValid => _nameValid && _mobileValid;
+  bool get _accountExists => _errorCode == 'account_exists';
+
+  void _startResendCountdown() {
+    _resendSeconds = 30;
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) { t.cancel(); return; }
+      setState(() {
+        _resendSeconds--;
+        if (_resendSeconds <= 0) t.cancel();
+      });
+    });
   }
 
   Future<void> _sendOtp() async {
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
+    if (!_nameValid) {
+      setState(() => _error = 'Please enter your name.');
+      return;
+    }
+    if (!_mobileValid) {
+      setState(() => _error = 'Enter a valid 10-digit mobile number.');
+      return;
+    }
+    setState(() { _busy = true; _error = null; _errorCode = null; });
     final result = await ref.read(authRepositoryProvider).sendOtp(_e164Mobile);
     if (!mounted) return;
     setState(() {
@@ -53,32 +91,36 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
       switch (result) {
         case Ok():
           _otpSent = true;
+          _otp = '';
+          _startResendCountdown();
         case Err(:final failure):
           _error = failure.message;
+          _errorCode = failure.code;
       }
     });
   }
 
+  Future<void> _resendOtp() async {
+    setState(() { _otp = ''; _error = null; _errorCode = null; });
+    await _sendOtp();
+  }
+
   Future<void> _register() async {
     if (_otp.length != 6) {
-      setState(() => _error = 'Enter the 6-digit code');
+      setState(() => _error = 'Enter the 6-digit code.');
       return;
     }
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
+    setState(() { _busy = true; _error = null; _errorCode = null; });
     final result = await ref.read(authRepositoryProvider).verifyOtp(
-          mobile: _e164Mobile,
-          otp: _otp,
-          username: _username.text,
-          referralCode: _referral.text,
-          language: _language,
-        );
+      mobile: _e164Mobile,
+      otp: _otp,
+      username: _username.text.trim(),
+      referralCode: _referral.text.trim().isEmpty ? null : _referral.text.trim(),
+      language: _language,
+    );
     if (!mounted) return;
     switch (result) {
       case Ok(:final value):
-        // Auto-create a "Me" profile so the user lands on Home with a counter scope.
         final profileRepo = ref.read(profileRepositoryProvider);
         final me = await profileRepo.create(
           userId: value.userId,
@@ -92,107 +134,223 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
         setState(() {
           _busy = false;
           _error = failure.message;
+          _errorCode = failure.code;
         });
     }
   }
 
+  // ── Build ──────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     return KvlScaffold(
-      title: 'Create Account',
+      title: context.l10n.createAccountTitle,
       scrollable: true,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: KvlSpacing.md),
           Text(
-            'Begin your spiritual journey',
+            context.l10n.beginSpiritualJourney,
             textAlign: TextAlign.center,
             style: KvlText.title(18),
           ),
           const SizedBox(height: 4),
           Text(
-            'Quick setup · takes 30 seconds',
+            context.l10n.quickSetup,
             textAlign: TextAlign.center,
             style: KvlText.caption(11.5),
           ),
           const SizedBox(height: KvlSpacing.lg),
+
           KvlCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Name
                 KvlInput(
-                  label: 'Username',
-                  hint: 'Enter your name',
+                  label: context.l10n.usernameLabel,
+                  hint: context.l10n.usernameHint,
                   controller: _username,
+                  textInputAction: TextInputAction.next,
                 ),
                 const SizedBox(height: KvlSpacing.md),
-                Row(
-                  children: [
-                    SizedBox(
-                      width: 78,
-                      child: KvlInput(label: 'Code', hint: '+91', readOnly: true),
+
+                // Mobile
+                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  SizedBox(
+                    width: 78,
+                    child: KvlInput(label: 'Code', hint: '+91', readOnly: true),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: KvlInput(
+                      label: context.l10n.mobileNumberLabel,
+                      hint: context.l10n.mobileNumberHint,
+                      controller: _mobile,
+                      keyboardType: TextInputType.phone,
+                      inputFormatters: [AuthMobileFormatter()],
+                      textInputAction: TextInputAction.next,
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: KvlInput(
-                        label: 'Mobile Number',
-                        hint: '98765 43210',
-                        controller: _mobile,
-                        keyboardType: TextInputType.phone,
-                        maxLength: 10,
-                      ),
+                  ),
+                ]),
+                const SizedBox(height: KvlSpacing.md),
+
+                // Referral
+                KvlInput(
+                  label: context.l10n.referralCodeLabel,
+                  hint: context.l10n.referralCodeHint,
+                  controller: _referral,
+                  textInputAction: TextInputAction.done,
+                ),
+                const SizedBox(height: KvlSpacing.md),
+
+                // Language picker
+                _LanguagePicker(
+                  value: _language,
+                  onChanged: (v) => setState(() => _language = v),
+                ),
+                const SizedBox(height: KvlSpacing.lg),
+
+                // ── Step 1: Send OTP ──
+                if (!_otpSent) ...[
+                  if (_error != null) ...[
+                    AuthErrorBar(_error!),
+                    const SizedBox(height: KvlSpacing.sm),
+                  ],
+                  KvlButton(
+                    label: _busy ? context.l10n.sendingButton : context.l10n.sendOtpButton,
+                    onPressed: (_busy || !_formValid) ? null : _sendOtp,
+                  ),
+                ],
+
+                // ── Step 2: OTP entry ──
+                if (_otpSent) ...[
+                  // account_exists card replaces the OTP UI
+                  if (_accountExists) ...[
+                    _AccountExistsCard(
+                        onLogin: () => context.go(KvlRoute.otpLogin)),
+                  ] else ...[
+                    Text(
+                      context.l10n.enterSixDigitCodeSent,
+                      style: KvlText.caption(11.5),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: KvlSpacing.sm),
+                    PinCodeInput(
+                      onChanged: (v) => setState(() => _otp = v),
+                      onCompleted: (_) => _register(),
+                    ),
+                    const SizedBox(height: KvlSpacing.sm),
+                    Center(
+                      child: _resendSeconds > 0
+                          ? Text(
+                              context.l10n.resendOtpCountdown(_resendSeconds),
+                              style: KvlText.caption(11)
+                                  .copyWith(color: KvlColors.inkSoft),
+                            )
+                          : GestureDetector(
+                              onTap: _busy ? null : _resendOtp,
+                              child: Text(
+                                context.l10n.resendOtp,
+                                style: KvlText.caption(11.5).copyWith(
+                                  color: KvlColors.primaryDeep,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                    ),
+                    if (_error != null) ...[
+                      const SizedBox(height: KvlSpacing.sm),
+                      AuthErrorBar(_error!),
+                    ],
+                    const SizedBox(height: KvlSpacing.lg),
+                    KvlButton(
+                      label: _busy
+                          ? context.l10n.verifyingButton
+                          : context.l10n.registerConfirmButton,
+                      onPressed: (_busy || _otp.length != 6) ? null : _register,
                     ),
                   ],
-                ),
-                const SizedBox(height: KvlSpacing.md),
-                KvlInput(
-                  label: 'Referral Code (Optional)',
-                  hint: 'Enter referral code',
-                  controller: _referral,
-                ),
-                const SizedBox(height: KvlSpacing.md),
-                _LanguagePicker(value: _language, onChanged: (v) => setState(() => _language = v)),
-                const SizedBox(height: KvlSpacing.lg),
-                if (!_otpSent)
-                  KvlButton(label: _busy ? 'Sending…' : 'Send OTP', onPressed: _busy ? null : _sendOtp)
-                else ...[
-                  Text('Enter the 6-digit code', style: KvlText.caption(11.5), textAlign: TextAlign.center),
-                  const SizedBox(height: KvlSpacing.sm),
-                  PinCodeInput(onChanged: (v) => _otp = v, onCompleted: (_) => _register()),
-                  const SizedBox(height: KvlSpacing.lg),
-                  KvlButton(label: _busy ? 'Verifying…' : 'Register', onPressed: _busy ? null : _register),
-                ],
-                if (_error != null) ...[
-                  const SizedBox(height: KvlSpacing.sm),
-                  Text(_error!, style: KvlText.caption(11.5).copyWith(color: KvlColors.danger), textAlign: TextAlign.center),
                 ],
               ],
             ),
           ),
-          const SizedBox(height: KvlSpacing.lg),
-          Center(
-            child: GestureDetector(
-              onTap: () => context.go(KvlRoute.otpLogin),
-              child: RichText(
-                text: TextSpan(
-                  style: KvlText.caption(11.5),
-                  children: [
-                    const TextSpan(text: 'Already have an account? '),
-                    TextSpan(
-                      text: 'Login',
-                      style: TextStyle(color: KvlColors.primaryDeep, fontWeight: FontWeight.w600),
-                    ),
-                  ],
+
+          // Bottom "Already have an account?" — hidden when account_exists card shows
+          if (!_accountExists) ...[
+            const SizedBox(height: KvlSpacing.lg),
+            Center(
+              child: GestureDetector(
+                onTap: () => context.push(KvlRoute.otpLogin),
+                child: RichText(
+                  text: TextSpan(
+                    style: KvlText.caption(11.5),
+                    children: [
+                      TextSpan(text: context.l10n.alreadyHaveAccount),
+                      TextSpan(
+                        text: context.l10n.loginLink,
+                        style: TextStyle(
+                          color: KvlColors.primaryDeep,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
   }
 }
+
+// ─────────────────────────────────────────────
+// Private sub-widgets (create account screen only)
+// ─────────────────────────────────────────────
+
+/// Shown when verifyOtp returns account_exists.
+class _AccountExistsCard extends StatelessWidget {
+  const _AccountExistsCard({required this.onLogin});
+  final VoidCallback onLogin;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      decoration: BoxDecoration(
+        color: KvlColors.surfaceWarm,
+        borderRadius: KvlRadius.brMD,
+        border: Border.all(color: KvlColors.border),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Icon(Icons.person_outline_rounded, size: 17, color: KvlColors.inkSoft),
+          const SizedBox(width: 7),
+          Text('Number already registered',
+              style: KvlText.ui(13).copyWith(fontWeight: FontWeight.w600)),
+        ]),
+        const SizedBox(height: 5),
+        Text(
+          'An account already exists for this number.',
+          style: KvlText.caption(11.5).copyWith(color: KvlColors.inkSoft),
+        ),
+        const SizedBox(height: 13),
+        KvlButton(
+          label: 'Log in instead',
+          icon: Icons.arrow_forward_rounded,
+          onPressed: onLogin,
+        ),
+      ]),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+// Language picker
+// ─────────────────────────────────────────────
 
 class _LanguagePicker extends StatelessWidget {
   const _LanguagePicker({required this.value, required this.onChanged});
@@ -211,7 +369,13 @@ class _LanguagePicker extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Select Language', style: KvlText.caption(11.5).copyWith(color: KvlColors.inkSoft, fontWeight: FontWeight.w500)),
+        Text(
+          context.l10n.selectLanguage,
+          style: KvlText.caption(11.5).copyWith(
+            color: KvlColors.inkSoft,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         const SizedBox(height: 4),
         Container(
           decoration: BoxDecoration(
@@ -228,7 +392,10 @@ class _LanguagePicker extends StatelessWidget {
               borderRadius: KvlRadius.brMD,
               items: [
                 for (final (code, label) in _options)
-                  DropdownMenuItem(value: code, child: Text(label, style: KvlText.ui(13))),
+                  DropdownMenuItem(
+                    value: code,
+                    child: Text(label, style: KvlText.ui(13)),
+                  ),
               ],
               onChanged: (v) {
                 if (v != null) onChanged(v);

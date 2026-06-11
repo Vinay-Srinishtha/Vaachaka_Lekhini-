@@ -161,7 +161,7 @@ Idempotency is already handled server-side via client-supplied UUIDs + `skipDupl
 
 **Shape of the work**
 
-LWW (last-write-wins) by `updated_at` is the simplest and right answer for KVL — counter increments are commutative anyway, and program metadata changes are infrequent.
+LWW (last-write-wins) by `updated_at` is the simplest and right answer for Vaachaka Lekhini — counter increments are commutative anyway, and program metadata changes are infrequent.
 
 1. `SyncEngine.pull()` → for each member/program/session in the snapshot, compare `updated_at` against the local Drift row. If server is newer, overwrite. If local is newer, schedule a push (it'll re-overwrite on the server).
 2. Sessions and reward events are append-only — no conflicts possible.

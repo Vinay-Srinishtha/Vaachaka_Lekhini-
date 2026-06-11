@@ -1,6 +1,6 @@
-# KVL Admin
+# Vaachaka Lekhini Admin
 
-Admin dashboard + content backend for the **Koti Vachika Lekhini (KVL)** Flutter app.
+Admin dashboard + content backend for the **Vaachaka Lekhini** Flutter app.
 Everything the Flutter client sees — mantras, store items, feature flags — is controlled from here.
 
 - SvelteKit 2 + Svelte 5 (runes)
@@ -18,6 +18,7 @@ Everything the Flutter client sees — mantras, store items, feature flags — i
 
 ```sh
 cd manage/vachika-lekhini-admin
+cd "/Users/nitro/Documents/PROJECTS /srinishitha/vachika-lekhini-main/manage/vachika-lekhini-admin"
 bun install
 
 # Create the database

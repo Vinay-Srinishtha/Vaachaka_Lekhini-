@@ -18,7 +18,12 @@ class KvlScaffold extends StatelessWidget {
     this.trailing,
     this.onBack,
     this.bottomNavigationBar,
-    this.padding = const EdgeInsets.fromLTRB(KvlSpacing.lg, 0, KvlSpacing.lg, KvlSpacing.lg),
+    this.padding = const EdgeInsets.fromLTRB(
+      KvlSpacing.lg,
+      0,
+      KvlSpacing.lg,
+      KvlSpacing.lg,
+    ),
     this.scrollable = false,
   });
 
@@ -35,25 +40,44 @@ class KvlScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final padded = Padding(padding: padding, child: body);
-    final bodyWidget = scrollable ? SingleChildScrollView(child: padded) : padded;
+    final viewInsets = MediaQuery.viewInsetsOf(context);
+    final padded = Padding(
+      padding: scrollable
+          ? EdgeInsetsDirectional.only(bottom: viewInsets.bottom).add(padding)
+          : padding,
+      child: body,
+    );
+    final bodyWidget = scrollable
+        ? SingleChildScrollView(child: padded)
+        : padded;
 
     final framed = CenteredPhoneCanvas(child: bodyWidget);
 
-    return Scaffold(
-      backgroundColor: KvlColors.bg,
-      appBar: (title == null && leading == null && trailing == null && !showBack)
-          ? null
-          : KvlTopBar(
-              title: title,
-              subtitle: subtitle,
-              leading: leading,
-              trailing: trailing,
-              onBack: onBack,
-              showBack: showBack,
-            ),
-      body: framed,
-      bottomNavigationBar: bottomNavigationBar,
+    return PopScope(
+      // When a custom onBack is provided, we intercept and call it.
+      // Otherwise allow the framework to pop naturally (works for pushed routes).
+      canPop: onBack == null,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        // Only reached when canPop == false, i.e. onBack is set.
+        onBack!();
+      },
+      child: Scaffold(
+        backgroundColor: KvlColors.bg,
+        appBar:
+            (title == null && leading == null && trailing == null && !showBack)
+            ? null
+            : KvlTopBar(
+                title: title,
+                subtitle: subtitle,
+                leading: leading,
+                trailing: trailing,
+                onBack: onBack,
+                showBack: showBack,
+              ),
+        body: framed,
+        bottomNavigationBar: bottomNavigationBar,
+      ),
     );
   }
 }

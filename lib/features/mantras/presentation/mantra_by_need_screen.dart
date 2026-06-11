@@ -4,8 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/providers.dart';
 import '../../../app/router.dart';
+import '../../../core/i18n/language_options.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../settings/domain/settings_repository.dart';
+import '../../../l10n/l10n.dart';
 import '../domain/mantra.dart';
 
 class MantraByNeedScreen extends ConsumerStatefulWidget {
@@ -21,26 +24,37 @@ class _MantraByNeedScreenState extends ConsumerState<MantraByNeedScreen> {
   @override
   Widget build(BuildContext context) {
     final repo = ref.watch(mantraRepositoryProvider);
-    final recommended = _need == null ? const <Mantra>[] : repo.recommendForNeed(_need!);
+    final recommended = _need == null
+        ? const <Mantra>[]
+        : repo.recommendForNeed(_need!);
     final pick = recommended.isEmpty ? null : recommended.first;
 
     return KvlScaffold(
-      title: 'Mantra for Your Needs',
+      title: context.l10n.mantraForYourNeeds,
       scrollable: true,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: KvlSpacing.md),
-          Text('Select your need or problem',
-              style: KvlText.caption(11.5).copyWith(color: KvlColors.inkSoft, fontWeight: FontWeight.w500)),
+          Text(
+            context.l10n.selectNeedOrProblem,
+            style: KvlText.caption(
+              11.5,
+            ).copyWith(color: KvlColors.inkSoft, fontWeight: FontWeight.w500),
+          ),
           const SizedBox(height: 4),
-          _NeedDropdown(value: _need, onChanged: (v) => setState(() => _need = v)),
+          _NeedDropdown(
+            value: _need,
+            onChanged: (v) => setState(() => _need = v),
+          ),
           const SizedBox(height: KvlSpacing.md),
           if (pick != null) _Recommendation(mantra: pick),
           const SizedBox(height: KvlSpacing.md),
           KvlButton(
-            label: 'Start This Practice',
-            onPressed: pick == null ? null : () => context.push('${KvlRoute.mantraDetails}/${pick.id}'),
+            label: context.l10n.startThisPractice,
+            onPressed: pick == null
+                ? null
+                : () => context.push('${KvlRoute.mantraDetails}/${pick.id}'),
           ),
         ],
       ),
@@ -66,12 +80,18 @@ class _NeedDropdown extends StatelessWidget {
         child: DropdownButton<MantraNeed>(
           value: value,
           isExpanded: true,
-          hint: Text('Select…', style: KvlText.ui(13).copyWith(color: KvlColors.muted)),
+          hint: Text(
+            context.l10n.selectDropdownHint,
+            style: KvlText.ui(13).copyWith(color: KvlColors.muted),
+          ),
           icon: const Icon(Icons.keyboard_arrow_down_rounded),
           borderRadius: KvlRadius.brMD,
           items: [
             for (final n in MantraNeed.values)
-              DropdownMenuItem(value: n, child: Text(n.label, style: KvlText.ui(13))),
+              DropdownMenuItem(
+                value: n,
+                child: Text(n.label, style: KvlText.ui(13)),
+              ),
           ],
           onChanged: onChanged,
         ),
@@ -80,33 +100,58 @@ class _NeedDropdown extends StatelessWidget {
   }
 }
 
-class _Recommendation extends StatelessWidget {
+class _Recommendation extends ConsumerWidget {
   const _Recommendation({required this.mantra});
   final Mantra mantra;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
+    final script = mantra.name.scriptForLanguage(settings.languageCode);
+    final name = mantra.name.displayForLanguage(settings.languageCode);
     return KvlCard(
       variant: KvlCardVariant.warm,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          MantraText(mantra.name.devanagari, size: 24, color: KvlColors.primaryDeep),
+          MantraText(
+            name,
+            script: script,
+            size: 24,
+            color: KvlColors.primaryDeep,
+          ),
           const SizedBox(height: 6),
-          Text(mantra.description,
-              textAlign: TextAlign.center,
-              style: KvlText.caption(11.5).copyWith(color: KvlColors.inkSoft, height: 1.5)),
+          Text(
+            mantra.description,
+            textAlign: TextAlign.center,
+            style: KvlText.caption(
+              11.5,
+            ).copyWith(color: KvlColors.inkSoft, height: 1.5),
+          ),
           const Divider(color: KvlColors.rule, height: 24),
           if (mantra.recommendedCount != null)
-            _Detail(icon: Icons.refresh_rounded, value: '${mantra.recommendedCount} times daily', sub: 'Recitations'),
+            _Detail(
+              icon: Icons.refresh_rounded,
+              value: context.l10n.recitationsTimes(mantra.recommendedCount!),
+              sub: context.l10n.recitationsSub,
+            ),
           if (mantra.recommendedCount != null && mantra.recommendedDays != null)
             const SizedBox(height: KvlSpacing.sm),
           if (mantra.recommendedDays != null)
-            _Detail(icon: Icons.calendar_today_rounded, value: 'For ${mantra.recommendedDays} days', sub: 'Duration'),
+            _Detail(
+              icon: Icons.calendar_today_rounded,
+              value: context.l10n.forDays(mantra.recommendedDays!),
+              sub: context.l10n.durationSub,
+            ),
           const SizedBox(height: KvlSpacing.sm),
           Center(
-            child: Text('Learn More',
-                style: KvlText.caption(12).copyWith(color: KvlColors.primaryDeep, fontWeight: FontWeight.w600)),
+            child: Text(
+              context.l10n.learnMore,
+              style: KvlText.caption(12).copyWith(
+                color: KvlColors.primaryDeep,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),

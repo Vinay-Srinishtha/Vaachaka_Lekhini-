@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/providers.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../../l10n/l10n.dart';
 
 class InviteFriendsScreen extends ConsumerWidget {
   const InviteFriendsScreen({super.key});
@@ -22,14 +23,14 @@ class InviteFriendsScreen extends ConsumerWidget {
     Future<void> doCopy() async {
       await invite.copyLink(userId);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invite link copied')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(context.l10n.inviteLinkCopied)));
       }
     }
 
     return KvlScaffold(
-      title: 'Invite Friends',
+      title: context.l10n.inviteFriendsTitle,
       scrollable: true,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -39,33 +40,46 @@ class InviteFriendsScreen extends ConsumerWidget {
             child: Container(
               width: 110,
               height: 110,
-              decoration: const BoxDecoration(color: KvlColors.primaryGhost, shape: BoxShape.circle),
+              decoration: const BoxDecoration(
+                color: KvlColors.primaryGhost,
+                shape: BoxShape.circle,
+              ),
               alignment: Alignment.center,
-              child: const Icon(Icons.group_add_rounded, color: KvlColors.primaryDeep, size: 48),
+              child: const Icon(
+                Icons.group_add_rounded,
+                color: KvlColors.primaryDeep,
+                size: 48,
+              ),
             ),
           ),
           const SizedBox(height: KvlSpacing.lg),
           Text(
-            'Share the journey of\nspiritual growth',
+            context.l10n.shareJourneyTitle,
             textAlign: TextAlign.center,
             style: KvlText.title(18).copyWith(height: 1.3),
           ),
           const SizedBox(height: 6),
           Text(
-            'Invite friends to join Koti Vachika Lekhini and earn reward points.',
+            context.l10n.inviteEarnPoints,
             textAlign: TextAlign.center,
             style: KvlText.caption(11.5).copyWith(height: 1.5),
           ),
           const SizedBox(height: KvlSpacing.lg),
           KvlCard(
-            padding: const EdgeInsets.symmetric(horizontal: KvlSpacing.md, vertical: KvlSpacing.sm),
+            padding: const EdgeInsets.symmetric(
+              horizontal: KvlSpacing.md,
+              vertical: KvlSpacing.sm,
+            ),
             onTap: doCopy,
             child: Row(
               children: [
                 Expanded(
                   child: Text(
                     link,
-                    style: KvlText.caption(11.5).copyWith(fontFamily: 'monospace', color: KvlColors.inkSoft),
+                    style: KvlText.caption(11.5).copyWith(
+                      fontFamily: 'monospace',
+                      color: KvlColors.inkSoft,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -73,30 +87,37 @@ class InviteFriendsScreen extends ConsumerWidget {
                 Container(
                   width: 30,
                   height: 30,
-                  decoration: BoxDecoration(color: KvlColors.primaryGhost, borderRadius: KvlRadius.brSM),
+                  decoration: BoxDecoration(
+                    color: KvlColors.primaryGhost,
+                    borderRadius: KvlRadius.brSM,
+                  ),
                   alignment: Alignment.center,
-                  child: const Icon(Icons.copy_rounded, color: KvlColors.primaryDeep, size: 14),
+                  child: const Icon(
+                    Icons.copy_rounded,
+                    color: KvlColors.primaryDeep,
+                    size: 14,
+                  ),
                 ),
               ],
             ),
           ),
           const SizedBox(height: KvlSpacing.md),
           _ShareTile(
-            label: 'Share via WhatsApp',
+            label: context.l10n.shareViaWhatsApp,
             color: const Color(0xFF25D366),
             icon: Icons.chat_bubble_rounded,
             onTap: doShare,
           ),
           const SizedBox(height: KvlSpacing.sm),
           _ShareTile(
-            label: 'Share via Facebook',
+            label: context.l10n.shareViaFacebook,
             color: const Color(0xFF1877F2),
             icon: Icons.facebook_rounded,
             onTap: doShare,
           ),
           const SizedBox(height: KvlSpacing.sm),
           _ShareTile(
-            label: 'Share via Instagram',
+            label: context.l10n.shareViaInstagram,
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -108,7 +129,7 @@ class InviteFriendsScreen extends ConsumerWidget {
           const SizedBox(height: KvlSpacing.md),
           Center(
             child: Text(
-              'All channels open your device share sheet.',
+              context.l10n.allChannelsShareSheet,
               style: KvlText.muted(10),
             ),
           ),
@@ -136,7 +157,10 @@ class _ShareTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return KvlCard(
-      padding: const EdgeInsets.symmetric(horizontal: KvlSpacing.md, vertical: KvlSpacing.sm),
+      padding: const EdgeInsets.symmetric(
+        horizontal: KvlSpacing.md,
+        vertical: KvlSpacing.sm,
+      ),
       onTap: onTap,
       child: Row(
         children: [

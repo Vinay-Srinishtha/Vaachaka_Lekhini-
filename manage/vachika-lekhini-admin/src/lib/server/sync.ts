@@ -45,6 +45,90 @@ export async function recomputeMemberBalance(memberId: string): Promise<number> 
 	return total;
 }
 
+/// Recompute currentStreak and longestStreak for a program from its Session
+/// rows, then persist the results. Called after each session batch insert so
+/// the server — not the client — is the write-authority for streak values.
+///
+/// "Current streak" = consecutive calendar days with at least one finished
+/// session, counting back from today (or yesterday if today has no session yet).
+/// "Longest streak" = max run ever recorded.
+export async function recomputeProgramStreaks(programId: string): Promise<void> {
+	const sessions = await prisma.session.findMany({
+		where: { programId, endedAt: { not: null } },
+		select: { startedAt: true },
+		orderBy: { startedAt: 'desc' }
+	});
+
+	// Deduplicate to calendar dates (local-midnight UTC).
+	const daySet = new Set<string>();
+	for (const s of sessions) {
+		const d = s.startedAt;
+		daySet.add(`${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`);
+	}
+	const days = Array.from(daySet)
+		.map((key) => {
+			const [y, m, d] = key.split('-').map(Number);
+			return new Date(Date.UTC(y, m, d));
+		})
+		.sort((a, b) => b.getTime() - a.getTime()); // newest first
+
+	const MS_PER_DAY = 86_400_000;
+
+	// Current streak — must start from today or yesterday.
+	let currentStreak = 0;
+	if (days.length > 0) {
+		const todayUtc = new Date(
+			Date.UTC(
+				new Date().getUTCFullYear(),
+				new Date().getUTCMonth(),
+				new Date().getUTCDate()
+			)
+		);
+		const mostRecent = days[0];
+		const gapDays = Math.round((todayUtc.getTime() - mostRecent.getTime()) / MS_PER_DAY);
+		if (gapDays <= 1) {
+			currentStreak = 1;
+			for (let i = 1; i < days.length; i++) {
+				const gap = Math.round((days[i - 1].getTime() - days[i].getTime()) / MS_PER_DAY);
+				if (gap === 1) {
+					currentStreak++;
+				} else {
+					break;
+				}
+			}
+		}
+	}
+
+	// Longest streak — full scan.
+	let longestStreak = 0;
+	let run = 0;
+	for (let i = 0; i < days.length; i++) {
+		if (i === 0) {
+			run = 1;
+		} else {
+			const gap = Math.round((days[i - 1].getTime() - days[i].getTime()) / MS_PER_DAY);
+			if (gap === 1) {
+				run++;
+			} else {
+				run = 1;
+			}
+		}
+		if (run > longestStreak) longestStreak = run;
+	}
+
+	// Never let the stored longest streak shrink (edge case: session deletion).
+	const existing = await prisma.program.findUnique({
+		where: { id: programId },
+		select: { longestStreak: true }
+	});
+	const finalLongest = Math.max(longestStreak, existing?.longestStreak ?? 0);
+
+	await prisma.program.update({
+		where: { id: programId },
+		data: { currentStreak, longestStreak: finalLongest }
+	});
+}
+
 export const FAMILY_RELATIONS = ['self', 'spouse', 'parent', 'child', 'sibling', 'friend', 'other'] as const;
 export const SESSION_MODALITIES = ['voice', 'handwriting', 'manual'] as const;
 export const REWARD_KINDS = ['earn', 'spend', 'milestone', 'gift', 'refund'] as const;

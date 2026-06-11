@@ -1,12 +1,16 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:hive_ce/hive.dart';
+import 'package:uuid/uuid.dart';
 
 import '../api/api_client.dart';
 import '../auth/auth_service.dart';
+import '../storage/storage_keys.dart';
 import 'sync_outbox.dart';
 
 /// Drains the outbox + pulls /api/v1/me at the right moments:
@@ -72,23 +76,38 @@ class SyncEngine with WidgetsBindingObserver {
   /// (so writes stay ordered per-resource).
   Future<void> drain() async {
     if (_draining) return;
-    if (!_auth.isAuthenticated) return;
     _draining = true;
     try {
       final pending = await _outbox.peekAll();
       for (final item in pending) {
-        final route = _routeFor(item.kind);
-        if (route == null) {
+        final spec = _specFor(item.kind);
+        if (spec == null) {
           // Unknown kind — drop so we don't loop forever.
           await _outbox.remove(item.id);
           continue;
         }
+        // Wrap the payload in the array envelope the server expects.
+        // devices.upsert is the only endpoint that takes a bare object.
+        final body = spec.wrapKey != null
+            ? {spec.wrapKey!: [item.payload]}
+            : item.payload;
         try {
-          await _api.dio.post<Map<String, Object?>>(route, data: item.payload);
+          await _api.dio.post<Map<String, Object?>>(spec.route, data: body);
           await _outbox.remove(item.id);
+          if (kDebugMode) debugPrint('[sync] pushed ${item.kind} → ${spec.route}');
         } on DioException catch (e) {
-          await _outbox.markFailure(item, e.message ?? 'unknown');
-          if (kDebugMode) debugPrint('[sync] push $route failed: ${e.message}');
+          final status = e.response?.statusCode ?? 0;
+          final respBody = e.response?.data?.toString() ?? '';
+          final msg = '${e.message ?? 'unknown'} | status=$status | $respBody';
+          await _outbox.markFailure(item, msg);
+          if (kDebugMode) debugPrint('[sync] push ${spec.route} FAILED: $msg');
+          // 4xx = bad payload (won't get better) — drop after 3 attempts.
+          // 5xx / network = transient — keep retrying indefinitely.
+          if (status >= 400 && status < 500 && item.attempts >= 3) {
+            if (kDebugMode) debugPrint('[sync] dropping ${item.kind} after ${item.attempts} 4xx failures');
+            await _outbox.remove(item.id);
+            continue;
+          }
           break; // preserve FIFO ordering
         }
       }
@@ -97,29 +116,46 @@ class SyncEngine with WidgetsBindingObserver {
     }
   }
 
-  String? _routeFor(String kind) {
-    switch (kind) {
-      case 'members.upsert':
-        return '/api/v1/members';
-      case 'programs.upsert':
-        return '/api/v1/programs';
-      case 'sessions.append':
-        return '/api/v1/sessions';
-      case 'reward_events.append':
-        return '/api/v1/reward-events';
-      case 'devices.upsert':
-        return '/api/v1/devices';
-      default:
-        return null;
+  _SyncSpec? _specFor(String kind) => switch (kind) {
+        'members.upsert'       => const _SyncSpec('/api/v1/members',      'members'),
+        'programs.upsert'      => const _SyncSpec('/api/v1/programs',     'programs'),
+        'sessions.append'      => const _SyncSpec('/api/v1/sessions',     'sessions'),
+        'reward_events.append' => const _SyncSpec('/api/v1/reward-events','events'),
+        'devices.upsert'       => const _SyncSpec('/api/v1/devices',      null),
+        _                      => null,
+      };
+
+  Future<String> _stableDeviceId() async {
+    final box = Hive.box<dynamic>(KvlBoxes.session);
+    String? id = box.get(KvlKeys.deviceId) as String?;
+    if (id == null) {
+      id = const Uuid().v4();
+      await box.put(KvlKeys.deviceId, id);
     }
+    return id;
+  }
+
+  Future<void> _registerDevice() async {
+    final deviceId = await _stableDeviceId();
+    final platform = Platform.isAndroid ? 'android' : 'ios';
+    await enqueue('devices.upsert', {
+      'id': deviceId,
+      'platform': platform,
+      'app_version': null,
+    });
   }
 
   void _watchAuth() {
+    // Real JWT sign-in (fires when AuthService gets a token)
     _authSub = _auth.accountStream.listen((account) {
       if (account != null) {
+        unawaited(_registerDevice());
         unawaited(syncNow());
       }
     });
+    // Kick an immediate drain on startup so any outbox items queued
+    // during a previous session (even with dummy auth) are flushed.
+    unawaited(drain());
   }
 
   void _watchConnectivity() {
@@ -142,4 +178,12 @@ class SyncEngine with WidgetsBindingObserver {
     await _authSub?.cancel();
     await _pullController.close();
   }
+}
+
+class _SyncSpec {
+  const _SyncSpec(this.route, this.wrapKey);
+  final String route;
+  /// The JSON key to wrap the payload array in, e.g. "sessions".
+  /// Null means send the payload object directly (no wrapping).
+  final String? wrapKey;
 }

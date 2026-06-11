@@ -18,8 +18,10 @@ class InviteService {
 
   String inviteMessage(String userId, {String? sender}) {
     final link = linkFor(userId);
-    final who = sender == null || sender.trim().isEmpty ? 'A friend' : sender.trim();
-    return "$who has invited you to Koti Vachika Lekhini — chant, write, and track your spiritual practice together.\n\n$link";
+    final who = sender == null || sender.trim().isEmpty
+        ? 'A friend'
+        : sender.trim();
+    return "$who has invited you to Vaachaka Lekhini — chant, write, and track your spiritual practice together.\n\n$link";
   }
 
   Future<void> share(String userId, {String? sender}) async {

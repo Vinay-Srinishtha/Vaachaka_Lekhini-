@@ -26,10 +26,13 @@ void main() {
     await tmp.delete(recursive: true);
   });
 
-  testWidgets('KvlApp boots and redirects unauthenticated user to Welcome', (tester) async {
+  testWidgets('KvlApp boots and redirects unauthenticated user to Welcome', (
+    tester,
+  ) async {
     await tester.pumpWidget(const ProviderScope(child: KvlApp()));
     await tester.pumpAndSettle();
-    expect(find.text('Continue to App'), findsOneWidget);
-    expect(find.text('Koti Vachika Lekhini'), findsOneWidget);
+    expect(find.text('Login'), findsOneWidget);
+    expect(find.text('Register'), findsOneWidget);
+    expect(find.text('Vaachaka Lekhini'), findsOneWidget);
   });
 }

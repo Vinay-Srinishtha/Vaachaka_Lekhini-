@@ -8,12 +8,13 @@ import '../../../app/providers.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../enrolment/voice/data/voice_enrolment_service.dart';
+import '../../enrolment/voice/domain/voice_enrolment.dart';
 import '../../mantras/domain/mantra.dart';
 import '../../programs/domain/program.dart';
 import '../../programs/domain/program_repository.dart';
 import '../../programs/domain/session.dart';
-import '../../rewards/domain/reward_repository.dart';
 import '../../rewards/domain/reward_rules.dart';
+import '../../settings/domain/settings_repository.dart';
 
 /// View-state for a single program's practice screen.
 @immutable
@@ -60,18 +61,19 @@ class PracticeState {
     String? errorMessage,
     bool clearError = false,
     bool? micPermanentlyDenied,
-  }) =>
-      PracticeState(
-        program: program ?? this.program,
-        modality: modality ?? this.modality,
-        isRunning: isRunning ?? this.isRunning,
-        sessionCount: sessionCount ?? this.sessionCount,
-        todaysTotal: todaysTotal ?? this.todaysTotal,
-        streak: streak ?? this.streak,
-        activeSessionId: clearSession ? null : (activeSessionId ?? this.activeSessionId),
-        errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
-        micPermanentlyDenied: micPermanentlyDenied ?? this.micPermanentlyDenied,
-      );
+  }) => PracticeState(
+    program: program ?? this.program,
+    modality: modality ?? this.modality,
+    isRunning: isRunning ?? this.isRunning,
+    sessionCount: sessionCount ?? this.sessionCount,
+    todaysTotal: todaysTotal ?? this.todaysTotal,
+    streak: streak ?? this.streak,
+    activeSessionId: clearSession
+        ? null
+        : (activeSessionId ?? this.activeSessionId),
+    errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+    micPermanentlyDenied: micPermanentlyDenied ?? this.micPermanentlyDenied,
+  );
 }
 
 /// Owns the live counting loop for one program. UI watches it for state;
@@ -89,7 +91,6 @@ class PracticeController extends AsyncNotifier<PracticeState> {
   int _pendingFlush = 0;
 
   ProgramRepository get _programs => ref.read(programRepositoryProvider);
-  RewardRepository get _rewards => ref.read(rewardRepositoryProvider);
 
   @override
   Future<PracticeState> build() async {
@@ -102,16 +103,9 @@ class PracticeController extends AsyncNotifier<PracticeState> {
     final todaysTotal = await _programs.countForDay(programId, today);
     final streak = await _programs.currentStreak(programId);
 
-    // If the user has already trained their voice for this mantra, voice
-    // mode is the natural default. Otherwise fall back to manual tap-to-count.
-    final enrolment = await ref
-        .read(voiceEnrolmentRepositoryProvider)
-        .get(program.profileId, program.mantraId);
-    final defaultModality = enrolment != null ? SessionModality.voice : SessionModality.manual;
-
     return PracticeState(
       program: program,
-      modality: defaultModality,
+      modality: SessionModality.voice,
       isRunning: false,
       sessionCount: 0,
       todaysTotal: todaysTotal,
@@ -129,33 +123,62 @@ class PracticeController extends AsyncNotifier<PracticeState> {
     final s = state.value;
     if (s == null || s.isRunning) return;
 
+    // Resuming an already-open session — just restart the audio, keep count.
+    if (s.activeSessionId != null) {
+      state = AsyncData(s.copyWith(isRunning: true, clearError: true));
+      if (s.modality == SessionModality.voice && mantra != null) {
+        final sensitivity = ref.read(settingsProvider).value?.micSensitivity
+            ?? MicSensitivity.medium;
+        _voice = VoiceEnrolmentService();
+        _voiceSub = _voice!.events.listen((e) {
+          if (e.count > 0) _bump(s.sessionCount + e.count);
+        }, onError: (Object err) => _failVoice("Voice recogniser stopped: $err"));
+        try {
+          await _voice!.start(mantra, target: 1 << 30, sensitivity: sensitivity);
+        } catch (e) {
+          _failVoice("Couldn't start the mic. Try again, or switch to Manual.");
+        }
+      }
+      _flushTimer ??= Timer.periodic(const Duration(seconds: 4), (_) => _flush());
+      return;
+    }
+
     // Voice mode requires mic permission. Check up front and surface a
     // friendly state instead of crashing inside the audio stream.
     if (s.modality == SessionModality.voice) {
+      final trained = await _hasCompletedVoiceTraining(s.program.mantraId);
+      if (!trained) return;
       final ok = await _ensureMicReady();
       if (!ok) return;
     }
 
+    // ADDED: pass memberId so Prisma Session row has it directly
+    final profile = ref.read(activeProfileProvider).value;
     final session = await _programs.startSession(
       programId: s.program.id,
+      memberId: profile?.id ?? s.program.memberId,
       modality: s.modality,
     );
 
-    state = AsyncData(s.copyWith(
-      isRunning: true,
-      sessionCount: 0,
-      activeSessionId: session.id,
-      clearError: true,
-    ));
+    state = AsyncData(
+      s.copyWith(
+        isRunning: true,
+        sessionCount: 0,
+        activeSessionId: session.id,
+        clearError: true,
+      ),
+    );
 
     if (s.modality == SessionModality.voice && mantra != null) {
+      final sensitivity = ref.read(settingsProvider).value?.micSensitivity
+          ?? MicSensitivity.medium;
       _voice = VoiceEnrolmentService();
       _voiceSub = _voice!.events.listen((e) {
         if (e.count > 0) _bump(e.count);
       }, onError: (Object err) => _failVoice("Voice recogniser stopped: $err"));
       try {
         // High target so the service doesn't auto-stop while counting.
-        await _voice!.start(mantra, target: 1 << 30);
+        await _voice!.start(mantra, target: 1 << 30, sensitivity: sensitivity);
       } catch (e) {
         _failVoice("Couldn't start the mic. Try again, or switch to Manual.");
       }
@@ -174,17 +197,48 @@ class PracticeController extends AsyncNotifier<PracticeState> {
     final next = await Permission.microphone.request();
     if (next.isGranted) return true;
 
-    final permanentlyDenied = next.isPermanentlyDenied || status.isPermanentlyDenied;
+    final permanentlyDenied =
+        next.isPermanentlyDenied || status.isPermanentlyDenied;
     final s = state.value;
     if (s != null) {
-      state = AsyncData(s.copyWith(
-        errorMessage: permanentlyDenied
-            ? 'Mic access is blocked. Open Settings to enable it, or tap Manual to count by hand.'
-            : 'Mic access is needed to count chants. Allow it, or switch to Manual.',
-        micPermanentlyDenied: permanentlyDenied,
-      ));
+      state = AsyncData(
+        s.copyWith(
+          errorMessage: permanentlyDenied
+              ? 'Mic access is blocked. Open Settings to enable it, or tap Manual to count by hand.'
+              : 'Mic access is needed to count chants. Allow it, or switch to Manual.',
+          micPermanentlyDenied: permanentlyDenied,
+        ),
+      );
     }
     return false;
+  }
+
+  Future<bool> _hasCompletedVoiceTraining(String mantraId) async {
+    final profile = ref.read(activeProfileProvider).value;
+    final s = state.value;
+    if (profile == null) {
+      if (s != null) {
+        state = AsyncData(
+          s.copyWith(
+            errorMessage: 'Select a profile before starting voice practice.',
+          ),
+        );
+      }
+      return false;
+    }
+    final enrolment = await ref
+        .read(voiceEnrolmentRepositoryProvider)
+        .get(profile.id, mantraId);
+    final complete = enrolment != null && enrolment.isComplete;
+    if (!complete && s != null) {
+      state = AsyncData(
+        s.copyWith(
+          errorMessage:
+              'Complete voice training (${VoiceEnrolment.requiredSamples}/${VoiceEnrolment.requiredSamples}) before using voice practice.',
+        ),
+      );
+    }
+    return complete;
   }
 
   /// Triggered from the UI's "Open Settings" CTA when mic was permanently denied.
@@ -196,7 +250,9 @@ class PracticeController extends AsyncNotifier<PracticeState> {
   void clearError() {
     final s = state.value;
     if (s != null) {
-      state = AsyncData(s.copyWith(clearError: true, micPermanentlyDenied: false));
+      state = AsyncData(
+        s.copyWith(clearError: true, micPermanentlyDenied: false),
+      );
     }
   }
 
@@ -206,6 +262,7 @@ class PracticeController extends AsyncNotifier<PracticeState> {
     if (s == null || !s.isRunning) return;
     if (s.modality != SessionModality.manual) return;
     _bump(s.sessionCount + 1);
+    unawaited(HapticFeedback.selectionClick());
   }
 
   /// VoiceEnrolmentService emits absolute counts; persist each net delta.
@@ -215,10 +272,9 @@ class PracticeController extends AsyncNotifier<PracticeState> {
     final delta = newCount - s.sessionCount;
     if (delta <= 0) return;
     _pendingFlush += delta;
-    state = AsyncData(s.copyWith(
-      sessionCount: newCount,
-      todaysTotal: s.todaysTotal + delta,
-    ));
+    state = AsyncData(
+      s.copyWith(sessionCount: newCount, todaysTotal: s.todaysTotal + delta),
+    );
   }
 
   Future<void> _flush() async {
@@ -252,36 +308,27 @@ class PracticeController extends AsyncNotifier<PracticeState> {
     final streak = await _programs.currentStreak(s.program.id);
     final today = await _programs.countForDay(s.program.id, DateTime.now());
 
-    // Award points: daily-target completion + any milestone crossed.
+    // Haptic feedback for daily-target and milestone crossings.
+    // Points are awarded server-side in /api/v1/sessions after session
+    // ingestion — Flutter must never call earn() for rule-based bonuses.
     final after = program.totalChants + program.totalWritings;
-    if (today >= program.dailyTarget && (s.todaysTotal < program.dailyTarget)) {
-      await _rewards.earn(
-        profileId: program.profileId,
-        amount: RewardRules.dailyTarget,
-        source: 'Daily Mantra Completion',
-      );
-      // Soft confirmation when the day's target is met.
+    if (today >= program.dailyTarget && s.todaysTotal < program.dailyTarget) {
       unawaited(HapticFeedback.mediumImpact());
     }
-    final milestone = RewardRules.milestoneCrossedLabel(before, after);
-    if (milestone != null) {
-      await _rewards.earn(
-        profileId: program.profileId,
-        amount: RewardRules.milestoneCross,
-        source: 'Milestone: $milestone',
-      );
-      // Stronger feedback for milestones — feels like an event.
+    if (RewardRules.milestoneCrossedLabel(before, after) != null) {
       unawaited(HapticFeedback.heavyImpact());
     }
 
-    state = AsyncData(s.copyWith(
-      isRunning: false,
-      sessionCount: 0,
-      program: program,
-      todaysTotal: today,
-      streak: streak,
-      clearSession: true,
-    ));
+    state = AsyncData(
+      s.copyWith(
+        isRunning: false,
+        sessionCount: 0,
+        program: program,
+        todaysTotal: today,
+        streak: streak,
+        clearSession: true,
+      ),
+    );
   }
 
   void _failVoice(String message) {
@@ -303,4 +350,6 @@ class PracticeController extends AsyncNotifier<PracticeState> {
 }
 
 final practiceControllerProvider =
-    AsyncNotifierProvider.family<PracticeController, PracticeState, String>(PracticeController.new);
+    AsyncNotifierProvider.family<PracticeController, PracticeState, String>(
+      PracticeController.new,
+    );

@@ -4,19 +4,25 @@ import 'package:hive_ce/hive.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/storage/storage_keys.dart';
+import '../../../core/sync/sync_outbox.dart';
 import '../domain/profile.dart';
 import '../domain/profile_repository.dart';
 
 /// Hive-backed implementation. Each profile is a JSON map keyed by its id
 /// in the profiles box. The active-profile pointer lives in the session box.
+///
+/// [outbox] is optional — when provided, every create/update enqueues a
+/// `members.upsert` so the Prisma Member table stays in sync.
 class ProfileRepositoryLocal implements ProfileRepository {
   ProfileRepositoryLocal({
     required Box<dynamic> profilesBox,
     required Box<dynamic> sessionBox,
     Uuid? uuid,
+    SyncOutbox? outbox,   // ADDED
   })  : _profiles = profilesBox,
         _session = sessionBox,
-        _uuid = uuid ?? const Uuid() {
+        _uuid = uuid ?? const Uuid(),
+        _outbox = outbox {
     _profiles.watch().listen((_) => _emitAll());
     _session.watch(key: KvlKeys.activeProfileId).listen((_) async {
       _activeController.add(await getActive());
@@ -26,6 +32,7 @@ class ProfileRepositoryLocal implements ProfileRepository {
   final Box<dynamic> _profiles;
   final Box<dynamic> _session;
   final Uuid _uuid;
+  final SyncOutbox? _outbox;
 
   final _allController = StreamController<List<Profile>>.broadcast();
   final _activeController = StreamController<Profile?>.broadcast();
@@ -103,12 +110,15 @@ class ProfileRepositoryLocal implements ProfileRepository {
       avatarSeed: _uuid.v4().substring(0, 8),
     );
     await _profiles.put(p.id, p.toJson());
+    // Sync to Prisma — field names match Member table exactly
+    await _outbox?.enqueue('members.upsert', _memberPayload(p));
     return p;
   }
 
   @override
   Future<void> update(Profile profile) async {
     await _profiles.put(profile.id, profile.toJson());
+    await _outbox?.enqueue('members.upsert', _memberPayload(profile));
   }
 
   @override
@@ -119,4 +129,27 @@ class ProfileRepositoryLocal implements ProfileRepository {
     }
     await _profiles.delete(profileId);
   }
+
+  /// Payload keys match Prisma Member column names exactly so the backend
+  /// can upsert without any transformation.
+  Map<String, Object?> _memberPayload(Profile p) => {
+        'id': p.id,
+        'account_id': p.userId,          // Prisma Member.accountId
+        'display_name': p.name,          // Prisma Member.displayName
+        'avatar_key': p.avatarSeed,      // Prisma Member.avatarKey
+        'relation': _serverRelation(p.relation),
+        'is_primary': p.relation == FamilyRelation.me,
+        'language': 'en',                // default; updated from /api/v1/me pull
+      };
+
+  // Map Flutter FamilyRelation to the server's FAMILY_RELATIONS enum.
+  // Server accepts: self | spouse | parent | child | sibling | friend | other
+  static String _serverRelation(FamilyRelation r) => switch (r) {
+        FamilyRelation.me => 'self',
+        FamilyRelation.father || FamilyRelation.mother => 'parent',
+        FamilyRelation.son || FamilyRelation.daughter => 'child',
+        FamilyRelation.spouse => 'spouse',
+        FamilyRelation.sibling => 'sibling',
+        _ => 'other',
+      };
 }

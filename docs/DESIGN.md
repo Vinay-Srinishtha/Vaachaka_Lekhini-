@@ -1,9 +1,9 @@
-# KVL App — Figma Design Audit
+# Vaachaka Lekhini App — Figma Design Audit
 
 _Source: Figma file `KVL-App_14-04-26` — 9 frames reviewed 2026-05-11._
 _Companion to `STATUS.md` (engineering status). This doc captures what the design says the product **is**, regardless of current build state._
 
-App name in design: **Koti Vachika Lekhini (KVL)** — _"Your Personal Spiritual Practice Companion · Write God's Name with AI | Chant with Purpose | Track with Pride"_
+App name in design: **Vaachaka Lekhini** — _"Your Personal Spiritual Practice Companion · Write God's Name with AI | Chant with Purpose | Track with Pride"_
 
 ---
 
@@ -313,7 +313,7 @@ This needs an explicit decision before backend choice (Supabase / Firebase / cus
 7. **Reward economy** — earn/spend rates, store inventory source (admin tool needed?), abuse prevention.
 8. **App Store viability** — iOS background mic + spiritual content rewards may need review-team framing.
 9. **Privacy of voice & handwriting** — explicit consent + storage policy; "Download Your Data" implies GDPR-style export.
-10. **Welcome screen** uses both _"Koti Vachika Lekhini"_ and the working title _"Vachika Lekhini"_ — confirm final brand.
+10. **Welcome screen** uses _"Vaachaka Lekhini"_ as the final brand.
 
 ---
 

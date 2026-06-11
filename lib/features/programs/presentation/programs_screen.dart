@@ -6,9 +6,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/providers.dart';
 import '../../../app/router.dart';
+import '../../../core/i18n/language_options.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/utils/indian_number_format.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../../l10n/l10n.dart';
+import '../../settings/domain/settings_repository.dart';
 import '../domain/program.dart';
 
 class ProgramsScreen extends ConsumerWidget {
@@ -33,66 +36,106 @@ class _Body extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final overallProgress = programs.isEmpty
         ? 0.0
-        : programs.map((p) => p.progressFraction).reduce((a, b) => a + b) / programs.length;
+        : programs.map((p) => p.progressFraction).reduce((a, b) => a + b) /
+              programs.length;
     final totalChants = programs.fold<int>(0, (a, p) => a + p.totalProgress);
     final daysAvg = programs.isEmpty
         ? 0
-        : (programs.map((p) => p.daysElapsed).reduce((a, b) => a + b) / programs.length).round();
+        : (programs.map((p) => p.daysElapsed).reduce((a, b) => a + b) /
+                  programs.length)
+              .round();
+
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(KvlSpacing.lg, KvlSpacing.sm, KvlSpacing.lg, KvlSpacing.lg),
+      padding: EdgeInsets.fromLTRB(
+        KvlSpacing.lg,
+        KvlSpacing.lg + 100,
+        KvlSpacing.lg,
+        bottomInset + 104,
+      ),
       children: [
         KvlCard(
           variant: KvlCardVariant.soft,
+          padding: const EdgeInsets.fromLTRB(
+            KvlSpacing.lg,
+            KvlSpacing.lg,
+            KvlSpacing.lg,
+            KvlSpacing.md,
+          ),
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [KvlColors.primarySoft, Color(0xFFFBD6A4)],
+            colors: [Color(0xFFFFBC70), KvlColors.primary],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 programs.isEmpty
-                    ? 'Every journey begins with a single step.'
+                    ? context.l10n.everyJourneyBegins
                     : '"Every chant is a step closer to the divine. Keep going!"',
-                style: KvlText.body(13).copyWith(fontStyle: FontStyle.italic, height: 1.5),
+                style: KvlText.body(13).copyWith(
+                  color: Colors.white,
+                  fontStyle: FontStyle.italic,
+                  height: 1.45,
+                ),
               ),
               const SizedBox(height: KvlSpacing.md),
               Wrap(
-                spacing: KvlSpacing.xl,
-                runSpacing: KvlSpacing.md,
+                spacing: KvlSpacing.lg,
+                runSpacing: KvlSpacing.sm,
                 children: [
-                  _Kpi(label: 'Total Chants', value: IndianNumberFormat.compact(totalChants)),
-                  _Kpi(label: 'Complete', value: '${(overallProgress * 100).round()}%'),
-                  _Kpi(label: 'Days Practising', value: '$daysAvg'),
-                  _Kpi(label: 'Programs', value: '${programs.length}'),
+                  _Kpi(
+                    label: context.l10n.totalChants,
+                    value: IndianNumberFormat.compact(totalChants),
+                    onDark: true,
+                  ),
+                  _Kpi(
+                    label: context.l10n.complete,
+                    value: '${(overallProgress * 100).round()}%',
+                    onDark: true,
+                  ),
+                  _Kpi(
+                    label: context.l10n.daysPractising,
+                    value: '$daysAvg',
+                    onDark: true,
+                  ),
+                  _Kpi(
+                    label: context.l10n.programs,
+                    value: '${programs.length}',
+                    onDark: true,
+                  ),
                 ],
               ),
             ],
           ),
         ),
-        const SizedBox(height: KvlSpacing.lg),
+        const SizedBox(height: KvlSpacing.md),
         Center(child: _OverallRing(progress: overallProgress)),
-        const SizedBox(height: KvlSpacing.lg),
+        const SizedBox(height: KvlSpacing.md),
         KvlButton(
-          label: 'Create New Program',
+          label: context.l10n.createNewProgramButton,
           icon: Icons.add,
           onPressed: () => context.push(KvlRoute.mantraSelection),
         ),
-        const SizedBox(height: KvlSpacing.lg),
-        Text('My Recitation Programs', style: KvlText.title(16)),
+        const SizedBox(height: KvlSpacing.md),
+        Text(context.l10n.myRecitationPrograms, style: KvlText.title(16)),
         const SizedBox(height: KvlSpacing.sm),
         if (programs.isEmpty)
           KvlCard(
             child: Column(
               children: [
-                const Icon(Icons.menu_book_rounded, color: KvlColors.muted, size: 36),
+                const Icon(
+                  Icons.menu_book_rounded,
+                  color: KvlColors.muted,
+                  size: 36,
+                ),
                 const SizedBox(height: 8),
-                Text('No programs yet', style: KvlText.title(13)),
+                Text(context.l10n.noProgramsYet, style: KvlText.title(13)),
                 const SizedBox(height: 4),
                 Text(
-                  'Pick a mantra and set a target to start your first program.',
+                  context.l10n.pickMantraAndTargetToStart,
                   textAlign: TextAlign.center,
                   style: KvlText.caption(11.5),
                 ),
@@ -110,9 +153,11 @@ class _Body extends ConsumerWidget {
 }
 
 class _Kpi extends StatelessWidget {
-  const _Kpi({required this.label, required this.value});
+  const _Kpi({required this.label, required this.value, this.onDark = false});
   final String label;
   final String value;
+  final bool onDark;
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
@@ -120,9 +165,20 @@ class _Kpi extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: KvlText.muted(12).copyWith(fontWeight: FontWeight.w500)),
+          Text(
+            label,
+            style: KvlText.muted(12).copyWith(
+              color: onDark ? Colors.white.withValues(alpha: .88) : null,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(value, style: KvlText.bigNumber(20)),
+          Text(
+            value,
+            style: KvlText.bigNumber(
+              20,
+            ).copyWith(color: onDark ? Colors.white : null),
+          ),
         ],
       ),
     );
@@ -147,8 +203,11 @@ class _OverallRing extends StatelessWidget {
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('${(progress * 100).round()}%', style: KvlText.bigNumber(20)),
-              Text('Overall Progress', style: KvlText.muted(9.5)),
+              Text(
+                '${(progress * 100).round()}%',
+                style: KvlText.bigNumber(20),
+              ),
+              Text(context.l10n.overallProgress, style: KvlText.muted(9.5)),
             ],
           ),
         ],
@@ -171,8 +230,9 @@ class _RingPainter extends CustomPainter {
       ..strokeWidth = 12
       ..strokeCap = StrokeCap.round;
     final fg = Paint()
-      ..shader = const LinearGradient(colors: [KvlColors.primary, KvlColors.primaryDeep])
-          .createShader(Rect.fromCircle(center: center, radius: radius))
+      ..shader = const LinearGradient(
+        colors: [KvlColors.primary, KvlColors.primaryDeep],
+      ).createShader(Rect.fromCircle(center: center, radius: radius))
       ..style = PaintingStyle.stroke
       ..strokeWidth = 12
       ..strokeCap = StrokeCap.round;
@@ -198,9 +258,15 @@ class _ProgramCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final mantra = ref.watch(mantraByIdProvider(program.mantraId));
-    final name = mantra?.name.roman ?? program.mantraId;
+    final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
+    final script =
+        mantra?.name.scriptForLanguage(settings.languageCode) ??
+        settings.languageCode.mantraScriptForLanguage;
+    final name =
+        mantra?.name.displayForLanguage(settings.languageCode) ??
+        program.mantraId;
     final pct = (program.progressFraction * 100).round();
-    final complete = program.status == ProgramStatus.completed;
+    final complete = program.isCompleted;
     return KvlCard(
       onTap: () => context.push('${KvlRoute.dailyProgress}/${program.id}'),
       child: Row(
@@ -215,7 +281,13 @@ class _ProgramCard extends ConsumerWidget {
                   size: const Size(44, 44),
                   painter: _RingPainter(progress: program.progressFraction),
                 ),
-                Text('$pct%', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                Text(
+                  '$pct%',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ],
             ),
           ),
@@ -224,13 +296,21 @@ class _ProgramCard extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: KvlText.ui(15, FontWeight.w600)),
+                Text(
+                  name,
+                  style: KvlText.bodyByScript(
+                    script,
+                    15,
+                  ).copyWith(fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   complete
-                      ? '${IndianNumberFormat.format(program.totalProgress)} / ${IndianNumberFormat.format(program.targetWritings)} · Completed ✓'
+                      ? '${IndianNumberFormat.format(program.totalProgress)} / ${IndianNumberFormat.format(program.targetWritings)} · ${context.l10n.completedWithCheck}'
                       : '${IndianNumberFormat.format(program.totalProgress)} / ${IndianNumberFormat.format(program.targetWritings)}',
-                  style: KvlText.muted(12).copyWith(color: complete ? KvlColors.success : KvlColors.muted),
+                  style: KvlText.muted(12).copyWith(
+                    color: complete ? KvlColors.success : KvlColors.muted,
+                  ),
                 ),
               ],
             ),

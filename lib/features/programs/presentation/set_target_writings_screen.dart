@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/router.dart';
+import '../../../l10n/l10n.dart';
+import '../../../core/navigation/back_navigation.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/utils/indian_number_format.dart';
 import '../../../core/widgets/widgets.dart';
@@ -75,7 +77,7 @@ class _SetTargetWritingsScreenState extends ConsumerState<SetTargetWritingsScree
   @override
   Widget build(BuildContext context) {
     return KvlScaffold(
-      title: 'Set Your Practice Target',
+      title: context.l10n.choosePracticeTarget,
       scrollable: true,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -90,14 +92,14 @@ class _SetTargetWritingsScreenState extends ConsumerState<SetTargetWritingsScree
           _RadioCard(
             selected: _preset == _Preset.crore,
             onTap: () => setState(() => _preset = _Preset.crore),
-            title: '1,00,00,000 writings',
-            badge: 'Most Popular',
+            title: context.l10n.writingsTargetCrore,
+            badge: context.l10n.mostPopularBadge,
           ),
           const SizedBox(height: KvlSpacing.sm),
           _RadioCard(
             selected: _preset == _Preset.million,
             onTap: () => setState(() => _preset = _Preset.million),
-            title: '1,000,000 writings',
+            title: context.l10n.writingsTargetMillion,
           ),
           const SizedBox(height: KvlSpacing.sm),
           KvlCard(
@@ -111,20 +113,20 @@ class _SetTargetWritingsScreenState extends ConsumerState<SetTargetWritingsScree
                   children: [
                     _RadioDot(selected: _preset == _Preset.custom),
                     const SizedBox(width: KvlSpacing.sm),
-                    Text('Set a custom target', style: KvlText.ui(13, FontWeight.w600)),
+                    Text(context.l10n.setCustomTarget, style: KvlText.ui(13, FontWeight.w600)),
                   ],
                 ),
                 const SizedBox(height: KvlSpacing.md),
                 KvlInput(
-                  label: 'Total Writings',
-                  hint: 'e.g., 500,000',
+                  label: context.l10n.totalWritingsLabel,
+                  hint: context.l10n.totalWritingsHint,
                   controller: _customWritings,
                   keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: KvlSpacing.sm),
                 KvlInput(
-                  label: 'Completion Time (in days)',
-                  hint: 'e.g., 365',
+                  label: context.l10n.completionTimeLabel,
+                  hint: context.l10n.completionTimeHint,
                   controller: _customDays,
                   keyboardType: TextInputType.number,
                 ),
@@ -140,13 +142,14 @@ class _SetTargetWritingsScreenState extends ConsumerState<SetTargetWritingsScree
             ),
           ),
           const SizedBox(height: KvlSpacing.lg),
-          KvlButton(label: 'Confirm Target', onPressed: _writings > 0 ? _confirm : null),
+          KvlButton(label: context.l10n.confirmTarget, onPressed: _writings > 0 ? _confirm : null),
           const SizedBox(height: KvlSpacing.sm),
           Center(
             child: TextButton(
-              onPressed: context.canPop() ? () => context.pop() : null,
+              onPressed: () =>
+                  context.popOrGo('${KvlRoute.handwritingSubmit}/${widget.mantraId}'),
               child: Text(
-                'Cancel',
+                context.l10n.cancelButton,
                 style: KvlText.caption(12).copyWith(color: KvlColors.primaryDeep, fontWeight: FontWeight.w500),
               ),
             ),

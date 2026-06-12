@@ -88,7 +88,7 @@
 				</tr>
 			</thead>
 			<tbody class="divide-y divide-gray-100">
-				{#each rows as r, i (i)}
+				{#each rows as r ((r as Record<string, unknown>).id ?? r)}
 					{@render row(r)}
 				{:else}
 					<tr>

@@ -62,23 +62,15 @@ export const load: PageServerLoad = async () => {
 		sessions30d.push({ day: lbl, count: hit ? Number(hit.cnt) : 0, chants: hit ? Number(hit.chants) : 0 });
 	}
 
-	// Top 5 mantras by program count
-	const topMantraGroups = await prisma.program.groupBy({
-		by: ['mantraId'],
-		_count: { mantraId: true },
-		orderBy: { _count: { mantraId: 'desc' } },
-		take: 5,
-	});
-	const topMantraRows = topMantraGroups.length
-		? await prisma.mantra.findMany({
-				where: { id: { in: topMantraGroups.map((t) => t.mantraId) } },
-				select: { id: true, nameRoman: true },
-			})
-		: [];
-	const topMantras = topMantraGroups.map((t) => ({
-		name:  topMantraRows.find((r) => r.id === t.mantraId)?.nameRoman ?? 'Unknown',
-		count: t._count.mantraId,
-	}));
+	// Top 5 mantras by program count — single JOIN query instead of two round-trips.
+	const topMantrasRaw = await prisma.$queryRaw<{ name: string; count: number }[]>`
+		SELECT m."nameRoman" AS name, COUNT(p.id)::int AS count
+		FROM "Program" p
+		JOIN "Mantra" m ON m.id = p."mantraId"
+		GROUP BY m.id, m."nameRoman"
+		ORDER BY count DESC
+		LIMIT 5`;
+	const topMantras = topMantrasRaw.map((r) => ({ name: r.name, count: Number(r.count) }));
 
 	const sessionsDelta =
 		sessionsYesterday > 0

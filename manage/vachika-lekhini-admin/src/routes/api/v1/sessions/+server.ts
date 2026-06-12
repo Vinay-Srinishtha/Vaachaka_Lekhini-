@@ -64,9 +64,7 @@ export const POST: RequestHandler = async (event) => {
 	// the programs endpoint deliberately ignores client-supplied streak values.
 	if (inserted.count > 0) {
 		const uniqueProgramIdsForStreak = Array.from(new Set(body.sessions.map((s) => s.program_id)));
-		for (const programId of uniqueProgramIdsForStreak) {
-			await recomputeProgramStreaks(programId);
-		}
+		await Promise.all(uniqueProgramIdsForStreak.map((id) => recomputeProgramStreaks(id)));
 		emitChange('program');
 	}
 
@@ -76,16 +74,18 @@ export const POST: RequestHandler = async (event) => {
 	// not overwrite this field. Fix for Issue #3.
 	if (inserted.count > 0) {
 		const programIdsForTotal = Array.from(new Set(body.sessions.map((s) => s.program_id)));
-		for (const programId of programIdsForTotal) {
-			const agg = await prisma.session.aggregate({
-				where: { programId },
-				_sum: { countAdded: true }
-			});
-			await prisma.program.update({
-				where: { id: programId },
-				data: { totalWritings: agg._sum.countAdded ?? 0 }
-			});
-		}
+		await Promise.all(
+			programIdsForTotal.map(async (programId) => {
+				const agg = await prisma.session.aggregate({
+					where: { programId },
+					_sum: { countAdded: true }
+				});
+				return prisma.program.update({
+					where: { id: programId },
+					data: { totalWritings: agg._sum.countAdded ?? 0 }
+				});
+			})
+		);
 	}
 
 	// Auto-award per-chant reward points for newly inserted sessions only.
@@ -119,53 +119,46 @@ export const POST: RequestHandler = async (event) => {
 			pointsEarned[memberId] = pts;
 		}
 		if (Object.keys(pointsEarned).length > 0) {
-			for (const memberId of Object.keys(pointsEarned)) {
-				await recomputeMemberBalance(memberId);
-			}
+			await Promise.all(Object.keys(pointsEarned).map((id) => recomputeMemberBalance(id)));
 			emitChange('reward_event');
 		}
 
 		// ── Milestone check ─────────────────────────────────────────────────
-		// For each program touched by this batch, fetch the current server-side
-		// totalWritings (which Flutter sends as totalChants + totalWritings combined
-		// in the programs.upsert payload — see _programPayload in
-		// program_repository_drift.dart). Derive pre-session total from the
-		// count_added values, then test for a crossed threshold.
-		//
-		// Idempotency key: milestone:<memberId>:<threshold> — safe to retry.
 		const countAddedByProgram = new Map<string, number>();
 		for (const s of body.sessions) {
 			countAddedByProgram.set(s.program_id, (countAddedByProgram.get(s.program_id) ?? 0) + s.count_added);
 		}
+		// Batch-fetch all affected programs in one query instead of N findUnique calls.
+		const programIdsForMilestone = Array.from(countAddedByProgram.keys());
+		const milestonePrograms = await prisma.program.findMany({
+			where: { id: { in: programIdsForMilestone } },
+			select: { id: true, memberId: true, totalWritings: true }
+		});
 		const milestoneMembers = new Set<string>();
-		for (const [programId, countAdded] of countAddedByProgram) {
-			const program = await prisma.program.findUnique({
-				where: { id: programId },
-				select: { memberId: true, totalWritings: true }
-			});
-			if (!program) continue;
-			const after = program.totalWritings;
-			const before = after - countAdded;
-			const threshold = milestoneCrossed(before, after);
-			if (threshold === null) continue;
-			const milestoneEventId = `milestone:${program.memberId}:${threshold}`;
-			await prisma.rewardEvent.upsert({
-				where: { id: milestoneEventId },
-				create: {
-					id: milestoneEventId,
-					memberId: program.memberId,
-					kind: 'milestone',
-					amount: MILESTONE_AMOUNT,
-					source: `Milestone: ${milestoneLabel(threshold)}`
-				},
-				update: {} // idempotent — one grant per threshold per member ever
-			});
-			milestoneMembers.add(program.memberId);
-		}
+		await Promise.all(
+			milestonePrograms.map(async (program) => {
+				const countAdded = countAddedByProgram.get(program.id) ?? 0;
+				const after = program.totalWritings;
+				const before = after - countAdded;
+				const threshold = milestoneCrossed(before, after);
+				if (threshold === null) return;
+				const milestoneEventId = `milestone:${program.memberId}:${threshold}`;
+				await prisma.rewardEvent.upsert({
+					where: { id: milestoneEventId },
+					create: {
+						id: milestoneEventId,
+						memberId: program.memberId,
+						kind: 'milestone',
+						amount: MILESTONE_AMOUNT,
+						source: `Milestone: ${milestoneLabel(threshold)}`
+					},
+					update: {}
+				});
+				milestoneMembers.add(program.memberId);
+			})
+		);
 		if (milestoneMembers.size > 0) {
-			for (const memberId of milestoneMembers) {
-				await recomputeMemberBalance(memberId);
-			}
+			await Promise.all([...milestoneMembers].map((id) => recomputeMemberBalance(id)));
 			emitChange('reward_event');
 		}
 	}
@@ -189,37 +182,36 @@ export const POST: RequestHandler = async (event) => {
 		});
 
 		const dailyBonusMembers = new Set<string>();
-		for (const program of programs) {
-			const dailyTarget = program.targetDays > 0
-				? Math.ceil(program.targetWritings / program.targetDays)
-				: 0;
-			if (dailyTarget <= 0) continue;
+		await Promise.all(
+			programs.map(async (program) => {
+				const dailyTarget = program.targetDays > 0
+					? Math.ceil(program.targetWritings / program.targetDays)
+					: 0;
+				if (dailyTarget <= 0) return;
 
-			const agg = await prisma.session.aggregate({
-				where: { programId: program.id, startedAt: { gte: dayStart, lt: dayEnd } },
-				_sum: { countAdded: true }
-			});
-			const todayTotal = agg._sum.countAdded ?? 0;
-			if (todayTotal < dailyTarget) continue;
+				const agg = await prisma.session.aggregate({
+					where: { programId: program.id, startedAt: { gte: dayStart, lt: dayEnd } },
+					_sum: { countAdded: true }
+				});
+				if ((agg._sum.countAdded ?? 0) < dailyTarget) return;
 
-			const bonusId = `daily_target_bonus:${program.id}:${calendarDate}`;
-			await prisma.rewardEvent.upsert({
-				where: { id: bonusId },
-				create: {
-					id: bonusId,
-					memberId: program.memberId,
-					kind: 'milestone',
-					amount: 50,
-					source: 'daily_target_bonus'
-				},
-				update: {} // idempotent — never re-award for the same program+day
-			});
-			dailyBonusMembers.add(program.memberId);
-		}
+				const bonusId = `daily_target_bonus:${program.id}:${calendarDate}`;
+				await prisma.rewardEvent.upsert({
+					where: { id: bonusId },
+					create: {
+						id: bonusId,
+						memberId: program.memberId,
+						kind: 'milestone',
+						amount: 50,
+						source: 'daily_target_bonus'
+					},
+					update: {}
+				});
+				dailyBonusMembers.add(program.memberId);
+			})
+		);
 		if (dailyBonusMembers.size > 0) {
-			for (const memberId of dailyBonusMembers) {
-				await recomputeMemberBalance(memberId);
-			}
+			await Promise.all([...dailyBonusMembers].map((id) => recomputeMemberBalance(id)));
 			emitChange('reward_event');
 		}
 	}

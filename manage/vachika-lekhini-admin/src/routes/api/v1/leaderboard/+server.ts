@@ -4,65 +4,58 @@ import { snakeJson } from '$lib/server/snake-case';
 import { requireAccount } from '$lib/server/user-auth';
 
 /// GET /api/v1/leaderboard?sort=total_chants|streak  (Bearer)
-/// Returns the calling user's own members + all other members in the DB,
-/// ranked by total chants or longest streak. Capped at 50 entries.
+/// Returns members ranked by total chants or longest streak. Capped at 50.
 ///
 /// Each entry:
 ///   id           — member id
 ///   name         — display name
 ///   total_chants — sum of all Session.countAdded for that member
 ///   streak_days  — highest Program.currentStreak across all member programs
-///                  (server-authoritative consecutive-day streak, not calendar days)
 ///   is_self      — true if the member belongs to the calling account
 export const GET: RequestHandler = async (event) => {
 	const account = await requireAccount(event);
 	const sortParam = event.url.searchParams.get('sort') ?? 'total_chants';
 	const byStreak = sortParam === 'streak';
 
-	// Aggregate per-member stats in one query.
-	const rows = await prisma.member.findMany({
-		select: {
-			id: true,
-			displayName: true,
-			accountId: true,
-			programs: {
-				select: {
-					currentStreak: true,
-					sessions: { select: { countAdded: true } }
-				}
-			}
-		},
-		take: 200 // pull top pool then sort in JS
-	});
+	// Single aggregation query — DB does all grouping, sorting, and limiting.
+	// Much faster than pulling 200 rows with nested relations into JS.
+	type Row = { id: string; name: string; total_chants: number; streak_days: number; account_id: string };
+	const rows = byStreak
+		? await prisma.$queryRaw<Row[]>`
+			SELECT m.id,
+			       m."displayName"        AS name,
+			       COALESCE(SUM(s."countAdded"), 0)::int AS total_chants,
+			       COALESCE(MAX(p."currentStreak"), 0)::int AS streak_days,
+			       m."accountId"          AS account_id
+			FROM "Member" m
+			LEFT JOIN "Program" p ON p."memberId" = m.id
+			LEFT JOIN "Session" s ON s."memberId" = m.id
+			GROUP BY m.id, m."displayName", m."accountId"
+			ORDER BY streak_days DESC, total_chants DESC
+			LIMIT 50`
+		: await prisma.$queryRaw<Row[]>`
+			SELECT m.id,
+			       m."displayName"        AS name,
+			       COALESCE(SUM(s."countAdded"), 0)::int AS total_chants,
+			       COALESCE(MAX(p."currentStreak"), 0)::int AS streak_days,
+			       m."accountId"          AS account_id
+			FROM "Member" m
+			LEFT JOIN "Program" p ON p."memberId" = m.id
+			LEFT JOIN "Session" s ON s."memberId" = m.id
+			GROUP BY m.id, m."displayName", m."accountId"
+			ORDER BY total_chants DESC, streak_days DESC
+			LIMIT 50`;
 
-	const entries = rows.map((m) => {
-		const totalChants = m.programs
-			.flatMap((p) => p.sessions)
-			.reduce((s, sess) => s + sess.countAdded, 0);
-		// currentStreak is a server-computed consecutive-day streak stored on
-		// the Program row. daysElapsed is a Flutter client-side computed getter
-		// that is not a Prisma field — it would always resolve to undefined here.
-		const streakDays = m.programs.reduce(
-			(max, p) => (p.currentStreak > max ? p.currentStreak : max),
-			0
-		);
-		return {
-			id: m.id,
-			name: m.displayName,
-			total_chants: totalChants,
-			streak_days: streakDays,
-			is_self: m.accountId === account.id
-		};
-	});
-
-	entries.sort((a, b) =>
-		byStreak
-			? b.streak_days - a.streak_days
-			: b.total_chants - a.total_chants
-	);
+	const entries = rows.map((r) => ({
+		id: r.id,
+		name: r.name,
+		total_chants: Number(r.total_chants),
+		streak_days: Number(r.streak_days),
+		is_self: r.account_id === account.id
+	}));
 
 	return snakeJson(
-		{ entries: entries.slice(0, 50) },
-		{ headers: { 'cache-control': 'private, max-age=30' } }
+		{ entries },
+		{ headers: { 'cache-control': 'private, max-age=60' } }
 	);
 };

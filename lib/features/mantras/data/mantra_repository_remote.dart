@@ -9,6 +9,7 @@ import '../../../core/storage/storage_keys.dart';
 import '../domain/mantra.dart';
 import '../domain/mantra_repository.dart';
 import 'mantra_dto.dart';
+
 /// Hive cache key holding the last successful API payload (JSON map).
 /// Stored as a JSON-encodable structure so it survives schema additions.
 extension MantraCacheKeys on KvlKeys {
@@ -28,9 +29,9 @@ class MantraRepositoryRemote implements MantraRepository {
     required ApiClient api,
     required Box<dynamic> cache,
     List<Mantra>? bootstrap,
-  })  : _api = api,
-        _cache = cache,
-        _mantras = List.unmodifiable(bootstrap ?? const []) {
+  }) : _api = api,
+       _cache = cache,
+       _mantras = List.unmodifiable(bootstrap ?? const []) {
     _byId = {for (final m in _mantras) m.id: m};
     unawaited(refresh());
   }
@@ -41,7 +42,8 @@ class MantraRepositoryRemote implements MantraRepository {
   List<Mantra> _mantras;
   late Map<String, Mantra> _byId;
 
-  final StreamController<List<Mantra>> _controller = StreamController.broadcast();
+  final StreamController<List<Mantra>> _controller =
+      StreamController.broadcast();
 
   /// Streams the catalog every time it's refreshed from the API.
   @override
@@ -56,33 +58,47 @@ class MantraRepositoryRemote implements MantraRepository {
   @override
   List<Mantra> recommendForNeed(MantraNeed need) {
     final wanted = _tagsFor(need);
-    final ranked = _mantras
-        .map((m) => (mantra: m, overlap: m.tags.intersection(wanted).length))
-        .where((e) => e.overlap > 0)
-        .toList()
-      ..sort((a, b) => b.overlap.compareTo(a.overlap));
+    final ranked =
+        _mantras
+            .map(
+              (m) => (mantra: m, overlap: m.tags.intersection(wanted).length),
+            )
+            .where((e) => e.overlap > 0)
+            .toList()
+          ..sort((a, b) => b.overlap.compareTo(a.overlap));
     return [for (final e in ranked) e.mantra];
   }
 
   /// Pull the latest catalog from the API. Updates the cache + in-memory
   /// view on success. Failures are swallowed (we keep showing what we had).
+  @override
   Future<void> refresh() async {
     try {
-      final res = await _api.dio.get<Map<String, Object?>>('/api/v1/mantras');
+      final res = await _api.dio.get<Map<String, Object?>>(
+        '/api/v1/mantras',
+        queryParameters: {
+          // Avoid an edge/browser cache serving an older publish status.
+          '_refresh': DateTime.now().millisecondsSinceEpoch,
+        },
+        options: Options(headers: const {'cache-control': 'no-cache'}),
+      );
       final body = res.data;
       if (body == null) return;
       final list = (body['mantras'] as List?) ?? const [];
       final parsed = [
-        for (final item in list) MantraDto.fromJson(item as Map<String, Object?>).toDomain(),
-      ];
-      if (parsed.isEmpty) return;
+        for (final item in list)
+          MantraDto.fromJson(item as Map<String, Object?>).toDomain(),
+      ].where((m) => m.isActive).toList();
 
       _mantras = List.unmodifiable(parsed);
       _byId = {for (final m in _mantras) m.id: m};
       _controller.add(_mantras);
 
       await _cache.put(MantraCacheKeys.remoteMantraPayload, body);
-      await _cache.put(MantraCacheKeys.remoteMantraFetchedAt, DateTime.now().toIso8601String());
+      await _cache.put(
+        MantraCacheKeys.remoteMantraFetchedAt,
+        DateTime.now().toIso8601String(),
+      );
     } on DioException catch (e) {
       if (kDebugMode) debugPrint('[mantras] refresh failed: ${e.message}');
     } catch (e) {
@@ -101,20 +117,23 @@ class MantraRepositoryRemote implements MantraRepository {
       return [
         for (final item in list)
           MantraDto.fromJson(Map<String, Object?>.from(item as Map)).toDomain(),
-      ];
+      ].where((m) => m.isActive).toList();
     } catch (_) {
       return null;
     }
   }
 
   Set<MantraTag> _tagsFor(MantraNeed need) => switch (need) {
-        MantraNeed.wealthProsperity => {MantraTag.wealth, MantraTag.prosperity},
-        MantraNeed.peaceCalm => {MantraTag.peace},
-        MantraNeed.healing => {MantraTag.healing},
-        MantraNeed.protection => {MantraTag.protection},
-        MantraNeed.strengthCourage => {MantraTag.strength, MantraTag.courage},
-        MantraNeed.spiritualLiberation => {MantraTag.liberation},
-        MantraNeed.wisdomEnlightenment => {MantraTag.wisdom, MantraTag.enlightenment},
-        MantraNeed.devotion => {MantraTag.devotion},
-      };
+    MantraNeed.wealthProsperity => {MantraTag.wealth, MantraTag.prosperity},
+    MantraNeed.peaceCalm => {MantraTag.peace},
+    MantraNeed.healing => {MantraTag.healing},
+    MantraNeed.protection => {MantraTag.protection},
+    MantraNeed.strengthCourage => {MantraTag.strength, MantraTag.courage},
+    MantraNeed.spiritualLiberation => {MantraTag.liberation},
+    MantraNeed.wisdomEnlightenment => {
+      MantraTag.wisdom,
+      MantraTag.enlightenment,
+    },
+    MantraNeed.devotion => {MantraTag.devotion},
+  };
 }

@@ -3,7 +3,7 @@ import { prisma } from '$lib/server/prisma';
 import { snakeJson } from '$lib/server/snake-case';
 
 /// GET /api/v1/mantras — full active catalog for the Flutter app.
-/// Public, no auth. Cached for 5 minutes on edge / device.
+/// Public, no auth. Always fresh so admin publish changes reach Flutter.
 /// Sorted by admin-defined sortOrder then alphabetical roman name.
 export const GET: RequestHandler = async () => {
 	const mantras = await prisma.mantra.findMany({
@@ -11,6 +11,7 @@ export const GET: RequestHandler = async () => {
 		orderBy: [{ sortOrder: 'asc' }, { nameRoman: 'asc' }],
 		select: {
 			slug: true,
+			isActive: true,
 			nameDevanagari: true,
 			nameRoman: true,
 			nameTelugu: true,
@@ -22,6 +23,7 @@ export const GET: RequestHandler = async () => {
 			recommendedCount: true,
 			recommendedDays: true,
 			pronunciationUrl: true,
+			imageUrl: true,
 			sortOrder: true,
 			updatedAt: true
 		}
@@ -40,7 +42,7 @@ export const GET: RequestHandler = async () => {
 		},
 		{
 			headers: {
-				'cache-control': 'public, max-age=300, stale-while-revalidate=600',
+				'cache-control': 'no-store, max-age=0',
 				'last-modified': latest.toUTCString()
 			}
 		}

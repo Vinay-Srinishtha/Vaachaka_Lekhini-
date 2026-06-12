@@ -6,11 +6,14 @@ import 'package:flutter/foundation.dart';
 ///
 /// Precedence:
 ///   1. `--dart-define=KVL_API_BASE=<url>` build flag
-///   2. Platform-aware localhost mapping (Android emulator vs everything else)
+///   2. Production Vercel API for release builds
+///   3. Platform-aware local development mapping
 ///
 /// All paths under `/api/v1/*` are appended to this base.
 abstract final class ApiConfig {
   static const String _override = String.fromEnvironment('KVL_API_BASE');
+  static const String _productionBaseUrl =
+      'https://vaachaka-lekhini.vercel.app';
 
   /// Dev fallback. The SvelteKit dev server defaults to port 5173.
   static const int _devPort = 5173;
@@ -24,6 +27,7 @@ abstract final class ApiConfig {
 
   static String _resolveBaseUrl() {
     if (_override.isNotEmpty) return _stripTrailingSlash(_override);
+    if (kReleaseMode) return _productionBaseUrl;
     if (kIsWeb) return 'http://localhost:$_devPort';
     // Both emulator (10.0.2.2) and real device need the Mac's LAN IP.
     // Real device on WiFi can't use localhost or 10.0.2.2.

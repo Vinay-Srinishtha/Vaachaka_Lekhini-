@@ -44,6 +44,7 @@ class MantraRepositoryRemote implements MantraRepository {
   final StreamController<List<Mantra>> _controller = StreamController.broadcast();
 
   /// Streams the catalog every time it's refreshed from the API.
+  @override
   Stream<List<Mantra>> get stream => _controller.stream;
 
   @override

@@ -5,3 +5,16 @@ git token : <REDACTED — store in ~/.zshrc or a password manager>
 
 
 # alias kvl='cd "/Users/nitro/Documents/PROJECTS /srinishitha/vachika-lekhini-main/manage/vachika-lekhini-admin" && bun run dev > /tmp/kvl-backend.log 2>&1 & bunx prisma studio'
+
+on
+postgresql://neondb_owner:npg_Rze8PFQDvXq7@ep-sweet-snow-aovrqiql-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+
+off
+postgresql://neondb_owner:npg_Rze8PFQDvXq7@ep-sweet-snow-aovrqiql.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+Pass= Master_look
+
+
+SESSION_SECRET:
+bf2bef2c6d06f50b7037183e35b441e8a2dc90219251252b4876c275381c82a6
+USER_JWT_SECRET:
+9947fbe254db3251ebbf1f44d40586fc8684ed713f69c38cf7b350aad1d64c36

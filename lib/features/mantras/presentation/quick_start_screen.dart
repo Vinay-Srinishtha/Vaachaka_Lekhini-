@@ -21,7 +21,7 @@ class _QuickStartScreenState extends ConsumerState<QuickStartScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final catalog = ref.watch(mantraCatalogProvider);
+    final catalog = ref.watch(mantraCatalogProvider).value ?? const [];
     // Auto-select first mantra so the CTA is never dead on first render.
     _selectedId ??= catalog.isNotEmpty ? catalog.first.id : null;
 

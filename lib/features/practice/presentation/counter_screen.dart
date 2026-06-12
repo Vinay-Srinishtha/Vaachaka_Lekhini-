@@ -37,13 +37,55 @@ class CounterScreen extends ConsumerWidget {
   }
 }
 
-class _Body extends ConsumerWidget {
+class _Body extends ConsumerStatefulWidget {
   const _Body({required this.programId, required this.state});
   final String programId;
   final PracticeState state;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_Body> createState() => _BodyState();
+}
+
+class _BodyState extends ConsumerState<_Body> {
+  bool _dedicationShown = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final programId = widget.programId;
+    final state = widget.state;
+
+    // Show dedication dialog exactly once when the program target is crossed.
+    ref.listen(practiceControllerProvider(programId), (_, next) {
+      if (next.value?.targetReached == true && !_dedicationShown && context.mounted) {
+        _dedicationShown = true;
+        _showDedicationDialog(context, ref, programId);
+      }
+    });
+
+    return _buildBody(context, ref, programId, state);
+  }
+
+  Future<void> _showDedicationDialog(BuildContext context, WidgetRef ref, String programId) async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _DedicationDialog(
+        onDedicate: () async {
+          Navigator.of(context).pop();
+          final controller = ref.read(practiceControllerProvider(programId).notifier);
+          await controller.finish();
+          if (!context.mounted) return;
+          context.go('${KvlRoute.dailyProgress}/$programId');
+        },
+        onContinue: () {
+          Navigator.of(context).pop();
+          // Let user keep going past target if they want.
+        },
+      ),
+    );
+  }
+
+  Widget _buildBody(BuildContext context, WidgetRef ref, String programId, PracticeState state) {
     final mantra = ref.watch(mantraByIdProvider(state.program.mantraId));
     final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
     final profile = ref.watch(activeProfileProvider).value;
@@ -1107,6 +1149,62 @@ class _MicErrorCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _DedicationDialog extends StatelessWidget {
+  const _DedicationDialog({required this.onDedicate, required this.onContinue});
+  final VoidCallback onDedicate;
+  final VoidCallback onContinue;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: KvlRadius.brLG),
+      child: Padding(
+        padding: const EdgeInsets.all(KvlSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [Color(0xFFFFB572), KvlColors.primary],
+                ),
+              ),
+              alignment: Alignment.center,
+              child: const Icon(Icons.self_improvement_rounded, color: Colors.white, size: 32),
+            ),
+            const SizedBox(height: KvlSpacing.md),
+            Text(
+              'Program Complete!',
+              style: KvlText.ui(20, FontWeight.w800).copyWith(color: KvlColors.ink),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: KvlSpacing.sm),
+            Text(
+              'You have completed your sankalpa.\nWould you like to dedicate this practice?',
+              style: KvlText.caption(13.5).copyWith(color: KvlColors.inkSoft, height: 1.5),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: KvlSpacing.lg),
+            KvlButton(
+              label: 'Dedicate & Complete',
+              onPressed: onDedicate,
+            ),
+            const SizedBox(height: KvlSpacing.sm),
+            KvlButton(
+              label: 'Keep Practising',
+              variant: KvlButtonVariant.secondary,
+              onPressed: onContinue,
+            ),
+          ],
+        ),
       ),
     );
   }

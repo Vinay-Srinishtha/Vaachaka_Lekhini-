@@ -181,13 +181,34 @@ final rewardRepositoryProvider = Provider<RewardRepository>((ref) {
   );
 });
 
+/// Exposes the /api/v1/me snapshot stream so other providers can react to pulls.
+final meSnapshotProvider = StreamProvider<Map<String, Object?>>((ref) {
+  return ref.watch(syncEngineProvider).snapshots;
+});
+
 final rewardTotalProvider = StreamProvider<int>((ref) async* {
   final profile = ref.watch(activeProfileProvider).value;
   if (profile == null) {
     yield 0;
     return;
   }
-  // profile.id IS the memberId (Prisma Member.id)
+
+  // Reconcile server-computed balance into local Drift after each /api/v1/me pull.
+  // This bridges the gap: server awards points via Prisma, Flutter watches local Drift.
+  ref.listen(meSnapshotProvider, (_, next) {
+    final snapshot = next.value;
+    if (snapshot == null) return;
+    final members = ((snapshot['account'] as Map?)?['members'] as List<dynamic>?) ?? [];
+    for (final m in members) {
+      final map = Map<String, dynamic>.from(m as Map);
+      if (map['id'] == profile.id) {
+        final serverBal = (map['reward_points_balance'] as num?)?.toInt() ?? 0;
+        Future(() => ref.read(rewardRepositoryProvider).reconcileFromServer(profile.id, serverBal));
+        break;
+      }
+    }
+  });
+
   yield* ref.watch(rewardRepositoryProvider).watchTotalPoints(profile.id);
 });
 

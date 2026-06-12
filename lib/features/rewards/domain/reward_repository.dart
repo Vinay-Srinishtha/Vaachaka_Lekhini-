@@ -20,6 +20,10 @@ abstract class RewardRepository {
     required String source,
     String? storeItemId,
   });
+
+  /// Sync the server-computed balance into local storage without enqueuing
+  /// anything to the outbox. Called after each /api/v1/me pull.
+  Future<void> reconcileFromServer(String memberId, int serverBalance);
 }
 
 class RewardFailure extends Failure {

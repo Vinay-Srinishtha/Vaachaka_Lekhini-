@@ -44,6 +44,7 @@ export const GET: RequestHandler = async (event) => {
 							startedAt: true,
 							completedAt: true,
 							totalWritings: true,
+							totalChants: true,
 							currentStreak: true,
 							longestStreak: true,
 							lastActiveDate: true,

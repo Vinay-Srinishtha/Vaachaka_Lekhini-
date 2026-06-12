@@ -132,4 +132,22 @@ class RewardRepositoryDrift implements RewardRepository {
     });
     return const Ok(null);
   }
+
+  @override
+  Future<void> reconcileFromServer(String memberId, int serverBalance) async {
+    final local = await totalPoints(memberId);
+    final diff = serverBalance - local;
+    if (diff <= 0) return;
+    // Write a local-only earn event to bridge the gap — no outbox enqueue.
+    await _db.into(_db.rewardEvents).insert(
+      RewardEventsCompanion.insert(
+        id: _uuid.v4(),
+        memberId: memberId,
+        kind: 'earn',
+        amount: diff,
+        source: 'server_sync',
+        occurredAt: DateTime.now(),
+      ),
+    );
+  }
 }

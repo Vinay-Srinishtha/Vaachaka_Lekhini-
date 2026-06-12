@@ -9,15 +9,17 @@
 		admin: { username: string; role: AdminRole };
 		onOpenMobile: () => void;
 		live?: boolean;
+		pendingPath?: string | null;
 	}
 
-	let { admin, onOpenMobile, live = true }: Props = $props();
+	let { admin, onOpenMobile, live = true, pendingPath = null }: Props = $props();
 
 	const currentLabel = $derived(
 		NAV_ITEMS.find((i) =>
 			i.href === '/'
-				? page.url.pathname === '/'
-				: page.url.pathname === i.href || page.url.pathname.startsWith(i.href + '/')
+				? (pendingPath ?? page.url.pathname) === '/'
+				: (pendingPath ?? page.url.pathname) === i.href ||
+					(pendingPath ?? page.url.pathname).startsWith(i.href + '/')
 		)?.label ?? 'Admin'
 	);
 

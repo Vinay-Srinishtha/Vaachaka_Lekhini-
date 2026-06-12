@@ -63,14 +63,14 @@ Never deploy with `OTP_PROVIDER=dev`.
 
 ## 3. Verify the deployment
 
-Replace the hostname below with the Vercel hostname:
+Production hostname:
 
 ```bash
-curl -f https://example.vercel.app/api/v1/health
-curl -f https://example.vercel.app/api/v1/mantras
-curl -f https://example.vercel.app/api/v1/store
-curl -f https://example.vercel.app/api/v1/config
-curl -f https://example.vercel.app/api/v1/stats
+curl -f https://vaachaka-lekhini.vercel.app/api/v1/health
+curl -f https://vaachaka-lekhini.vercel.app/api/v1/mantras
+curl -f https://vaachaka-lekhini.vercel.app/api/v1/store
+curl -f https://vaachaka-lekhini.vercel.app/api/v1/config
+curl -f https://vaachaka-lekhini.vercel.app/api/v1/stats
 ```
 
 Then verify:
@@ -97,7 +97,7 @@ For a production APK:
 
 ```bash
 flutter build apk --release \
-  --dart-define=KVL_API_BASE=https://admin.example.com
+  --dart-define=KVL_API_BASE=https://vaachaka-lekhini.vercel.app
 ```
 
 Do not append `/api/v1`; the Flutter client adds endpoint paths.
@@ -106,7 +106,7 @@ For a production-like device test:
 
 ```bash
 flutter run \
-  --dart-define=KVL_API_BASE=https://admin.example.com
+  --dart-define=KVL_API_BASE=https://vaachaka-lekhini.vercel.app
 ```
 
 Native Android and iOS clients do not require browser CORS headers.

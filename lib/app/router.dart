@@ -11,6 +11,7 @@ import '../core/widgets/widgets.dart';
 import '../features/auth/presentation/create_account_screen.dart';
 import '../features/auth/presentation/otp_login_screen.dart';
 import '../features/auth/presentation/welcome_screen.dart';
+import '../features/community/domain/friend.dart';
 import '../features/community/presentation/community_screen.dart';
 import '../features/community/presentation/invite_friends_screen.dart';
 import '../features/enrolment/handwriting/presentation/capture_handwriting_screen.dart';
@@ -278,9 +279,31 @@ class _RouterRefresh extends ChangeNotifier {
   }
 }
 
-class _ShellPage extends ConsumerWidget {
+class _ShellPage extends ConsumerStatefulWidget {
   const _ShellPage({required this.shell});
   final StatefulNavigationShell shell;
+
+  @override
+  ConsumerState<_ShellPage> createState() => _ShellPageState();
+}
+
+class _ShellPageState extends ConsumerState<_ShellPage> {
+  StatefulNavigationShell get shell => widget.shell;
+
+  /// Tab indices in [kvlNavItems] for the feature-flag-gated tabs.
+  static const _communityTab = 3;
+  static const _storeTab = 4;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-warm Community and Store data before the user taps the tabs.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(storeItemsProvider);
+      ref.read(leaderboardProvider(LeaderboardSort.streak));
+      ref.read(leaderboardProvider(LeaderboardSort.totalChants));
+    });
+  }
 
   List<String> _buildTitles(BuildContext context) => [
     context.l10n.navHome,
@@ -290,13 +313,8 @@ class _ShellPage extends ConsumerWidget {
     context.l10n.navStore,
   ];
 
-  /// Tab indices in [kvlNavItems] for the feature-flag-gated tabs.
-  /// Must match the order in `_titles` / the StatefulShell branches.
-  static const _communityTab = 3;
-  static const _storeTab = 4;
-
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final profile = ref.watch(activeProfileProvider).value;
     final initial = profile?.initials ?? '?';
     final cfg = ref.watch(remoteConfigProvider).value ?? RemoteConfig.empty;
@@ -342,8 +360,8 @@ class _ShellPage extends ConsumerWidget {
                 onBack: shell.currentIndex == 1
                     ? () => context.popOrGo(KvlRoute.home)
                     : isCommunity
-                        ? () => shell.goBranch(0)
-                        : null,
+                    ? () => shell.goBranch(0)
+                    : null,
                 topGapColor: isCommunity || isStore ? Colors.black : null,
                 leading: isStore
                     ? _RewardHistoryChip(

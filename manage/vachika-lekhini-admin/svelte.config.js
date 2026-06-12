@@ -9,7 +9,8 @@ const config = {
 	kit: {
 		// Keep Prisma and PostgreSQL access in the standard Node.js runtime.
 		adapter: adapter({
-			split: false
+			split: false,
+			regions: ['sin1']
 		})
 	}
 };

@@ -16,7 +16,7 @@ class WelcomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
     final languages = KvlLanguage.availableFor(
-      ref.watch(mantraCatalogProvider),
+      ref.watch(mantraCatalogProvider).value ?? const [],
     );
     final settingsRepo = ref.read(settingsRepositoryProvider);
 

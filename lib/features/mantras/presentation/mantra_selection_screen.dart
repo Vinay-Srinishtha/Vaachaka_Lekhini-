@@ -21,7 +21,7 @@ class _MantraSelectionScreenState extends ConsumerState<MantraSelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final catalog = ref.watch(mantraCatalogProvider);
+    final catalog = ref.watch(mantraCatalogProvider).value ?? const [];
     _selectedId ??= catalog.isNotEmpty ? catalog.first.id : null;
 
     return KvlScaffold(

@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { page } from '$app/state';
+	import { navigating, page } from '$app/state';
+	import { preloadData } from '$app/navigation';
 	import { NAV_ITEMS } from '$lib/nav';
 	import { hasRole, type AdminRole } from '$lib/roles';
 	import { ChevronsLeft, ChevronsRight, X } from '@lucide/svelte';
@@ -8,11 +9,21 @@
 		role: AdminRole;
 		collapsed: boolean;
 		mobileOpen: boolean;
+		pendingPath: string | null;
 		onToggleCollapsed: () => void;
 		onCloseMobile: () => void;
+		onNavigateStart: (href: string) => void;
 	}
 
-	let { role, collapsed, mobileOpen, onToggleCollapsed, onCloseMobile }: Props = $props();
+	let {
+		role,
+		collapsed,
+		mobileOpen,
+		pendingPath,
+		onToggleCollapsed,
+		onCloseMobile,
+		onNavigateStart
+	}: Props = $props();
 
 	const items = $derived(NAV_ITEMS.filter((i) => !i.minRole || hasRole(role, i.minRole)));
 	const grouped = $derived(buildGroups(items));
@@ -34,6 +45,31 @@
 		const path = page.url.pathname;
 		if (href === '/') return path === '/';
 		return path === href || path.startsWith(href + '/');
+	}
+
+	function isLoading(href: string): boolean {
+		const path = pendingPath ?? navigating.to?.url.pathname;
+		if (!path) return false;
+		if (href === '/') return path === '/';
+		return path === href || path.startsWith(href + '/');
+	}
+
+	function preload(href: string) {
+		void preloadData(href);
+	}
+
+	function startNavigation(event: MouseEvent, href: string) {
+		if (
+			event.button !== 0 ||
+			event.metaKey ||
+			event.ctrlKey ||
+			event.shiftKey ||
+			event.altKey ||
+			isActive(href)
+		) {
+			return;
+		}
+		onNavigateStart(href);
 	}
 </script>
 
@@ -74,7 +110,11 @@
 	</div>
 
 	<!-- Nav links -->
-	<nav class="flex-1 overflow-y-auto py-4 px-2 space-y-0.5">
+	<nav
+		class="flex-1 overflow-y-auto py-4 px-2 space-y-0.5"
+		data-sveltekit-preload-code="eager"
+		data-sveltekit-preload-data="hover"
+	>
 		{#each grouped as g}
 			{#if g.label && (!collapsed || mobileOpen)}
 				<div class="px-3 pt-4 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500 select-none">
@@ -86,24 +126,37 @@
 
 			{#each g.items as item (item.href)}
 				{@const active = isActive(item.href)}
+				{@const loading = isLoading(item.href)}
 				<a
 					href={item.href}
-					onclick={onCloseMobile}
+					onclick={(event) => {
+						startNavigation(event, item.href);
+						onCloseMobile();
+					}}
+					onpointerenter={() => preload(item.href)}
+					onfocus={() => preload(item.href)}
 					title={collapsed && !mobileOpen ? item.label : undefined}
 					class="group flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all relative
-						{active
+						{active || loading
 						? 'bg-brand-600/20 text-brand-300 shadow-sm'
 						: 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'}"
+					aria-busy={loading}
 				>
-					{#if active}
+					{#if active || loading}
 						<div class="absolute left-0 inset-y-2 w-0.5 rounded-r-full bg-brand-400"></div>
 					{/if}
 					<item.icon
 						size={17}
-						class="shrink-0 transition-colors {active ? 'text-brand-400' : 'text-slate-500 group-hover:text-slate-300'}"
+						class="shrink-0 transition-colors {active || loading ? 'text-brand-400' : 'text-slate-500 group-hover:text-slate-300'}"
 					/>
 					{#if !collapsed || mobileOpen}
 						<span class="ml-3 truncate">{item.label}</span>
+						{#if loading}
+							<span
+								class="ml-auto size-3.5 rounded-full border-2 border-brand-400/30 border-t-brand-300 animate-spin"
+								aria-hidden="true"
+							></span>
+						{/if}
 					{/if}
 				</a>
 			{/each}

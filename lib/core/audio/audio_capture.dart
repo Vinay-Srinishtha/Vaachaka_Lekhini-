@@ -64,7 +64,7 @@ class AudioCapture {
       encoder: AudioEncoder.pcm16bits,
       sampleRate: sampleRate,
       numChannels: 1,
-      noiseSuppress: true,
+      noiseSuppress: false, // hardware NoiseSuppressor unavailable on many devices → crashes release APK
       echoCancel: false,
     ));
     _out = StreamController<Uint8List>.broadcast();

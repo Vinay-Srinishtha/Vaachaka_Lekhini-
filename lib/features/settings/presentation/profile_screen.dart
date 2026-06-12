@@ -36,7 +36,7 @@ class ProfileScreen extends ConsumerWidget {
     final programs =
         ref.watch(programsForActiveProfileProvider).value ?? const [];
     final languages = KvlLanguage.availableFor(
-      ref.watch(mantraCatalogProvider),
+      ref.watch(mantraCatalogProvider).value ?? const [],
     );
     final points = ref.watch(rewardTotalProvider).value ?? 0;
     final settingsRepo = ref.read(settingsRepositoryProvider);
@@ -946,8 +946,8 @@ class _ReminderTimePickerSheetState extends State<_ReminderTimePickerSheet> {
                     child: _TimeStepper(
                       label: 'Minute',
                       value: _minuteLabel,
-                      onDecrease: () => _changeMinute(-5),
-                      onIncrease: () => _changeMinute(5),
+                      onDecrease: () => _changeMinute(-1),
+                      onIncrease: () => _changeMinute(1),
                     ),
                   ),
                 ],
@@ -957,7 +957,7 @@ class _ReminderTimePickerSheetState extends State<_ReminderTimePickerSheet> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  for (final minute in const [0, 15, 30, 45])
+                  for (final minute in const [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55])
                     _MinuteChip(
                       minute: minute,
                       selected: _minute == minute,

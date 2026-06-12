@@ -137,22 +137,31 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen> {
               children: [
                 RichText(
                   text: TextSpan(
-                    style: KvlText.ui(12.5, FontWeight.w600),
+                    style: KvlText.ui(16, FontWeight.w700),
                     children: [
                       TextSpan(text: context.l10n.sayMantraInstruction),
                       TextSpan(
                         text: mantraText,
                         style: KvlText.mantraByScript(
                           script,
-                          14,
-                        ).copyWith(color: KvlColors.primaryDeep),
+                          18,
+                        ).copyWith(
+                          color: KvlColors.primaryDeep,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                       TextSpan(text: context.l10n.sayMantraElevenTimes),
                     ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(context.l10n.speakNaturally, style: KvlText.caption(11)),
+                const SizedBox(height: 6),
+                Text(
+                  context.l10n.speakNaturally,
+                  style: KvlText.caption(13).copyWith(
+                    color: KvlColors.muted,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ],
             ),
           ),

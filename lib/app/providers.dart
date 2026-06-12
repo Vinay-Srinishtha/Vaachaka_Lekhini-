@@ -114,12 +114,22 @@ final mantraRepositoryProvider = Provider<MantraRepository>((ref) {
 });
 
 
-final mantraCatalogProvider = Provider<List<Mantra>>(
-  (ref) => ref.watch(mantraRepositoryProvider).all(),
-);
+/// Live mantra catalog — seeds from cache immediately, then updates whenever
+/// the API refresh lands (without any loading gap on subsequent opens).
+final mantraCatalogProvider = StreamProvider<List<Mantra>>((ref) async* {
+  final repo = ref.watch(mantraRepositoryProvider);
+  yield repo.all();        // instant: cached or bootstrap value
+  yield* repo.stream;      // live: emits on every API refresh
+});
 
 final mantraByIdProvider = Provider.family<Mantra?, String>((ref, id) {
-  return ref.watch(mantraRepositoryProvider).byId(id);
+  final catalog = ref.watch(mantraCatalogProvider).value;
+  if (catalog == null) return null;
+  try {
+    return catalog.firstWhere((m) => m.id == id);
+  } catch (_) {
+    return null;
+  }
 });
 
 /// Remote feature-flag store. Reads `/api/v1/config`, caches in Hive.
@@ -274,8 +284,8 @@ final activeProfileProvider = StreamProvider<Profile?>((ref) async* {
 });
 
 /// Live store catalogue from /api/v1/store.
-/// autoDispose so each navigation to the Store tab re-fetches (also enables retry).
-final storeItemsProvider = FutureProvider.autoDispose<List<StoreItem>>((ref) async {
+/// Kept alive so switching back to the Store tab is instant — no re-fetch.
+final storeItemsProvider = FutureProvider<List<StoreItem>>((ref) async {
   final api = ref.watch(apiClientProvider);
   final res = await api.dio.get<dynamic>('/api/v1/store');
   final data = res.data;

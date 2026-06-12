@@ -20,8 +20,17 @@ class _QuickStartScreenState extends ConsumerState<QuickStartScreen> {
   String? _selectedId;
 
   @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => ref.read(mantraRepositoryProvider).refresh());
+  }
+
+  @override
   Widget build(BuildContext context) {
     final catalog = ref.watch(mantraCatalogProvider).value ?? const [];
+    if (_selectedId != null && !catalog.any((m) => m.id == _selectedId)) {
+      _selectedId = catalog.isNotEmpty ? catalog.first.id : null;
+    }
     // Auto-select first mantra so the CTA is never dead on first render.
     _selectedId ??= catalog.isNotEmpty ? catalog.first.id : null;
 

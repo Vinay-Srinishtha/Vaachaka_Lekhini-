@@ -48,6 +48,10 @@ abstract class ProgramRepository {
   /// recently updated program if no sessions yet.
   Future<Program?> mostRecentlyActive(String memberId);
 
+  /// Reconcile server-computed totals into local Drift (no outbox enqueue).
+  /// Called after each /api/v1/me pull to keep program status live.
+  Future<void> reconcileFromServer(String programId, int serverChants, int serverWritings);
+
   /// Daily target helper — pure function so UI can preview before saving.
   static int computeDailyTarget(int targetWritings, int targetDays) {
     if (targetDays <= 0) return 0;

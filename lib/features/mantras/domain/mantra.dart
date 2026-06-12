@@ -76,6 +76,7 @@ class Mantra extends Equatable {
     required this.description,
     required this.thumbPalette,
     required this.tags,
+    this.isActive = true,
     this.deity,
     this.imageUrl,
     this.pronunciationAsset,
@@ -88,6 +89,10 @@ class Mantra extends Equatable {
   final String description;
   final MantraThumbPalette thumbPalette;
   final Set<MantraTag> tags;
+
+  /// False when the admin has deactivated this mantra. The API already filters
+  /// server-side; this field enables defensive client-side filtering from cache.
+  final bool isActive;
 
   /// Optional name of the deity invoked — drives the hero image colour.
   final String? deity;
@@ -103,5 +108,5 @@ class Mantra extends Equatable {
   final int? recommendedDays;
 
   @override
-  List<Object?> get props => [id, imageUrl];
+  List<Object?> get props => [id, isActive, imageUrl];
 }

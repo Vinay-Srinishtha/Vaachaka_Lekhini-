@@ -8,6 +8,7 @@ import '../domain/mantra.dart';
 class MantraDto {
   const MantraDto({
     required this.slug,
+    required this.isActive,
     required this.nameDevanagari,
     required this.nameRoman,
     this.nameTelugu,
@@ -23,6 +24,7 @@ class MantraDto {
   });
 
   final String slug;
+  final bool isActive;
   final String nameDevanagari;
   final String nameRoman;
   final String? nameTelugu;
@@ -38,6 +40,8 @@ class MantraDto {
 
   factory MantraDto.fromJson(Map<String, Object?> json) => MantraDto(
         slug: json['slug'] as String,
+        // Default true: old cached entries without the field were active when cached.
+        isActive: json['is_active'] as bool? ?? true,
         nameDevanagari: json['name_devanagari'] as String,
         nameRoman: json['name_roman'] as String,
         nameTelugu: json['name_telugu'] as String?,
@@ -56,6 +60,7 @@ class MantraDto {
 
   Map<String, Object?> toJson() => {
         'slug': slug,
+        'is_active': isActive,
         'name_devanagari': nameDevanagari,
         'name_roman': nameRoman,
         'name_telugu': nameTelugu,
@@ -70,11 +75,10 @@ class MantraDto {
         'image_url': imageUrl,
       };
 
-  /// Convert to the domain object the rest of the app already knows about.
-  /// Unknown palettes / tags are silently dropped so a future server-side
-  /// addition can't crash older clients.
+  /// Convert to the domain object. Unknown palettes/tags are silently dropped.
   Mantra toDomain() => Mantra(
         id: slug,
+        isActive: isActive,
         name: MantraName(
           devanagari: nameDevanagari,
           roman: nameRoman,

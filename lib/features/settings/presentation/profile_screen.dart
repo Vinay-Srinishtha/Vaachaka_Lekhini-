@@ -957,7 +957,7 @@ class _ReminderTimePickerSheetState extends State<_ReminderTimePickerSheet> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  for (final minute in const [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55])
+                  for (final minute in const [0, 15, 30, 45])
                     _MinuteChip(
                       minute: minute,
                       selected: _minute == minute,

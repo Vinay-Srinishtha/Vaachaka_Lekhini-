@@ -145,9 +145,20 @@
 				<input id="pronunciationUrl" name="pronunciationUrl" type="url" class="input" value={value.pronunciationUrl ?? ''} placeholder="https://…" />
 			</FormField>
 		</div>
-		<label class="inline-flex items-center gap-2 mt-2">
-			<input type="checkbox" name="isActive" checked={value.isActive} class="rounded border-gray-300 text-brand-600 focus:ring-brand-500" />
-			<span class="text-sm text-gray-700">Visible in Flutter app</span>
+		<label class="flex items-center justify-between gap-4 mt-2 p-3 rounded-lg border cursor-pointer select-none
+			{value.isActive ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'}">
+			<div>
+				<p class="text-sm font-semibold {value.isActive ? 'text-green-800' : 'text-gray-700'}">
+					{value.isActive ? 'Published — mantra is live for all users' : 'Unpublished — mantra is hidden from users'}
+				</p>
+				<p class="text-xs mt-0.5 {value.isActive ? 'text-green-600' : 'text-gray-500'}">
+					Toggle to show or hide this mantra in the Flutter app
+				</p>
+			</div>
+			<input type="checkbox" name="isActive" checked={value.isActive} class="sr-only" />
+			<div class="relative shrink-0 w-11 h-6 rounded-full transition-colors {value.isActive ? 'bg-green-500' : 'bg-gray-300'}">
+				<span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform {value.isActive ? 'translate-x-5' : 'translate-x-0'}"></span>
+			</div>
 		</label>
 	</section>
 

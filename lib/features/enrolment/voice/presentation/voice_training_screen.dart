@@ -89,7 +89,7 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen> {
           ),
         );
     if (!mounted) return;
-    context.go('${KvlRoute.handwritingSubmit}/${widget.mantraId}');
+    context.push('${KvlRoute.handwritingSubmit}/${widget.mantraId}');
   }
 
   @override
@@ -111,7 +111,6 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen> {
 
     return KvlScaffold(
       title: '',
-      trailing: const SizedBox(width: 36),
       scrollable: true,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

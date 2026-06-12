@@ -29,6 +29,7 @@ class PracticeState {
     this.activeSessionId,
     this.errorMessage,
     this.micPermanentlyDenied = false,
+    this.targetReached = false,
   });
 
   final Program program;
@@ -49,6 +50,9 @@ class PracticeState {
   /// only way out is to open system settings.
   final bool micPermanentlyDenied;
 
+  /// True when todaysTotal just crossed dailyTarget — triggers dedication prompt.
+  final bool targetReached;
+
   PracticeState copyWith({
     Program? program,
     SessionModality? modality,
@@ -61,6 +65,7 @@ class PracticeState {
     String? errorMessage,
     bool clearError = false,
     bool? micPermanentlyDenied,
+    bool? targetReached,
   }) => PracticeState(
     program: program ?? this.program,
     modality: modality ?? this.modality,
@@ -73,6 +78,7 @@ class PracticeState {
         : (activeSessionId ?? this.activeSessionId),
     errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
     micPermanentlyDenied: micPermanentlyDenied ?? this.micPermanentlyDenied,
+    targetReached: targetReached ?? this.targetReached,
   );
 }
 
@@ -272,9 +278,28 @@ class PracticeController extends AsyncNotifier<PracticeState> {
     final delta = newCount - s.sessionCount;
     if (delta <= 0) return;
     _pendingFlush += delta;
-    state = AsyncData(
-      s.copyWith(sessionCount: newCount, todaysTotal: s.todaysTotal + delta),
-    );
+
+    final newTotal = s.todaysTotal + delta;
+    final programTotal = s.program.totalProgress + delta;
+    final hitProgramTarget = !s.targetReached &&
+        s.program.targetWritings > 0 &&
+        programTotal >= s.program.targetWritings;
+
+    state = AsyncData(s.copyWith(
+      sessionCount: newCount,
+      todaysTotal: newTotal,
+      targetReached: hitProgramTarget ? true : null,
+    ));
+
+    if (hitProgramTarget) {
+      // Auto-pause so the dedication prompt can be shown.
+      Future(() async {
+        await _voice?.stop();
+        await _flush();
+        final cur = state.value;
+        if (cur != null) state = AsyncData(cur.copyWith(isRunning: false));
+      });
+    }
   }
 
   Future<void> _flush() async {
@@ -327,6 +352,7 @@ class PracticeController extends AsyncNotifier<PracticeState> {
         todaysTotal: today,
         streak: streak,
         clearSession: true,
+        targetReached: false,
       ),
     );
   }

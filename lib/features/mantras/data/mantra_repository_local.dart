@@ -8,6 +8,9 @@ class MantraRepositoryLocal implements MantraRepository {
   late final Map<String, Mantra> _byId = {for (final m in _all) m.id: m};
 
   @override
+  Stream<List<Mantra>> get stream => const Stream.empty();
+
+  @override
   List<Mantra> all() => List.unmodifiable(_all);
 
   @override

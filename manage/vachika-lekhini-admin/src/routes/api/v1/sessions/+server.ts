@@ -68,21 +68,28 @@ export const POST: RequestHandler = async (event) => {
 		emitChange('program');
 	}
 
-	// Recompute Program.totalWritings from the Session table for every affected
-	// program. This is the server-authoritative aggregate — Flutter's local
-	// arithmetic (totalChants + totalWritings pushed via programs.upsert) must
-	// not overwrite this field. Fix for Issue #3.
+	// Recompute Program.totalWritings and Program.totalChants from the Session
+	// table for every affected program, split by modality. Server-authoritative.
 	if (inserted.count > 0) {
 		const programIdsForTotal = Array.from(new Set(body.sessions.map((s) => s.program_id)));
 		await Promise.all(
 			programIdsForTotal.map(async (programId) => {
-				const agg = await prisma.session.aggregate({
-					where: { programId },
-					_sum: { countAdded: true }
-				});
+				const [writingAgg, chantAgg] = await Promise.all([
+					prisma.session.aggregate({
+						where: { programId, modality: 'handwriting' },
+						_sum: { countAdded: true }
+					}),
+					prisma.session.aggregate({
+						where: { programId, modality: { not: 'handwriting' } },
+						_sum: { countAdded: true }
+					})
+				]);
 				return prisma.program.update({
 					where: { id: programId },
-					data: { totalWritings: agg._sum.countAdded ?? 0 }
+					data: {
+						totalWritings: writingAgg._sum.countAdded ?? 0,
+						totalChants: chantAgg._sum.countAdded ?? 0
+					}
 				});
 			})
 		);
@@ -99,12 +106,21 @@ export const POST: RequestHandler = async (event) => {
 		// returns inserted.count=0 and this block is skipped.
 		const chantsByMember = new Map<string, number>();
 		for (const s of body.sessions) {
+			// Handwriting sessions earn writing-rate rewards, not chant-rate points.
+			if (s.modality === 'handwriting') continue;
 			chantsByMember.set(s.member_id, (chantsByMember.get(s.member_id) ?? 0) + s.count_added);
 		}
 		for (const [memberId, chants] of chantsByMember) {
 			const pts = Math.floor(chants / rate);
 			if (pts <= 0) continue;
-			const eventId = `chant_${body.sessions.map((s) => s.id).join('_').slice(0, 60)}`;
+			// Key MUST include memberId — all-sessions key is shared across members,
+			// causing the second member's upsert to silently no-op.
+			const memberSessionIds = body.sessions
+				.filter((s) => s.member_id === memberId && s.modality !== 'handwriting')
+				.map((s) => s.id)
+				.sort()
+				.join('_');
+			const eventId = `chant_${memberId}_${memberSessionIds}`.slice(0, 80);
 			await prisma.rewardEvent.upsert({
 				where: { id: eventId },
 				create: {
@@ -132,13 +148,13 @@ export const POST: RequestHandler = async (event) => {
 		const programIdsForMilestone = Array.from(countAddedByProgram.keys());
 		const milestonePrograms = await prisma.program.findMany({
 			where: { id: { in: programIdsForMilestone } },
-			select: { id: true, memberId: true, totalWritings: true }
+			select: { id: true, memberId: true, totalWritings: true, totalChants: true }
 		});
 		const milestoneMembers = new Set<string>();
 		await Promise.all(
 			milestonePrograms.map(async (program) => {
 				const countAdded = countAddedByProgram.get(program.id) ?? 0;
-				const after = program.totalWritings;
+				const after = program.totalChants + program.totalWritings;
 				const before = after - countAdded;
 				const threshold = milestoneCrossed(before, after);
 				if (threshold === null) return;

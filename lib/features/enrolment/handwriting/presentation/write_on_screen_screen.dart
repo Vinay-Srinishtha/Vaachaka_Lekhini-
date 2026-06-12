@@ -297,7 +297,7 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
       context.pop();
       if (mounted && context.canPop()) context.pop();
     } else {
-      context.go('${KvlRoute.setTargetWritings}/${widget.mantraId}');
+      context.push('${KvlRoute.setTargetWritings}/${widget.mantraId}');
     }
   }
 

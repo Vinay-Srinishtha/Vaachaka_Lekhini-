@@ -74,7 +74,7 @@ class _CaptureHandwritingScreenState extends ConsumerState<CaptureHandwritingScr
         context.pop();
         if (mounted && context.canPop()) context.pop();
       } else {
-        context.go('${KvlRoute.setTargetWritings}/${widget.mantraId}');
+        context.push('${KvlRoute.setTargetWritings}/${widget.mantraId}');
       }
     } catch (e) {
       if (!mounted) return;
@@ -97,7 +97,7 @@ class _CaptureHandwritingScreenState extends ConsumerState<CaptureHandwritingScr
       title: context.l10n.captureHandwritingTitle,
       trailing: IconButton(
         icon: const Icon(Icons.delete_outline_rounded),
-        onPressed: () => Navigator.of(context).maybePop(),
+        onPressed: () => context.pop(),
       ),
       padding: const EdgeInsets.fromLTRB(KvlSpacing.lg, 0, KvlSpacing.lg, KvlSpacing.lg),
       body: Column(
@@ -145,7 +145,7 @@ class _CaptureHandwritingScreenState extends ConsumerState<CaptureHandwritingScr
               IconButton(
                 onPressed: () {
                   final suffix = widget.isRetrain ? '?retrain=1' : '';
-                  context.go('${KvlRoute.handwritingUpload}/${widget.mantraId}$suffix');
+                  context.push('${KvlRoute.handwritingUpload}/${widget.mantraId}$suffix');
                 },
                 icon: const Icon(Icons.image_outlined),
                 iconSize: 28,

@@ -54,7 +54,7 @@ class _HandwritingSubmitScreenState extends ConsumerState<HandwritingSubmitScree
     if (widget.isRetrain) {
       context.pop();
     } else {
-      context.go('${KvlRoute.setTargetWritings}/${widget.mantraId}');
+      context.push('${KvlRoute.setTargetWritings}/${widget.mantraId}');
     }
   }
 

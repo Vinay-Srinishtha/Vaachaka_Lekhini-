@@ -113,7 +113,14 @@ export const POST: RequestHandler = async (event) => {
 		for (const [memberId, chants] of chantsByMember) {
 			const pts = Math.floor(chants / rate);
 			if (pts <= 0) continue;
-			const eventId = `chant_${body.sessions.map((s) => s.id).join('_').slice(0, 60)}`;
+			// Key MUST include memberId — all-sessions key is shared across members,
+			// causing the second member's upsert to silently no-op.
+			const memberSessionIds = body.sessions
+				.filter((s) => s.member_id === memberId && s.modality !== 'handwriting')
+				.map((s) => s.id)
+				.sort()
+				.join('_');
+			const eventId = `chant_${memberId}_${memberSessionIds}`.slice(0, 80);
 			await prisma.rewardEvent.upsert({
 				where: { id: eventId },
 				create: {

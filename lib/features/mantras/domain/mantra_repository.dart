@@ -4,6 +4,9 @@ abstract class MantraRepository {
   List<Mantra> all();
   Mantra? byId(String id);
 
+  /// Pulls the latest active catalog from the backing source.
+  Future<void> refresh() async {}
+
   /// Returns the best-fit mantras for [need], ordered by match strength.
   /// In v1 we return a single recommendation, but the API is plural-friendly
   /// for later "show me 3 options" UX.

@@ -17,24 +17,33 @@ class MantraRepositoryLocal implements MantraRepository {
   Mantra? byId(String id) => _byId[id];
 
   @override
+  Future<void> refresh() async {}
+
+  @override
   List<Mantra> recommendForNeed(MantraNeed need) {
     final wanted = _tagsFor(need);
-    final ranked = _all
-        .map((m) => (mantra: m, overlap: m.tags.intersection(wanted).length))
-        .where((e) => e.overlap > 0)
-        .toList()
-      ..sort((a, b) => b.overlap.compareTo(a.overlap));
+    final ranked =
+        _all
+            .map(
+              (m) => (mantra: m, overlap: m.tags.intersection(wanted).length),
+            )
+            .where((e) => e.overlap > 0)
+            .toList()
+          ..sort((a, b) => b.overlap.compareTo(a.overlap));
     return [for (final e in ranked) e.mantra];
   }
 
   Set<MantraTag> _tagsFor(MantraNeed need) => switch (need) {
-        MantraNeed.wealthProsperity => {MantraTag.wealth, MantraTag.prosperity},
-        MantraNeed.peaceCalm => {MantraTag.peace},
-        MantraNeed.healing => {MantraTag.healing},
-        MantraNeed.protection => {MantraTag.protection},
-        MantraNeed.strengthCourage => {MantraTag.strength, MantraTag.courage},
-        MantraNeed.spiritualLiberation => {MantraTag.liberation},
-        MantraNeed.wisdomEnlightenment => {MantraTag.wisdom, MantraTag.enlightenment},
-        MantraNeed.devotion => {MantraTag.devotion},
-      };
+    MantraNeed.wealthProsperity => {MantraTag.wealth, MantraTag.prosperity},
+    MantraNeed.peaceCalm => {MantraTag.peace},
+    MantraNeed.healing => {MantraTag.healing},
+    MantraNeed.protection => {MantraTag.protection},
+    MantraNeed.strengthCourage => {MantraTag.strength, MantraTag.courage},
+    MantraNeed.spiritualLiberation => {MantraTag.liberation},
+    MantraNeed.wisdomEnlightenment => {
+      MantraTag.wisdom,
+      MantraTag.enlightenment,
+    },
+    MantraNeed.devotion => {MantraTag.devotion},
+  };
 }

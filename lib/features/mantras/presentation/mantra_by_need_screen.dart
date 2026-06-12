@@ -22,7 +22,14 @@ class _MantraByNeedScreenState extends ConsumerState<MantraByNeedScreen> {
   MantraNeed? _need;
 
   @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => ref.read(mantraRepositoryProvider).refresh());
+  }
+
+  @override
   Widget build(BuildContext context) {
+    ref.watch(mantraCatalogProvider);
     final repo = ref.watch(mantraRepositoryProvider);
     final recommended = _need == null
         ? const <Mantra>[]

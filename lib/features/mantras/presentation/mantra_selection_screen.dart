@@ -13,15 +13,25 @@ class MantraSelectionScreen extends ConsumerStatefulWidget {
   const MantraSelectionScreen({super.key});
 
   @override
-  ConsumerState<MantraSelectionScreen> createState() => _MantraSelectionScreenState();
+  ConsumerState<MantraSelectionScreen> createState() =>
+      _MantraSelectionScreenState();
 }
 
 class _MantraSelectionScreenState extends ConsumerState<MantraSelectionScreen> {
   String? _selectedId;
 
   @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => ref.read(mantraRepositoryProvider).refresh());
+  }
+
+  @override
   Widget build(BuildContext context) {
     final catalog = ref.watch(mantraCatalogProvider).value ?? const [];
+    if (_selectedId != null && !catalog.any((m) => m.id == _selectedId)) {
+      _selectedId = catalog.isNotEmpty ? catalog.first.id : null;
+    }
     _selectedId ??= catalog.isNotEmpty ? catalog.first.id : null;
 
     return KvlScaffold(

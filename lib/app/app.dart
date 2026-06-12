@@ -8,11 +8,35 @@ import '../l10n/app_localizations.dart';
 import 'providers.dart';
 import 'router.dart';
 
-class KvlApp extends ConsumerWidget {
+class KvlApp extends ConsumerStatefulWidget {
   const KvlApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<KvlApp> createState() => _KvlAppState();
+}
+
+class _KvlAppState extends ConsumerState<KvlApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.read(mantraRepositoryProvider).refresh();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
     final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
     // Kick off the Vosk model warm-up in the background once auth completes.

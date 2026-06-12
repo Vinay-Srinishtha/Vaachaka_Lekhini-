@@ -78,9 +78,12 @@
 			<td class="px-4 py-3">
 				<div class="flex items-center gap-1 justify-end">
 					{#if canEdit}
-						<form method="POST" action="/store?/toggleActive" use:enhance={() => async ({ result, update }) => {
-								await update();
-								if (result.type === 'success') toasts.show(it.isActive ? 'Item hidden from store' : 'Item visible in store');
+						<form method="POST" action="/store?/toggleActive" use:enhance={() => {
+								const wasActive = it.isActive;
+								return async ({ result, update }) => {
+									await update();
+									if (result.type === 'success') toasts.show(wasActive ? 'Item hidden from store' : 'Item now visible in store');
+								};
 							}}>
 							<input type="hidden" name="id" value={it.id} />
 							<button class="p-2 rounded hover:bg-gray-100 text-gray-500" title={it.isActive ? 'Hide from app' : 'Show in app'}>

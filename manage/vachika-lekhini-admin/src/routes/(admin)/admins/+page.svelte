@@ -88,9 +88,12 @@
 			</td>
 			<td class="px-4 py-3 hidden md:table-cell text-gray-600 text-xs">{a.email ?? '—'}</td>
 			<td class="px-4 py-3">
-				<form method="POST" action="?/setRole" use:enhance={() => async ({ result, update }) => {
-					await update();
-					if (result.type === 'success') toasts.show(`Role updated for ${a.username}`);
+				<form method="POST" action="?/setRole" use:enhance={() => {
+					const name = a.username;
+					return async ({ result, update }) => {
+						await update();
+						if (result.type === 'success') toasts.show(`Role updated for ${name}`);
+					};
 				}} class="flex">
 					<input type="hidden" name="id" value={a.id} />
 					<select
@@ -118,9 +121,12 @@
 			<td class="px-4 py-3 hidden lg:table-cell text-gray-600 text-xs">{fmt(a.createdAt)}</td>
 			<td class="px-4 py-3 hidden lg:table-cell text-gray-600 text-xs">{fmt(a.lastLoginAt)}</td>
 			<td class="px-4 py-3">
-				<form method="POST" action="?/toggleActive" use:enhance={() => async ({ result, update }) => {
-					await update();
-					if (result.type === 'success') toasts.show(a.isActive ? `${a.username} disabled` : `${a.username} enabled`);
+				<form method="POST" action="?/toggleActive" use:enhance={() => {
+					const wasActive = a.isActive;
+					return async ({ result, update }) => {
+						await update();
+						if (result.type === 'success') toasts.show(wasActive ? `${a.username} disabled` : `${a.username} enabled`);
+					};
 				}} class="flex justify-end">
 					<input type="hidden" name="id" value={a.id} />
 					<button

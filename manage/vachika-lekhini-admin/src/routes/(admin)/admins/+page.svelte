@@ -7,9 +7,10 @@
 	import FormField from '$lib/components/FormField.svelte';
 	import { ADMIN_ROLES } from '$lib/constants';
 	import { enhance } from '$app/forms';
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
 	import { patchQuery } from '$lib/url';
+	import { toasts } from '$lib/stores/toast';
 
 	let { data, form } = $props();
 
@@ -87,7 +88,10 @@
 			</td>
 			<td class="px-4 py-3 hidden md:table-cell text-gray-600 text-xs">{a.email ?? '—'}</td>
 			<td class="px-4 py-3">
-				<form method="POST" action="?/setRole" use:enhance class="flex">
+				<form method="POST" action="?/setRole" use:enhance={() => async ({ result, update }) => {
+					await update();
+					if (result.type === 'success') toasts.show(`Role updated for ${a.username}`);
+				}} class="flex">
 					<input type="hidden" name="id" value={a.id} />
 					<select
 						name="role"
@@ -114,7 +118,10 @@
 			<td class="px-4 py-3 hidden lg:table-cell text-gray-600 text-xs">{fmt(a.createdAt)}</td>
 			<td class="px-4 py-3 hidden lg:table-cell text-gray-600 text-xs">{fmt(a.lastLoginAt)}</td>
 			<td class="px-4 py-3">
-				<form method="POST" action="?/toggleActive" use:enhance class="flex justify-end">
+				<form method="POST" action="?/toggleActive" use:enhance={() => async ({ result, update }) => {
+					await update();
+					if (result.type === 'success') toasts.show(a.isActive ? `${a.username} disabled` : `${a.username} enabled`);
+				}} class="flex justify-end">
 					<input type="hidden" name="id" value={a.id} />
 					<button
 						class={a.isActive ? 'btn-secondary !px-2 !py-1.5' : 'btn-primary !px-2 !py-1.5'}
@@ -136,8 +143,14 @@
 		action="?/create"
 		use:enhance={() => {
 			submitting = true;
-			return async ({ update }) => {
-				await update();
+			return async ({ result, update }) => {
+				if (result.type === 'redirect' || result.type === 'success') {
+					toasts.show('Admin account created');
+					closeNew();
+					await invalidateAll();
+				} else {
+					await update();
+				}
 				submitting = false;
 			};
 		}}

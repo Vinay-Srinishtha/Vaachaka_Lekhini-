@@ -3,6 +3,7 @@
 	import { page } from '$app/state';
 	import Modal from '$lib/components/Modal.svelte';
 	import StoreItemForm from '$lib/components/StoreItemForm.svelte';
+	import { toasts } from '$lib/stores/toast';
 
 	let { form } = $props();
 
@@ -24,8 +25,13 @@
 		const qs = params.toString();
 		goto(`/store${qs ? '?' + qs : ''}`, { keepFocus: true, noScroll: true });
 	}
+
+	function handleSuccess() {
+		toasts.show('Store item created successfully');
+		close();
+	}
 </script>
 
 <Modal open title="New store item" size="lg" onClose={close}>
-	<StoreItemForm {value} fieldErrors={form?.fieldErrors ?? {}} submitLabel="Create item" />
+	<StoreItemForm {value} fieldErrors={form?.fieldErrors ?? {}} submitLabel="Create item" onSuccess={handleSuccess} />
 </Modal>

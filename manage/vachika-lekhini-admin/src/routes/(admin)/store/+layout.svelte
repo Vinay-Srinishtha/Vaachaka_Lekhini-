@@ -6,6 +6,7 @@
 	import { hasRole } from '$lib/roles';
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
+	import { toasts } from '$lib/stores/toast';
 
 	let { data, children } = $props();
 	const canEdit = $derived(hasRole(data.admin?.role, 'editor'));
@@ -77,7 +78,10 @@
 			<td class="px-4 py-3">
 				<div class="flex items-center gap-1 justify-end">
 					{#if canEdit}
-						<form method="POST" action="/store?/toggleActive" use:enhance>
+						<form method="POST" action="/store?/toggleActive" use:enhance={() => async ({ result, update }) => {
+								await update();
+								if (result.type === 'success') toasts.show(it.isActive ? 'Item hidden from store' : 'Item visible in store');
+							}}>
 							<input type="hidden" name="id" value={it.id} />
 							<button class="p-2 rounded hover:bg-gray-100 text-gray-500" title={it.isActive ? 'Hide from app' : 'Show in app'}>
 								{#if it.isActive}<EyeOff size={16} />{:else}<Eye size={16} />{/if}

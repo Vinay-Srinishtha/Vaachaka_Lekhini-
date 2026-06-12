@@ -4,6 +4,7 @@
 	import Modal from '$lib/components/Modal.svelte';
 	import FeatureFlagForm from '$lib/components/FeatureFlagForm.svelte';
 	import { encodeFlagValue, type FlagType } from '$lib/constants';
+	import { toasts } from '$lib/stores/toast';
 
 	let { data, form } = $props();
 
@@ -27,8 +28,13 @@
 		const qs = params.toString();
 		goto(`/config${qs ? '?' + qs : ''}`, { keepFocus: true, noScroll: true });
 	}
+
+	function handleSuccess() {
+		toasts.show('Flag updated');
+		close();
+	}
 </script>
 
 <Modal open title={`Edit · ${f.key}`} size="md" onClose={close}>
-	<FeatureFlagForm {value} fieldErrors={form?.fieldErrors ?? {}} submitLabel="Save changes" isEdit />
+	<FeatureFlagForm {value} fieldErrors={form?.fieldErrors ?? {}} submitLabel="Save changes" isEdit onSuccess={handleSuccess} />
 </Modal>

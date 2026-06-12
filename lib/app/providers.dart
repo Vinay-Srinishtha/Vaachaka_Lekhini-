@@ -193,8 +193,7 @@ final rewardTotalProvider = StreamProvider<int>((ref) async* {
     return;
   }
 
-  // Reconcile server-computed balance into local Drift after each /api/v1/me pull.
-  // This bridges the gap: server awards points via Prisma, Flutter watches local Drift.
+  // Reconcile server-computed balance + program totals into local Drift after each pull.
   ref.listen(meSnapshotProvider, (_, next) {
     final snapshot = next.value;
     if (snapshot == null) return;
@@ -202,8 +201,21 @@ final rewardTotalProvider = StreamProvider<int>((ref) async* {
     for (final m in members) {
       final map = Map<String, dynamic>.from(m as Map);
       if (map['id'] == profile.id) {
+        // Reward balance reconciliation
         final serverBal = (map['reward_points_balance'] as num?)?.toInt() ?? 0;
         Future(() => ref.read(rewardRepositoryProvider).reconcileFromServer(profile.id, serverBal));
+
+        // Program totals reconciliation — server is canonical for totalChants/totalWritings
+        final programs = (map['programs'] as List<dynamic>?) ?? [];
+        for (final p in programs) {
+          final pm = Map<String, dynamic>.from(p as Map);
+          final programId = pm['id'] as String?;
+          if (programId == null) continue;
+          final serverChants = (pm['totalChants'] as num?)?.toInt() ?? 0;
+          final serverWritings = (pm['totalWritings'] as num?)?.toInt() ?? 0;
+          Future(() => ref.read(programRepositoryProvider)
+              .reconcileFromServer(programId, serverChants, serverWritings));
+        }
         break;
       }
     }

@@ -394,6 +394,26 @@ class ProgramRepositoryDrift implements ProgramRepository {
     return p == null ? null : _toProgram(p);
   }
 
+  @override
+  Future<void> reconcileFromServer(
+    String programId,
+    int serverChants,
+    int serverWritings,
+  ) async {
+    final row = await (_db.select(_db.programs)
+          ..where((t) => t.id.equals(programId)))
+        .getSingleOrNull();
+    if (row == null) return;
+    // Only write if server has higher values — never overwrite with stale data.
+    if (serverChants <= row.totalChants && serverWritings <= row.totalWritings) return;
+    await (_db.update(_db.programs)..where((t) => t.id.equals(programId))).write(
+      ProgramsCompanion(
+        totalChants: serverChants > row.totalChants ? Value(serverChants) : const Value.absent(),
+        totalWritings: serverWritings > row.totalWritings ? Value(serverWritings) : const Value.absent(),
+      ),
+    );
+  }
+
   // ---------------------------------------------------------------------------
   // Outbox payload helpers — field names match Prisma column names exactly
   // ---------------------------------------------------------------------------

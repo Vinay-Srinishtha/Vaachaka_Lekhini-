@@ -20,6 +20,13 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   String _query = '';
 
   Future<void> _redeem(StoreItem item) async {
+    // Confirmation dialog before spending points
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => _RedeemConfirmDialog(item: item),
+    );
+    if (confirmed != true || !mounted) return;
+
     final profile = ref.read(activeProfileProvider).value;
     if (profile == null) return;
     final result = await ref
@@ -28,16 +35,19 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
           memberId: profile.id,
           amount: item.pricePoints,
           source: 'Store: ${item.title}',
+          storeItemId: item.id,
         );
     if (!mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
     switch (result) {
       case Ok():
-        messenger.showSnackBar(
-          SnackBar(content: Text(context.l10n.rewardedItemTitle(item.title))),
+        await showDialog<void>(
+          context: context,
+          builder: (_) => _RedeemSuccessDialog(item: item),
         );
       case Err(:final failure):
-        messenger.showSnackBar(SnackBar(content: Text(failure.message)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(failure.message)),
+        );
     }
   }
 
@@ -282,6 +292,85 @@ class _StoreCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _RedeemConfirmDialog extends StatelessWidget {
+  const _RedeemConfirmDialog({required this.item});
+  final StoreItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: KvlRadius.brLG),
+      backgroundColor: KvlColors.surface,
+      title: Text('Redeem ${item.title}?', style: KvlText.title(16)),
+      content: Text(
+        'This will spend ★ ${IndianNumberFormat.format(item.pricePoints)} points from your balance.',
+        style: KvlText.caption(13),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: Text(
+            'Redeem',
+            style: TextStyle(color: KvlColors.primary, fontWeight: FontWeight.w600),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RedeemSuccessDialog extends StatelessWidget {
+  const _RedeemSuccessDialog({required this.item});
+  final StoreItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: KvlRadius.brLG),
+      backgroundColor: KvlColors.surface,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: KvlSpacing.sm),
+          Text(item.glyph, style: const TextStyle(fontSize: 52)),
+          const SizedBox(height: KvlSpacing.md),
+          Text(
+            'You have redeemed',
+            style: KvlText.caption(13).copyWith(color: KvlColors.muted),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            item.title,
+            style: KvlText.title(17),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: KvlSpacing.sm),
+          Text(
+            '★ ${IndianNumberFormat.format(item.pricePoints)} points spent',
+            style: KvlText.caption(11.5).copyWith(
+              color: KvlColors.gold,
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: KvlSpacing.lg),
+          KvlButton(
+            label: 'Close',
+            variant: KvlButtonVariant.primary,
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          const SizedBox(height: KvlSpacing.sm),
+        ],
       ),
     );
   }

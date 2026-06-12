@@ -355,6 +355,10 @@ class PracticeController extends AsyncNotifier<PracticeState> {
         targetReached: false,
       ),
     );
+
+    // Drain outbox → server computes reward points → pull /api/v1/me →
+    // reconcileFromServer writes local earn event → rewardTotalProvider updates live.
+    unawaited(ref.read(syncEngineProvider).syncNow());
   }
 
   void _failVoice(String message) {

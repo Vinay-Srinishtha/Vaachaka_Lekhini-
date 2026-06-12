@@ -4,6 +4,7 @@
 	import { enhance } from '$app/forms';
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 	import { patchQuery } from '$lib/url';
+	import { toasts } from '$lib/stores/toast';
 
 	let { data, form } = $props();
 
@@ -32,9 +33,13 @@
 	action="?/delete"
 	use:enhance={() => {
 		submitting = true;
-		return async ({ update }) => {
+		const name = target?.nameRoman ?? 'Mantra';
+		return async ({ result, update }) => {
 			await update();
 			submitting = false;
+			if (result.type === 'redirect' || result.type === 'success') {
+				toasts.show(`"${name}" deleted`);
+			}
 		};
 	}}
 >

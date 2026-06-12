@@ -3,6 +3,7 @@
 	import { page } from '$app/state';
 	import Modal from '$lib/components/Modal.svelte';
 	import MantraForm from '$lib/components/MantraForm.svelte';
+	import { toasts } from '$lib/stores/toast';
 
 	let { data, form } = $props();
 
@@ -40,8 +41,13 @@
 		const qs = params.toString();
 		goto(`/mantras${qs ? '?' + qs : ''}`, { keepFocus: true, noScroll: true });
 	}
+
+	function handleSuccess() {
+		toasts.show('Mantra updated');
+		close();
+	}
 </script>
 
 <Modal open title={`Edit · ${m.nameRoman}`} subtitle={`Slug · ${m.slug}`} size="xl" onClose={close}>
-	<MantraForm {value} fieldErrors={form?.fieldErrors ?? {}} submitLabel="Save changes" isEdit />
+	<MantraForm {value} fieldErrors={form?.fieldErrors ?? {}} submitLabel="Save changes" isEdit onSuccess={handleSuccess} />
 </Modal>

@@ -3,6 +3,7 @@
 	import { page } from '$app/state';
 	import Modal from '$lib/components/Modal.svelte';
 	import MantraForm from '$lib/components/MantraForm.svelte';
+	import { toasts } from '$lib/stores/toast';
 
 	let { form } = $props();
 
@@ -31,8 +32,13 @@
 		const qs = params.toString();
 		goto(`/mantras${qs ? '?' + qs : ''}`, { keepFocus: true, noScroll: true });
 	}
+
+	function handleSuccess() {
+		toasts.show('Mantra created successfully');
+		close();
+	}
 </script>
 
 <Modal open title="New mantra" subtitle="Add a mantra to the catalog served to Flutter" size="xl" onClose={close}>
-	<MantraForm {value} fieldErrors={form?.fieldErrors ?? {}} submitLabel="Create mantra" />
+	<MantraForm {value} fieldErrors={form?.fieldErrors ?? {}} submitLabel="Create mantra" onSuccess={handleSuccess} />
 </Modal>

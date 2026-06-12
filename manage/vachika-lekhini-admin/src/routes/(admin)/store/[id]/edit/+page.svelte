@@ -3,6 +3,7 @@
 	import { page } from '$app/state';
 	import Modal from '$lib/components/Modal.svelte';
 	import StoreItemForm from '$lib/components/StoreItemForm.svelte';
+	import { toasts } from '$lib/stores/toast';
 
 	let { data, form } = $props();
 
@@ -26,8 +27,13 @@
 		const qs = params.toString();
 		goto(`/store${qs ? '?' + qs : ''}`, { keepFocus: true, noScroll: true });
 	}
+
+	function handleSuccess() {
+		toasts.show('Changes saved');
+		close();
+	}
 </script>
 
 <Modal open title={`Edit · ${it.name}`} subtitle={`Slug · ${it.slug}`} size="lg" onClose={close}>
-	<StoreItemForm {value} fieldErrors={form?.fieldErrors ?? {}} submitLabel="Save changes" isEdit />
+	<StoreItemForm {value} fieldErrors={form?.fieldErrors ?? {}} submitLabel="Save changes" isEdit onSuccess={handleSuccess} />
 </Modal>

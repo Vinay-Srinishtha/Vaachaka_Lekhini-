@@ -17,6 +17,7 @@
 		generalError?: string | null;
 		submitLabel?: string;
 		isEdit?: boolean;
+		onSuccess?: () => void;
 	}
 
 	let {
@@ -24,7 +25,8 @@
 		fieldErrors = {},
 		generalError = null,
 		submitLabel = 'Save',
-		isEdit = false
+		isEdit = false,
+		onSuccess
 	}: Props = $props();
 
 	// Track type + raw value locally so the input control swaps as type changes.
@@ -47,8 +49,13 @@
 	method="POST"
 	use:enhance={() => {
 		submitting = true;
-		return async ({ update }) => {
-			await update();
+		return async ({ result, update }) => {
+			if (result.type === 'redirect' || result.type === 'success') {
+				onSuccess?.();
+				if (result.type !== 'redirect') await update();
+			} else {
+				await update();
+			}
 			submitting = false;
 		};
 	}}

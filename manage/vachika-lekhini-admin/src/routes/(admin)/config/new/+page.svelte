@@ -4,6 +4,7 @@
 	import Modal from '$lib/components/Modal.svelte';
 	import FeatureFlagForm from '$lib/components/FeatureFlagForm.svelte';
 	import type { FlagType } from '$lib/constants';
+	import { toasts } from '$lib/stores/toast';
 
 	let { form } = $props();
 
@@ -21,8 +22,13 @@
 		const qs = params.toString();
 		goto(`/config${qs ? '?' + qs : ''}`, { keepFocus: true, noScroll: true });
 	}
+
+	function handleSuccess() {
+		toasts.show('Flag created');
+		close();
+	}
 </script>
 
 <Modal open title="New flag" size="md" onClose={close}>
-	<FeatureFlagForm {value} fieldErrors={form?.fieldErrors ?? {}} submitLabel="Create flag" />
+	<FeatureFlagForm {value} fieldErrors={form?.fieldErrors ?? {}} submitLabel="Create flag" onSuccess={handleSuccess} />
 </Modal>

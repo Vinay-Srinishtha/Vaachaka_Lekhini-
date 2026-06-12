@@ -123,12 +123,12 @@ export const POST: RequestHandler = async (event) => {
 		);
 	}
 
-	// Recompute balance for each touched member.
+	// Recompute balance for each touched member in parallel.
 	const memberIds = Array.from(new Set(body.events.map((e) => e.member_id)));
-	const balances: Record<string, number> = {};
-	for (const id of memberIds) {
-		balances[id] = await recomputeMemberBalance(id);
-	}
+	const balanceEntries = await Promise.all(
+		memberIds.map(async (id) => [id, await recomputeMemberBalance(id)] as const)
+	);
+	const balances = Object.fromEntries(balanceEntries);
 
 	if (insertedCount > 0) emitChange('reward_event');
 	return snakeJson({ created: insertedCount, requested: body.events.length, balances });

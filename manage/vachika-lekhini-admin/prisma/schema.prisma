@@ -168,6 +168,8 @@ model Member {
 
   @@index([accountId])
   @@index([accountId, isPrimary])
+  @@index([rewardPointsBalance])
+  @@index([lastActiveAt])
 }
 
 enum FamilyRelation {
@@ -204,6 +206,8 @@ model Program {
 
   @@index([memberId])
   @@index([mantraId])
+  @@index([completedAt])
+  @@index([memberId, mantraId])
 }
 
 /// One row per chant session — start to finish. Lets us reconstruct totals
@@ -224,6 +228,7 @@ model Session {
 
   @@index([memberId, startedAt])
   @@index([programId, startedAt])
+  @@index([startedAt])
 }
 
 enum SessionModality {
@@ -246,6 +251,7 @@ model RewardEvent {
   occurredAt  DateTime  @default(now())
 
   @@index([memberId, occurredAt])
+  @@index([kind, occurredAt])
 }
 
 enum RewardEventKind {
@@ -310,6 +316,7 @@ model Device {
 
   @@index([accountId])
   @@index([pushToken])
+  @@index([platform])
 }
 
 enum DevicePlatform {
@@ -334,6 +341,7 @@ model Invite {
 
   @@index([inviterAccountId])
   @@index([inviteeMobile])
+  @@index([status])
 }
 
 enum InviteStatus {
@@ -372,6 +380,8 @@ model AdminUser {
   isActive     Boolean    @default(true)
   createdAt    DateTime   @default(now())
   lastLoginAt  DateTime?
+
+  @@index([isActive])
 }
 
 enum AdminRole {

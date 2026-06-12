@@ -23,7 +23,6 @@ export const GET: RequestHandler = async () => {
 			recommendedCount: true,
 			recommendedDays: true,
 			pronunciationUrl: true,
-			imageUrl: true,
 			sortOrder: true,
 			updatedAt: true
 		}

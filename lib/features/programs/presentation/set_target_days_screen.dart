@@ -76,7 +76,7 @@ class _SetTargetDaysScreenState extends ConsumerState<SetTargetDaysScreen> {
           ),
         ),
       );
-      context.go('${KvlRoute.voiceTraining}/${widget.mantraId}');
+      context.push('${KvlRoute.voiceTraining}/${widget.mantraId}');
       return;
     }
     setState(() => _busy = true);

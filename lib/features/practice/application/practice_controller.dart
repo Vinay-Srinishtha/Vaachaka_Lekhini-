@@ -347,9 +347,6 @@ class PracticeController extends AsyncNotifier<PracticeState> {
     final streak = await _programs.currentStreak(s.program.id);
     final today = await _programs.countForDay(s.program.id, DateTime.now());
 
-    // Haptic feedback for daily-target and milestone crossings.
-    // Points are awarded server-side in /api/v1/sessions after session
-    // ingestion — Flutter must never call earn() for rule-based bonuses.
     final after = program.totalChants + program.totalWritings;
     if (today >= program.dailyTarget && s.todaysTotal < program.dailyTarget) {
       unawaited(HapticFeedback.mediumImpact());

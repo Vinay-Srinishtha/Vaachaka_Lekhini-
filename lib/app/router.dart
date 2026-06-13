@@ -33,8 +33,7 @@ import '../features/settings/presentation/info_screen.dart';
 import '../features/settings/presentation/profile_screen.dart';
 import '../features/programs/presentation/daily_progress_screen.dart';
 import '../features/programs/presentation/programs_screen.dart';
-import '../features/programs/presentation/set_target_days_screen.dart';
-import '../features/programs/presentation/set_target_writings_screen.dart';
+import '../features/programs/presentation/set_program_target_screen.dart';
 import '../features/rewards/presentation/reward_history_screen.dart';
 import '../features/rewards/presentation/store_screen.dart';
 import '../l10n/l10n.dart';
@@ -69,7 +68,6 @@ abstract final class KvlRoute {
 
   // Later phases — reserved.
   static const setTargetWritings = '/set-target-writings';
-  static const setTargetDays = '/set-target-days';
   static const dailyProgress = '/daily-progress';
   static const profile = '/profile';
   static const addFamily = '/add-family';
@@ -178,23 +176,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Phase 3 — programs / targets / daily progress
       GoRoute(
         path: '${KvlRoute.setTargetWritings}/:mantraId',
-        builder: (_, state) => SetTargetWritingsScreen(
+        builder: (_, state) => SetProgramTargetScreen(
           mantraId: state.pathParameters['mantraId']!,
         ),
-      ),
-      GoRoute(
-        path: '${KvlRoute.setTargetDays}/:mantraId/:writings',
-        builder: (_, state) {
-          final writings = int.tryParse(state.pathParameters['writings']!) ?? 0;
-          final daysHint = int.tryParse(
-            state.uri.queryParameters['days'] ?? '',
-          );
-          return SetTargetDaysScreen(
-            mantraId: state.pathParameters['mantraId']!,
-            writings: writings,
-            daysHint: daysHint,
-          );
-        },
       ),
       GoRoute(
         path: '${KvlRoute.dailyProgress}/:programId',
@@ -393,6 +377,7 @@ class _ShellPageState extends ConsumerState<_ShellPage> {
           onTap: (i) =>
               shell.goBranch(i, initialLocation: i == shell.currentIndex),
           hiddenIndices: hidden,
+          storePoints: points,
         ),
       ),
     );

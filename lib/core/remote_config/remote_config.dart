@@ -11,8 +11,6 @@ class RemoteConfig {
   final Map<String, Object?> _values;
   final DateTime? fetchedAt;
 
-  Object? raw(String key) => _values[key];
-
   bool boolFlag(String key, {required bool fallback}) {
     final v = _values[key];
     if (v is bool) return v;
@@ -40,11 +38,6 @@ class RemoteConfig {
     if (v is String) return v;
     if (v == null) return fallback;
     return v.toString();
-  }
-
-  T? jsonFlag<T>(String key) {
-    final v = _values[key];
-    return v is T ? v : null;
   }
 
   Map<String, Object?> get all => Map.unmodifiable(_values);

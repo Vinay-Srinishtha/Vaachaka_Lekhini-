@@ -349,7 +349,9 @@ final rewardTotalProvider = StreamProvider<int>((ref) async* {
     }
   });
 
-  yield* ref.watch(rewardRepositoryProvider).watchTotalPoints(profile.id);
+  // Balance = sum(programs.totalProgress) − sum(spend events).
+  // Updates live on every chant without waiting for a server sync.
+  yield* ref.watch(rewardRepositoryProvider).watchBalance(profile.id);
 });
 
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {

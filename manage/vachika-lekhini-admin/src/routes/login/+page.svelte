@@ -47,20 +47,22 @@
 				</div>
 				<div>
 					<label class="label" for="password">Password</label>
-					<div class="relative">
+					<div style="position:relative; display:flex; align-items:center;">
 						<input
 							id="password"
 							name="password"
 							type={showPassword ? 'text' : 'password'}
 							autocomplete="current-password"
-							class="input pr-10"
+							class="input"
+							style="padding-right:2.5rem;"
 							required
 						/>
 						<button
 							type="button"
 							onclick={() => showPassword = !showPassword}
-							class="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600"
+							style="position:absolute; right:0; top:0; bottom:0; display:flex; align-items:center; padding:0 0.75rem; background:none; border:none; cursor:pointer; color:#9ca3af;"
 							tabindex="-1"
+							aria-label={showPassword ? 'Hide password' : 'Show password'}
 						>
 							{#if showPassword}
 								<EyeOff size={16} />

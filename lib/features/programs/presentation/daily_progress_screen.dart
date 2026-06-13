@@ -29,6 +29,11 @@ class DailyProgressScreen extends ConsumerStatefulWidget {
 }
 
 class _DailyProgressScreenState extends ConsumerState<DailyProgressScreen> {
+  final _today = DateTime(
+    DateTime.now().year,
+    DateTime.now().month,
+    DateTime.now().day,
+  );
   DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
   DateTime _selected = DateTime(
     DateTime.now().year,
@@ -149,6 +154,7 @@ class _DailyProgressScreenState extends ConsumerState<DailyProgressScreen> {
                                     Expanded(
                                       child: _CalGrid(
                                         month: _month,
+                                        today: _today,
                                         selected: _selected,
                                         countsByDay: counts,
                                         rowHeight: gridHeight / 7,
@@ -166,6 +172,7 @@ class _DailyProgressScreenState extends ConsumerState<DailyProgressScreen> {
                       ),
                       SizedBox(height: tight ? KvlSpacing.sm : KvlSpacing.md),
                       FutureBuilder<DailySummary>(
+                        key: ValueKey(_selected),
                         future: _loadSummary(),
                         builder: (_, snap) {
                           final s = snap.data;
@@ -384,6 +391,7 @@ class _CalHeader extends StatelessWidget {
 class _CalGrid extends StatelessWidget {
   const _CalGrid({
     required this.month,
+    required this.today,
     required this.selected,
     required this.countsByDay,
     required this.rowHeight,
@@ -392,6 +400,7 @@ class _CalGrid extends StatelessWidget {
   });
 
   final DateTime month;
+  final DateTime today;
   final DateTime selected;
   final Map<DateTime, int> countsByDay;
   final double rowHeight;
@@ -434,14 +443,15 @@ class _CalGrid extends StatelessWidget {
                   : dayIndex < 1
                   ? DateTime(month.year, month.month - 1, displayDay)
                   : DateTime(month.year, month.month + 1, displayDay);
+              final isFuture = isInMonth && day.isAfter(today);
               final isSelected = isInMonth && day == selected;
               final hasActivity = isInMonth && (countsByDay[day] ?? 0) > 0;
               final dateSize = compact ? 38.0 : 44.0;
               final dotSize = compact ? 5.5 : 6.5;
               return Expanded(
                 child: GestureDetector(
-                  onTap: isInMonth ? () => onTapDay(day) : null,
-                  behavior: isInMonth
+                  onTap: (isInMonth && !isFuture) ? () => onTapDay(day) : null,
+                  behavior: (isInMonth && !isFuture)
                       ? HitTestBehavior.opaque
                       : HitTestBehavior.deferToChild,
                   child: SizedBox(
@@ -472,6 +482,8 @@ class _CalGrid extends StatelessWidget {
                                     : FontWeight.w400,
                                 color: isSelected
                                     ? Colors.white
+                                    : isFuture
+                                    ? KvlColors.muted.withValues(alpha: .4)
                                     : isInMonth
                                     ? KvlColors.ink
                                     : KvlColors.muted,

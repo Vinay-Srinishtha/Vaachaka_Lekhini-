@@ -304,37 +304,6 @@ class ProfileScreen extends ConsumerWidget {
             title: context.l10n.displaySection,
             children: [
               SettingRow(
-                icon: Icons.brightness_6_rounded,
-                label: context.l10n.themeSetting,
-                value: switch (settings.themeMode) {
-                  ThemeMode.light => context.l10n.themeLight,
-                  ThemeMode.dark => context.l10n.themeDark,
-                  ThemeMode.system => context.l10n.themeSystem,
-                },
-                onTap: () => _pickFromList(
-                  context,
-                  title: context.l10n.themeSetting,
-                  options: [
-                    context.l10n.themeLight,
-                    context.l10n.themeDark,
-                    context.l10n.themeSystem,
-                  ],
-                  current: switch (settings.themeMode) {
-                    ThemeMode.light => context.l10n.themeLight,
-                    ThemeMode.dark => context.l10n.themeDark,
-                    ThemeMode.system => context.l10n.themeSystem,
-                  },
-                  onPicked: (label) async {
-                    final mode = switch (label) {
-                      _ when label == context.l10n.themeDark => ThemeMode.dark,
-                      _ when label == context.l10n.themeSystem => ThemeMode.system,
-                      _ => ThemeMode.light,
-                    };
-                    await settingsRepo.setThemeMode(mode);
-                  },
-                ),
-              ),
-              SettingRow(
                 icon: Icons.language_rounded,
                 label: context.l10n.languageSetting,
                 value: KvlLanguage.byCode(settings.languageCode).nativeLabel,
@@ -343,35 +312,6 @@ class ProfileScreen extends ConsumerWidget {
                   languages: languages,
                   currentCode: settings.languageCode,
                   onPicked: settingsRepo.setLanguage,
-                ),
-              ),
-              SettingRow(
-                icon: Icons.text_fields_rounded,
-                label: context.l10n.fontSizeSetting,
-                value: settings.fontScale == 1.0
-                    ? context.l10n.fontSizeDefaultPct
-                    : '${(settings.fontScale * 100).round()}%',
-                onTap: () => _pickFromList(
-                  context,
-                  title: context.l10n.fontSizeSetting,
-                  options: [
-                    context.l10n.fontSizeSmall,
-                    context.l10n.fontSizeDefaultPct,
-                    context.l10n.fontSizeLarge,
-                    context.l10n.fontSizeExtraLarge,
-                  ],
-                  current: settings.fontScale == 1.0
-                      ? context.l10n.fontSizeDefaultPct
-                      : null,
-                  onPicked: (label) async {
-                    final scale = switch (label) {
-                      _ when label == context.l10n.fontSizeSmall => 0.9,
-                      _ when label == context.l10n.fontSizeLarge => 1.15,
-                      _ when label == context.l10n.fontSizeExtraLarge => 1.3,
-                      _ => 1.0,
-                    };
-                    await settingsRepo.setFontScale(scale);
-                  },
                 ),
               ),
             ],
@@ -612,8 +552,6 @@ class ProfileScreen extends ConsumerWidget {
     buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     buf.writeln('  SETTINGS');
     buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    buf.writeln('  Theme           : ${settings.themeMode.name}');
-    buf.writeln('  Font Scale      : ${settings.fontScale}x');
     buf.writeln('  Reminder Time   : ${settings.reminderTime.hour.toString().padLeft(2, "0")}:${settings.reminderTime.minute.toString().padLeft(2, "0")}');
     buf.writeln('  Notification    : ${settings.notificationSound}');
     buf.writeln('  Mic Sensitivity : ${settings.micSensitivity.name}');

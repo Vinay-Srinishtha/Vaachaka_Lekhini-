@@ -560,33 +560,6 @@ class AppLocalizationsKn extends AppLocalizations {
   String get languagePickerTitle => 'ಭಾಷೆ';
 
   @override
-  String get themeSetting => 'ಥೀಮ್';
-
-  @override
-  String get themeLight => 'ಬೆಳಕು';
-
-  @override
-  String get themeDark => 'ಕತ್ತಲು';
-
-  @override
-  String get themeSystem => 'ಸಿಸ್ಟಮ್';
-
-  @override
-  String get fontSizeSetting => 'ಅಕ್ಷರ ಗಾತ್ರ';
-
-  @override
-  String get fontSizeSmall => 'ಚಿಕ್ಕದು (90%)';
-
-  @override
-  String get fontSizeDefaultPct => 'ಡಿಫಾಲ್ಟ್ (100%)';
-
-  @override
-  String get fontSizeLarge => 'ದೊಡ್ಡದು (115%)';
-
-  @override
-  String get fontSizeExtraLarge => 'ತುಂಬಾ ದೊಡ್ಡದು (130%)';
-
-  @override
   String get linkSocialSection => 'ಸಾಮಾಜಿಕ ಲಿಂಕ್';
 
   @override
@@ -1196,20 +1169,28 @@ class AppLocalizationsKn extends AppLocalizations {
 
   @override
   String get mantraNeedWealthProsperity => 'ಸಂಪತ್ತು & ಸಮೃದ್ಧಿ';
+
   @override
   String get mantraNeedPeaceCalm => 'ಶಾಂತಿ & ನೆಮ್ಮದಿ';
+
   @override
   String get mantraNeedHealing => 'ಚಿಕಿತ್ಸೆ';
+
   @override
   String get mantraNeedProtection => 'ರಕ್ಷಣೆ';
+
   @override
   String get mantraNeedStrengthCourage => 'ಶಕ್ತಿ & ಧೈರ್ಯ';
+
   @override
   String get mantraNeedSpiritualLiberation => 'ಆಧ್ಯಾತ್ಮಿಕ ಮುಕ್ತಿ';
+
   @override
   String get mantraNeedWisdomEnlightenment => 'ಜ್ಞಾನ & ಜ್ಞಾನೋದಯ';
+
   @override
   String get mantraNeedDevotion => 'ಭಕ್ತಿ';
+
   @override
   String get appTitle => 'ವಾಚಿಕ ಲೇಖಿನಿ';
 }

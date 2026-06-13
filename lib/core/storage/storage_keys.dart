@@ -17,8 +17,6 @@ abstract final class KvlKeys {
 
   // settings box
   static const languageCode = 'languageCode';
-  static const themeMode = 'themeMode';
-  static const fontScale = 'fontScale';
   static const reminderTime = 'reminderTime';
   static const notificationSound = 'notificationSound';
   static const micSensitivity = 'micSensitivity';

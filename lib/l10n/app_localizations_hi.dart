@@ -559,33 +559,6 @@ class AppLocalizationsHi extends AppLocalizations {
   String get languagePickerTitle => 'भाषा';
 
   @override
-  String get themeSetting => 'थीम';
-
-  @override
-  String get themeLight => 'लाइट';
-
-  @override
-  String get themeDark => 'डार्क';
-
-  @override
-  String get themeSystem => 'सिस्टम';
-
-  @override
-  String get fontSizeSetting => 'फ़ॉन्ट आकार';
-
-  @override
-  String get fontSizeSmall => 'छोटा (90%)';
-
-  @override
-  String get fontSizeDefaultPct => 'डिफ़ॉल्ट (100%)';
-
-  @override
-  String get fontSizeLarge => 'बड़ा (115%)';
-
-  @override
-  String get fontSizeExtraLarge => 'बहुत बड़ा (130%)';
-
-  @override
   String get linkSocialSection => 'सोशल लिंक';
 
   @override
@@ -1196,20 +1169,28 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get mantraNeedWealthProsperity => 'धन और समृद्धि';
+
   @override
   String get mantraNeedPeaceCalm => 'शांति और सुकून';
+
   @override
   String get mantraNeedHealing => 'उपचार';
+
   @override
   String get mantraNeedProtection => 'सुरक्षा';
+
   @override
   String get mantraNeedStrengthCourage => 'शक्ति और साहस';
+
   @override
   String get mantraNeedSpiritualLiberation => 'आध्यात्मिक मुक्ति';
+
   @override
   String get mantraNeedWisdomEnlightenment => 'ज्ञान और प्रबोधन';
+
   @override
   String get mantraNeedDevotion => 'भक्ति';
+
   @override
   String get appTitle => 'वाचिक लेखिनी';
 }

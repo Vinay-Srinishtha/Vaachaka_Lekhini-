@@ -106,8 +106,7 @@ class _KvlAppState extends ConsumerState<KvlApp> with WidgetsBindingObserver {
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       debugShowCheckedModeBanner: false,
       theme: buildKvlLightTheme(),
-      darkTheme: buildKvlDarkTheme(),
-      themeMode: settings.themeMode,
+      themeMode: ThemeMode.light,
       routerConfig: router,
       locale: Locale(settings.languageCode),
       localizationsDelegates: const [
@@ -122,16 +121,6 @@ class _KvlAppState extends ConsumerState<KvlApp> with WidgetsBindingObserver {
         Locale('te'),
         Locale('kn'),
       ],
-      builder: (context, child) {
-        // Honour the user-selected font scale (Profile → Display → Font Size).
-        // Clamped to a sensible range so layouts never break.
-        final scale = settings.fontScale.clamp(0.85, 1.5);
-        final mq = MediaQuery.of(context);
-        return MediaQuery(
-          data: mq.copyWith(textScaler: TextScaler.linear(scale)),
-          child: child ?? const SizedBox.shrink(),
-        );
-      },
     );
   }
 }

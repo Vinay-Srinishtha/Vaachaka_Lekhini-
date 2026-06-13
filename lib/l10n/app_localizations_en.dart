@@ -558,33 +558,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get languagePickerTitle => 'Language';
 
   @override
-  String get themeSetting => 'Theme';
-
-  @override
-  String get themeLight => 'Light';
-
-  @override
-  String get themeDark => 'Dark';
-
-  @override
-  String get themeSystem => 'System';
-
-  @override
-  String get fontSizeSetting => 'Font Size';
-
-  @override
-  String get fontSizeSmall => 'Small (90%)';
-
-  @override
-  String get fontSizeDefaultPct => 'Default (100%)';
-
-  @override
-  String get fontSizeLarge => 'Large (115%)';
-
-  @override
-  String get fontSizeExtraLarge => 'Extra Large (130%)';
-
-  @override
   String get linkSocialSection => 'LINK SOCIAL';
 
   @override
@@ -1198,20 +1171,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mantraNeedWealthProsperity => 'Wealth & Prosperity';
+
   @override
   String get mantraNeedPeaceCalm => 'Peace & Calm';
+
   @override
   String get mantraNeedHealing => 'Healing';
+
   @override
   String get mantraNeedProtection => 'Protection';
+
   @override
   String get mantraNeedStrengthCourage => 'Strength & Courage';
+
   @override
   String get mantraNeedSpiritualLiberation => 'Spiritual Liberation';
+
   @override
   String get mantraNeedWisdomEnlightenment => 'Wisdom & Enlightenment';
+
   @override
   String get mantraNeedDevotion => 'Devotion';
+
   @override
   String get appTitle => 'Vaachaka Lekhini';
 }

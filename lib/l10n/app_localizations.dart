@@ -1116,60 +1116,6 @@ abstract class AppLocalizations {
   /// **'Language'**
   String get languagePickerTitle;
 
-  /// No description provided for @themeSetting.
-  ///
-  /// In en, this message translates to:
-  /// **'Theme'**
-  String get themeSetting;
-
-  /// No description provided for @themeLight.
-  ///
-  /// In en, this message translates to:
-  /// **'Light'**
-  String get themeLight;
-
-  /// No description provided for @themeDark.
-  ///
-  /// In en, this message translates to:
-  /// **'Dark'**
-  String get themeDark;
-
-  /// No description provided for @themeSystem.
-  ///
-  /// In en, this message translates to:
-  /// **'System'**
-  String get themeSystem;
-
-  /// No description provided for @fontSizeSetting.
-  ///
-  /// In en, this message translates to:
-  /// **'Font Size'**
-  String get fontSizeSetting;
-
-  /// No description provided for @fontSizeSmall.
-  ///
-  /// In en, this message translates to:
-  /// **'Small (90%)'**
-  String get fontSizeSmall;
-
-  /// No description provided for @fontSizeDefaultPct.
-  ///
-  /// In en, this message translates to:
-  /// **'Default (100%)'**
-  String get fontSizeDefaultPct;
-
-  /// No description provided for @fontSizeLarge.
-  ///
-  /// In en, this message translates to:
-  /// **'Large (115%)'**
-  String get fontSizeLarge;
-
-  /// No description provided for @fontSizeExtraLarge.
-  ///
-  /// In en, this message translates to:
-  /// **'Extra Large (130%)'**
-  String get fontSizeExtraLarge;
-
   /// No description provided for @linkSocialSection.
   ///
   /// In en, this message translates to:
@@ -2291,14 +2237,59 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Resend code in {seconds}s'**
   String resendCodeCountdown(int seconds);
+
+  /// No description provided for @mantraNeedWealthProsperity.
+  ///
+  /// In en, this message translates to:
+  /// **'Wealth & Prosperity'**
   String get mantraNeedWealthProsperity;
+
+  /// No description provided for @mantraNeedPeaceCalm.
+  ///
+  /// In en, this message translates to:
+  /// **'Peace & Calm'**
   String get mantraNeedPeaceCalm;
+
+  /// No description provided for @mantraNeedHealing.
+  ///
+  /// In en, this message translates to:
+  /// **'Healing'**
   String get mantraNeedHealing;
+
+  /// No description provided for @mantraNeedProtection.
+  ///
+  /// In en, this message translates to:
+  /// **'Protection'**
   String get mantraNeedProtection;
+
+  /// No description provided for @mantraNeedStrengthCourage.
+  ///
+  /// In en, this message translates to:
+  /// **'Strength & Courage'**
   String get mantraNeedStrengthCourage;
+
+  /// No description provided for @mantraNeedSpiritualLiberation.
+  ///
+  /// In en, this message translates to:
+  /// **'Spiritual Liberation'**
   String get mantraNeedSpiritualLiberation;
+
+  /// No description provided for @mantraNeedWisdomEnlightenment.
+  ///
+  /// In en, this message translates to:
+  /// **'Wisdom & Enlightenment'**
   String get mantraNeedWisdomEnlightenment;
+
+  /// No description provided for @mantraNeedDevotion.
+  ///
+  /// In en, this message translates to:
+  /// **'Devotion'**
   String get mantraNeedDevotion;
+
+  /// No description provided for @appTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Vaachaka Lekhini'**
   String get appTitle;
 }
 

@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:hive_ce/hive.dart';
 
 import '../../../core/storage/storage_keys.dart';
@@ -20,7 +20,6 @@ class SettingsRepositoryLocal implements SettingsRepository {
   KvlSettings _read() {
     String? str(String k) => _box.get(k) as String?;
     bool b(String k, {bool fb = false}) => (_box.get(k) as bool?) ?? fb;
-    double d(String k, {double fb = 1.0}) => (_box.get(k) as num?)?.toDouble() ?? fb;
 
     final reminderRaw = str(KvlKeys.reminderTime) ?? '06:00';
     final parts = reminderRaw.split(':');
@@ -28,17 +27,8 @@ class SettingsRepositoryLocal implements SettingsRepository {
         ? TimeOfDay(hour: int.tryParse(parts[0]) ?? 6, minute: int.tryParse(parts[1]) ?? 0)
         : KvlSettings.fallback.reminderTime;
 
-    final themeName = str(KvlKeys.themeMode) ?? 'system';
-    final theme = switch (themeName) {
-      'light' => ThemeMode.light,
-      'dark' => ThemeMode.dark,
-      _ => ThemeMode.system,
-    };
-
     return KvlSettings(
       languageCode: str(KvlKeys.languageCode) ?? KvlSettings.fallback.languageCode,
-      themeMode: theme,
-      fontScale: d(KvlKeys.fontScale),
       reminderTime: t,
       notificationSound: str(KvlKeys.notificationSound) ?? KvlSettings.fallback.notificationSound,
       micSensitivity: MicSensitivity.fromName(str(KvlKeys.micSensitivity)),
@@ -59,17 +49,6 @@ class SettingsRepositoryLocal implements SettingsRepository {
 
   @override
   Future<void> setLanguage(String code) => _box.put(KvlKeys.languageCode, code);
-
-  @override
-  Future<void> setThemeMode(ThemeMode mode) =>
-      _box.put(KvlKeys.themeMode, switch (mode) {
-        ThemeMode.light => 'light',
-        ThemeMode.dark => 'dark',
-        ThemeMode.system => 'system',
-      });
-
-  @override
-  Future<void> setFontScale(double scale) => _box.put(KvlKeys.fontScale, scale);
 
   @override
   Future<void> setReminderTime(TimeOfDay t) =>
@@ -95,8 +74,6 @@ class SettingsRepositoryLocal implements SettingsRepository {
     final s = _read();
     return {
       'languageCode': s.languageCode,
-      'themeMode': s.themeMode.name,
-      'fontScale': s.fontScale,
       'reminderTime': '${s.reminderTime.hour}:${s.reminderTime.minute}',
       'notificationSound': s.notificationSound,
       'micSensitivity': s.micSensitivity.name,

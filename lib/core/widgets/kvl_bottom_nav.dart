@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../theme/colors.dart';
 import '../theme/shadows.dart';
 import '../theme/spacing.dart';
@@ -10,12 +11,13 @@ class KvlNavItem {
   final IconData icon;
 }
 
-const kvlNavItems = <KvlNavItem>[
-  KvlNavItem(label: 'Home', icon: Icons.home_outlined),
-  KvlNavItem(label: 'My Programs', icon: Icons.dashboard_outlined),
-  KvlNavItem(label: 'Practice', icon: Icons.edit_note_rounded),
-  KvlNavItem(label: 'Community', icon: Icons.groups_outlined),
-  KvlNavItem(label: 'Store', icon: Icons.shopping_bag_outlined),
+/// Icons are stable; labels are resolved from l10n at build time.
+const _navIcons = <IconData>[
+  Icons.home_outlined,
+  Icons.dashboard_outlined,
+  Icons.edit_note_rounded,
+  Icons.groups_outlined,
+  Icons.shopping_bag_outlined,
 ];
 
 const _practiceIndex = 2;
@@ -42,6 +44,14 @@ class KvlBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final navItems = <KvlNavItem>[
+      KvlNavItem(label: l10n.navHome, icon: _navIcons[0]),
+      KvlNavItem(label: l10n.navPrograms, icon: _navIcons[1]),
+      KvlNavItem(label: l10n.navPractice, icon: _navIcons[2]),
+      KvlNavItem(label: l10n.navCommunity, icon: _navIcons[3]),
+      KvlNavItem(label: l10n.navStore, icon: _navIcons[4]),
+    ];
     final practiceHidden = hiddenIndices.contains(_practiceIndex);
 
     return Material(
@@ -75,13 +85,13 @@ class KvlBottomNav extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        for (int i = 0; i < kvlNavItems.length; i++)
+                        for (int i = 0; i < navItems.length; i++)
                           if (!hiddenIndices.contains(i))
                             Expanded(
                               child: i == _practiceIndex
                                   ? const SizedBox.shrink()
                                   : _Tab(
-                                      item: kvlNavItems[i],
+                                      item: navItems[i],
                                       active: i == currentIndex,
                                       onTap: () => onTap(i),
                                       badge: i == 4 ? storePoints : null,
@@ -96,7 +106,7 @@ class KvlBottomNav extends StatelessWidget {
                 Positioned(
                   top: 0,
                   child: _PracticeTab(
-                    item: kvlNavItems[_practiceIndex],
+                    item: navItems[_practiceIndex],
                     active: currentIndex == _practiceIndex,
                     onTap: () => onTap(_practiceIndex),
                   ),

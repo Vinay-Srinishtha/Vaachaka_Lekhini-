@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' show TimeOfDay;
 
 import '../../../core/storage/repository.dart';
 
@@ -32,8 +32,6 @@ enum MicSensitivity {
 class KvlSettings {
   const KvlSettings({
     required this.languageCode,
-    required this.themeMode,
-    required this.fontScale,
     required this.reminderTime,
     required this.notificationSound,
     required this.micSensitivity,
@@ -43,8 +41,6 @@ class KvlSettings {
   });
 
   final String languageCode;
-  final ThemeMode themeMode;
-  final double fontScale;
   final TimeOfDay reminderTime;
   final String notificationSound;
   final MicSensitivity micSensitivity;
@@ -54,8 +50,6 @@ class KvlSettings {
 
   static const fallback = KvlSettings(
     languageCode: 'en',
-    themeMode: ThemeMode.system,
-    fontScale: 1.0,
     reminderTime: TimeOfDay(hour: 6, minute: 0),
     notificationSound: 'bell',
     micSensitivity: MicSensitivity.medium,
@@ -66,8 +60,6 @@ class KvlSettings {
 
   KvlSettings copyWith({
     String? languageCode,
-    ThemeMode? themeMode,
-    double? fontScale,
     TimeOfDay? reminderTime,
     String? notificationSound,
     MicSensitivity? micSensitivity,
@@ -77,8 +69,6 @@ class KvlSettings {
   }) =>
       KvlSettings(
         languageCode: languageCode ?? this.languageCode,
-        themeMode: themeMode ?? this.themeMode,
-        fontScale: fontScale ?? this.fontScale,
         reminderTime: reminderTime ?? this.reminderTime,
         notificationSound: notificationSound ?? this.notificationSound,
         micSensitivity: micSensitivity ?? this.micSensitivity,
@@ -93,8 +83,6 @@ abstract class SettingsRepository {
   Stream<KvlSettings> watch();
 
   Future<void> setLanguage(String code);
-  Future<void> setThemeMode(ThemeMode mode);
-  Future<void> setFontScale(double scale);
   Future<void> setReminderTime(TimeOfDay t);
   Future<void> setNotificationSound(String sound);
   Future<void> setMicSensitivity(MicSensitivity s);

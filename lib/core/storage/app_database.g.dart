@@ -2120,12 +2120,339 @@ class RewardEventsCompanion extends UpdateCompanion<RewardEventRow> {
   }
 }
 
+class $PracticeSessionDraftsTable extends PracticeSessionDrafts
+    with TableInfo<$PracticeSessionDraftsTable, DraftRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PracticeSessionDraftsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _programIdMeta = const VerificationMeta(
+    'programId',
+  );
+  @override
+  late final GeneratedColumn<String> programId = GeneratedColumn<String>(
+    'program_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sessionCountMeta = const VerificationMeta(
+    'sessionCount',
+  );
+  @override
+  late final GeneratedColumn<int> sessionCount = GeneratedColumn<int>(
+    'session_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _modalityMeta = const VerificationMeta(
+    'modality',
+  );
+  @override
+  late final GeneratedColumn<String> modality = GeneratedColumn<String>(
+    'modality',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _savedAtMeta = const VerificationMeta(
+    'savedAt',
+  );
+  @override
+  late final GeneratedColumn<int> savedAt = GeneratedColumn<int>(
+    'saved_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    programId,
+    sessionCount,
+    modality,
+    savedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'practice_session_drafts';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DraftRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('program_id')) {
+      context.handle(
+        _programIdMeta,
+        programId.isAcceptableOrUnknown(data['program_id']!, _programIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_programIdMeta);
+    }
+    if (data.containsKey('session_count')) {
+      context.handle(
+        _sessionCountMeta,
+        sessionCount.isAcceptableOrUnknown(
+          data['session_count']!,
+          _sessionCountMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_sessionCountMeta);
+    }
+    if (data.containsKey('modality')) {
+      context.handle(
+        _modalityMeta,
+        modality.isAcceptableOrUnknown(data['modality']!, _modalityMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_modalityMeta);
+    }
+    if (data.containsKey('saved_at')) {
+      context.handle(
+        _savedAtMeta,
+        savedAt.isAcceptableOrUnknown(data['saved_at']!, _savedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_savedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {programId};
+  @override
+  DraftRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DraftRow(
+      programId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}program_id'],
+      )!,
+      sessionCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}session_count'],
+      )!,
+      modality: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}modality'],
+      )!,
+      savedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}saved_at'],
+      )!,
+    );
+  }
+
+  @override
+  $PracticeSessionDraftsTable createAlias(String alias) {
+    return $PracticeSessionDraftsTable(attachedDatabase, alias);
+  }
+}
+
+class DraftRow extends DataClass implements Insertable<DraftRow> {
+  final String programId;
+  final int sessionCount;
+  final String modality;
+  final int savedAt;
+  const DraftRow({
+    required this.programId,
+    required this.sessionCount,
+    required this.modality,
+    required this.savedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['program_id'] = Variable<String>(programId);
+    map['session_count'] = Variable<int>(sessionCount);
+    map['modality'] = Variable<String>(modality);
+    map['saved_at'] = Variable<int>(savedAt);
+    return map;
+  }
+
+  PracticeSessionDraftsCompanion toCompanion(bool nullToAbsent) {
+    return PracticeSessionDraftsCompanion(
+      programId: Value(programId),
+      sessionCount: Value(sessionCount),
+      modality: Value(modality),
+      savedAt: Value(savedAt),
+    );
+  }
+
+  factory DraftRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DraftRow(
+      programId: serializer.fromJson<String>(json['programId']),
+      sessionCount: serializer.fromJson<int>(json['sessionCount']),
+      modality: serializer.fromJson<String>(json['modality']),
+      savedAt: serializer.fromJson<int>(json['savedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'programId': serializer.toJson<String>(programId),
+      'sessionCount': serializer.toJson<int>(sessionCount),
+      'modality': serializer.toJson<String>(modality),
+      'savedAt': serializer.toJson<int>(savedAt),
+    };
+  }
+
+  DraftRow copyWith({
+    String? programId,
+    int? sessionCount,
+    String? modality,
+    int? savedAt,
+  }) => DraftRow(
+    programId: programId ?? this.programId,
+    sessionCount: sessionCount ?? this.sessionCount,
+    modality: modality ?? this.modality,
+    savedAt: savedAt ?? this.savedAt,
+  );
+  DraftRow copyWithCompanion(PracticeSessionDraftsCompanion data) {
+    return DraftRow(
+      programId: data.programId.present ? data.programId.value : this.programId,
+      sessionCount: data.sessionCount.present
+          ? data.sessionCount.value
+          : this.sessionCount,
+      modality: data.modality.present ? data.modality.value : this.modality,
+      savedAt: data.savedAt.present ? data.savedAt.value : this.savedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DraftRow(')
+          ..write('programId: $programId, ')
+          ..write('sessionCount: $sessionCount, ')
+          ..write('modality: $modality, ')
+          ..write('savedAt: $savedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(programId, sessionCount, modality, savedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DraftRow &&
+          other.programId == this.programId &&
+          other.sessionCount == this.sessionCount &&
+          other.modality == this.modality &&
+          other.savedAt == this.savedAt);
+}
+
+class PracticeSessionDraftsCompanion extends UpdateCompanion<DraftRow> {
+  final Value<String> programId;
+  final Value<int> sessionCount;
+  final Value<String> modality;
+  final Value<int> savedAt;
+  final Value<int> rowid;
+  const PracticeSessionDraftsCompanion({
+    this.programId = const Value.absent(),
+    this.sessionCount = const Value.absent(),
+    this.modality = const Value.absent(),
+    this.savedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PracticeSessionDraftsCompanion.insert({
+    required String programId,
+    required int sessionCount,
+    required String modality,
+    required int savedAt,
+    this.rowid = const Value.absent(),
+  }) : programId = Value(programId),
+       sessionCount = Value(sessionCount),
+       modality = Value(modality),
+       savedAt = Value(savedAt);
+  static Insertable<DraftRow> custom({
+    Expression<String>? programId,
+    Expression<int>? sessionCount,
+    Expression<String>? modality,
+    Expression<int>? savedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (programId != null) 'program_id': programId,
+      if (sessionCount != null) 'session_count': sessionCount,
+      if (modality != null) 'modality': modality,
+      if (savedAt != null) 'saved_at': savedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PracticeSessionDraftsCompanion copyWith({
+    Value<String>? programId,
+    Value<int>? sessionCount,
+    Value<String>? modality,
+    Value<int>? savedAt,
+    Value<int>? rowid,
+  }) {
+    return PracticeSessionDraftsCompanion(
+      programId: programId ?? this.programId,
+      sessionCount: sessionCount ?? this.sessionCount,
+      modality: modality ?? this.modality,
+      savedAt: savedAt ?? this.savedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (programId.present) {
+      map['program_id'] = Variable<String>(programId.value);
+    }
+    if (sessionCount.present) {
+      map['session_count'] = Variable<int>(sessionCount.value);
+    }
+    if (modality.present) {
+      map['modality'] = Variable<String>(modality.value);
+    }
+    if (savedAt.present) {
+      map['saved_at'] = Variable<int>(savedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PracticeSessionDraftsCompanion(')
+          ..write('programId: $programId, ')
+          ..write('sessionCount: $sessionCount, ')
+          ..write('modality: $modality, ')
+          ..write('savedAt: $savedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $ProgramsTable programs = $ProgramsTable(this);
   late final $SessionsTable sessions = $SessionsTable(this);
   late final $RewardEventsTable rewardEvents = $RewardEventsTable(this);
+  late final $PracticeSessionDraftsTable practiceSessionDrafts =
+      $PracticeSessionDraftsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2134,6 +2461,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     programs,
     sessions,
     rewardEvents,
+    practiceSessionDrafts,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -3367,6 +3695,204 @@ typedef $$RewardEventsTableProcessedTableManager =
       RewardEventRow,
       PrefetchHooks Function()
     >;
+typedef $$PracticeSessionDraftsTableCreateCompanionBuilder =
+    PracticeSessionDraftsCompanion Function({
+      required String programId,
+      required int sessionCount,
+      required String modality,
+      required int savedAt,
+      Value<int> rowid,
+    });
+typedef $$PracticeSessionDraftsTableUpdateCompanionBuilder =
+    PracticeSessionDraftsCompanion Function({
+      Value<String> programId,
+      Value<int> sessionCount,
+      Value<String> modality,
+      Value<int> savedAt,
+      Value<int> rowid,
+    });
+
+class $$PracticeSessionDraftsTableFilterComposer
+    extends Composer<_$AppDatabase, $PracticeSessionDraftsTable> {
+  $$PracticeSessionDraftsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get programId => $composableBuilder(
+    column: $table.programId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sessionCount => $composableBuilder(
+    column: $table.sessionCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get modality => $composableBuilder(
+    column: $table.modality,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get savedAt => $composableBuilder(
+    column: $table.savedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PracticeSessionDraftsTableOrderingComposer
+    extends Composer<_$AppDatabase, $PracticeSessionDraftsTable> {
+  $$PracticeSessionDraftsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get programId => $composableBuilder(
+    column: $table.programId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sessionCount => $composableBuilder(
+    column: $table.sessionCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get modality => $composableBuilder(
+    column: $table.modality,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get savedAt => $composableBuilder(
+    column: $table.savedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PracticeSessionDraftsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PracticeSessionDraftsTable> {
+  $$PracticeSessionDraftsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get programId =>
+      $composableBuilder(column: $table.programId, builder: (column) => column);
+
+  GeneratedColumn<int> get sessionCount => $composableBuilder(
+    column: $table.sessionCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get modality =>
+      $composableBuilder(column: $table.modality, builder: (column) => column);
+
+  GeneratedColumn<int> get savedAt =>
+      $composableBuilder(column: $table.savedAt, builder: (column) => column);
+}
+
+class $$PracticeSessionDraftsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PracticeSessionDraftsTable,
+          DraftRow,
+          $$PracticeSessionDraftsTableFilterComposer,
+          $$PracticeSessionDraftsTableOrderingComposer,
+          $$PracticeSessionDraftsTableAnnotationComposer,
+          $$PracticeSessionDraftsTableCreateCompanionBuilder,
+          $$PracticeSessionDraftsTableUpdateCompanionBuilder,
+          (
+            DraftRow,
+            BaseReferences<
+              _$AppDatabase,
+              $PracticeSessionDraftsTable,
+              DraftRow
+            >,
+          ),
+          DraftRow,
+          PrefetchHooks Function()
+        > {
+  $$PracticeSessionDraftsTableTableManager(
+    _$AppDatabase db,
+    $PracticeSessionDraftsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PracticeSessionDraftsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$PracticeSessionDraftsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$PracticeSessionDraftsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> programId = const Value.absent(),
+                Value<int> sessionCount = const Value.absent(),
+                Value<String> modality = const Value.absent(),
+                Value<int> savedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PracticeSessionDraftsCompanion(
+                programId: programId,
+                sessionCount: sessionCount,
+                modality: modality,
+                savedAt: savedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String programId,
+                required int sessionCount,
+                required String modality,
+                required int savedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => PracticeSessionDraftsCompanion.insert(
+                programId: programId,
+                sessionCount: sessionCount,
+                modality: modality,
+                savedAt: savedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PracticeSessionDraftsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PracticeSessionDraftsTable,
+      DraftRow,
+      $$PracticeSessionDraftsTableFilterComposer,
+      $$PracticeSessionDraftsTableOrderingComposer,
+      $$PracticeSessionDraftsTableAnnotationComposer,
+      $$PracticeSessionDraftsTableCreateCompanionBuilder,
+      $$PracticeSessionDraftsTableUpdateCompanionBuilder,
+      (
+        DraftRow,
+        BaseReferences<_$AppDatabase, $PracticeSessionDraftsTable, DraftRow>,
+      ),
+      DraftRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3377,4 +3903,6 @@ class $AppDatabaseManager {
       $$SessionsTableTableManager(_db, _db.sessions);
   $$RewardEventsTableTableManager get rewardEvents =>
       $$RewardEventsTableTableManager(_db, _db.rewardEvents);
+  $$PracticeSessionDraftsTableTableManager get practiceSessionDrafts =>
+      $$PracticeSessionDraftsTableTableManager(_db, _db.practiceSessionDrafts);
 }

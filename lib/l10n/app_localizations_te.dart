@@ -559,33 +559,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get languagePickerTitle => 'భాష';
 
   @override
-  String get themeSetting => 'థీమ్';
-
-  @override
-  String get themeLight => 'లైట్';
-
-  @override
-  String get themeDark => 'డార్క్';
-
-  @override
-  String get themeSystem => 'సిస్టమ్';
-
-  @override
-  String get fontSizeSetting => 'అక్షర పరిమాణం';
-
-  @override
-  String get fontSizeSmall => 'చిన్నది (90%)';
-
-  @override
-  String get fontSizeDefaultPct => 'డిఫాల్ట్ (100%)';
-
-  @override
-  String get fontSizeLarge => 'పెద్దది (115%)';
-
-  @override
-  String get fontSizeExtraLarge => 'చాలా పెద్దది (130%)';
-
-  @override
   String get linkSocialSection => 'సోషల్ లింక్';
 
   @override
@@ -1197,20 +1170,28 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get mantraNeedWealthProsperity => 'సంపద & సమృద్ధి';
+
   @override
   String get mantraNeedPeaceCalm => 'శాంతి & ప్రశాంతత';
+
   @override
   String get mantraNeedHealing => 'వైద్యం';
+
   @override
   String get mantraNeedProtection => 'రక్షణ';
+
   @override
   String get mantraNeedStrengthCourage => 'బలం & ధైర్యం';
+
   @override
   String get mantraNeedSpiritualLiberation => 'ఆధ్యాత్మిక విముక్తి';
+
   @override
   String get mantraNeedWisdomEnlightenment => 'జ్ఞానం & జ్ఞానోదయం';
+
   @override
   String get mantraNeedDevotion => 'భక్తి';
+
   @override
   String get appTitle => 'వాచిక లేఖిని';
 }

@@ -94,7 +94,20 @@ class RewardEvents extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
-@DriftDatabase(tables: [Programs, Sessions, RewardEvents])
+/// One row per active (unsaved) practice session — survives app kills.
+/// Deleted when the user finishes the session or discards the draft.
+@DataClassName('DraftRow')
+class PracticeSessionDrafts extends Table {
+  TextColumn get programId => text()();
+  IntColumn get sessionCount => integer()();
+  TextColumn get modality => text()();
+  IntColumn get savedAt => integer()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {programId};
+}
+
+@DriftDatabase(tables: [Programs, Sessions, RewardEvents, PracticeSessionDrafts])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
@@ -102,7 +115,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.inMemory() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -110,19 +123,46 @@ class AppDatabase extends _$AppDatabase {
         onUpgrade: (m, from, to) async {
           // v2→v3: column renames + new columns across all 3 tables.
           // SQLite cannot rename columns, so we drop and recreate.
-          // Safe at this dev stage — the sync engine will re-pull data from
-          // the backend after the user signs in.
           if (from < 3) {
             await m.drop(sessions);
             await m.drop(rewardEvents);
             await m.drop(programs);
             await m.createAll();
+            return;
+          }
+          // v3→v4: add practice_session_drafts table (non-destructive).
+          if (from < 4) {
+            await m.createTable(practiceSessionDrafts);
           }
         },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');
         },
       );
+
+  Future<void> saveDraft({
+    required String programId,
+    required int count,
+    required String modality,
+  }) =>
+      into(practiceSessionDrafts).insertOnConflictUpdate(
+        PracticeSessionDraftsCompanion.insert(
+          programId: programId,
+          sessionCount: count,
+          modality: modality,
+          savedAt: DateTime.now().millisecondsSinceEpoch,
+        ),
+      );
+
+  Future<DraftRow?> getDraft(String programId) =>
+      (select(practiceSessionDrafts)
+            ..where((d) => d.programId.equals(programId)))
+          .getSingleOrNull();
+
+  Future<void> deleteDraft(String programId) =>
+      (delete(practiceSessionDrafts)
+            ..where((d) => d.programId.equals(programId)))
+          .go();
 
   static QueryExecutor _open() {
     return LazyDatabase(() async {

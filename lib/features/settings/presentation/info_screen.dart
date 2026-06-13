@@ -1,6 +1,6 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/theme/theme.dart';
@@ -55,7 +55,6 @@ class InfoScreen extends ConsumerWidget {
     }
 
     final t = _topicFor(context, topic);
-    final actionLabel = _actionLabel(context, topic);
     return KvlScaffold(
       title: t.title,
       scrollable: true,
@@ -81,46 +80,9 @@ class InfoScreen extends ConsumerWidget {
             textAlign: TextAlign.center,
             style: KvlText.body(12).copyWith(height: 1.6),
           ),
-          if (actionLabel != null) ...[
-            const SizedBox(height: KvlSpacing.xl),
-            KvlButton(
-              label: actionLabel,
-              icon: Icons.open_in_new_rounded,
-              onPressed: () => _launchAction(context, topic),
-            ),
-          ],
         ],
       ),
     );
-  }
-
-  String? _actionLabel(BuildContext context, String key) => switch (key) {
-    'report' => 'Send Email Report',
-    'feedback' => 'Share Feedback via Email',
-    _ => null,
-  };
-
-  Future<void> _launchAction(BuildContext context, String key) async {
-    final Uri uri;
-    switch (key) {
-      case 'report':
-        uri = Uri(
-          scheme: 'mailto',
-          path: 'support@vaachikalekhini.com',
-          query: 'subject=Bug Report - Vaachika Lekhini',
-        );
-      case 'feedback':
-        uri = Uri(
-          scheme: 'mailto',
-          path: 'support@vaachikalekhini.com',
-          query: 'subject=Feedback - Vaachika Lekhini',
-        );
-      default:
-        return;
-    }
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    }
   }
 
   _Topic _topicFor(BuildContext context, String key) {
@@ -155,7 +117,7 @@ class InfoScreen extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Report Issue — full text-input form that launches a mailto: on send.
+// Report Issue — full text-input form that POSTs to /api/v1/support.
 // ---------------------------------------------------------------------------
 
 class _ReportScreen extends ConsumerStatefulWidget {
@@ -166,12 +128,11 @@ class _ReportScreen extends ConsumerStatefulWidget {
 }
 
 class _ReportScreenState extends ConsumerState<_ReportScreen> {
-  static const _fallbackEmail = 'support@vaachikalekhini.com';
-
   final _formKey = GlobalKey<FormState>();
   final _subjectCtrl = TextEditingController(text: 'Bug Report');
   final _bodyCtrl = TextEditingController();
   bool _sending = false;
+  bool _sent = false;
 
   @override
   void dispose() {
@@ -180,128 +141,127 @@ class _ReportScreenState extends ConsumerState<_ReportScreen> {
     super.dispose();
   }
 
-  String get _recipientEmail {
-    final settings = ref.read(appSettingsProvider).value;
-    return settings?.supportEmail ?? _fallbackEmail;
-  }
-
   Future<void> _send() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _sending = true);
-
-    final email = _recipientEmail;
-    final subject = Uri.encodeComponent(_subjectCtrl.text.trim());
-    final body = Uri.encodeComponent(_bodyCtrl.text.trim());
-    final uri = Uri.parse('mailto:$email?subject=$subject&body=$body');
-
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
+    try {
+      final dio = ref.read(apiClientProvider).dio;
+      await dio.post<void>(
+        '/api/v1/support',
+        data: {
+          'subject': _subjectCtrl.text.trim(),
+          'body': _bodyCtrl.text.trim(),
+        },
+      );
+      if (mounted) setState(() { _sending = false; _sent = true; });
+    } on DioException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Opening your email app…'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } else {
-      if (mounted) {
+        setState(() => _sending = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('No email app found. Please email $email directly.'),
+            content: Text('Failed to send: ${e.message ?? 'network error'}'),
             behavior: SnackBarBehavior.floating,
           ),
         );
       }
     }
-
-    if (mounted) setState(() => _sending = false);
   }
 
   @override
   Widget build(BuildContext context) {
-    // Watch so the email address updates if the provider resolves after build.
-    final settingsAsync = ref.watch(appSettingsProvider);
-    final email = settingsAsync.value?.supportEmail ?? _fallbackEmail;
-
     return KvlScaffold(
       title: 'Report Issue',
       scrollable: true,
-      body: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: KvlSpacing.md),
-            Container(
-              width: 56,
-              height: 56,
-              decoration: const BoxDecoration(
-                color: KvlColors.primaryGhost,
-                shape: BoxShape.circle,
-              ),
-              alignment: Alignment.center,
-              child: const Icon(Icons.flag_outlined, color: KvlColors.primaryDeep, size: 26),
-            ),
-            const SizedBox(height: KvlSpacing.sm),
-            Center(
-              child: Text(
-                'Tell us what went wrong',
-                style: KvlText.title(16),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Center(
-              child: Text(
-                'We read every report and respond within 48 hours.',
-                textAlign: TextAlign.center,
-                style: KvlText.muted(11.5),
-              ),
-            ),
-            const SizedBox(height: KvlSpacing.lg),
-            TextFormField(
-              controller: _subjectCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Subject',
-                hintText: 'e.g. Bug Report, Feature Request…',
-              ),
-              textCapitalization: TextCapitalization.sentences,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Subject is required' : null,
-            ),
-            const SizedBox(height: KvlSpacing.md),
-            TextFormField(
-              controller: _bodyCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Describe the issue',
-                hintText:
-                    'What happened? What did you expect to happen? Which screen were you on?',
-                alignLabelWithHint: true,
-              ),
-              maxLines: 8,
-              minLines: 5,
-              textCapitalization: TextCapitalization.sentences,
-              validator: (v) =>
-                  (v == null || v.trim().length < 10)
-                      ? 'Please describe the issue (at least 10 characters)'
-                      : null,
-            ),
-            const SizedBox(height: KvlSpacing.lg),
-            KvlButton(
-              label: _sending ? 'Opening email…' : 'Send Report',
-              icon: Icons.send_rounded,
-              onPressed: _sending ? null : _send,
-            ),
-            const SizedBox(height: KvlSpacing.sm),
-            Center(
-              child: Text(
-                'Sends to $email',
-                style: KvlText.muted(10),
+      body: _sent
+          ? _buildSuccess(context)
+          : Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: KvlSpacing.md),
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: const BoxDecoration(
+                      color: KvlColors.primaryGhost,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(Icons.flag_outlined, color: KvlColors.primaryDeep, size: 26),
+                  ),
+                  const SizedBox(height: KvlSpacing.sm),
+                  Center(
+                    child: Text(
+                      'Tell us what went wrong',
+                      style: KvlText.title(16),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Center(
+                    child: Text(
+                      'We read every report and respond within 48 hours.',
+                      textAlign: TextAlign.center,
+                      style: KvlText.muted(11.5),
+                    ),
+                  ),
+                  const SizedBox(height: KvlSpacing.lg),
+                  TextFormField(
+                    controller: _subjectCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Subject',
+                      hintText: 'e.g. Bug Report, Feature Request…',
+                    ),
+                    textCapitalization: TextCapitalization.sentences,
+                    validator: (v) =>
+                        (v == null || v.trim().isEmpty) ? 'Subject is required' : null,
+                  ),
+                  const SizedBox(height: KvlSpacing.md),
+                  TextFormField(
+                    controller: _bodyCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Describe the issue',
+                      hintText:
+                          'What happened? What did you expect to happen? Which screen were you on?',
+                      alignLabelWithHint: true,
+                    ),
+                    maxLines: 8,
+                    minLines: 5,
+                    textCapitalization: TextCapitalization.sentences,
+                    validator: (v) =>
+                        (v == null || v.trim().length < 10)
+                            ? 'Please describe the issue (at least 10 characters)'
+                            : null,
+                  ),
+                  const SizedBox(height: KvlSpacing.lg),
+                  KvlButton(
+                    label: _sending ? 'Sending…' : 'Send Report',
+                    icon: Icons.send_rounded,
+                    onPressed: _sending ? null : _send,
+                  ),
+                ],
               ),
             ),
-          ],
+    );
+  }
+
+  Widget _buildSuccess(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Icon(Icons.check_circle_outline_rounded, color: KvlColors.primaryDeep, size: 56),
+        const SizedBox(height: KvlSpacing.md),
+        Center(child: Text('Report Submitted', style: KvlText.title(17))),
+        const SizedBox(height: KvlSpacing.sm),
+        Center(
+          child: Text(
+            "We'll read your report and respond within 48 hours.",
+            textAlign: TextAlign.center,
+            style: KvlText.muted(12),
+          ),
         ),
-      ),
+      ],
     );
   }
 }

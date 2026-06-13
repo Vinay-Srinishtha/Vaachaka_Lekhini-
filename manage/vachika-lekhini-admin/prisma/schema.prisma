@@ -416,3 +416,16 @@ model AppSetting {
   value     String   @db.Text
   updatedAt DateTime @updatedAt
 }
+
+/// In-app bug/feedback reports submitted from the Report Issue screen.
+model SupportReport {
+  id        String   @id @default(cuid())
+  subject   String
+  body      String   @db.Text
+  memberId  String?
+  mobile    String?
+  status    String   @default("open")
+  createdAt DateTime @default(now())
+
+  @@index([status, createdAt])
+}

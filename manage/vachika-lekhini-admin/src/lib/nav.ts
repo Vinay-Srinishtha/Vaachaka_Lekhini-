@@ -15,7 +15,8 @@ import {
 	Smartphone,
 	BarChart3,
 	HelpCircle,
-	Sliders
+	Sliders,
+	Flag
 } from '@lucide/svelte';
 import type { AdminRole } from './roles';
 
@@ -44,6 +45,8 @@ export const NAV_ITEMS: NavItem[] = [
 	{ href: '/rewards', label: 'Rewards Ledger', icon: Coins, minRole: 'editor', group: 'Users' },
 	{ href: '/enrolments', label: 'Enrolments', icon: Mic2, minRole: 'editor', group: 'Users' },
 	{ href: '/invites', label: 'Invites', icon: UserPlus, minRole: 'editor', group: 'Users' },
+
+	{ href: '/support', label: 'Support Reports', icon: Flag, minRole: 'viewer', group: 'Users' },
 
 	{ href: '/otp-log', label: 'OTP Log', icon: MessageSquareDot, minRole: 'editor', group: 'Audit' },
 	{ href: '/devices', label: 'Devices', icon: Smartphone, minRole: 'editor', group: 'Audit' },

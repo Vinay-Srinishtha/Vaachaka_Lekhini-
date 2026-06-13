@@ -134,12 +134,11 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
     if (!mounted) return;
     switch (result) {
       case Ok(:final value):
+        // Seed the primary member with the server UUID so local ID matches.
+        // Do NOT setActive — user picks who is practicing on profile-select.
         final profileRepo = ref.read(profileRepositoryProvider);
         final serverId = value.primaryMemberId;
         if (serverId != null) {
-          // Use the server-assigned member UUID so local profile ID matches
-          // the server — without this the active profile would be a Flutter-
-          // generated UUID with no server data and every count shows 0.
           await profileRepo.upsertRemote(Profile(
             id: serverId,
             userId: value.userId,
@@ -148,17 +147,15 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
             language: value.language,
             createdAt: value.createdAt,
           ));
-          await profileRepo.setActive(serverId);
         } else {
-          final me = await profileRepo.create(
+          await profileRepo.create(
             userId: value.userId,
             name: value.username,
             relation: FamilyRelation.me,
           );
-          await profileRepo.setActive(me.id);
         }
         if (!mounted) return;
-        context.go(KvlRoute.home);
+        context.go(KvlRoute.profileSelect);
       case Err(:final failure):
         setState(() {
           _busy = false;

@@ -214,15 +214,11 @@ final accountHydrationProvider = Provider<void>((ref) {
       final accountId = accountMap['id'] as String?;
       if (accountId == null) return;
       final members = accountMap['members'] as List<dynamic>? ?? const [];
-      String? firstMemberId;
-      String? primaryMemberId;
 
       for (final rawMember in members) {
         final member = Map<String, dynamic>.from(rawMember as Map);
         final memberId = member['id'] as String?;
         if (memberId == null) continue;
-        firstMemberId ??= memberId;
-        if (member['is_primary'] == true) primaryMemberId = memberId;
         final profile = Profile(
           id: memberId,
           userId: accountId,
@@ -288,12 +284,6 @@ final accountHydrationProvider = Provider<void>((ref) {
         }
       }
 
-      if (await ref.read(profileRepositoryProvider).getActive() == null) {
-        final preferred = primaryMemberId ?? firstMemberId;
-        if (preferred != null) {
-          await ref.read(profileRepositoryProvider).setActive(preferred);
-        }
-      }
     });
   });
 });

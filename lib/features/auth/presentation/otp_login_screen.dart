@@ -109,11 +109,13 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
     if (!mounted) return;
     switch (res) {
       case Ok(:final value):
+        // On a fresh device, seed the primary member using the server UUID
+        // so the local profile ID matches the server from the start.
+        // Do NOT setActive here — the user picks who is practicing on
+        // the profile-select screen shown immediately after.
         final pr = ref.read(profileRepositoryProvider);
         final list = await pr.listForUser(value.userId);
         if (list.isEmpty) {
-          // On a fresh device, seed the primary member using the server UUID
-          // so the local profile ID matches the server from the start.
           final serverId = value.primaryMemberId;
           if (serverId != null) {
             await pr.upsertRemote(Profile(
@@ -124,19 +126,15 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
               language: value.language,
               createdAt: value.createdAt,
             ));
-            await pr.setActive(serverId);
           } else {
-            final me = await pr.create(
+            await pr.create(
                 userId: value.userId,
                 name: value.username,
                 relation: FamilyRelation.me);
-            await pr.setActive(me.id);
           }
-        } else if (await pr.getActive() == null) {
-          await pr.setActive(list.first.id);
         }
         if (!mounted) return;
-        context.go(KvlRoute.home);
+        context.go(KvlRoute.profileSelect);
       case Err(:final failure):
         setState(() { _busy = false; _error = localizeAuthError(context, code: failure.code, fallback: failure.message); _errorCode = failure.code; });
     }

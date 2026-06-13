@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/providers.dart';
 import '../../../app/router.dart';
@@ -90,23 +91,64 @@ class _DeityHero extends StatelessWidget {
   }
 }
 
-class _PronunciationCard extends StatelessWidget {
+class _PronunciationCard extends StatefulWidget {
   const _PronunciationCard({required this.mantra, required this.languageCode});
   final Mantra mantra;
   final String languageCode;
 
   @override
+  State<_PronunciationCard> createState() => _PronunciationCardState();
+}
+
+class _PronunciationCardState extends State<_PronunciationCard> {
+  bool _loading = false;
+
+  Future<void> _play() async {
+    final asset = widget.mantra.pronunciationAsset;
+    if (asset == null || asset.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pronunciation audio not available for this mantra yet.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _loading = true);
+    final uri = Uri.tryParse(asset);
+    if (uri != null && await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open pronunciation audio.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+    if (mounted) setState(() => _loading = false);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final name = mantra.name.displayForLanguage(languageCode);
+    final name = widget.mantra.name.displayForLanguage(widget.languageCode);
+    final hasAudio = widget.mantra.pronunciationAsset?.isNotEmpty ?? false;
+
     return KvlCard(
       padding: const EdgeInsets.all(KvlSpacing.md),
+      onTap: _play,
       child: Row(
         children: [
           Container(
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              gradient: KvlColors.primaryGradient,
+              gradient: hasAudio
+                  ? KvlColors.primaryGradient
+                  : const LinearGradient(colors: [KvlColors.muted, KvlColors.muted]),
               borderRadius: KvlRadius.brSM,
             ),
             alignment: Alignment.center,
@@ -125,24 +167,34 @@ class _PronunciationCard extends StatelessWidget {
                   context.l10n.pronunciationGuide,
                   style: KvlText.ui(11.5, FontWeight.w600),
                 ),
-                Text('$name Mantra', style: KvlText.muted(10.5)),
+                Text(
+                  hasAudio ? '$name Mantra' : 'Audio coming soon',
+                  style: KvlText.muted(10.5),
+                ),
               ],
             ),
           ),
-          Container(
-            width: 30,
-            height: 30,
-            decoration: const BoxDecoration(
-              color: KvlColors.primary,
-              shape: BoxShape.circle,
+          if (_loading)
+            const SizedBox(
+              width: 30,
+              height: 30,
+              child: CircularProgressIndicator(strokeWidth: 2.5),
+            )
+          else
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: hasAudio ? KvlColors.primary : KvlColors.muted,
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: const Icon(
+                Icons.play_arrow_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
             ),
-            alignment: Alignment.center,
-            child: const Icon(
-              Icons.play_arrow_rounded,
-              color: Colors.white,
-              size: 18,
-            ),
-          ),
         ],
       ),
     );

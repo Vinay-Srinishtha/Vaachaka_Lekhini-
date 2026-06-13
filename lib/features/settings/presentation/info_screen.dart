@@ -13,6 +13,7 @@ class InfoScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (topic == 'help') return const _FaqScreen();
+    if (topic == 'report') return const _ReportScreen();
 
     final t = _topicFor(context, topic);
     final actionLabel = _actionLabel(context, topic);
@@ -113,6 +114,150 @@ class InfoScreen extends StatelessWidget {
     }
   }
 }
+
+// ---------------------------------------------------------------------------
+// Report Issue — full text-input form that launches a mailto: on send.
+// ---------------------------------------------------------------------------
+
+class _ReportScreen extends StatefulWidget {
+  const _ReportScreen();
+
+  @override
+  State<_ReportScreen> createState() => _ReportScreenState();
+}
+
+class _ReportScreenState extends State<_ReportScreen> {
+  static const _recipientEmail = 'vinaaysai@gmail.com';
+
+  final _formKey = GlobalKey<FormState>();
+  final _subjectCtrl = TextEditingController(text: 'Bug Report');
+  final _bodyCtrl = TextEditingController();
+  bool _sending = false;
+
+  @override
+  void dispose() {
+    _subjectCtrl.dispose();
+    _bodyCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    setState(() => _sending = true);
+
+    final subject = Uri.encodeComponent(_subjectCtrl.text.trim());
+    final body = Uri.encodeComponent(_bodyCtrl.text.trim());
+    final uri = Uri.parse('mailto:$_recipientEmail?subject=$subject&body=$body');
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Opening your email app…'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No email app found. Please email vinaaysai@gmail.com directly.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+
+    if (mounted) setState(() => _sending = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return KvlScaffold(
+      title: 'Report Issue',
+      scrollable: true,
+      body: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: KvlSpacing.md),
+            Container(
+              width: 56,
+              height: 56,
+              decoration: const BoxDecoration(
+                color: KvlColors.primaryGhost,
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: const Icon(Icons.flag_outlined, color: KvlColors.primaryDeep, size: 26),
+            ),
+            const SizedBox(height: KvlSpacing.sm),
+            Center(
+              child: Text(
+                'Tell us what went wrong',
+                style: KvlText.title(16),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Center(
+              child: Text(
+                'We read every report and respond within 48 hours.',
+                textAlign: TextAlign.center,
+                style: KvlText.muted(11.5),
+              ),
+            ),
+            const SizedBox(height: KvlSpacing.lg),
+            TextFormField(
+              controller: _subjectCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Subject',
+                hintText: 'e.g. Bug Report, Feature Request…',
+              ),
+              textCapitalization: TextCapitalization.sentences,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Subject is required' : null,
+            ),
+            const SizedBox(height: KvlSpacing.md),
+            TextFormField(
+              controller: _bodyCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Describe the issue',
+                hintText:
+                    'What happened? What did you expect to happen? Which screen were you on?',
+                alignLabelWithHint: true,
+              ),
+              maxLines: 8,
+              minLines: 5,
+              textCapitalization: TextCapitalization.sentences,
+              validator: (v) =>
+                  (v == null || v.trim().length < 10)
+                      ? 'Please describe the issue (at least 10 characters)'
+                      : null,
+            ),
+            const SizedBox(height: KvlSpacing.lg),
+            KvlButton(
+              label: _sending ? 'Opening email…' : 'Send Report',
+              icon: Icons.send_rounded,
+              onPressed: _sending ? null : _send,
+            ),
+            const SizedBox(height: KvlSpacing.sm),
+            Center(
+              child: Text(
+                'Sends to $_recipientEmail',
+                style: KvlText.muted(10),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 
 class _FaqScreen extends StatelessWidget {
   const _FaqScreen();

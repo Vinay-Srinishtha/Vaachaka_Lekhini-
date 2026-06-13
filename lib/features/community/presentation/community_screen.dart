@@ -398,7 +398,7 @@ class _StatRow extends StatelessWidget {
   }
 }
 
-class _RankRow extends StatelessWidget {
+class _RankRow extends StatefulWidget {
   const _RankRow({
     required this.rank,
     required this.friend,
@@ -411,13 +411,32 @@ class _RankRow extends StatelessWidget {
   final bool highlight;
 
   @override
+  State<_RankRow> createState() => _RankRowState();
+}
+
+class _RankRowState extends State<_RankRow> {
+  bool _sent = false;
+
+  void _encourage() {
+    if (_sent) return;
+    setState(() => _sent = true);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(context.l10n.encouragementSentLabel),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final metric = sort == LeaderboardSort.streak
-        ? '${friend.streakDays} Days'
-        : IndianNumberFormat.compact(friend.totalChants);
+    final metric = widget.sort == LeaderboardSort.streak
+        ? '${widget.friend.streakDays} Days'
+        : IndianNumberFormat.compact(widget.friend.totalChants);
     return KvlCard(
-      variant: highlight ? KvlCardVariant.soft : KvlCardVariant.plain,
-      border: highlight
+      variant: widget.highlight ? KvlCardVariant.soft : KvlCardVariant.plain,
+      border: widget.highlight
           ? Border.all(color: KvlColors.primarySoft, width: 1.5)
           : null,
       padding: const EdgeInsets.symmetric(
@@ -429,9 +448,9 @@ class _RankRow extends StatelessWidget {
           SizedBox(
             width: 22,
             child: Text(
-              '$rank',
+              '${widget.rank}',
               style: KvlText.ui(13, FontWeight.w700).copyWith(
-                color: highlight ? KvlColors.primaryDeep : KvlColors.inkSoft,
+                color: widget.highlight ? KvlColors.primaryDeep : KvlColors.inkSoft,
               ),
             ),
           ),
@@ -448,7 +467,7 @@ class _RankRow extends StatelessWidget {
             ),
             alignment: Alignment.center,
             child: Text(
-              friend.initials,
+              widget.friend.initials,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 11,
@@ -463,17 +482,43 @@ class _RankRow extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  highlight ? context.l10n.youLabel : friend.name,
+                  widget.highlight ? context.l10n.youLabel : widget.friend.name,
                   style: KvlText.ui(12, FontWeight.w600),
                 ),
                 Text(
-                  sort == LeaderboardSort.streak ? context.l10n.streakLabel : context.l10n.totalChantsSort,
+                  widget.sort == LeaderboardSort.streak
+                      ? context.l10n.streakLabel
+                      : context.l10n.totalChantsSort,
                   style: KvlText.muted(10),
                 ),
               ],
             ),
           ),
           Text(metric, style: KvlText.ui(12, FontWeight.w600)),
+          // Don't show encouragement button on the user's own row.
+          if (!widget.highlight) ...[
+            const SizedBox(width: KvlSpacing.sm),
+            Tooltip(
+              message: context.l10n.sendEncouragement,
+              child: GestureDetector(
+                onTap: _encourage,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: _sent ? KvlColors.primarySoft : KvlColors.primaryGhost,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    _sent ? '🙏' : '💪',
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

@@ -53,10 +53,11 @@ export const load: PageServerLoad = async (event) => {
 				include: { mantra: { select: { nameRoman: true } } }
 			});
 			const map = Object.fromEntries(programs.map((p) => [p.id, p.mantra.nameRoman]));
-			// Aggregate by mantra name
+			// Aggregate by mantra name — skip programs whose mantra was deleted
 			const byMantra: Record<string, number> = {};
 			for (const g of groups) {
-				const name = map[g.programId] ?? 'Unknown';
+				const name = map[g.programId];
+				if (!name) continue;
 				byMantra[name] = (byMantra[name] ?? 0) + g._count;
 			}
 			return Object.entries(byMantra)
@@ -77,7 +78,10 @@ export const load: PageServerLoad = async (event) => {
 				select: { id: true, displayName: true }
 			});
 			const map = Object.fromEntries(members.map((m) => [m.id, m.displayName]));
-			return groups.map((g) => ({ name: map[g.memberId] ?? 'Unknown', total: g._sum.countAdded ?? 0 }));
+			// Skip members that no longer exist in DB
+			return groups
+				.filter((g) => map[g.memberId])
+				.map((g) => ({ name: map[g.memberId], total: g._sum.countAdded ?? 0 }));
 		}),
 		// Session modality split
 		prisma.session.groupBy({ by: ['modality'], _count: true }),

@@ -106,8 +106,7 @@ class _BodyState extends ConsumerState<_Body> {
     final globalCount =
         (statsAsync.value?.globalChantCount ?? 0) + state.sessionCount;
     final title =
-        mantra?.name.displayForLanguage(settings.languageCode) ??
-        'Sri Rama lekhanam';
+        mantra?.name.displayForLanguage(settings.languageCode) ?? '';
     final mantraLabel =
         mantra?.name.displayForLanguage(settings.languageCode) ??
         state.program.mantraId;

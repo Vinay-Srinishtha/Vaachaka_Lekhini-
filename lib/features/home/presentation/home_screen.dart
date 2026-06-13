@@ -343,8 +343,7 @@ class _DailyReminder extends ConsumerWidget {
                 ),
                 const SizedBox(height: KvlSpacing.xs),
                 Text(
-                  mantra?.name.displayForLanguage(settings.languageCode) ??
-                      'Sri Rama lekhanam',
+                  mantra?.name.displayForLanguage(settings.languageCode) ?? '',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: KvlText.ui(
@@ -393,10 +392,10 @@ class _HeroQuote extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cfg = ref.watch(remoteConfigProvider).value ?? RemoteConfig.empty;
-    final quote = cfg.stringFlag(
-      RemoteConfigKeys.dailyQuoteTelugu,
-      fallback: 'ధర్మో రక్షతి రక్షితః',
-    );
+    final quote = cfg.stringFlag(RemoteConfigKeys.dailyQuoteTelugu, fallback: '');
+    final attribution = cfg.stringFlag(RemoteConfigKeys.dailyQuoteAttribution, fallback: '');
+    // Don't render the card if the DB has no quote configured yet.
+    if (quote.isEmpty) return const SizedBox.shrink();
     return KvlCard(
       variant: KvlCardVariant.warm,
       padding: EdgeInsets.zero,
@@ -452,24 +451,24 @@ class _HeroQuote extends ConsumerWidget {
                             ),
                           ),
                         ),
-                        SizedBox(height: tight ? KvlSpacing.xs : KvlSpacing.sm),
-                        Text(
-                          '— Ramayana',
-                          style: KvlText.muted(
-                            tight ? 11.5 : 14,
-                          ).copyWith(fontWeight: FontWeight.w600),
-                        ),
+                        if (attribution.isNotEmpty) ...[
+                          SizedBox(height: tight ? KvlSpacing.xs : KvlSpacing.sm),
+                          Text(
+                            '— $attribution',
+                            style: KvlText.muted(
+                              tight ? 11.5 : 14,
+                            ).copyWith(fontWeight: FontWeight.w600),
+                          ),
+                        ],
                       ],
                     ),
                   ),
                   InkWell(
                     onTap: () {
-                      SharePlus.instance.share(
-                        ShareParams(
-                          text:
-                              '"దుష్టులను క్షమించడం ధర్మం కాదు."\n— Ramayana\n\nShared via Vachika Lekhini 🙏',
-                        ),
-                      );
+                      final shareText = attribution.isNotEmpty
+                          ? '"$quote"\n— $attribution\n\nShared via Vachika Lekhini 🙏'
+                          : '"$quote"\n\nShared via Vachika Lekhini 🙏';
+                      SharePlus.instance.share(ShareParams(text: shareText));
                     },
                     borderRadius: BorderRadius.circular(18),
                     child: Container(

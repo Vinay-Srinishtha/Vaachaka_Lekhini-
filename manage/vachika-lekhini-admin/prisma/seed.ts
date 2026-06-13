@@ -134,7 +134,8 @@ const flags = [
 	{ key: 'feature.handwriting_gallery', valueType: 'bool' as const, value: true, description: 'Allow gallery upload for handwriting enrolment.' },
 	{ key: 'feature.community_tab', valueType: 'bool' as const, value: true, description: 'Show Community tab.' },
 	{ key: 'feature.store_tab', valueType: 'bool' as const, value: true, description: 'Show Store tab.' },
-	{ key: 'config.daily_quote_telugu', valueType: 'string' as const, value: 'ధర్మో రక్షతి రక్షితః', description: 'Quote shown on Home screen.' },
+	{ key: 'config.daily_quote_telugu', valueType: 'string' as const, value: '', description: 'Quote shown on Home screen (Telugu). Leave empty to hide the card.' },
+	{ key: 'config.daily_quote_attribution', valueType: 'string' as const, value: '', description: 'Attribution line below the daily quote (e.g. "Ramayana"). Leave empty to hide.' },
 	{ key: 'config.max_profiles_per_user', valueType: 'int' as const, value: 4, description: 'Maximum family profiles per registered mobile.' },
 	{ key: 'config.min_app_version', valueType: 'string' as const, value: '1.0.0', description: 'Minimum supported Flutter app version — older clients are force-updated.' }
 ];
@@ -173,15 +174,19 @@ async function main() {
 	console.log(`  ✔ ${flags.length} flags seeded`);
 
 	console.log('▶ Seeding default admin user…');
-	const username = process.env.ADMIN_USERNAME ?? 'admin';
-	const defaultPassword = process.env.ADMIN_BOOTSTRAP_PASSWORD ?? 'admin123';
-	const passwordHash = await bcrypt.hash(defaultPassword, 10);
-	await prisma.adminUser.upsert({
-		where: { username },
-		create: { username, passwordHash, role: 'super_admin' },
-		update: {}
-	});
-	console.log(`  ✔ admin "${username}" ready (password: ${defaultPassword} — change immediately)`);
+	const username = process.env.ADMIN_USERNAME;
+	const defaultPassword = process.env.ADMIN_BOOTSTRAP_PASSWORD;
+	if (!username || !defaultPassword) {
+		console.warn('  ⚠ ADMIN_USERNAME or ADMIN_BOOTSTRAP_PASSWORD not set — skipping admin seed.');
+	} else {
+		const passwordHash = await bcrypt.hash(defaultPassword, 10);
+		await prisma.adminUser.upsert({
+			where: { username },
+			create: { username, passwordHash, role: 'super_admin' },
+			update: {}
+		});
+		console.log(`  ✔ admin "${username}" created`);
+	}
 
 	// No demo accounts — real users register via the Flutter app.
 }

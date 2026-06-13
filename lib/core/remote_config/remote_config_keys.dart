@@ -10,6 +10,7 @@ abstract final class RemoteConfigKeys {
 
   // Tunables
   static const dailyQuoteTelugu = 'config.daily_quote_telugu';
+  static const dailyQuoteAttribution = 'config.daily_quote_attribution';
   static const maxProfilesPerUser = 'config.max_profiles_per_user';
 
   /// Minimum handwriting accuracy (0–100 integer) required to accept a

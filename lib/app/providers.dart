@@ -222,7 +222,7 @@ final accountHydrationProvider = Provider<void>((ref) {
         final profile = Profile(
           id: memberId,
           userId: accountId,
-          name: member['display_name'] as String? ?? 'User',
+          name: (member['display_name'] as String?) ?? '',
           relation: _familyRelationFromServer(member['relation'] as String?),
           avatarSeed: member['avatar_key'] as String?,
           language: member['language'] as String? ?? 'en',

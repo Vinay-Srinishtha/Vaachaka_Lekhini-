@@ -104,7 +104,7 @@ class ProfileRepositoryLocal implements ProfileRepository {
     final p = Profile(
       id: _uuid.v4(),
       userId: userId,
-      name: name.trim().isEmpty ? 'Profile' : name.trim(),
+      name: name.trim(),
       relation: relation,
       createdAt: DateTime.now(),
       avatarSeed: _uuid.v4().substring(0, 8),

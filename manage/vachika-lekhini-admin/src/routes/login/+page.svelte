@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { LogIn } from '@lucide/svelte';
+	import { LogIn, Eye, EyeOff } from '@lucide/svelte';
 
 	let { form } = $props();
 	let submitting = $state(false);
+	let showPassword = $state(false);
 </script>
 
 <svelte:head>
@@ -46,14 +47,28 @@
 				</div>
 				<div>
 					<label class="label" for="password">Password</label>
-					<input
-						id="password"
-						name="password"
-						type="password"
-						autocomplete="current-password"
-						class="input"
-						required
-					/>
+					<div class="relative">
+						<input
+							id="password"
+							name="password"
+							type={showPassword ? 'text' : 'password'}
+							autocomplete="current-password"
+							class="input pr-10"
+							required
+						/>
+						<button
+							type="button"
+							onclick={() => showPassword = !showPassword}
+							class="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600"
+							tabindex="-1"
+						>
+							{#if showPassword}
+								<EyeOff size={16} />
+							{:else}
+								<Eye size={16} />
+							{/if}
+						</button>
+					</div>
 				</div>
 
 				{#if form?.error}

@@ -92,7 +92,14 @@ class SyncEngine with WidgetsBindingObserver {
             ? {spec.wrapKey!: [item.payload]}
             : item.payload;
         try {
-          await _api.dio.post<Map<String, Object?>>(spec.route, data: body);
+          final route = spec.isDelete
+              ? '${spec.route}/${item.payload['id']}'
+              : spec.route;
+          if (spec.isDelete) {
+            await _api.dio.delete<Map<String, Object?>>(route);
+          } else {
+            await _api.dio.post<Map<String, Object?>>(route, data: body);
+          }
           await _outbox.remove(item.id);
           if (kDebugMode) debugPrint('[sync] pushed ${item.kind} → ${spec.route}');
         } on DioException catch (e) {
@@ -118,6 +125,7 @@ class SyncEngine with WidgetsBindingObserver {
 
   _SyncSpec? _specFor(String kind) => switch (kind) {
         'members.upsert'       => const _SyncSpec('/api/v1/members',      'members'),
+        'members.delete'       => const _SyncSpec('/api/v1/members',      null, isDelete: true),
         'programs.upsert'      => const _SyncSpec('/api/v1/programs',     'programs'),
         'sessions.append'      => const _SyncSpec('/api/v1/sessions',     'sessions'),
         'reward_events.append' => const _SyncSpec('/api/v1/reward-events','events'),
@@ -181,9 +189,11 @@ class SyncEngine with WidgetsBindingObserver {
 }
 
 class _SyncSpec {
-  const _SyncSpec(this.route, this.wrapKey);
+  const _SyncSpec(this.route, this.wrapKey, {this.isDelete = false});
   final String route;
   /// The JSON key to wrap the payload array in, e.g. "sessions".
   /// Null means send the payload object directly (no wrapping).
   final String? wrapKey;
+  /// When true, send `DELETE route/id` instead of POST.
+  final bool isDelete;
 }

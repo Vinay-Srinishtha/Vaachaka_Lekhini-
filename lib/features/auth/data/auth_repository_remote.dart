@@ -139,7 +139,7 @@ class AuthRepositoryRemote implements AuthRepository {
         userId: account.id,          // Prisma Account.id
         username: (username?.trim().isNotEmpty == true)
             ? username!.trim()
-            : (existing?.username ?? 'Friend'),
+            : (existing?.username ?? ''),
         mobile: mobile,
         language: language ?? existing?.language ?? 'en',
         referralCode: referralCode?.trim().isEmpty == true

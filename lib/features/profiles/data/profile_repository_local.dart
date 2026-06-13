@@ -134,6 +134,8 @@ class ProfileRepositoryLocal implements ProfileRepository {
       await _session.delete(KvlKeys.activeProfileId);
     }
     await _profiles.delete(profileId);
+    // Queue DELETE /api/v1/members/:id so the server removes it too.
+    await _outbox?.enqueue('members.delete', {'id': profileId});
   }
 
   /// Payload keys match Prisma Member column names exactly so the backend

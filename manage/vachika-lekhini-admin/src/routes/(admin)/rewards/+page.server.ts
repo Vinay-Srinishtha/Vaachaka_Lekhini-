@@ -63,7 +63,7 @@ export const load: PageServerLoad = async (event) => {
 };
 
 const grantSchema = z.object({
-	memberId: z.string().cuid(),
+	memberId: z.string().min(1), // UUIDs from Flutter clients are not CUIDs
 	kind: z.enum(['gift', 'refund']),
 	amount: z.coerce.number().int().min(1).max(100_000),
 	note: z.string().max(300).default('')

@@ -85,8 +85,12 @@ export async function verifyAccountPassword(
 }
 
 /// Find-or-create the Account for [mobile]. Used on successful OTP verify.
-/// First account on a mobile gets a primary Member auto-created.
-export async function ensureAccount(mobile: string, countryCode = '+91'): Promise<AuthedAccount> {
+/// The caller's username is used as the primary member's display name.
+export async function ensureAccount(
+	mobile: string,
+	username: string,
+	countryCode = '+91'
+): Promise<AuthedAccount> {
 	let account = await prisma.account.findUnique({
 		where: { mobile },
 		select: { id: true, mobile: true, countryCode: true, isBanned: true }
@@ -99,7 +103,7 @@ export async function ensureAccount(mobile: string, countryCode = '+91'): Promis
 			countryCode,
 			members: {
 				create: {
-					displayName: 'Member 1',
+					displayName: username,
 					isPrimary: true
 				}
 			}

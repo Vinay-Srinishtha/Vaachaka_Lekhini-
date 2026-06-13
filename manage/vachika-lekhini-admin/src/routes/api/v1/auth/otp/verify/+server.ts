@@ -32,8 +32,8 @@ export const POST: RequestHandler = async (event) => {
 
 	let account;
 	if (body.username) {
-		// Registration — create account if new.
-		account = await ensureAccount(body.mobile, body.country_code ?? '+91');
+		// Registration — create account if new. Primary member gets the supplied username.
+		account = await ensureAccount(body.mobile, body.username, body.country_code ?? '+91');
 	} else {
 		// Login — refuse if account doesn't exist.
 		account = await prisma.account.findUnique({

@@ -3,6 +3,10 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
+/// Exposed so the shell widget can listen and navigate when a notification
+/// is tapped. Value is the go_router route to push; reset to null after use.
+final notificationTapRoute = ValueNotifier<String?>(null);
+
 /// Manages the single daily practice-reminder notification.
 /// Wired in KvlApp — reschedules automatically whenever the user changes
 /// reminder time or notification sound in the Profile settings tab.
@@ -11,7 +15,7 @@ class NotificationScheduler {
   static const _channelId = 'kvl_reminder';
   static const _channelName = 'Practice Reminders';
 
-  final _plugin = FlutterLocalNotificationsPlugin();
+  static final _plugin = FlutterLocalNotificationsPlugin();
   bool _initialised = false;
 
   Future<void> _ensureInit() async {
@@ -37,13 +41,13 @@ class NotificationScheduler {
           requestAlertPermission: true,
           requestBadgePermission: true,
           requestSoundPermission: true,
-          // Show banner even when the app is in the foreground.
           defaultPresentAlert: true,
           defaultPresentBadge: true,
           defaultPresentSound: true,
         ),
       ),
       onDidReceiveNotificationResponse: _onForegroundNotification,
+      onDidReceiveBackgroundNotificationResponse: _onBackgroundNotification,
     );
 
     await _plugin
@@ -67,6 +71,16 @@ class NotificationScheduler {
     _initialised = true;
   }
 
+  /// Call once after the router is ready to handle any cold-start tap
+  /// (app was terminated and user tapped the notification to launch it).
+  static Future<String?> checkLaunchNotification() async {
+    final details = await _plugin.getNotificationAppLaunchDetails();
+    if (details?.didNotificationLaunchApp == true) {
+      return '/programs'; // navigate to programs on launch from notification
+    }
+    return null;
+  }
+
   /// Schedule a daily reminder at [time]. Pass [sound] = 'none' to cancel.
   Future<void> reschedule(TimeOfDay time, {String sound = 'bell'}) async {
     await _ensureInit();
@@ -75,12 +89,10 @@ class NotificationScheduler {
 
     final androidSound = RawResourceAndroidNotificationSound(sound.toLowerCase());
 
-    // Compute the next occurrence of [time] in local timezone.
     final now = DateTime.now();
     var next = DateTime(now.year, now.month, now.day, time.hour, time.minute);
     if (!next.isAfter(now)) next = next.add(const Duration(days: 1));
 
-    // Convert to TZDateTime using UTC (offset already baked into local DateTime).
     final tzNext = tz.TZDateTime.from(next.toUtc(), tz.UTC);
 
     await _plugin.zonedSchedule(
@@ -98,7 +110,6 @@ class NotificationScheduler {
           sound: androidSound,
           playSound: true,
           enableVibration: true,
-          // Show heads-up even when app is in foreground on Android.
           fullScreenIntent: false,
           visibility: NotificationVisibility.public,
         ),
@@ -117,9 +128,14 @@ class NotificationScheduler {
   Future<void> cancel() => _plugin.cancel(id: _reminderId);
 }
 
+// Top-level so flutter_local_notifications can register it as an entry point.
 void _onForegroundNotification(NotificationResponse response) {
-  // Tapping the notification brings the app to the foreground naturally.
+  notificationTapRoute.value = '/programs';
 }
 
 @pragma('vm:entry-point')
-void _onBackgroundNotification(NotificationResponse response) {}
+void _onBackgroundNotification(NotificationResponse response) {
+  // Runs on main isolate when app is backgrounded. Signal the notifier so the
+  // shell widget navigates as soon as it re-enters the foreground.
+  notificationTapRoute.value = '/programs';
+}

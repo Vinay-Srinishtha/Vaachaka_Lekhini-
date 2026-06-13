@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/notifications/notification_scheduler.dart';
 import '../core/remote_config/remote_config.dart';
 import '../core/remote_config/remote_config_keys.dart';
 import '../core/navigation/back_navigation.dart';
@@ -286,12 +287,31 @@ class _ShellPageState extends ConsumerState<_ShellPage> {
   @override
   void initState() {
     super.initState();
-    // Pre-warm Community and Store data before the user taps the tabs.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(storeItemsProvider);
       ref.read(leaderboardProvider(LeaderboardSort.streak));
       ref.read(leaderboardProvider(LeaderboardSort.totalChants));
+      _checkLaunchNotification();
     });
+    notificationTapRoute.addListener(_onNotificationTap);
+  }
+
+  @override
+  void dispose() {
+    notificationTapRoute.removeListener(_onNotificationTap);
+    super.dispose();
+  }
+
+  void _onNotificationTap() {
+    final route = notificationTapRoute.value;
+    if (route == null || !mounted) return;
+    notificationTapRoute.value = null;
+    context.go(route);
+  }
+
+  Future<void> _checkLaunchNotification() async {
+    final route = await NotificationScheduler.checkLaunchNotification();
+    if (route != null && mounted) context.go(route);
   }
 
   List<String> _buildTitles(BuildContext context) => [

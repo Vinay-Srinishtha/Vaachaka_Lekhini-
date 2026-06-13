@@ -5,6 +5,10 @@ abstract class RewardRepository {
   Future<int> totalPoints(String memberId);
   Stream<int> watchTotalPoints(String memberId);
 
+  /// Live balance = sum(programs.totalProgress) − sum(spend events).
+  /// Updates immediately on every chant without waiting for a server sync.
+  Stream<int> watchBalance(String memberId);
+
   Future<List<RewardEvent>> history(String memberId, {RewardKind? filter});
   Stream<List<RewardEvent>> watchHistory(String memberId, {RewardKind? filter});
 

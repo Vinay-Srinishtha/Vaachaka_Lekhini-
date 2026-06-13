@@ -400,36 +400,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setYourPracticeTarget => 'Set Your Practice Target';
 
   @override
-  String chooseDaysSpread(String count) {
-    return 'Choose how many days you want to spread $count across.';
-  }
-
-  @override
-  String get presetFastest => 'Fastest';
-
-  @override
-  String get presetBalanced => 'Balanced';
-
-  @override
-  String get presetGentle => 'Gentle';
-
-  @override
-  String get presetSustainable => 'Sustainable';
-
-  @override
-  String get setCustomDuration => 'Set a Custom Duration';
-
-  @override
-  String get durationLabel => 'Duration';
-
-  @override
   String daysValue(int days) {
     return '$days days';
-  }
-
-  @override
-  String thisMeansPace(String pace) {
-    return 'This means $pace';
   }
 
   @override
@@ -437,10 +409,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get creatingButton => 'Creating…';
-
-  @override
-  String get choosePracticeTarget =>
-      'Choose a target for your practice. You can select one of the popular targets or set your own custom one.';
 
   @override
   String get writingsTargetCrore => '1,00,00,000 writings';
@@ -459,15 +427,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get totalWritingsHint => 'e.g., 500,000';
-
-  @override
-  String get completionTimeLabel => 'Completion Time (in days)';
-
-  @override
-  String get completionTimeHint => 'e.g., 365';
-
-  @override
-  String get confirmTarget => 'Confirm Target';
 
   @override
   String get cancelButton => 'Cancel';

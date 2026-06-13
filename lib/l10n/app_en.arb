@@ -157,36 +157,18 @@
   "pickMantraAndTargetToStart": "Pick a mantra and set a target to start your first program.",
   "completedWithCheck": "Completed ✓",
   "setYourPracticeTarget": "Set Your Practice Target",
-  "chooseDaysSpread": "Choose how many days you want to spread {count} across.",
-  "@chooseDaysSpread": {
-    "placeholders": { "count": { "type": "String" } }
-  },
-  "presetFastest": "Fastest",
-  "presetBalanced": "Balanced",
-  "presetGentle": "Gentle",
-  "presetSustainable": "Sustainable",
-  "setCustomDuration": "Set a Custom Duration",
-  "durationLabel": "Duration",
   "daysValue": "{days} days",
   "@daysValue": {
     "placeholders": { "days": { "type": "int" } }
   },
-  "thisMeansPace": "This means {pace}",
-  "@thisMeansPace": {
-    "placeholders": { "pace": { "type": "String" } }
-  },
   "confirmAndBegin": "Confirm & Begin",
   "creatingButton": "Creating…",
-  "choosePracticeTarget": "Choose a target for your practice. You can select one of the popular targets or set your own custom one.",
   "writingsTargetCrore": "1,00,00,000 writings",
   "mostPopularBadge": "Most Popular",
   "writingsTargetMillion": "1,000,000 writings",
   "setCustomTarget": "Set a custom target",
   "totalWritingsLabel": "Total Writings",
   "totalWritingsHint": "e.g., 500,000",
-  "completionTimeLabel": "Completion Time (in days)",
-  "completionTimeHint": "e.g., 365",
-  "confirmTarget": "Confirm Target",
   "cancelButton": "Cancel",
   "searchRewards": "Search for rewards…",
   "allFilter": "All",

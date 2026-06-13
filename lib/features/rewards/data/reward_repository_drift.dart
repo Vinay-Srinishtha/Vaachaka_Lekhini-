@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
@@ -63,6 +65,63 @@ class RewardRepositoryDrift implements RewardRepository {
     return _historyQuery(memberId, filter: filter)
         .watch()
         .map((rs) => rs.map(_toEvent).toList());
+  }
+
+  @override
+  Stream<int> watchBalance(String memberId) {
+    // Balance = chant/writing progress + gifted/reconciled extras − spends.
+    //
+    // Three streams combined:
+    //   progTotal   — sum of totalChants+totalWritings across all programs
+    //   extrasTotal — gift / milestone / refund / server_sync events (positive credits
+    //                 not derived from program progress, e.g. admin gifts)
+    //   spentTotal  — spend events (the only debit kind clients can submit)
+    final controller = StreamController<int>();
+    int progTotal = 0;
+    int extrasTotal = 0;
+    int spentTotal = 0;
+    bool progReady = false;
+    bool extrasReady = false;
+    bool spentReady = false;
+
+    void emit() {
+      if (!progReady || !extrasReady || !spentReady) return;
+      final credits = progTotal + extrasTotal;
+      controller.add((credits - spentTotal).clamp(0, credits));
+    }
+
+    final progSub = (_db.select(_db.programs)
+          ..where((t) => t.memberId.equals(memberId)))
+        .watch()
+        .map((rows) => rows.fold<int>(0, (a, r) => a + r.totalChants + r.totalWritings))
+        .listen((v) { progTotal = v; progReady = true; emit(); });
+
+    // Gift / milestone / refund events + server_sync reconciliation bridging.
+    // These are credits that exist outside program progress (admin gifts, etc.).
+    final extrasSub = (_db.select(_db.rewardEvents)
+          ..where(
+            (t) =>
+                t.memberId.equals(memberId) &
+                (t.kind.isIn(['gift', 'milestone', 'refund']) |
+                    (t.kind.equals('earn') & t.source.equals('server_sync'))),
+          ))
+        .watch()
+        .map((rows) => rows.fold<int>(0, (a, r) => a + r.amount))
+        .listen((v) { extrasTotal = v; extrasReady = true; emit(); });
+
+    final spentSub = (_db.select(_db.rewardEvents)
+          ..where((t) => t.memberId.equals(memberId) & t.kind.equals('spend')))
+        .watch()
+        .map((rows) => rows.fold<int>(0, (a, r) => a + r.amount))
+        .listen((v) { spentTotal = v; spentReady = true; emit(); });
+
+    controller.onCancel = () {
+      progSub.cancel();
+      extrasSub.cancel();
+      spentSub.cancel();
+    };
+
+    return controller.stream;
   }
 
   @override

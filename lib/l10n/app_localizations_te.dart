@@ -400,36 +400,8 @@ class AppLocalizationsTe extends AppLocalizations {
   String get setYourPracticeTarget => 'మీ సాధన లక్ష్యం నిర్ణయించండి';
 
   @override
-  String chooseDaysSpread(String count) {
-    return '$count ని ఎన్ని రోజులలో విస్తరించాలో ఎంచుకోండి.';
-  }
-
-  @override
-  String get presetFastest => 'అత్యంత వేగంగా';
-
-  @override
-  String get presetBalanced => 'సమతుల్యంగా';
-
-  @override
-  String get presetGentle => 'సులభంగా';
-
-  @override
-  String get presetSustainable => 'స్థిరంగా';
-
-  @override
-  String get setCustomDuration => 'అనుకూల వ్యవధి నిర్ణయించండి';
-
-  @override
-  String get durationLabel => 'వ్యవధి';
-
-  @override
   String daysValue(int days) {
     return '$days రోజులు';
-  }
-
-  @override
-  String thisMeansPace(String pace) {
-    return 'అంటే $pace';
   }
 
   @override
@@ -437,10 +409,6 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get creatingButton => 'సృష్టిస్తోంది…';
-
-  @override
-  String get choosePracticeTarget =>
-      'మీ సాధన కోసం లక్ష్యాన్ని ఎంచుకోండి. ప్రసిద్ధ లక్ష్యాలలో ఒకదాన్ని ఎంచుకోవచ్చు లేదా స్వంతంగా నిర్ణయించుకోవచ్చు.';
 
   @override
   String get writingsTargetCrore => '1,00,00,000 రాతలు';
@@ -459,15 +427,6 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get totalWritingsHint => 'ఉదా., 5,00,000';
-
-  @override
-  String get completionTimeLabel => 'పూర్తయే సమయం (రోజులలో)';
-
-  @override
-  String get completionTimeHint => 'ఉదా., 365';
-
-  @override
-  String get confirmTarget => 'లక్ష్యాన్ని నిర్ధారించండి';
 
   @override
   String get cancelButton => 'రద్దు';

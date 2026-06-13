@@ -400,36 +400,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get setYourPracticeTarget => 'अपना साधना लक्ष्य निर्धारित करें';
 
   @override
-  String chooseDaysSpread(String count) {
-    return '$count को कितने दिनों में फैलाना है, चुनें।';
-  }
-
-  @override
-  String get presetFastest => 'सबसे तेज़';
-
-  @override
-  String get presetBalanced => 'संतुलित';
-
-  @override
-  String get presetGentle => 'सरल';
-
-  @override
-  String get presetSustainable => 'स्थिर';
-
-  @override
-  String get setCustomDuration => 'कस्टम अवधि निर्धारित करें';
-
-  @override
-  String get durationLabel => 'अवधि';
-
-  @override
   String daysValue(int days) {
     return '$days दिन';
-  }
-
-  @override
-  String thisMeansPace(String pace) {
-    return 'इसका मतलब $pace';
   }
 
   @override
@@ -437,10 +409,6 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get creatingButton => 'बनाया जा रहा है…';
-
-  @override
-  String get choosePracticeTarget =>
-      'अपनी साधना के लिए लक्ष्य चुनें। आप लोकप्रिय लक्ष्यों में से एक चुन सकते हैं या अपना खुद का निर्धारित कर सकते हैं।';
 
   @override
   String get writingsTargetCrore => '1,00,00,000 लेखन';
@@ -459,15 +427,6 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get totalWritingsHint => 'जैसे, 5,00,000';
-
-  @override
-  String get completionTimeLabel => 'पूर्णता समय (दिनों में)';
-
-  @override
-  String get completionTimeHint => 'जैसे, 365';
-
-  @override
-  String get confirmTarget => 'लक्ष्य की पुष्टि करें';
 
   @override
   String get cancelButton => 'रद्द करें';

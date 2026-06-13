@@ -401,36 +401,8 @@ class AppLocalizationsKn extends AppLocalizations {
   String get setYourPracticeTarget => 'ನಿಮ್ಮ ಅಭ್ಯಾಸ ಗುರಿ ನಿರ್ಧರಿಸಿ';
 
   @override
-  String chooseDaysSpread(String count) {
-    return '$count ಅನ್ನು ಎಷ್ಟು ದಿನಗಳಲ್ಲಿ ಹರಡಬೇಕೆಂದು ಆಯ್ಕೆ ಮಾಡಿ.';
-  }
-
-  @override
-  String get presetFastest => 'ಅತ್ಯಂತ ವೇಗವಾಗಿ';
-
-  @override
-  String get presetBalanced => 'ಸಮತೋಲಿತ';
-
-  @override
-  String get presetGentle => 'ಸರಳ';
-
-  @override
-  String get presetSustainable => 'ಸ್ಥಿರ';
-
-  @override
-  String get setCustomDuration => 'ಕಸ್ಟಮ್ ಅವಧಿ ನಿರ್ಧರಿಸಿ';
-
-  @override
-  String get durationLabel => 'ಅವಧಿ';
-
-  @override
   String daysValue(int days) {
     return '$days ದಿನಗಳು';
-  }
-
-  @override
-  String thisMeansPace(String pace) {
-    return 'ಅಂದರೆ $pace';
   }
 
   @override
@@ -438,10 +410,6 @@ class AppLocalizationsKn extends AppLocalizations {
 
   @override
   String get creatingButton => 'ರಚಿಸಲಾಗುತ್ತಿದೆ…';
-
-  @override
-  String get choosePracticeTarget =>
-      'ನಿಮ್ಮ ಅಭ್ಯಾಸಕ್ಕಾಗಿ ಗುರಿ ಆಯ್ಕೆ ಮಾಡಿ. ಜನಪ್ರಿಯ ಗುರಿಗಳಲ್ಲಿ ಒಂದನ್ನು ಆಯ್ಕೆ ಮಾಡಬಹುದು ಅಥವಾ ನಿಮ್ಮದೇ ನಿರ್ಧರಿಸಬಹುದು.';
 
   @override
   String get writingsTargetCrore => '1,00,00,000 ಬರವಣಿಗೆಗಳು';
@@ -460,15 +428,6 @@ class AppLocalizationsKn extends AppLocalizations {
 
   @override
   String get totalWritingsHint => 'ಉದಾ., 5,00,000';
-
-  @override
-  String get completionTimeLabel => 'ಪೂರ್ಣಗೊಳಿಸುವ ಸಮಯ (ದಿನಗಳಲ್ಲಿ)';
-
-  @override
-  String get completionTimeHint => 'ಉದಾ., 365';
-
-  @override
-  String get confirmTarget => 'ಗುರಿ ದೃಢಪಡಿಸಿ';
 
   @override
   String get cancelButton => 'ರದ್ದು ಮಾಡಿ';

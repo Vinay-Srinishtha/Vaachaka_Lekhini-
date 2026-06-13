@@ -810,59 +810,11 @@ abstract class AppLocalizations {
   /// **'Set Your Practice Target'**
   String get setYourPracticeTarget;
 
-  /// No description provided for @chooseDaysSpread.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose how many days you want to spread {count} across.'**
-  String chooseDaysSpread(String count);
-
-  /// No description provided for @presetFastest.
-  ///
-  /// In en, this message translates to:
-  /// **'Fastest'**
-  String get presetFastest;
-
-  /// No description provided for @presetBalanced.
-  ///
-  /// In en, this message translates to:
-  /// **'Balanced'**
-  String get presetBalanced;
-
-  /// No description provided for @presetGentle.
-  ///
-  /// In en, this message translates to:
-  /// **'Gentle'**
-  String get presetGentle;
-
-  /// No description provided for @presetSustainable.
-  ///
-  /// In en, this message translates to:
-  /// **'Sustainable'**
-  String get presetSustainable;
-
-  /// No description provided for @setCustomDuration.
-  ///
-  /// In en, this message translates to:
-  /// **'Set a Custom Duration'**
-  String get setCustomDuration;
-
-  /// No description provided for @durationLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Duration'**
-  String get durationLabel;
-
   /// No description provided for @daysValue.
   ///
   /// In en, this message translates to:
   /// **'{days} days'**
   String daysValue(int days);
-
-  /// No description provided for @thisMeansPace.
-  ///
-  /// In en, this message translates to:
-  /// **'This means {pace}'**
-  String thisMeansPace(String pace);
 
   /// No description provided for @confirmAndBegin.
   ///
@@ -875,12 +827,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Creating…'**
   String get creatingButton;
-
-  /// No description provided for @choosePracticeTarget.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose a target for your practice. You can select one of the popular targets or set your own custom one.'**
-  String get choosePracticeTarget;
 
   /// No description provided for @writingsTargetCrore.
   ///
@@ -917,24 +863,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'e.g., 500,000'**
   String get totalWritingsHint;
-
-  /// No description provided for @completionTimeLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Completion Time (in days)'**
-  String get completionTimeLabel;
-
-  /// No description provided for @completionTimeHint.
-  ///
-  /// In en, this message translates to:
-  /// **'e.g., 365'**
-  String get completionTimeHint;
-
-  /// No description provided for @confirmTarget.
-  ///
-  /// In en, this message translates to:
-  /// **'Confirm Target'**
-  String get confirmTarget;
 
   /// No description provided for @cancelButton.
   ///

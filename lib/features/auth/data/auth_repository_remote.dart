@@ -253,7 +253,12 @@ class AuthRepositoryRemote implements AuthRepository {
     if (!RegExp(r'^\d{6}$').hasMatch(otp)) return Err(AuthFailure.invalidOtp());
     try {
       final digits = newMobile.replaceAll(RegExp(r'^\+91'), '');
-      await _auth.verifyOtp(mobile: digits, code: otp);
+      // Call the server to verify the OTP and persist the new number in the DB.
+      // Only update the local session after the server confirms the change.
+      await _auth.api.dio.put<Map<String, dynamic>>(
+        '/api/v1/me/mobile',
+        data: {'new_mobile': digits, 'otp': otp},
+      );
       final updated = existing.copyWith(mobile: newMobile);
       await _writeSession(updated);
       return Ok(updated);

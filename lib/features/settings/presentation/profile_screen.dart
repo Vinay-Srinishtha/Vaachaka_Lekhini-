@@ -185,6 +185,11 @@ class ProfileScreen extends ConsumerWidget {
           SettingsSection(
             title: context.l10n.familyCommunitySection,
             children: [
+              SettingRow(
+                icon: Icons.switch_account_rounded,
+                label: 'Switch User',
+                onTap: () => context.go(KvlRoute.profileSelect),
+              ),
               // Only the primary member (Me) can manage family members.
               if (profile?.relation == FamilyRelation.me)
                 SettingRow(

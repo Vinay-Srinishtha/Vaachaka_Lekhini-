@@ -18,6 +18,7 @@ class _AddFamilyScreenState extends ConsumerState<AddFamilyScreen> {
   final _name = TextEditingController();
   FamilyRelation _relation = FamilyRelation.other;
   bool _busy = false;
+  String? _deletingId;
   String? _error;
 
   @override
@@ -49,12 +50,19 @@ class _AddFamilyScreenState extends ConsumerState<AddFamilyScreen> {
       ),
     );
     if (confirmed != true || !mounted) return;
+    setState(() { _deletingId = p.id; _error = null; });
     try {
+      // Delete locally first, then immediately drain outbox so the server
+      // DELETE is sent before any background /api/v1/me pull can re-add the
+      // member via hydration.
       await ref.read(profileRepositoryProvider).delete(p.id);
+      await ref.read(syncEngineProvider).syncNow();
     } catch (e) {
       if (mounted) {
         setState(() => _error = '$e');
       }
+    } finally {
+      if (mounted) setState(() => _deletingId = null);
     }
   }
 
@@ -143,13 +151,36 @@ class _AddFamilyScreenState extends ConsumerState<AddFamilyScreen> {
                       ),
                     ),
                     if (p.relation != FamilyRelation.me)
-                      IconButton(
-                        onPressed: () => _deleteMember(p),
-                        icon: const Icon(Icons.delete_outline_rounded, size: 20),
-                        color: KvlColors.danger,
-                        tooltip: context.l10n.deleteMemberConfirm,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                      SizedBox(
+                        width: 36,
+                        height: 36,
+                        child: _deletingId == p.id
+                            ? const Center(
+                                child: SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: KvlColors.danger,
+                                  ),
+                                ),
+                              )
+                            : IconButton(
+                                onPressed: _deletingId != null
+                                    ? null
+                                    : () => _deleteMember(p),
+                                icon: const Icon(
+                                  Icons.delete_outline_rounded,
+                                  size: 20,
+                                ),
+                                color: KvlColors.danger,
+                                tooltip: context.l10n.deleteMemberConfirm,
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 36,
+                                  minHeight: 36,
+                                ),
+                              ),
                       ),
                   ],
                 ),

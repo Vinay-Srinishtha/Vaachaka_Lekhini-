@@ -86,9 +86,10 @@ final authServiceProvider = Provider<AuthService>((ref) {
   return service;
 });
 
-
 /// Outbox for pending mutations awaiting upload. Backed by Hive.
-final syncOutboxProvider = Provider<SyncOutbox>((ref) => SyncOutbox(outboxBox()));
+final syncOutboxProvider = Provider<SyncOutbox>(
+  (ref) => SyncOutbox(outboxBox()),
+);
 
 final syncEngineProvider = Provider<SyncEngine>((ref) {
   final engine = SyncEngine(
@@ -99,7 +100,6 @@ final syncEngineProvider = Provider<SyncEngine>((ref) {
   ref.onDispose(() => unawaited(engine.dispose()));
   return engine;
 });
-
 
 /// Mantra catalog — backed by the admin API with Hive cache fallback.
 /// Reads from `MantraRepositoryRemote.readCache(cacheBox())` at bootstrap
@@ -113,13 +113,12 @@ final mantraRepositoryProvider = Provider<MantraRepository>((ref) {
   );
 });
 
-
 /// Live mantra catalog — seeds from cache immediately, then updates whenever
 /// the API refresh lands (without any loading gap on subsequent opens).
 final mantraCatalogProvider = StreamProvider<List<Mantra>>((ref) async* {
   final repo = ref.watch(mantraRepositoryProvider);
-  yield repo.all();        // instant: cached or bootstrap value
-  yield* repo.stream;      // live: emits on every API refresh
+  yield repo.all(); // instant: cached or bootstrap value
+  yield* repo.stream; // live: emits on every API refresh
 });
 
 final mantraByIdProvider = Provider.family<Mantra?, String>((ref, id) {
@@ -162,14 +161,15 @@ final profileCapProvider = Provider<int>((ref) {
   return remote.clamp(1, ProfileRepository.maxPerUser);
 });
 
-final voiceEnrolmentRepositoryProvider = Provider<VoiceEnrolmentRepository>((ref) {
+final voiceEnrolmentRepositoryProvider = Provider<VoiceEnrolmentRepository>((
+  ref,
+) {
   return VoiceEnrolmentRepositoryLocal(cacheBox());
 });
 
 final handwritingRepositoryProvider = Provider<HandwritingRepository>((ref) {
   return HandwritingRepositoryLocal(cacheBox());
 });
-
 
 final inviteServiceProvider = Provider<InviteService>((ref) => InviteService());
 
@@ -186,6 +186,123 @@ final meSnapshotProvider = StreamProvider<Map<String, Object?>>((ref) {
   return ref.watch(syncEngineProvider).snapshots;
 });
 
+/// Hydrates server-owned account data into local repositories after login,
+/// foreground sync, and connectivity recovery. This makes a fresh device
+/// usable without first creating duplicate local profiles/programs.
+final accountHydrationProvider = Provider<void>((ref) {
+  // Trigger an immediate pull whenever the user logs in so the restore
+  // fires on a fresh device (startup pull happens before auth token exists).
+  ref.listen(sessionProvider, (prev, next) {
+    final wasLoggedOut = prev?.value == null;
+    final isNowLoggedIn = next.value != null;
+    if (wasLoggedOut && isNowLoggedIn) {
+      unawaited(ref.read(syncEngineProvider).syncNow());
+    }
+  });
+
+  ref.listen(meSnapshotProvider, (_, next) {
+    final snapshot = next.value;
+    if (snapshot == null) return;
+    Future(() async {
+      final account = snapshot['account'];
+      if (account is! Map) return;
+      final accountMap = Map<String, dynamic>.from(account);
+      final accountId = accountMap['id'] as String?;
+      if (accountId == null) return;
+      final members = accountMap['members'] as List<dynamic>? ?? const [];
+      String? firstMemberId;
+      String? primaryMemberId;
+
+      for (final rawMember in members) {
+        final member = Map<String, dynamic>.from(rawMember as Map);
+        final memberId = member['id'] as String?;
+        if (memberId == null) continue;
+        firstMemberId ??= memberId;
+        if (member['is_primary'] == true) primaryMemberId = memberId;
+        final profile = Profile(
+          id: memberId,
+          userId: accountId,
+          name: member['display_name'] as String? ?? 'User',
+          relation: _familyRelationFromServer(member['relation'] as String?),
+          avatarSeed: member['avatar_key'] as String?,
+          language: member['language'] as String? ?? 'en',
+          createdAt:
+              DateTime.tryParse(member['created_at'] as String? ?? '') ??
+              DateTime.now(),
+        );
+        await ref.read(profileRepositoryProvider).upsertRemote(profile);
+
+        final programs = member['programs'] as List<dynamic>? ?? const [];
+        for (final rawProgram in programs) {
+          final program = Map<String, dynamic>.from(rawProgram as Map);
+          final id = program['id'] as String?;
+          final mantra = program['mantra'];
+          final mantraSlug = mantra is Map
+              ? Map<String, dynamic>.from(mantra)['slug'] as String?
+              : null;
+          final targetWritings =
+              (program['target_writings'] as num?)?.toInt() ?? 1;
+          final targetDays = (program['target_days'] as num?)?.toInt() ?? 1;
+          if (id == null || mantraSlug == null) continue;
+          final startedAt =
+              DateTime.tryParse(program['started_at'] as String? ?? '') ??
+              DateTime.now();
+          final updatedAt =
+              DateTime.tryParse(program['updated_at'] as String? ?? '') ??
+              startedAt;
+          await ref
+              .read(programRepositoryProvider)
+              .upsertRemote(
+                Program(
+                  id: id,
+                  memberId: memberId,
+                  mantraId: mantraSlug,
+                  targetWritings: targetWritings,
+                  targetDays: targetDays,
+                  dailyTarget: ProgramRepository.computeDailyTarget(
+                    targetWritings,
+                    targetDays,
+                  ),
+                  startedAt: startedAt,
+                  createdAt: startedAt,
+                  updatedAt: updatedAt,
+                  completedAt: DateTime.tryParse(
+                    program['completed_at'] as String? ?? '',
+                  ),
+                  currentStreak:
+                      (program['current_streak'] as num?)?.toInt() ?? 0,
+                  longestStreak:
+                      (program['longest_streak'] as num?)?.toInt() ?? 0,
+                  lastActiveDate: DateTime.tryParse(
+                    program['last_active_date'] as String? ?? '',
+                  ),
+                  totalChants: (program['total_chants'] as num?)?.toInt() ?? 0,
+                  totalWritings:
+                      (program['total_writings'] as num?)?.toInt() ?? 0,
+                ),
+              );
+        }
+      }
+
+      if (await ref.read(profileRepositoryProvider).getActive() == null) {
+        final preferred = primaryMemberId ?? firstMemberId;
+        if (preferred != null) {
+          await ref.read(profileRepositoryProvider).setActive(preferred);
+        }
+      }
+    });
+  });
+});
+
+FamilyRelation _familyRelationFromServer(String? value) => switch (value) {
+  'self' => FamilyRelation.me,
+  'spouse' => FamilyRelation.spouse,
+  'parent' => FamilyRelation.father,
+  'child' => FamilyRelation.son,
+  'sibling' => FamilyRelation.sibling,
+  _ => FamilyRelation.other,
+};
+
 final rewardTotalProvider = StreamProvider<int>((ref) async* {
   final profile = ref.watch(activeProfileProvider).value;
   if (profile == null) {
@@ -197,13 +314,18 @@ final rewardTotalProvider = StreamProvider<int>((ref) async* {
   ref.listen(meSnapshotProvider, (_, next) {
     final snapshot = next.value;
     if (snapshot == null) return;
-    final members = ((snapshot['account'] as Map?)?['members'] as List<dynamic>?) ?? [];
+    final members =
+        ((snapshot['account'] as Map?)?['members'] as List<dynamic>?) ?? [];
     for (final m in members) {
       final map = Map<String, dynamic>.from(m as Map);
       if (map['id'] == profile.id) {
         // Reward balance reconciliation
         final serverBal = (map['reward_points_balance'] as num?)?.toInt() ?? 0;
-        Future(() => ref.read(rewardRepositoryProvider).reconcileFromServer(profile.id, serverBal));
+        Future(
+          () => ref
+              .read(rewardRepositoryProvider)
+              .reconcileFromServer(profile.id, serverBal),
+        );
 
         // Program totals reconciliation — server is canonical for totalChants/totalWritings
         final programs = (map['programs'] as List<dynamic>?) ?? [];
@@ -211,10 +333,16 @@ final rewardTotalProvider = StreamProvider<int>((ref) async* {
           final pm = Map<String, dynamic>.from(p as Map);
           final programId = pm['id'] as String?;
           if (programId == null) continue;
-          final serverChants = (pm['totalChants'] as num?)?.toInt() ?? 0;
-          final serverWritings = (pm['totalWritings'] as num?)?.toInt() ?? 0;
-          Future(() => ref.read(programRepositoryProvider)
-              .reconcileFromServer(programId, serverChants, serverWritings));
+          // Server sends snake_case after snakeJson transformation
+          final serverChants =
+              (pm['total_chants'] as num?)?.toInt() ?? 0;
+          final serverWritings =
+              (pm['total_writings'] as num?)?.toInt() ?? 0;
+          Future(
+            () => ref
+                .read(programRepositoryProvider)
+                .reconcileFromServer(programId, serverChants, serverWritings),
+          );
         }
         break;
       }
@@ -236,6 +364,26 @@ final settingsProvider = StreamProvider<KvlSettings>((ref) {
   return ref.watch(settingsRepositoryProvider).watch();
 });
 
+/// Keep the selected UI language attached to the active server-backed member.
+/// Local settings remain the immediate source of truth; the profile update is
+/// queued so the same language is restored after login on another device.
+final profileLanguageSyncProvider = Provider<void>((ref) {
+  ref.listen(settingsProvider, (_, next) {
+    final settings = next.value;
+    final profile = ref.read(activeProfileProvider).value;
+    if (settings == null ||
+        profile == null ||
+        profile.language == settings.languageCode) {
+      return;
+    }
+    Future(
+      () => ref
+          .read(profileRepositoryProvider)
+          .update(profile.copyWith(language: settings.languageCode)),
+    );
+  });
+});
+
 /// Fire-and-forget warm-up: once a session exists, extract the bundled
 /// Hindi Vosk model on a background isolate-ish path so the first voice
 /// session doesn't stall on unzip. Idempotent — `ensureExtracted` short-
@@ -252,7 +400,9 @@ final voskModelWarmupProvider = FutureProvider<String?>((ref) async {
     if (kDebugMode) debugPrint('Vosk model warmed at: $path');
     return path;
   } catch (e) {
-    if (kDebugMode) debugPrint('Vosk warm-up failed (will retry on first use): $e');
+    if (kDebugMode) {
+      debugPrint('Vosk warm-up failed (will retry on first use): $e');
+    }
     return null;
   }
 });
@@ -273,7 +423,9 @@ final programRepositoryProvider = Provider<ProgramRepository>((ref) {
 });
 
 /// Programs belonging to the active member. Empty when no profile is selected.
-final programsForActiveProfileProvider = StreamProvider<List<Program>>((ref) async* {
+final programsForActiveProfileProvider = StreamProvider<List<Program>>((
+  ref,
+) async* {
   final profile = ref.watch(activeProfileProvider).value;
   if (profile == null) {
     yield const [];
@@ -332,46 +484,49 @@ final storeItemsProvider = FutureProvider<List<StoreItem>>((ref) async {
 /// Never throws — returns zeros on any network/server error so the UI
 /// always has a safe value to display.
 final globalStatsProvider =
-    FutureProvider.autoDispose<({int globalChantCount, int memberCount})>(
-        (ref) async {
-  try {
-    final api = ref.watch(apiClientProvider);
-    final res = await api.dio.get<Map<String, dynamic>>('/api/v1/stats');
-    final data = res.data ?? {};
-    return (
-      globalChantCount: (data['global_chant_count'] as num?)?.toInt() ?? 0,
-      memberCount: (data['member_count'] as num?)?.toInt() ?? 0,
-    );
-  } catch (_) {
-    return (globalChantCount: 0, memberCount: 0);
-  }
-});
+    FutureProvider.autoDispose<({int globalChantCount, int memberCount})>((
+      ref,
+    ) async {
+      try {
+        final api = ref.watch(apiClientProvider);
+        final res = await api.dio.get<Map<String, dynamic>>('/api/v1/stats');
+        final data = res.data ?? {};
+        return (
+          globalChantCount: (data['global_chant_count'] as num?)?.toInt() ?? 0,
+          memberCount: (data['member_count'] as num?)?.toInt() ?? 0,
+        );
+      } catch (_) {
+        return (globalChantCount: 0, memberCount: 0);
+      }
+    });
 
 /// Real leaderboard from /api/v1/leaderboard (Bearer required).
 /// Returns [] when unauthenticated or on any network error — never throws.
 /// keepAlive: data is cached across tab switches so switching back is instant.
-final leaderboardProvider = FutureProvider
-    .family<List<Friend>, LeaderboardSort>((ref, sort) async {
-  try {
-    final session = ref.watch(sessionProvider).value;
-    if (session == null) return [];
-    final api = ref.watch(apiClientProvider);
-    final sortParam =
-        sort == LeaderboardSort.streak ? 'streak' : 'total_chants';
-    final res = await api.dio
-        .get<Map<String, dynamic>>('/api/v1/leaderboard?sort=$sortParam');
-    final entries = (res.data?['entries'] as List<dynamic>?) ?? [];
-    return entries.map((e) {
-      final m = Map<String, dynamic>.from(e as Map);
-      return Friend(
-        id: m['id'] as String,
-        name: m['name'] as String,
-        streakDays: (m['streak_days'] as num?)?.toInt() ?? 0,
-        totalChants: (m['total_chants'] as num?)?.toInt() ?? 0,
-        isSelf: m['is_self'] == true,
-      );
-    }).toList();
-  } catch (_) {
-    return [];
-  }
-});
+final leaderboardProvider =
+    FutureProvider.family<List<Friend>, LeaderboardSort>((ref, sort) async {
+      try {
+        final session = ref.watch(sessionProvider).value;
+        if (session == null) return [];
+        final api = ref.watch(apiClientProvider);
+        final sortParam = sort == LeaderboardSort.streak
+            ? 'streak'
+            : 'total_chants';
+        final res = await api.dio.get<Map<String, dynamic>>(
+          '/api/v1/leaderboard?sort=$sortParam',
+        );
+        final entries = (res.data?['entries'] as List<dynamic>?) ?? [];
+        return entries.map((e) {
+          final m = Map<String, dynamic>.from(e as Map);
+          return Friend(
+            id: m['id'] as String,
+            name: m['name'] as String,
+            streakDays: (m['streak_days'] as num?)?.toInt() ?? 0,
+            totalChants: (m['total_chants'] as num?)?.toInt() ?? 0,
+            isSelf: m['is_self'] == true,
+          );
+        }).toList();
+      } catch (_) {
+        return [];
+      }
+    });

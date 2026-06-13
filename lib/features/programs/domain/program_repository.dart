@@ -14,6 +14,7 @@ abstract class ProgramRepository {
   });
 
   Future<void> update(Program program);
+  Future<void> upsertRemote(Program program);
   Future<void> delete(String id);
 
   // --- Sessions ---
@@ -24,6 +25,7 @@ abstract class ProgramRepository {
   });
   Future<void> incrementSession(String sessionId, {int by = 1});
   Future<PracticeSession> finishSession(String sessionId);
+  Future<PracticeSession?> openSessionForProgram(String programId);
   Stream<List<PracticeSession>> watchSessionsForProgram(String programId);
 
   /// Calendar/dashboard aggregates.
@@ -50,7 +52,11 @@ abstract class ProgramRepository {
 
   /// Reconcile server-computed totals into local Drift (no outbox enqueue).
   /// Called after each /api/v1/me pull to keep program status live.
-  Future<void> reconcileFromServer(String programId, int serverChants, int serverWritings);
+  Future<void> reconcileFromServer(
+    String programId,
+    int serverChants,
+    int serverWritings,
+  );
 
   /// Daily target helper — pure function so UI can preview before saving.
   static int computeDailyTarget(int targetWritings, int targetDays) {

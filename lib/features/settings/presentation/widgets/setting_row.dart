@@ -10,6 +10,7 @@ class SettingRow extends StatelessWidget {
     this.value,
     this.trailing,
     this.onTap,
+    this.disabled = false,
   });
 
   final IconData icon;
@@ -17,35 +18,41 @@ class SettingRow extends StatelessWidget {
   final String? value;
   final Widget? trailing;
   final VoidCallback? onTap;
+  final bool disabled;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: KvlSpacing.md, vertical: 11),
-        child: Row(
-          children: [
-            Container(
-              width: 26,
-              height: 26,
-              decoration: BoxDecoration(color: KvlColors.primaryGhost, borderRadius: KvlRadius.brSM),
-              alignment: Alignment.center,
-              child: Icon(icon, color: KvlColors.primaryDeep, size: 13),
-            ),
-            const SizedBox(width: KvlSpacing.sm),
-            Expanded(child: Text(label, style: KvlText.ui(12))),
-            if (value != null)
-              Text(value!, style: KvlText.caption(11).copyWith(color: KvlColors.inkSoft)),
-            if (trailing != null) ...[
-              const SizedBox(width: 8),
-              trailing!,
+    final iconColor = disabled ? KvlColors.muted : KvlColors.primaryDeep;
+    final iconBg = disabled ? KvlColors.border : KvlColors.primaryGhost;
+    return Opacity(
+      opacity: disabled ? 0.45 : 1.0,
+      child: InkWell(
+        onTap: disabled ? null : onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: KvlSpacing.md, vertical: 11),
+          child: Row(
+            children: [
+              Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(color: iconBg, borderRadius: KvlRadius.brSM),
+                alignment: Alignment.center,
+                child: Icon(icon, color: iconColor, size: 13),
+              ),
+              const SizedBox(width: KvlSpacing.sm),
+              Expanded(child: Text(label, style: KvlText.ui(12))),
+              if (value != null)
+                Text(value!, style: KvlText.caption(11).copyWith(color: KvlColors.inkSoft)),
+              if (trailing != null) ...[
+                const SizedBox(width: 8),
+                trailing!,
+              ],
+              if (onTap != null && !disabled) ...[
+                const SizedBox(width: 6),
+                const Icon(Icons.chevron_right_rounded, color: KvlColors.muted, size: 18),
+              ],
             ],
-            if (onTap != null) ...[
-              const SizedBox(width: 6),
-              const Icon(Icons.chevron_right_rounded, color: KvlColors.muted, size: 18),
-            ],
-          ],
+          ),
         ),
       ),
     );

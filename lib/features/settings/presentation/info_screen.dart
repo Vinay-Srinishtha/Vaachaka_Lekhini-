@@ -273,17 +273,6 @@ class _ReportScreenState extends ConsumerState<_ReportScreen> {
 class _FaqScreen extends ConsumerWidget {
   const _FaqScreen();
 
-  static const _fallbackFaqs = [
-    (
-      q: 'How do I start a new mantra program?',
-      a: 'Go to Programs → tap "Create New Program" → pick a mantra → set your daily target → begin.',
-    ),
-    (
-      q: 'How do I contact support?',
-      a: 'Go to Profile → Report Issue to send an email report. We respond to every message.',
-    ),
-  ];
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final faqsAsync = ref.watch(faqsProvider);
@@ -293,16 +282,21 @@ class _FaqScreen extends ConsumerWidget {
       scrollable: false,
       body: faqsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, st) => _buildList(context, _fallbackFaqs.map((e) => (question: e.q, answer: e.a)).toList()),
-        data: (faqs) {
-          if (faqs.isEmpty) {
-            return _buildList(
-              context,
-              _fallbackFaqs.map((e) => (question: e.q, answer: e.a)).toList(),
-            );
-          }
-          return _buildList(context, faqs);
-        },
+        error: (e, s) => Center(
+          child: Text(
+            'Could not load FAQs. Please check your connection.',
+            style: KvlText.muted(13),
+            textAlign: TextAlign.center,
+          ),
+        ),
+        data: (faqs) => faqs.isEmpty
+            ? Center(
+                child: Text(
+                  'No FAQs available yet.',
+                  style: KvlText.muted(13),
+                ),
+              )
+            : _buildList(context, faqs),
       ),
     );
   }

@@ -247,6 +247,7 @@ class ProfileScreen extends ConsumerWidget {
               SettingRow(
                 icon: Icons.mic_rounded,
                 label: context.l10n.reTrainVoice,
+                disabled: programs.where((p) => !p.isCompleted).isEmpty,
                 onTap: () {
                   final activePrograms = programs
                       .where((p) => !p.isCompleted)
@@ -288,6 +289,7 @@ class ProfileScreen extends ConsumerWidget {
               SettingRow(
                 icon: Icons.edit_rounded,
                 label: context.l10n.retrainWritingStyle,
+                disabled: programs.where((p) => !p.isCompleted).isEmpty,
                 onTap: () {
                   final activePrograms = programs
                       .where((p) => !p.isCompleted)

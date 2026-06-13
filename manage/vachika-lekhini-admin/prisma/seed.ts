@@ -188,7 +188,68 @@ async function main() {
 		console.log(`  ✔ admin "${username}" created`);
 	}
 
-	// No demo accounts — real users register via the Flutter app.
+		// No demo accounts — real users register via the Flutter app.
+
+	console.log('▶ Seeding FAQs…');
+	const faqs = [
+		{
+			question: 'How do I start a new mantra program?',
+			answer: 'Go to My Programs → tap "Add Program" → choose a mantra → set your daily target and number of days → tap Start. Your program begins immediately.',
+			sortOrder: 1
+		},
+		{
+			question: 'How does voice counting work?',
+			answer: 'On the Practice screen, tap the microphone icon and chant aloud. The app listens and counts each chant automatically using voice recognition. Make sure to chant clearly and at a normal pace.',
+			sortOrder: 2
+		},
+		{
+			question: 'How does handwriting counting work?',
+			answer: 'On the Practice screen, select Writing mode. Write the mantra in your own handwriting on paper, take a photo or upload from gallery. The app recognises your handwriting and counts the writings.',
+			sortOrder: 3
+		},
+		{
+			question: 'Can I add family members to my account?',
+			answer: 'Yes. Go to Profile → Family Members → Add Member. Enter the name and relationship. Each member has their own separate practice counter, streaks, and reward points. Up to 4 family members can be added.',
+			sortOrder: 4
+		},
+		{
+			question: 'How do I switch between family members?',
+			answer: 'Go to Profile → Switch User. The "Who is Practicing?" screen appears — tap any name to switch to that member\'s view. All data updates instantly for the selected person.',
+			sortOrder: 5
+		},
+		{
+			question: 'What are reward points and how do I earn them?',
+			answer: 'Reward points are earned for every chant and writing you complete. Milestones (e.g. 1 000, 10 000 chants) give bonus points. Points can be redeemed in the Reward Store for spiritual items and donations.',
+			sortOrder: 6
+		},
+		{
+			question: 'How do I redeem points in the Reward Store?',
+			answer: 'Go to Reward Store, browse items, and tap Redeem on anything you can afford. Once redeemed, the button changes to "Redeemed ✓" and the item is recorded under your account.',
+			sortOrder: 7
+		},
+		{
+			question: 'What is a streak and how is it calculated?',
+			answer: 'A streak counts consecutive days you practised. Each calendar day you log at least one chant or writing keeps your streak alive. Missing a day resets the streak to zero. The Leaderboard ranks members by streak.',
+			sortOrder: 8
+		},
+		{
+			question: 'How do I retrain the app to recognise my handwriting or voice?',
+			answer: 'Go to Profile → Retrain Voice or Retrain Writing Style. You must have at least one active program first. Select the mantra program you want to retrain, then follow the on-screen steps.',
+			sortOrder: 9
+		},
+		{
+			question: 'How do I report a problem or contact support?',
+			answer: 'Go to Profile → Report Issue. Fill in the subject and describe what happened. Tap Send — our team reads every report and responds within 48 hours. You can also write to support@vaachikalekhini.com.',
+			sortOrder: 10
+		}
+	];
+	for (const faq of faqs) {
+		const existing = await prisma.faq.findFirst({ where: { question: faq.question } });
+		if (!existing) {
+			await prisma.faq.create({ data: { ...faq, isActive: true } });
+		}
+	}
+	console.log(`  ✔ ${faqs.length} FAQs seeded`);
 }
 
 main()

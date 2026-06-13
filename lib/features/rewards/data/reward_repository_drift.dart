@@ -193,6 +193,41 @@ class RewardRepositoryDrift implements RewardRepository {
   }
 
   @override
+  Stream<Set<String>> watchRedeemedItemIds(String memberId) {
+    return (_db.select(_db.rewardEvents)
+          ..where(
+            (t) =>
+                t.memberId.equals(memberId) &
+                t.kind.equals('spend') &
+                t.storeItemId.isNotNull(),
+          ))
+        .watch()
+        .map((rows) => rows.map((r) => r.storeItemId!).toSet());
+  }
+
+  @override
+  Future<void> seedRedemption({
+    required String id,
+    required String memberId,
+    required String storeItemId,
+    required int amount,
+    required String source,
+    required DateTime occurredAt,
+  }) async {
+    await _db.into(_db.rewardEvents).insertOnConflictUpdate(
+          RewardEventsCompanion.insert(
+            id: id,
+            memberId: memberId,
+            kind: 'spend',
+            amount: amount,
+            source: source,
+            occurredAt: occurredAt,
+            storeItemId: Value(storeItemId),
+          ),
+        );
+  }
+
+  @override
   Future<void> reconcileFromServer(String memberId, int serverBalance) async {
     final local = await totalPoints(memberId);
     final diff = serverBalance - local;

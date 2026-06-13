@@ -62,6 +62,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   Widget build(BuildContext context) {
     final pointsAsync = ref.watch(rewardTotalProvider);
     final points = pointsAsync.value ?? 0;
+    final redeemed = ref.watch(redeemedItemIdsProvider).value ?? const <String>{};
     final storeAsync = ref.watch(storeItemsProvider);
     final allItems = storeAsync.value ?? const <StoreItem>[];
     final items = allItems
@@ -144,7 +145,12 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
             childAspectRatio: 0.62,
             children: [
               for (final i in items)
-                _StoreCard(item: i, points: points, onRedeem: () => _redeem(i)),
+                _StoreCard(
+                  item: i,
+                  points: points,
+                  isRedeemed: redeemed.contains(i.id),
+                  onRedeem: () => _redeem(i),
+                ),
             ],
           ),
           if (items.isEmpty)
@@ -233,10 +239,12 @@ class _StoreCard extends StatelessWidget {
   const _StoreCard({
     required this.item,
     required this.points,
+    required this.isRedeemed,
     required this.onRedeem,
   });
   final StoreItem item;
   final int points;
+  final bool isRedeemed;
   final VoidCallback onRedeem;
 
   @override
@@ -285,9 +293,12 @@ class _StoreCard extends StatelessWidget {
                     ),
                     const Spacer(),
                     _RedeemButton(
-                      canAfford: canAfford,
-                      label: context.l10n.redeemButton,
-                      onRedeem: onRedeem,
+                      canAfford: canAfford && !isRedeemed,
+                      isRedeemed: isRedeemed,
+                      label: isRedeemed
+                          ? 'Redeemed ✓'
+                          : context.l10n.redeemButton,
+                      onRedeem: isRedeemed ? null : onRedeem,
                     ),
                   ],
                 ),
@@ -303,15 +314,41 @@ class _StoreCard extends StatelessWidget {
 class _RedeemButton extends StatelessWidget {
   const _RedeemButton({
     required this.canAfford,
+    required this.isRedeemed,
     required this.label,
     required this.onRedeem,
   });
   final bool canAfford;
+  final bool isRedeemed;
   final String label;
-  final VoidCallback onRedeem;
+  final VoidCallback? onRedeem;
 
   @override
   Widget build(BuildContext context) {
+    if (isRedeemed) {
+      return SizedBox(
+        width: double.infinity,
+        height: 36,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: const Color(0xFFE8F5E9),
+            borderRadius: KvlRadius.brMD,
+            border: Border.all(color: const Color(0xFF81C784)),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF388E3C),
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     return Opacity(
       opacity: canAfford ? 1.0 : 0.38,
       child: SizedBox(

@@ -51,6 +51,10 @@ export const GET: RequestHandler = async (event) => {
 							updatedAt: true,
 							mantra: { select: { slug: true } }
 						}
+					},
+					rewardEvents: {
+						where: { kind: 'spend', storeItemId: { not: null } },
+						select: { id: true, storeItemId: true, amount: true, source: true, occurredAt: true }
 					}
 				}
 			}

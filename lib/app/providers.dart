@@ -285,6 +285,25 @@ final accountHydrationProvider = Provider<void>((ref) {
                 ),
               );
         }
+
+        final redemptions =
+            member['reward_events'] as List<dynamic>? ?? const [];
+        for (final rawRedemption in redemptions) {
+          final r = Map<String, dynamic>.from(rawRedemption as Map);
+          final eventId = r['id'] as String?;
+          final storeItemId = r['store_item_id'] as String?;
+          if (eventId == null || storeItemId == null) continue;
+          await ref.read(rewardRepositoryProvider).seedRedemption(
+                id: eventId,
+                memberId: memberId,
+                storeItemId: storeItemId,
+                amount: (r['amount'] as num?)?.toInt() ?? 0,
+                source: (r['source'] as String?) ?? 'store',
+                occurredAt:
+                    DateTime.tryParse(r['occurred_at'] as String? ?? '') ??
+                    DateTime.now(),
+              );
+        }
       }
 
     });
@@ -580,6 +599,17 @@ final leaderboardProvider =
         return [];
       }
     });
+
+/// Set of store item IDs the active member has already redeemed.
+/// Empty when no profile is selected.
+final redeemedItemIdsProvider = StreamProvider<Set<String>>((ref) async* {
+  final profile = ref.watch(activeProfileProvider).value;
+  if (profile == null) {
+    yield const <String>{};
+    return;
+  }
+  yield* ref.watch(rewardRepositoryProvider).watchRedeemedItemIds(profile.id);
+});
 
 /// Incremented each time a practice session is finished so that
 /// DailyProgressScreen knows to reload its data.

@@ -25,6 +25,19 @@ abstract class RewardRepository {
     String? storeItemId,
   });
 
+  /// Set of storeItemIds the member has redeemed (spend events with a storeItemId).
+  Stream<Set<String>> watchRedeemedItemIds(String memberId);
+
+  /// Seed a redemption locally from server data without re-enqueuing to outbox.
+  Future<void> seedRedemption({
+    required String id,
+    required String memberId,
+    required String storeItemId,
+    required int amount,
+    required String source,
+    required DateTime occurredAt,
+  });
+
   /// Sync the server-computed balance into local storage without enqueuing
   /// anything to the outbox. Called after each /api/v1/me pull.
   Future<void> reconcileFromServer(String memberId, int serverBalance);

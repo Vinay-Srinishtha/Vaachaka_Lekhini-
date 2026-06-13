@@ -135,6 +135,10 @@ class PracticeController extends AsyncNotifier<PracticeState> {
       if (s.modality == SessionModality.voice && mantra != null) {
         final sensitivity = ref.read(settingsProvider).value?.micSensitivity
             ?? MicSensitivity.medium;
+        // Cancel any lingering voice session before starting a new one.
+        await _voiceSub?.cancel();
+        _voiceSub = null;
+        await _voice?.dispose();
         _voice = VoiceEnrolmentService();
         _voiceSub = _voice!.events.listen((e) {
           if (e.count > 0) _bump(s.sessionCount + e.count);
@@ -280,7 +284,7 @@ class PracticeController extends AsyncNotifier<PracticeState> {
     _pendingFlush += delta;
 
     final newTotal = s.todaysTotal + delta;
-    final programTotal = s.program.totalProgress + delta;
+    final programTotal = s.program.totalProgress + newCount;
     final hitProgramTarget = !s.targetReached &&
         s.program.targetWritings > 0 &&
         programTotal >= s.program.targetWritings;
@@ -309,6 +313,16 @@ class PracticeController extends AsyncNotifier<PracticeState> {
     final delta = _pendingFlush;
     _pendingFlush = 0;
     await _programs.incrementSession(id, by: delta);
+  }
+
+  /// Reload just the program object from DB (e.g. after a handwriting session
+  /// updates totalWritings) without resetting the active voice/manual session.
+  Future<void> reloadProgram() async {
+    final s = state.value;
+    if (s == null) return;
+    final program = await _programs.getById(s.program.id);
+    if (program == null) return;
+    state = AsyncData(s.copyWith(program: program));
   }
 
   Future<void> pause() async {

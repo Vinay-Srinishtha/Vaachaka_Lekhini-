@@ -29,7 +29,7 @@ class MantraDetailsScreen extends ConsumerWidget {
     final name = mantra.name.displayForLanguage(settings.languageCode);
     return KvlScaffold(
       title: '$name Mantra Details',
-      trailing: const _FavoriteButton(),
+
       scrollable: true,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -62,31 +62,6 @@ class MantraDetailsScreen extends ConsumerWidget {
   }
 }
 
-class _FavoriteButton extends StatefulWidget {
-  const _FavoriteButton();
-
-  @override
-  State<_FavoriteButton> createState() => _FavoriteButtonState();
-}
-
-class _FavoriteButtonState extends State<_FavoriteButton> {
-  bool _on = false;
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      icon: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 200),
-        transitionBuilder: (c, a) => ScaleTransition(scale: a, child: c),
-        child: Icon(
-          _on ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-          color: _on ? KvlColors.primary : KvlColors.inkSoft,
-          key: ValueKey(_on),
-        ),
-      ),
-      onPressed: () => setState(() => _on = !_on),
-    );
-  }
-}
 
 class _DeityHero extends StatelessWidget {
   @override

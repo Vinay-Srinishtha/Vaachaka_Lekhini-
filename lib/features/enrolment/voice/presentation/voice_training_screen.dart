@@ -16,8 +16,13 @@ import '../data/voice_enrolment_service.dart';
 import '../domain/voice_enrolment.dart';
 
 class VoiceTrainingScreen extends ConsumerStatefulWidget {
-  const VoiceTrainingScreen({super.key, required this.mantraId});
+  const VoiceTrainingScreen({
+    super.key,
+    required this.mantraId,
+    this.isRetrain = false,
+  });
   final String mantraId;
+  final bool isRetrain;
 
   @override
   ConsumerState<VoiceTrainingScreen> createState() =>
@@ -89,7 +94,12 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen> {
           ),
         );
     if (!mounted) return;
-    context.push('${KvlRoute.handwritingSubmit}/${widget.mantraId}');
+    if (widget.isRetrain) {
+      // Retraining from settings — go back to the profile screen, no handwriting step.
+      context.pop();
+    } else {
+      context.push('${KvlRoute.handwritingSubmit}/${widget.mantraId}');
+    }
   }
 
   @override

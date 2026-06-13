@@ -196,6 +196,7 @@ model Program {
   startedAt       DateTime @default(now())
   completedAt     DateTime?
   totalWritings   Int      @default(0)
+  totalChants     Int      @default(0)
   currentStreak   Int      @default(0)
   longestStreak   Int      @default(0)
   lastActiveDate  DateTime?

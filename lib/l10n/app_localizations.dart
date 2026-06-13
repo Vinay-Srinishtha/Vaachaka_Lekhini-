@@ -288,6 +288,12 @@ abstract class AppLocalizations {
   /// **'Enter the 6-digit code sent to your number.'**
   String get enterSixDigitCodeSent;
 
+  /// No description provided for @enterSixDigitCodeSentToMobile.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the 6-digit code sent to +91{mobile}'**
+  String enterSixDigitCodeSentToMobile(String mobile);
+
   /// No description provided for @resendOtpCountdown.
   ///
   /// In en, this message translates to:
@@ -329,6 +335,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Welcome, {name}!'**
   String welcomeGreetingUser(String name);
+
+  /// No description provided for @homeSublineEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Start your spiritual journey'**
+  String get homeSublineEmpty;
+
+  /// No description provided for @homeSublineActive.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{You\'re doing great! 1 Program Active} other{You\'re doing great! {count} Programs Active}}'**
+  String homeSublineActive(int count);
+
+  /// No description provided for @saveNameButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Name'**
+  String get saveNameButton;
+
+  /// No description provided for @savingNameButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving…'**
+  String get savingNameButton;
+
+  /// No description provided for @pressBackAgainToExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Press back again to exit'**
+  String get pressBackAgainToExit;
 
   /// No description provided for @rewardPoints.
   ///
@@ -743,6 +779,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'My Recitation Programs'**
   String get myRecitationPrograms;
+
+  /// No description provided for @completedPrograms.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed Programs'**
+  String get completedPrograms;
 
   /// No description provided for @noProgramsYet.
   ///
@@ -1440,6 +1482,66 @@ abstract class AppLocalizations {
   /// **'Dedicate this program'**
   String get dedicateProgram;
 
+  /// No description provided for @dedicateSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Dedicate this Program'**
+  String get dedicateSheetTitle;
+
+  /// No description provided for @dedicateOfferPractice.
+  ///
+  /// In en, this message translates to:
+  /// **'Offer your chanting practice to someone special'**
+  String get dedicateOfferPractice;
+
+  /// No description provided for @dedicateOfferNamedPractice.
+  ///
+  /// In en, this message translates to:
+  /// **'Offer your {mantraName} practice to someone special'**
+  String dedicateOfferNamedPractice(String mantraName);
+
+  /// No description provided for @dedicatedTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Dedicated to'**
+  String get dedicatedTo;
+
+  /// No description provided for @dedicatedToHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. My Mother, Sri Guru, Self'**
+  String get dedicatedToHint;
+
+  /// No description provided for @intention.
+  ///
+  /// In en, this message translates to:
+  /// **'Intention (optional)'**
+  String get intention;
+
+  /// No description provided for @intentionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. For her health and happiness…'**
+  String get intentionHint;
+
+  /// No description provided for @removeDedication.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove dedication'**
+  String get removeDedication;
+
+  /// No description provided for @updateDedication.
+  ///
+  /// In en, this message translates to:
+  /// **'Update Dedication'**
+  String get updateDedication;
+
+  /// No description provided for @saveDedication.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Dedication'**
+  String get saveDedication;
+
   /// No description provided for @editGoal.
   ///
   /// In en, this message translates to:
@@ -1973,6 +2075,294 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reward Store'**
   String get rewardStore;
+
+  /// No description provided for @encouragementSentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Encouragement sent! 🙏'**
+  String get encouragementSentLabel;
+
+  /// No description provided for @membersLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Members'**
+  String get membersLabel;
+
+  /// No description provided for @bestStreakLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Best Streak'**
+  String get bestStreakLabel;
+
+  /// No description provided for @daysLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'days'**
+  String get daysLabel;
+
+  /// No description provided for @closeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get closeLabel;
+
+  /// No description provided for @authErrorInvalidOtp.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrong verification code. Please try again.'**
+  String get authErrorInvalidOtp;
+
+  /// No description provided for @authErrorInvalidMobile.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid 10-digit mobile number.'**
+  String get authErrorInvalidMobile;
+
+  /// No description provided for @authErrorAccountNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No account found for this number. Please create an account first.'**
+  String get authErrorAccountNotFound;
+
+  /// No description provided for @authErrorAccountExists.
+  ///
+  /// In en, this message translates to:
+  /// **'An account already exists for this number. Please log in instead.'**
+  String get authErrorAccountExists;
+
+  /// No description provided for @authErrorServerUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Server is unreachable. Please check your connection and try again.'**
+  String get authErrorServerUnavailable;
+
+  /// No description provided for @authErrorNoInternet.
+  ///
+  /// In en, this message translates to:
+  /// **'No internet connection. Please check your network and try again.'**
+  String get authErrorNoInternet;
+
+  /// No description provided for @authErrorOtpExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification code has expired. Please request a new one.'**
+  String get authErrorOtpExpired;
+
+  /// No description provided for @authErrorServerError.
+  ///
+  /// In en, this message translates to:
+  /// **'Server error. Please try again in a moment.'**
+  String get authErrorServerError;
+
+  /// No description provided for @authErrorTooManyAttempts.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many attempts. Please wait a moment before trying again.'**
+  String get authErrorTooManyAttempts;
+
+  /// No description provided for @authErrorUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Please try again.'**
+  String get authErrorUnknown;
+
+  /// No description provided for @authErrorEnterName.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your name.'**
+  String get authErrorEnterName;
+
+  /// No description provided for @authErrorEnterMobileValid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid 10-digit mobile number.'**
+  String get authErrorEnterMobileValid;
+
+  /// No description provided for @authErrorEnterOtpDigits.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the 6-digit code.'**
+  String get authErrorEnterOtpDigits;
+
+  /// No description provided for @authErrorMobileIndian.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid Indian mobile number (starts with 6–9).'**
+  String get authErrorMobileIndian;
+
+  /// No description provided for @authErrorSameMobile.
+  ///
+  /// In en, this message translates to:
+  /// **'This is already your current mobile number.'**
+  String get authErrorSameMobile;
+
+  /// No description provided for @authErrorEnterOtp6.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter the 6-digit verification code.'**
+  String get authErrorEnterOtp6;
+
+  /// No description provided for @nameUpdatedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Name updated successfully.'**
+  String get nameUpdatedSuccess;
+
+  /// No description provided for @mobileUpdatedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Mobile number updated successfully.'**
+  String get mobileUpdatedSuccess;
+
+  /// No description provided for @nameEmptyError.
+  ///
+  /// In en, this message translates to:
+  /// **'Name cannot be empty.'**
+  String get nameEmptyError;
+
+  /// No description provided for @deleteMemberTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove member?'**
+  String get deleteMemberTitle;
+
+  /// No description provided for @deleteMemberContent.
+  ///
+  /// In en, this message translates to:
+  /// **'This will remove {name} from your account.'**
+  String deleteMemberContent(String name);
+
+  /// No description provided for @deleteMemberConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get deleteMemberConfirm;
+
+  /// No description provided for @changeMobileNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Mobile Number'**
+  String get changeMobileNumber;
+
+  /// No description provided for @numberNotRegistered.
+  ///
+  /// In en, this message translates to:
+  /// **'Number not registered'**
+  String get numberNotRegistered;
+
+  /// No description provided for @noAccountForNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t find an account for this number.'**
+  String get noAccountForNumber;
+
+  /// No description provided for @createAnAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Create an account'**
+  String get createAnAccount;
+
+  /// No description provided for @numberAlreadyRegistered.
+  ///
+  /// In en, this message translates to:
+  /// **'Number already registered'**
+  String get numberAlreadyRegistered;
+
+  /// No description provided for @accountAlreadyExistsForNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'An account already exists for this number.'**
+  String get accountAlreadyExistsForNumber;
+
+  /// No description provided for @logInInstead.
+  ///
+  /// In en, this message translates to:
+  /// **'Log in instead'**
+  String get logInInstead;
+
+  /// No description provided for @resendCodeIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend code in {seconds}s'**
+  String resendCodeIn(int seconds);
+
+  /// No description provided for @resendCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend code'**
+  String get resendCode;
+
+  /// No description provided for @editProfileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Profile'**
+  String get editProfileTitle;
+
+  /// No description provided for @displayNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Display Name'**
+  String get displayNameLabel;
+
+  /// No description provided for @displayNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your name'**
+  String get displayNameHint;
+
+  /// No description provided for @mobileNumberLabel2.
+  ///
+  /// In en, this message translates to:
+  /// **'Mobile Number'**
+  String get mobileNumberLabel2;
+
+  /// No description provided for @changeMobileSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Mobile Number'**
+  String get changeMobileSheetTitle;
+
+  /// No description provided for @enterNewMobileHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your new mobile number. We will send a verification code to confirm.'**
+  String get enterNewMobileHint;
+
+  /// No description provided for @sendingOtpButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending…'**
+  String get sendingOtpButton;
+
+  /// No description provided for @confirmNewNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm New Number'**
+  String get confirmNewNumber;
+
+  /// No description provided for @verifyingButton2.
+  ///
+  /// In en, this message translates to:
+  /// **'Verifying…'**
+  String get verifyingButton2;
+
+  /// No description provided for @writingStyleSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Writing Style'**
+  String get writingStyleSection;
+
+  /// No description provided for @retrainWritingStyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Retrain Writing Style'**
+  String get retrainWritingStyle;
+
+  /// No description provided for @resendCodeCountdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend code in {seconds}s'**
+  String resendCodeCountdown(int seconds);
 }
 
 class _AppLocalizationsDelegate

@@ -150,7 +150,7 @@ class _Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isEarn = event.kind == RewardKind.earn;
+    final isCredit = event.kind.isCredit;
     return KvlCard(
       padding: const EdgeInsets.symmetric(horizontal: KvlSpacing.md, vertical: 10),
       child: Row(
@@ -166,9 +166,9 @@ class _Row extends StatelessWidget {
             ),
           ),
           Text(
-            (isEarn ? '+' : '−') + IndianNumberFormat.format(event.amount),
+            (isCredit ? '+' : '−') + IndianNumberFormat.format(event.amount),
             style: KvlText.ui(13, FontWeight.w700).copyWith(
-              color: isEarn ? KvlColors.success : KvlColors.danger,
+              color: isCredit ? KvlColors.success : KvlColors.danger,
             ),
           ),
         ],

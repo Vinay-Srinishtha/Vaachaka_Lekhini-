@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -139,8 +140,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '${KvlRoute.voiceTraining}/:mantraId',
-        builder: (_, state) =>
-            VoiceTrainingScreen(mantraId: state.pathParameters['mantraId']!),
+        builder: (_, state) => VoiceTrainingScreen(
+          mantraId: state.pathParameters['mantraId']!,
+          isRetrain: state.uri.queryParameters['retrain'] == '1',
+        ),
       ),
       GoRoute(
         path: '${KvlRoute.handwritingSubmit}/:mantraId',
@@ -294,6 +297,8 @@ class _ShellPageState extends ConsumerState<_ShellPage> {
   static const _communityTab = 3;
   static const _storeTab = 4;
 
+  DateTime? _lastBackPress;
+
   @override
   void initState() {
     super.initState();
@@ -339,13 +344,21 @@ class _ShellPageState extends ConsumerState<_ShellPage> {
           context.pop();
           return;
         }
+        // Double-back to exit: first press shows a hint, second press exits.
+        final now = DateTime.now();
+        if (_lastBackPress != null &&
+            now.difference(_lastBackPress!) < const Duration(seconds: 2)) {
+          SystemNavigator.pop();
+          return;
+        }
+        _lastBackPress = now;
         ScaffoldMessenger.of(context)
           ..clearSnackBars()
           ..showSnackBar(
-            const SnackBar(
-              content: Text('You are already on Home'),
+            SnackBar(
+              content: Text(context.l10n.pressBackAgainToExit),
               behavior: SnackBarBehavior.floating,
-              duration: Duration(seconds: 2),
+              duration: const Duration(seconds: 2),
             ),
           );
       },

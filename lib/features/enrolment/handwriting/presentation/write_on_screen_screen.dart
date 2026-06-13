@@ -18,6 +18,7 @@ import '../../../../core/remote_config/remote_config.dart';
 import '../../../../core/remote_config/remote_config_keys.dart';
 import '../../../../core/theme/theme.dart';
 import '../../../../core/utils/indian_number_format.dart';
+import '../../../practice/application/practice_controller.dart';
 import '../../../programs/domain/session.dart';
 import '../../../settings/domain/settings_repository.dart';
 import '../domain/handwriting_asset.dart';
@@ -242,7 +243,6 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
   }
 
   Future<void> _save() async {
-    if (_writingCount == 0 && _controller.isEmpty) return;
     // Count any pending unsaved drawing
     final total = _writingCount + (_controller.isEmpty ? 0 : 1);
     setState(() => _saving = true);
@@ -267,26 +267,32 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
     if (programId != null) {
       final repo = ref.read(programRepositoryProvider);
       final activeProfile = ref.read(activeProfileProvider).value;
-      final session = await repo.startSession(
-        programId: programId,
-        memberId: activeProfile?.id ?? '',
-        modality: SessionModality.handwriting,
-        // usedHandwriting removed — modality==handwriting covers it
-      );
-      await repo.incrementSession(session.id, by: total);
-      await repo.finishSession(session.id);
+      if (total > 0) {
+        final session = await repo.startSession(
+          programId: programId,
+          memberId: activeProfile?.id ?? '',
+          modality: SessionModality.handwriting,
+        );
+        await repo.incrementSession(session.id, by: total);
+        await repo.finishSession(session.id);
+      }
       if (!mounted) return;
-      _showSnack(SnackBar(
-        duration: const Duration(milliseconds: 1500),
-        content: Text(context.l10n.handwritingSaved(total)),
-        backgroundColor: KvlColors.accent,
-        behavior: SnackBarBehavior.floating,
-        action: SnackBarAction(
-          label: '✕',
-          textColor: Colors.white,
-          onPressed: () => ScaffoldMessenger.of(context).clearSnackBars(),
-        ),
-      ));
+      // Refresh the practice controller so the counter shows updated DB counts.
+      await ref.read(practiceControllerProvider(programId).notifier).reloadProgram();
+      if (!mounted) return;
+      if (total > 0) {
+        _showSnack(SnackBar(
+          duration: const Duration(milliseconds: 1500),
+          content: Text(context.l10n.handwritingSaved(total)),
+          backgroundColor: KvlColors.accent,
+          behavior: SnackBarBehavior.floating,
+          action: SnackBarAction(
+            label: '✕',
+            textColor: Colors.white,
+            onPressed: () => ScaffoldMessenger.of(context).clearSnackBars(),
+          ),
+        ));
+      }
       // Pop back to the practice counter screen (it pushed us here).
       context.pop();
       return;
@@ -326,9 +332,8 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
         currentCount: progress,
         globalCount: globalCount,
         writingCount: _writingCount,
-        onBack: () => context.popOrGo(KvlRoute.practice),
         onAdd: _submitOne,
-        onFinish: _saving ? null : _save,
+        onFinish: _save,
         onClear: _controller.clear,
         onUndo: _controller.undo,
         onRedo: _controller.redo,
@@ -829,7 +834,6 @@ class _ProtoWriteScaffold extends StatefulWidget {
     required this.currentCount,
     required this.globalCount,
     required this.writingCount,
-    required this.onBack,
     required this.onAdd,
     required this.onFinish,
     required this.onClear,
@@ -846,7 +850,6 @@ class _ProtoWriteScaffold extends StatefulWidget {
   final int currentCount;
   final int globalCount;
   final int writingCount;
-  final VoidCallback onBack;
   final VoidCallback onAdd;
   final VoidCallback? onFinish;
   final VoidCallback onClear;
@@ -950,16 +953,6 @@ class _ProtoWriteScaffoldState extends State<_ProtoWriteScaffold> {
                     increment: widget.writingCount,
                     compact: compact,
                   ),
-                ),
-              ),
-              Positioned(
-                left: 14,
-                top: topInset,
-                child: IconButton(
-                  onPressed: widget.onBack,
-                  icon: const Icon(Icons.arrow_back_rounded),
-                  iconSize: compact ? 28 : 32,
-                  color: KvlColors.ink,
                 ),
               ),
               Positioned(

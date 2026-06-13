@@ -26,6 +26,38 @@ class _AddFamilyScreenState extends ConsumerState<AddFamilyScreen> {
     super.dispose();
   }
 
+  Future<void> _deleteMember(Profile p) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(context.l10n.deleteMemberTitle),
+        content: Text(context.l10n.deleteMemberContent(p.name)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(context.l10n.deleteDialogCancel),
+          ),
+          FilledButton.tonal(
+            style: FilledButton.styleFrom(
+              backgroundColor: KvlColors.danger,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(context.l10n.deleteMemberConfirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await ref.read(profileRepositoryProvider).delete(p.id);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = '$e');
+      }
+    }
+  }
+
   Future<void> _save() async {
     final session = ref.read(sessionProvider).value;
     if (session == null) return;
@@ -110,6 +142,15 @@ class _AddFamilyScreenState extends ConsumerState<AddFamilyScreen> {
                         ],
                       ),
                     ),
+                    if (p.relation != FamilyRelation.me)
+                      IconButton(
+                        onPressed: () => _deleteMember(p),
+                        icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                        color: KvlColors.danger,
+                        tooltip: context.l10n.deleteMemberConfirm,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                      ),
                   ],
                 ),
               ),

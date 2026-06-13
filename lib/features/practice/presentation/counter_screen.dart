@@ -74,6 +74,13 @@ class _BodyState extends ConsumerState<_Body> {
           Navigator.of(context).pop();
           final controller = ref.read(practiceControllerProvider(programId).notifier);
           await controller.finish();
+          // Mark program completed locally so the UI locks immediately.
+          final program = ref.read(practiceControllerProvider(programId)).value?.program;
+          if (program != null && !program.isCompleted) {
+            await ref.read(programRepositoryProvider).update(
+              program.copyWith(completedAt: DateTime.now()),
+            );
+          }
           if (!context.mounted) return;
           context.go('${KvlRoute.dailyProgress}/$programId');
         },
@@ -129,7 +136,6 @@ class _BodyState extends ConsumerState<_Body> {
                   _TopBar(
                     title: title,
                     initial: profile?.initials ?? '?',
-                    onBack: () => context.pop(),
                     onProfileTap: () => context.push(KvlRoute.profile),
                   ),
                   SizedBox(height: compact ? 10 : 16),
@@ -139,7 +145,6 @@ class _BodyState extends ConsumerState<_Body> {
                     onWritingMode: () => context.push(
                       '${KvlRoute.handwritingWrite}/${state.program.mantraId}?programId=$programId',
                     ),
-                    onAmbience: () {},
                     phoneModeEnabled: phoneModeEnabled,
                     onPhoneMode: () => _togglePhoneMode(ref),
                   ),
@@ -178,75 +183,76 @@ class _BodyState extends ConsumerState<_Body> {
                     onStart: state.isRunning
                         ? controller.pause
                         : () => controller.start(mantra: mantra),
-                    onFinish: state.activeSessionId == null
-                        ? null
-                        : () async {
-                            final saved = state.sessionCount;
-                            await controller.finish();
-                            if (!context.mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                duration: const Duration(milliseconds: 1500),
-                                behavior: SnackBarBehavior.floating,
-                                backgroundColor: const Color(0xFF15803D),
-                                elevation: 10,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: KvlRadius.brMD,
+                    onFinish: () async {
+                      if (state.activeSessionId != null) {
+                        final saved = state.sessionCount;
+                        await controller.finish();
+                        if (!context.mounted) return;
+                        ref.read(sessionCompletedProvider.notifier).increment();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            duration: const Duration(milliseconds: 1500),
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: const Color(0xFF15803D),
+                            elevation: 10,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: KvlRadius.brMD,
+                            ),
+                            content: Row(
+                              children: [
+                                Container(
+                                  width: 30,
+                                  height: 30,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(
+                                      alpha: .16,
+                                    ),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: const Icon(
+                                    Icons.check_rounded,
+                                    color: Colors.white,
+                                    size: 19,
+                                  ),
                                 ),
-                                content: Row(
-                                  children: [
-                                    Container(
-                                      width: 30,
-                                      height: 30,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withValues(
-                                          alpha: .16,
-                                        ),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      alignment: Alignment.center,
-                                      child: const Icon(
-                                        Icons.check_rounded,
-                                        color: Colors.white,
-                                        size: 19,
-                                      ),
-                                    ),
-                                    const SizedBox(width: KvlSpacing.sm),
-                                    Expanded(
-                                      child: Text(
-                                        'Session saved · +${IndianNumberFormat.format(saved)} chants',
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: KvlText.ui(
-                                          13,
-                                          FontWeight.w600,
-                                        ).copyWith(color: Colors.white),
-                                      ),
-                                    ),
-                                    GestureDetector(
-                                      behavior: HitTestBehavior.opaque,
-                                      onTap: () {
-                                        final messenger = ScaffoldMessenger.maybeOf(context);
-                                        messenger?.clearSnackBars();
-                                      },
-                                      child: const Padding(
-                                        padding: EdgeInsets.all(6),
-                                        child: Icon(
-                                          Icons.close,
-                                          color: Colors.white,
-                                          size: 20,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                const SizedBox(width: KvlSpacing.sm),
+                                Expanded(
+                                  child: Text(
+                                    'Session saved · +${IndianNumberFormat.format(saved)} chants',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: KvlText.ui(
+                                      13,
+                                      FontWeight.w600,
+                                    ).copyWith(color: Colors.white),
+                                  ),
                                 ),
-                              ),
-                            );
-                            if (!context.mounted) return;
-                            // Navigate to daily progress to show session summary.
-                            // Use go() so the user can't swipe back to an active session.
-                            context.go('${KvlRoute.dailyProgress}/$programId');
-                          },
+                                GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: () {
+                                    final messenger = ScaffoldMessenger.maybeOf(context);
+                                    messenger?.clearSnackBars();
+                                  },
+                                  child: const Padding(
+                                    padding: EdgeInsets.all(6),
+                                    child: Icon(
+                                      Icons.close,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+                      if (!context.mounted) return;
+                      // Navigate to daily progress to show session summary.
+                      // Use go() so the user can't swipe back to an active session.
+                      context.go('${KvlRoute.dailyProgress}/$programId');
+                    },
                   ),
                   if (state.errorMessage != null) ...[
                     const SizedBox(height: 8),
@@ -290,23 +296,17 @@ class _TopBar extends StatelessWidget {
   const _TopBar({
     required this.title,
     required this.initial,
-    required this.onBack,
     required this.onProfileTap,
   });
   final String title;
   final String initial;
-  final VoidCallback onBack;
   final VoidCallback onProfileTap;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        IconButton(
-          onPressed: onBack,
-          icon: const Icon(Icons.arrow_back_rounded, size: 28),
-          color: KvlColors.ink,
-        ),
+        const SizedBox(width: 48),
         Expanded(
           child: Text(
             title,
@@ -351,14 +351,12 @@ class _ToolRow extends StatelessWidget {
     required this.compact,
     required this.onChangeMantra,
     required this.onWritingMode,
-    required this.onAmbience,
     required this.phoneModeEnabled,
     required this.onPhoneMode,
   });
   final bool compact;
   final VoidCallback onChangeMantra;
   final VoidCallback onWritingMode;
-  final VoidCallback onAmbience;
   final bool phoneModeEnabled;
   final VoidCallback onPhoneMode;
 
@@ -379,14 +377,6 @@ class _ToolRow extends StatelessWidget {
             icon: Icons.draw_outlined,
             label: context.l10n.ownWritingModeLabel,
             onTap: onWritingMode,
-            compact: compact,
-          ),
-        ),
-        Expanded(
-          child: _Tool(
-            icon: Icons.music_note_rounded,
-            label: context.l10n.ambienceSound,
-            onTap: onAmbience,
             compact: compact,
           ),
         ),

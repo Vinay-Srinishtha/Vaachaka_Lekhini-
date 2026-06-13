@@ -108,7 +108,10 @@ class _Body extends StatelessWidget {
     }
 
     final podium = list.take(3).toList();
-    final rest = list.skip(3).toList();
+    // Avoid showing the current user twice: if they appear in the podium,
+    // skip their entry in the rest list.
+    final selfInPodium = podium.any((f) => f.isSelf);
+    final rest = list.skip(3).where((f) => !selfInPodium || !f.isSelf).toList();
     final topInset2 = topInset; // alias for use inside ListView builder
 
     return ListView(
@@ -136,15 +139,12 @@ class _Body extends StatelessWidget {
         ],
         const SizedBox(height: KvlSpacing.md),
         KvlButton(
-          label: context.l10n.sendEncouragement,
-          icon: Icons.favorite_rounded,
-          onPressed: () {},
-        ),
-        const SizedBox(height: KvlSpacing.sm),
-        KvlButton(
           variant: KvlButtonVariant.secondary,
           label: context.l10n.viewGroupStats,
-          onPressed: () {},
+          onPressed: () => showDialog<void>(
+            context: context,
+            builder: (_) => const _GroupStatsDialog(),
+          ),
         ),
       ],
     );
@@ -343,6 +343,55 @@ class _Pod extends StatelessWidget {
           ),
         ),
         Text(metric, style: KvlText.muted(10)),
+      ],
+    );
+  }
+}
+
+class _GroupStatsDialog extends ConsumerWidget {
+  const _GroupStatsDialog();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final leaderboardAsync = ref.watch(leaderboardProvider(LeaderboardSort.streak));
+    final list = leaderboardAsync.value ?? const <Friend>[];
+    final totalChants = list.fold<int>(0, (s, f) => s + f.totalChants);
+    final bestStreak = list.isEmpty ? 0 : list.map((f) => f.streakDays).reduce((a, b) => a > b ? a : b);
+
+    return AlertDialog(
+      title: Text(context.l10n.viewGroupStats),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _StatRow(label: context.l10n.membersLabel, value: '${list.length}'),
+          const SizedBox(height: KvlSpacing.sm),
+          _StatRow(label: context.l10n.totalChantsSort, value: IndianNumberFormat.compact(totalChants)),
+          const SizedBox(height: KvlSpacing.sm),
+          _StatRow(label: context.l10n.bestStreakLabel, value: '$bestStreak ${context.l10n.daysLabel}'),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(context.l10n.closeLabel),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatRow extends StatelessWidget {
+  const _StatRow({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: KvlText.muted(13)),
+        Text(value, style: KvlText.ui(14, FontWeight.w700)),
       ],
     );
   }

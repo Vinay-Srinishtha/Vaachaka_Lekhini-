@@ -265,6 +265,16 @@ class AuthRepositoryRemote implements AuthRepository {
   }
 
   @override
+  Future<void> deleteAccount() async {
+    try {
+      await _auth.api.dio.delete<void>('/api/v1/me');
+    } catch (_) {
+      // Best-effort — proceed with local wipe even if request fails.
+    }
+    await logout();
+  }
+
+  @override
   Future<void> logout() async {
     await _auth.logout();         // clears JWT from secure storage
     await _writeSession(null);    // clears Hive session

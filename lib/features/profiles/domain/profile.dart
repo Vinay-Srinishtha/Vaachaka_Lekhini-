@@ -34,6 +34,7 @@ class Profile extends Equatable {
     required this.relation,
     required this.createdAt,
     this.avatarSeed,
+    this.language = 'en',
   });
 
   final String id;
@@ -45,6 +46,9 @@ class Profile extends Equatable {
   /// Seed string used to generate deterministic placeholder avatars
   /// (gradient + initials) when the user has no real photo.
   final String? avatarSeed;
+
+  /// Preferred UI language for this family member (BCP-47 code: en/hi/te/kn).
+  final String language;
 
   /// Display label used on the Profile Selection screen.
   /// "Me" → just "Me", others → "Name, Relation".
@@ -59,12 +63,18 @@ class Profile extends Equatable {
     return (parts.first.characters.first + parts.last.characters.first).toUpperCase();
   }
 
-  Profile copyWith({String? name, FamilyRelation? relation, String? avatarSeed}) => Profile(
+  Profile copyWith({
+    String? name,
+    FamilyRelation? relation,
+    String? avatarSeed,
+    String? language,
+  }) => Profile(
         id: id,
         userId: userId,
         name: name ?? this.name,
         relation: relation ?? this.relation,
         avatarSeed: avatarSeed ?? this.avatarSeed,
+        language: language ?? this.language,
         createdAt: createdAt,
       );
 
@@ -74,6 +84,7 @@ class Profile extends Equatable {
         'name': name,
         'relation': relation.name,
         'avatarSeed': avatarSeed,
+        'language': language,
         'createdAt': createdAt.toIso8601String(),
       };
 
@@ -83,9 +94,10 @@ class Profile extends Equatable {
         name: j['name'] as String,
         relation: FamilyRelation.fromName(j['relation'] as String?),
         avatarSeed: j['avatarSeed'] as String?,
+        language: j['language'] as String? ?? 'en',
         createdAt: DateTime.parse(j['createdAt'] as String),
       );
 
   @override
-  List<Object?> get props => [id, userId, name, relation, avatarSeed, createdAt];
+  List<Object?> get props => [id, userId, name, relation, avatarSeed, language, createdAt];
 }

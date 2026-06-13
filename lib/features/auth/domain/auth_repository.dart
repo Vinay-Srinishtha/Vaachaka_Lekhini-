@@ -39,6 +39,9 @@ abstract class AuthRepository {
     required String otp,
   });
 
+  /// Delete the account from the backend, then drop the local session.
+  Future<void> deleteAccount();
+
   /// Drop the current session.
   Future<void> logout();
 }

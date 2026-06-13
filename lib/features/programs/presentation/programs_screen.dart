@@ -142,11 +142,29 @@ class _Body extends ConsumerWidget {
               ],
             ),
           )
-        else
-          for (final p in programs) ...[
-            _ProgramCard(program: p),
-            const SizedBox(height: KvlSpacing.sm),
-          ],
+        else ...[
+          ...() {
+            final active = programs.where((p) => !p.isCompleted).toList();
+            final completed = programs.where((p) => p.isCompleted).toList();
+            return [
+              if (active.isNotEmpty) ...[
+                for (final p in active) ...[
+                  _ProgramCard(program: p),
+                  const SizedBox(height: KvlSpacing.sm),
+                ],
+              ],
+              if (completed.isNotEmpty) ...[
+                const SizedBox(height: KvlSpacing.sm),
+                Text(context.l10n.completedPrograms, style: KvlText.title(14).copyWith(color: KvlColors.inkSoft)),
+                const SizedBox(height: KvlSpacing.sm),
+                for (final p in completed) ...[
+                  _ProgramCard(program: p),
+                  const SizedBox(height: KvlSpacing.sm),
+                ],
+              ],
+            ];
+          }(),
+        ],
       ],
     );
   }

@@ -31,6 +31,10 @@
   "mobileLabel": "Mobile",
   "enterSixDigitCode": "Enter the 6-digit code",
   "enterSixDigitCodeSent": "Enter the 6-digit code sent to your number.",
+  "enterSixDigitCodeSentToMobile": "Enter the 6-digit code sent to +91{mobile}",
+  "@enterSixDigitCodeSentToMobile": {
+    "placeholders": { "mobile": { "type": "String" } }
+  },
   "resendOtpCountdown": "Resend OTP in {seconds}s",
   "@resendOtpCountdown": {
     "placeholders": { "seconds": { "type": "int" } }
@@ -44,6 +48,14 @@
   "@welcomeGreetingUser": {
     "placeholders": { "name": { "type": "String" } }
   },
+  "homeSublineEmpty": "Start your spiritual journey",
+  "homeSublineActive": "{count, plural, =1{You're doing great! 1 Program Active} other{You're doing great! {count} Programs Active}}",
+  "@homeSublineActive": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "saveNameButton": "Save Name",
+  "savingNameButton": "Saving…",
+  "pressBackAgainToExit": "Press back again to exit",
   "rewardPoints": "Reward Points",
   "storeButton": "Store",
   "dailyPractice": "DAILY PRACTICE",
@@ -140,6 +152,7 @@
   "overallProgress": "Overall Progress",
   "createNewProgramButton": "Create New Program",
   "myRecitationPrograms": "My Recitation Programs",
+  "completedPrograms": "Completed Programs",
   "noProgramsYet": "No programs yet",
   "pickMantraAndTargetToStart": "Pick a mantra and set a target to start your first program.",
   "completedWithCheck": "Completed ✓",
@@ -271,6 +284,19 @@
   "handwritingUsedNo": "No",
   "startPractice": "Start Practice",
   "dedicateProgram": "Dedicate this program",
+  "dedicateSheetTitle": "Dedicate this Program",
+  "dedicateOfferPractice": "Offer your chanting practice to someone special",
+  "dedicateOfferNamedPractice": "Offer your {mantraName} practice to someone special",
+  "@dedicateOfferNamedPractice": {
+    "placeholders": { "mantraName": { "type": "String" } }
+  },
+  "dedicatedTo": "Dedicated to",
+  "dedicatedToHint": "e.g. My Mother, Sri Guru, Self",
+  "intention": "Intention (optional)",
+  "intentionHint": "e.g. For her health and happiness…",
+  "removeDedication": "Remove dedication",
+  "updateDedication": "Update Dedication",
+  "saveDedication": "Save Dedication",
   "editGoal": "Edit Goal",
   "shareProgram": "Share Program",
   "dailyProgressTitle": "Daily Progress",
@@ -380,5 +406,63 @@
   "navCommunity": "Streak Leaderboard",
   "navStore": "Reward Store",
   "seeHistory": "See History",
-  "rewardStore": "Reward Store"
+  "rewardStore": "Reward Store",
+  "encouragementSentLabel": "Encouragement sent! 🙏",
+  "membersLabel": "Members",
+  "bestStreakLabel": "Best Streak",
+  "daysLabel": "days",
+  "closeLabel": "Close",
+
+  "authErrorInvalidOtp": "Wrong verification code. Please try again.",
+  "authErrorInvalidMobile": "Please enter a valid 10-digit mobile number.",
+  "authErrorAccountNotFound": "No account found for this number. Please create an account first.",
+  "authErrorAccountExists": "An account already exists for this number. Please log in instead.",
+  "authErrorServerUnavailable": "Server is unreachable. Please check your connection and try again.",
+  "authErrorNoInternet": "No internet connection. Please check your network and try again.",
+  "authErrorOtpExpired": "Verification code has expired. Please request a new one.",
+  "authErrorServerError": "Server error. Please try again in a moment.",
+  "authErrorTooManyAttempts": "Too many attempts. Please wait a moment before trying again.",
+  "authErrorUnknown": "Something went wrong. Please try again.",
+  "authErrorEnterName": "Please enter your name.",
+  "authErrorEnterMobileValid": "Enter a valid 10-digit mobile number.",
+  "authErrorEnterOtpDigits": "Enter the 6-digit code.",
+  "authErrorMobileIndian": "Enter a valid Indian mobile number (starts with 6–9).",
+  "authErrorSameMobile": "This is already your current mobile number.",
+  "authErrorEnterOtp6": "Please enter the 6-digit verification code.",
+  "nameUpdatedSuccess": "Name updated successfully.",
+  "mobileUpdatedSuccess": "Mobile number updated successfully.",
+  "nameEmptyError": "Name cannot be empty.",
+  "deleteMemberTitle": "Remove member?",
+  "deleteMemberContent": "This will remove {name} from your account.",
+  "@deleteMemberContent": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "deleteMemberConfirm": "Remove",
+  "changeMobileNumber": "Change Mobile Number",
+  "numberNotRegistered": "Number not registered",
+  "noAccountForNumber": "We couldn't find an account for this number.",
+  "createAnAccount": "Create an account",
+  "numberAlreadyRegistered": "Number already registered",
+  "accountAlreadyExistsForNumber": "An account already exists for this number.",
+  "logInInstead": "Log in instead",
+  "resendCodeIn": "Resend code in {seconds}s",
+  "@resendCodeIn": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "resendCode": "Resend code",
+  "editProfileTitle": "Edit Profile",
+  "displayNameLabel": "Display Name",
+  "displayNameHint": "Your name",
+  "mobileNumberLabel2": "Mobile Number",
+  "changeMobileSheetTitle": "Change Mobile Number",
+  "enterNewMobileHint": "Enter your new mobile number. We will send a verification code to confirm.",
+  "sendingOtpButton": "Sending…",
+  "confirmNewNumber": "Confirm New Number",
+  "verifyingButton2": "Verifying…",
+  "writingStyleSection": "Writing Style",
+  "retrainWritingStyle": "Retrain Writing Style",
+  "resendCodeCountdown": "Resend code in {seconds}s",
+  "@resendCodeCountdown": {
+    "placeholders": { "seconds": { "type": "int" } }
+  }
 }

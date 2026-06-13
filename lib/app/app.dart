@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,6 +34,9 @@ class _KvlAppState extends ConsumerState<KvlApp> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       ref.read(mantraRepositoryProvider).refresh();
+      // Drain outbox and pull /api/v1/me so rewards, programs and streak
+      // counts reflect server state immediately when the user returns to the app.
+      unawaited(ref.read(syncEngineProvider).syncNow());
     }
   }
 
@@ -53,6 +58,25 @@ class _KvlAppState extends ConsumerState<KvlApp> with WidgetsBindingObserver {
     // CRITICAL: SyncEngine is a lazy provider — nothing else watches it, so
     // without this line the outbox never drains and nothing reaches Prisma.
     ref.watch(syncEngineProvider);
+
+    // Restore server profiles/programs after login and on every /api/v1/me pull.
+    ref.watch(accountHydrationProvider);
+
+    // Keep the active profile's language in sync with app-level settings.
+    ref.watch(profileLanguageSyncProvider);
+
+    // Switch UI language when the active profile changes (each family member
+    // may have a different preferred language).
+    ref.listen(activeProfileProvider, (prev, next) {
+      final profile = next.value;
+      if (profile == null) return;
+      final current = ref.read(settingsProvider).value;
+      if (current != null && current.languageCode != profile.language) {
+        unawaited(
+          ref.read(settingsRepositoryProvider).setLanguage(profile.language),
+        );
+      }
+    });
 
     // Reschedule on every cold start (clears the previously scheduled alarm
     // which Android drops on reboot) and whenever settings change.

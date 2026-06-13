@@ -73,24 +73,29 @@ class Program extends Equatable {
     int? totalChants,
     int? totalWritings,
     DateTime? updatedAt,
-  }) =>
-      Program(
-        id: id,
-        memberId: memberId,
-        mantraId: mantraId,
-        targetWritings: targetWritings,
-        targetDays: targetDays,
-        dailyTarget: dailyTarget,
-        startedAt: startedAt,
-        createdAt: createdAt,
-        updatedAt: updatedAt ?? this.updatedAt,
-        completedAt: completedAt ?? this.completedAt,
-        currentStreak: currentStreak ?? this.currentStreak,
-        longestStreak: longestStreak ?? this.longestStreak,
-        lastActiveDate: lastActiveDate ?? this.lastActiveDate,
-        totalChants: totalChants ?? this.totalChants,
-        totalWritings: totalWritings ?? this.totalWritings,
-      );
+    int? targetWritings,
+    int? targetDays,
+  }) {
+    final tw = targetWritings ?? this.targetWritings;
+    final td = targetDays ?? this.targetDays;
+    return Program(
+      id: id,
+      memberId: memberId,
+      mantraId: mantraId,
+      targetWritings: tw,
+      targetDays: td,
+      dailyTarget: td > 0 ? (tw / td).ceil() : 0,
+      startedAt: startedAt,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      completedAt: completedAt ?? this.completedAt,
+      currentStreak: currentStreak ?? this.currentStreak,
+      longestStreak: longestStreak ?? this.longestStreak,
+      lastActiveDate: lastActiveDate ?? this.lastActiveDate,
+      totalChants: totalChants ?? this.totalChants,
+      totalWritings: totalWritings ?? this.totalWritings,
+    );
+  }
 
   @override
   List<Object?> get props => [id];

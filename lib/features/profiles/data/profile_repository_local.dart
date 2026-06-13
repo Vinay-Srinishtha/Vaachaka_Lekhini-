@@ -122,6 +122,12 @@ class ProfileRepositoryLocal implements ProfileRepository {
   }
 
   @override
+  Future<void> upsertRemote(Profile profile) async {
+    // Write without outbox — this data came from the server, not the user.
+    await _profiles.put(profile.id, profile.toJson());
+  }
+
+  @override
   Future<void> delete(String profileId) async {
     final active = _session.get(KvlKeys.activeProfileId) as String?;
     if (active == profileId) {
@@ -139,7 +145,7 @@ class ProfileRepositoryLocal implements ProfileRepository {
         'avatar_key': p.avatarSeed,      // Prisma Member.avatarKey
         'relation': _serverRelation(p.relation),
         'is_primary': p.relation == FamilyRelation.me,
-        'language': 'en',                // default; updated from /api/v1/me pull
+        'language': p.language,
       };
 
   // Map Flutter FamilyRelation to the server's FAMILY_RELATIONS enum.

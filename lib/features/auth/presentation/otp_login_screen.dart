@@ -71,7 +71,7 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
         await ref.read(authRepositoryProvider).checkMobileRegistered(_e164);
     if (!mounted) return;
     if (check case Err(:final failure)) {
-      setState(() { _busy = false; _error = failure.message; _errorCode = failure.code; });
+      setState(() { _busy = false; _error = localizeAuthError(context, code: failure.code, fallback: failure.message); _errorCode = failure.code; });
       return;
     }
     if (check case Ok(:final value) when !value) {
@@ -90,7 +90,7 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
           _otp = '';
           _startCountdown();
         case Err(:final failure):
-          _error = failure.message;
+          _error = localizeAuthError(context, code: failure.code, fallback: failure.message);
           _errorCode = failure.code;
       }
     });
@@ -123,7 +123,7 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
         if (!mounted) return;
         context.go(KvlRoute.home);
       case Err(:final failure):
-        setState(() { _busy = false; _error = failure.message; _errorCode = failure.code; });
+        setState(() { _busy = false; _error = localizeAuthError(context, code: failure.code, fallback: failure.message); _errorCode = failure.code; });
     }
   }
 
@@ -165,7 +165,7 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
                   onCreateAccount: () => context.push(KvlRoute.createAccount)),
             ] else ...[
               if (_error != null) ...[
-                AuthErrorBar(_error!),
+                AuthErrorBar(_error!, onDismiss: () => setState(() { _error = null; _errorCode = null; })),
                 const SizedBox(height: KvlSpacing.sm),
               ],
               KvlButton(
@@ -192,6 +192,7 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
               onCompleted: (_) => _verify(),
               onResend: _resend,
               onVerify: _verify,
+              onDismissError: () => setState(() { _error = null; _errorCode = null; }),
               verifyLabel:
                   _busy ? context.l10n.verifyingButton : context.l10n.loginConfirmButton,
             ),
@@ -223,17 +224,17 @@ class _NoAccountCard extends StatelessWidget {
         Row(children: [
           Icon(Icons.person_off_outlined, size: 17, color: KvlColors.inkSoft),
           const SizedBox(width: 7),
-          Text('Number not registered',
+          Text(context.l10n.numberNotRegistered,
               style: KvlText.ui(13).copyWith(fontWeight: FontWeight.w600)),
         ]),
         const SizedBox(height: 5),
         Text(
-          "We couldn't find an account for this number.",
+          context.l10n.noAccountForNumber,
           style: KvlText.caption(11.5).copyWith(color: KvlColors.inkSoft),
         ),
         const SizedBox(height: 13),
         KvlButton(
-          label: 'Create an account',
+          label: context.l10n.createAnAccount,
           icon: Icons.arrow_forward_rounded,
           onPressed: onCreateAccount,
         ),
@@ -284,6 +285,7 @@ class _OtpSection extends StatelessWidget {
     required this.onResend,
     required this.onVerify,
     required this.verifyLabel,
+    this.onDismissError,
   });
 
   final bool busy;
@@ -295,6 +297,7 @@ class _OtpSection extends StatelessWidget {
   final VoidCallback onResend;
   final VoidCallback onVerify;
   final String verifyLabel;
+  final VoidCallback? onDismissError;
 
   @override
   Widget build(BuildContext context) {
@@ -302,7 +305,7 @@ class _OtpSection extends StatelessWidget {
       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         Icon(Icons.sms_outlined, size: 14, color: KvlColors.inkSoft),
         const SizedBox(width: 5),
-        Text('Enter the 6-digit code sent to your number',
+        Text(context.l10n.enterSixDigitCodeSent,
             style: KvlText.caption(11.5).copyWith(color: KvlColors.inkSoft)),
       ]),
       const SizedBox(height: KvlSpacing.md),
@@ -310,11 +313,11 @@ class _OtpSection extends StatelessWidget {
       const SizedBox(height: KvlSpacing.sm),
       Center(
         child: resendSeconds > 0
-            ? Text('Resend code in ${resendSeconds}s',
+            ? Text(context.l10n.resendCodeIn(resendSeconds),
                 style: KvlText.caption(11).copyWith(color: KvlColors.inkSoft))
             : GestureDetector(
                 onTap: busy ? null : onResend,
-                child: Text('Resend code',
+                child: Text(context.l10n.resendCode,
                     style: KvlText.caption(11.5).copyWith(
                         color: KvlColors.primaryDeep,
                         fontWeight: FontWeight.w600)),
@@ -322,7 +325,7 @@ class _OtpSection extends StatelessWidget {
       ),
       if (error != null) ...[
         const SizedBox(height: KvlSpacing.sm),
-        AuthErrorBar(error!),
+        AuthErrorBar(error!, onDismiss: onDismissError),
       ],
       const SizedBox(height: KvlSpacing.lg),
       KvlButton(

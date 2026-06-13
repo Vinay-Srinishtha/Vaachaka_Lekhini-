@@ -62,3 +62,12 @@ export const GET: RequestHandler = async (event) => {
 		serverTime: new Date().toISOString()
 	});
 };
+
+/// DELETE /api/v1/me  (Bearer)
+/// Hard-deletes the account and all owned data. Cascade rules in Prisma
+/// handle Members → Programs → Sessions → RewardEvents automatically.
+export const DELETE: RequestHandler = async (event) => {
+	const account = await requireAccount(event);
+	await prisma.account.delete({ where: { id: account.id } });
+	return new Response(null, { status: 204 });
+};

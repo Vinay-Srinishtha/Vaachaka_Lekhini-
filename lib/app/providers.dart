@@ -530,3 +530,16 @@ final leaderboardProvider =
         return [];
       }
     });
+
+/// Incremented each time a practice session is finished so that
+/// DailyProgressScreen knows to reload its data.
+class _SessionCompletedNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+  void increment() => state++;
+}
+
+final sessionCompletedProvider =
+    NotifierProvider<_SessionCompletedNotifier, int>(
+      _SessionCompletedNotifier.new,
+    );

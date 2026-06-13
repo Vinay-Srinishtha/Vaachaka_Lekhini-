@@ -76,14 +76,27 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
 
   Future<void> _sendOtp() async {
     if (!_nameValid) {
-      setState(() => _error = 'Please enter your name.');
+      setState(() => _error = context.l10n.authErrorEnterName);
       return;
     }
     if (!_mobileValid) {
-      setState(() => _error = 'Enter a valid 10-digit mobile number.');
+      setState(() => _error = context.l10n.authErrorEnterMobileValid);
       return;
     }
     setState(() { _busy = true; _error = null; _errorCode = null; });
+
+    // Block duplicate accounts: if this number is already registered, tell the user to log in.
+    final check = await ref.read(authRepositoryProvider).checkMobileRegistered(_e164Mobile);
+    if (!mounted) return;
+    if (check case Err(:final failure)) {
+      setState(() { _busy = false; _error = localizeAuthError(context, code: failure.code, fallback: failure.message); _errorCode = failure.code; });
+      return;
+    }
+    if (check case Ok(:final value) when value) {
+      setState(() { _busy = false; _error = context.l10n.authErrorAccountExists; _errorCode = 'account_exists'; });
+      return;
+    }
+
     final result = await ref.read(authRepositoryProvider).sendOtp(_e164Mobile);
     if (!mounted) return;
     setState(() {
@@ -94,7 +107,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
           _otp = '';
           _startResendCountdown();
         case Err(:final failure):
-          _error = failure.message;
+          _error = localizeAuthError(context, code: failure.code, fallback: failure.message);
           _errorCode = failure.code;
       }
     });
@@ -107,7 +120,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
 
   Future<void> _register() async {
     if (_otp.length != 6) {
-      setState(() => _error = 'Enter the 6-digit code.');
+      setState(() => _error = context.l10n.authErrorEnterOtpDigits);
       return;
     }
     setState(() { _busy = true; _error = null; _errorCode = null; });
@@ -133,7 +146,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
       case Err(:final failure):
         setState(() {
           _busy = false;
-          _error = failure.message;
+          _error = localizeAuthError(context, code: failure.code, fallback: failure.message);
           _errorCode = failure.code;
         });
     }
@@ -215,7 +228,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                 // ── Step 1: Send OTP ──
                 if (!_otpSent) ...[
                   if (_error != null) ...[
-                    AuthErrorBar(_error!),
+                    AuthErrorBar(_error!, onDismiss: () => setState(() { _error = null; _errorCode = null; })),
                     const SizedBox(height: KvlSpacing.sm),
                   ],
                   KvlButton(
@@ -262,7 +275,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                     ),
                     if (_error != null) ...[
                       const SizedBox(height: KvlSpacing.sm),
-                      AuthErrorBar(_error!),
+                      AuthErrorBar(_error!, onDismiss: () => setState(() { _error = null; _errorCode = null; })),
                     ],
                     const SizedBox(height: KvlSpacing.lg),
                     KvlButton(
@@ -329,17 +342,17 @@ class _AccountExistsCard extends StatelessWidget {
         Row(children: [
           Icon(Icons.person_outline_rounded, size: 17, color: KvlColors.inkSoft),
           const SizedBox(width: 7),
-          Text('Number already registered',
+          Text(context.l10n.numberAlreadyRegistered,
               style: KvlText.ui(13).copyWith(fontWeight: FontWeight.w600)),
         ]),
         const SizedBox(height: 5),
         Text(
-          'An account already exists for this number.',
+          context.l10n.accountAlreadyExistsForNumber,
           style: KvlText.caption(11.5).copyWith(color: KvlColors.inkSoft),
         ),
         const SizedBox(height: 13),
         KvlButton(
-          label: 'Log in instead',
+          label: context.l10n.logInInstead,
           icon: Icons.arrow_forward_rounded,
           onPressed: onLogin,
         ),

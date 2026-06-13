@@ -104,6 +104,11 @@ class AppLocalizationsHi extends AppLocalizations {
       'अपने नंबर पर भेजा गया 6 अंकों का कोड दर्ज करें।';
 
   @override
+  String enterSixDigitCodeSentToMobile(String mobile) {
+    return '+91$mobile पर भेजा गया 6 अंकों का कोड दर्ज करें';
+  }
+
+  @override
   String resendOtpCountdown(int seconds) {
     return '$secondsसे. में OTP दोबारा भेजें';
   }
@@ -127,6 +132,29 @@ class AppLocalizationsHi extends AppLocalizations {
   String welcomeGreetingUser(String name) {
     return 'स्वागत है, $name!';
   }
+
+  @override
+  String get homeSublineEmpty => 'अपनी आध्यात्मिक यात्रा शुरू करें';
+
+  @override
+  String homeSublineActive(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'शानदार! $count कार्यक्रम सक्रिय हैं',
+      one: 'शानदार! 1 कार्यक्रम सक्रिय है',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get saveNameButton => 'नाम सहेजें';
+
+  @override
+  String get savingNameButton => 'सहेजा जा रहा है…';
+
+  @override
+  String get pressBackAgainToExit => 'बाहर निकलने के लिए फिर से बैक दबाएं';
 
   @override
   String get rewardPoints => 'पुरस्कार अंक';
@@ -354,6 +382,9 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get myRecitationPrograms => 'मेरे पाठ कार्यक्रम';
+
+  @override
+  String get completedPrograms => 'पूर्ण कार्यक्रम';
 
   @override
   String get noProgramsYet => 'अभी तक कोई कार्यक्रम नहीं';
@@ -724,6 +755,39 @@ class AppLocalizationsHi extends AppLocalizations {
   String get dedicateProgram => 'यह कार्यक्रम समर्पित करें';
 
   @override
+  String get dedicateSheetTitle => 'यह कार्यक्रम समर्पित करें';
+
+  @override
+  String get dedicateOfferPractice =>
+      'अपनी जप साधना किसी खास व्यक्ति को अर्पित करें';
+
+  @override
+  String dedicateOfferNamedPractice(String mantraName) {
+    return 'अपनी $mantraName साधना किसी खास व्यक्ति को अर्पित करें';
+  }
+
+  @override
+  String get dedicatedTo => 'समर्पित';
+
+  @override
+  String get dedicatedToHint => 'जैसे: मेरी माँ, श्री गुरु, स्वयं';
+
+  @override
+  String get intention => 'संकल्प (वैकल्पिक)';
+
+  @override
+  String get intentionHint => 'जैसे: उनके स्वास्थ्य और खुशी के लिए…';
+
+  @override
+  String get removeDedication => 'समर्पण हटाएं';
+
+  @override
+  String get updateDedication => 'समर्पण अपडेट करें';
+
+  @override
+  String get saveDedication => 'समर्पण सहेजें';
+
+  @override
   String get editGoal => 'लक्ष्य संपादित करें';
 
   @override
@@ -1008,4 +1072,166 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get rewardStore => 'पुरस्कार स्टोर';
+
+  @override
+  String get encouragementSentLabel => 'प्रोत्साहन भेजा! 🙏';
+
+  @override
+  String get membersLabel => 'सदस्य';
+
+  @override
+  String get bestStreakLabel => 'सर्वश्रेष्ठ स्ट्रीक';
+
+  @override
+  String get daysLabel => 'दिन';
+
+  @override
+  String get closeLabel => 'बंद करें';
+
+  @override
+  String get authErrorInvalidOtp => 'गलत सत्यापन कोड। कृपया पुनः प्रयास करें।';
+
+  @override
+  String get authErrorInvalidMobile =>
+      'कृपया एक मान्य 10-अंकीय मोबाइल नंबर दर्ज करें।';
+
+  @override
+  String get authErrorAccountNotFound =>
+      'इस नंबर के लिए कोई खाता नहीं मिला। पहले खाता बनाएं।';
+
+  @override
+  String get authErrorAccountExists =>
+      'इस नंबर के लिए खाता पहले से मौजूद है। कृपया लॉग इन करें।';
+
+  @override
+  String get authErrorServerUnavailable =>
+      'सर्वर उपलब्ध नहीं है। अपना कनेक्शन जांचें।';
+
+  @override
+  String get authErrorNoInternet =>
+      'इंटरनेट कनेक्शन नहीं है। अपना नेटवर्क जांचें।';
+
+  @override
+  String get authErrorOtpExpired =>
+      'सत्यापन कोड की समय-सीमा समाप्त हो गई। नया अनुरोध करें।';
+
+  @override
+  String get authErrorServerError =>
+      'सर्वर त्रुटि। कृपया थोड़ी देर बाद प्रयास करें।';
+
+  @override
+  String get authErrorTooManyAttempts =>
+      'बहुत अधिक प्रयास। कृपया थोड़ी देर प्रतीक्षा करें।';
+
+  @override
+  String get authErrorUnknown => 'कुछ गलत हो गया। कृपया पुनः प्रयास करें।';
+
+  @override
+  String get authErrorEnterName => 'कृपया अपना नाम दर्ज करें।';
+
+  @override
+  String get authErrorEnterMobileValid =>
+      'एक मान्य 10-अंकीय मोबाइल नंबर दर्ज करें।';
+
+  @override
+  String get authErrorEnterOtpDigits => '6-अंकीय कोड दर्ज करें।';
+
+  @override
+  String get authErrorMobileIndian =>
+      'एक मान्य भारतीय मोबाइल नंबर दर्ज करें (6–9 से शुरू)।';
+
+  @override
+  String get authErrorSameMobile => 'यह पहले से आपका वर्तमान मोबाइल नंबर है।';
+
+  @override
+  String get authErrorEnterOtp6 => 'कृपया 6-अंकीय सत्यापन कोड दर्ज करें।';
+
+  @override
+  String get nameUpdatedSuccess => 'नाम सफलतापूर्वक अपडेट किया गया।';
+
+  @override
+  String get mobileUpdatedSuccess => 'मोबाइल नंबर सफलतापूर्वक अपडेट किया गया।';
+
+  @override
+  String get nameEmptyError => 'नाम खाली नहीं हो सकता।';
+
+  @override
+  String get deleteMemberTitle => 'सदस्य हटाएं?';
+
+  @override
+  String deleteMemberContent(String name) {
+    return '$name को आपके खाते से हटा देगा।';
+  }
+
+  @override
+  String get deleteMemberConfirm => 'हटाएं';
+
+  @override
+  String get changeMobileNumber => 'मोबाइल नंबर बदलें';
+
+  @override
+  String get numberNotRegistered => 'नंबर पंजीकृत नहीं है';
+
+  @override
+  String get noAccountForNumber => 'इस नंबर के लिए कोई खाता नहीं मिला।';
+
+  @override
+  String get createAnAccount => 'खाता बनाएं';
+
+  @override
+  String get numberAlreadyRegistered => 'नंबर पहले से पंजीकृत है';
+
+  @override
+  String get accountAlreadyExistsForNumber =>
+      'इस नंबर के लिए खाता पहले से मौजूद है।';
+
+  @override
+  String get logInInstead => 'लॉग इन करें';
+
+  @override
+  String resendCodeIn(int seconds) {
+    return '$seconds सेकंड में कोड दोबारा भेजें';
+  }
+
+  @override
+  String get resendCode => 'कोड दोबारा भेजें';
+
+  @override
+  String get editProfileTitle => 'प्रोफ़ाइल संपादित करें';
+
+  @override
+  String get displayNameLabel => 'प्रदर्शन नाम';
+
+  @override
+  String get displayNameHint => 'आपका नाम';
+
+  @override
+  String get mobileNumberLabel2 => 'मोबाइल नंबर';
+
+  @override
+  String get changeMobileSheetTitle => 'मोबाइल नंबर बदलें';
+
+  @override
+  String get enterNewMobileHint =>
+      'अपना नया मोबाइल नंबर दर्ज करें। पुष्टि के लिए सत्यापन कोड भेजा जाएगा।';
+
+  @override
+  String get sendingOtpButton => 'भेज रहे हैं…';
+
+  @override
+  String get confirmNewNumber => 'नया नंबर पुष्टि करें';
+
+  @override
+  String get verifyingButton2 => 'सत्यापित कर रहे हैं…';
+
+  @override
+  String get writingStyleSection => 'लेखन शैली';
+
+  @override
+  String get retrainWritingStyle => 'लेखन शैली पुनः प्रशिक्षित करें';
+
+  @override
+  String resendCodeCountdown(int seconds) {
+    return '$seconds से. में कोड दोबारा भेजें';
+  }
 }

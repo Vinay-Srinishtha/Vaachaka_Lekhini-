@@ -28,6 +28,8 @@ class _CaptureHandwritingScreenState extends ConsumerState<CaptureHandwritingScr
   Future<void>? _initFuture;
   String? _error;
   bool _capturing = false;
+  List<CameraDescription> _cameras = [];
+  CameraLensDirection _lens = CameraLensDirection.back;
 
   @override
   void initState() {
@@ -35,18 +37,23 @@ class _CaptureHandwritingScreenState extends ConsumerState<CaptureHandwritingScr
     _initFuture = _initCamera();
   }
 
-  Future<void> _initCamera() async {
+  Future<void> _initCamera({CameraLensDirection? lens}) async {
     try {
-      final cameras = await availableCameras();
-      if (cameras.isEmpty) {
+      if (_cameras.isEmpty) {
+        _cameras = await availableCameras();
+      }
+      if (_cameras.isEmpty) {
         setState(() => _error = context.l10n.noCameraAvailable);
         return;
       }
-      final back = cameras.firstWhere(
-        (c) => c.lensDirection == CameraLensDirection.back,
-        orElse: () => cameras.first,
+      final direction = lens ?? _lens;
+      final camera = _cameras.firstWhere(
+        (c) => c.lensDirection == direction,
+        orElse: () => _cameras.first,
       );
-      _controller = CameraController(back, ResolutionPreset.high, enableAudio: false);
+      _lens = camera.lensDirection;
+      await _controller?.dispose();
+      _controller = CameraController(camera, ResolutionPreset.high, enableAudio: false);
       await _controller!.initialize();
       if (mounted) setState(() {});
     } catch (e) {
@@ -168,11 +175,6 @@ class _CaptureHandwritingScreenState extends ConsumerState<CaptureHandwritingScr
                   ),
                   child: const Icon(Icons.circle_outlined, color: Colors.white, size: 48),
                 ),
-              ),
-              IconButton(
-                onPressed: () {},
-                icon: const Icon(Icons.cameraswitch_outlined),
-                iconSize: 28,
               ),
             ],
           ),

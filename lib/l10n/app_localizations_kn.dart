@@ -104,6 +104,11 @@ class AppLocalizationsKn extends AppLocalizations {
       'ನಿಮ್ಮ ಸಂಖ್ಯೆಗೆ ಕಳುಹಿಸಿದ 6 ಅಂಕಿಯ ಕೋಡ್ ನಮೂದಿಸಿ.';
 
   @override
+  String enterSixDigitCodeSentToMobile(String mobile) {
+    return '+91$mobile ಗೆ ಕಳುಹಿಸಿದ 6 ಅಂಕಿಯ ಕೋಡ್ ನಮೂದಿಸಿ';
+  }
+
+  @override
   String resendOtpCountdown(int seconds) {
     return '$secondsಸೆ. ನಲ್ಲಿ OTP ಮರುಕಳುಹಿಸಿ';
   }
@@ -127,6 +132,29 @@ class AppLocalizationsKn extends AppLocalizations {
   String welcomeGreetingUser(String name) {
     return 'ಸ್ವಾಗತ, $name!';
   }
+
+  @override
+  String get homeSublineEmpty => 'ನಿಮ್ಮ ಆಧ್ಯಾತ್ಮಿಕ ಪ್ರಯಾಣ ಪ್ರಾರಂಭಿಸಿ';
+
+  @override
+  String homeSublineActive(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ಅದ್ಭುತ! $count ಕಾರ್ಯಕ್ರಮಗಳು ಸಕ್ರಿಯವಾಗಿವೆ',
+      one: 'ಅದ್ಭುತ! 1 ಕಾರ್ಯಕ್ರಮ ಸಕ್ರಿಯವಾಗಿದೆ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get saveNameButton => 'ಹೆಸರು ಉಳಿಸಿ';
+
+  @override
+  String get savingNameButton => 'ಉಳಿಸಲಾಗುತ್ತಿದೆ…';
+
+  @override
+  String get pressBackAgainToExit => 'ನಿರ್ಗಮಿಸಲು ಮತ್ತೆ ಬ್ಯಾಕ್ ಒತ್ತಿ';
 
   @override
   String get rewardPoints => 'ಬಹುಮಾನ ಅಂಕಗಳು';
@@ -355,6 +383,9 @@ class AppLocalizationsKn extends AppLocalizations {
 
   @override
   String get myRecitationPrograms => 'ನನ್ನ ಪಠಣ ಕಾರ್ಯಕ್ರಮಗಳು';
+
+  @override
+  String get completedPrograms => 'ಪೂರ್ಣಗೊಂಡ ಕಾರ್ಯಕ್ರಮಗಳು';
 
   @override
   String get noProgramsYet => 'ಇನ್ನೂ ಕಾರ್ಯಕ್ರಮಗಳಿಲ್ಲ';
@@ -725,6 +756,39 @@ class AppLocalizationsKn extends AppLocalizations {
   String get dedicateProgram => 'ಈ ಕಾರ್ಯಕ್ರಮ ಅರ್ಪಿಸಿ';
 
   @override
+  String get dedicateSheetTitle => 'ಈ ಕಾರ್ಯಕ್ರಮ ಅರ್ಪಿಸಿ';
+
+  @override
+  String get dedicateOfferPractice =>
+      'ನಿಮ್ಮ ಜಪ ಸಾಧನೆಯನ್ನು ಒಬ್ಬ ವಿಶೇಷ ವ್ಯಕ್ತಿಗೆ ಅರ್ಪಿಸಿ';
+
+  @override
+  String dedicateOfferNamedPractice(String mantraName) {
+    return 'ನಿಮ್ಮ $mantraName ಸಾಧನೆಯನ್ನು ಒಬ್ಬ ವಿಶೇಷ ವ್ಯಕ್ತಿಗೆ ಅರ್ಪಿಸಿ';
+  }
+
+  @override
+  String get dedicatedTo => 'ಅರ್ಪಿಸಲಾಗಿದೆ';
+
+  @override
+  String get dedicatedToHint => 'ಉದಾ: ನನ್ನ ತಾಯಿ, ಶ್ರೀ ಗುರು, ಸ್ವಯಂ';
+
+  @override
+  String get intention => 'ಸಂಕಲ್ಪ (ಐಚ್ಛಿಕ)';
+
+  @override
+  String get intentionHint => 'ಉದಾ: ಅವಳ ಆರೋಗ್ಯ ಮತ್ತು ಸಂತೋಷಕ್ಕಾಗಿ…';
+
+  @override
+  String get removeDedication => 'ಅರ್ಪಣೆ ತೆಗೆದುಹಾಕಿ';
+
+  @override
+  String get updateDedication => 'ಅರ್ಪಣೆ ನವೀಕರಿಸಿ';
+
+  @override
+  String get saveDedication => 'ಅರ್ಪಣೆ ಉಳಿಸಿ';
+
+  @override
   String get editGoal => 'ಗುರಿ ಸಂಪಾದಿಸಿ';
 
   @override
@@ -1009,4 +1073,165 @@ class AppLocalizationsKn extends AppLocalizations {
 
   @override
   String get rewardStore => 'ಬಹುಮಾನ ಅಂಗಡಿ';
+
+  @override
+  String get encouragementSentLabel => 'ಪ್ರೋತ್ಸಾಹ ಕಳುಹಿಸಲಾಗಿದೆ! 🙏';
+
+  @override
+  String get membersLabel => 'ಸದಸ್ಯರು';
+
+  @override
+  String get bestStreakLabel => 'ಅತ್ಯುತ್ತಮ ಸ್ಟ್ರೀಕ್';
+
+  @override
+  String get daysLabel => 'ದಿನಗಳು';
+
+  @override
+  String get closeLabel => 'ಮುಚ್ಚು';
+
+  @override
+  String get authErrorInvalidOtp =>
+      'ತಪ್ಪಾದ ಪರಿಶೀಲನಾ ಕೋಡ್. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.';
+
+  @override
+  String get authErrorInvalidMobile =>
+      'ದಯವಿಟ್ಟು ಮಾನ್ಯ 10 ಅಂಕಿಯ ಮೊಬೈಲ್ ಸಂಖ್ಯೆ ನಮೂದಿಸಿ.';
+
+  @override
+  String get authErrorAccountNotFound =>
+      'ಈ ಸಂಖ್ಯೆಗೆ ಖಾತೆ ಕಂಡುಬಂದಿಲ್ಲ. ಮೊದಲು ಖಾತೆ ರಚಿಸಿ.';
+
+  @override
+  String get authErrorAccountExists =>
+      'ಈ ಸಂಖ್ಯೆಗೆ ಖಾತೆ ಈಗಾಗಲೇ ಇದೆ. ದಯವಿಟ್ಟು ಲಾಗಿನ್ ಮಾಡಿ.';
+
+  @override
+  String get authErrorServerUnavailable =>
+      'ಸರ್ವರ್ ಲಭ್ಯವಿಲ್ಲ. ನಿಮ್ಮ ಸಂಪರ್ಕ ಪರಿಶೀಲಿಸಿ.';
+
+  @override
+  String get authErrorNoInternet =>
+      'ಇಂಟರ್ನೆಟ್ ಸಂಪರ್ಕ ಇಲ್ಲ. ನಿಮ್ಮ ನೆಟ್‌ವರ್ಕ್ ಪರಿಶೀಲಿಸಿ.';
+
+  @override
+  String get authErrorOtpExpired =>
+      'ಪರಿಶೀಲನಾ ಕೋಡ್ ಅವಧಿ ಮೀರಿದೆ. ಹೊಸದನ್ನು ವಿನಂತಿಸಿ.';
+
+  @override
+  String get authErrorServerError =>
+      'ಸರ್ವರ್ ದೋಷ. ಸ್ವಲ್ಪ ಸಮಯದ ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.';
+
+  @override
+  String get authErrorTooManyAttempts => 'ಹಲವು ಪ್ರಯತ್ನಗಳು. ಸ್ವಲ್ಪ ಕಾಯಿರಿ.';
+
+  @override
+  String get authErrorUnknown => 'ಏನೋ ತಪ್ಪಾಗಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.';
+
+  @override
+  String get authErrorEnterName => 'ದಯವಿಟ್ಟು ನಿಮ್ಮ ಹೆಸರು ನಮೂದಿಸಿ.';
+
+  @override
+  String get authErrorEnterMobileValid =>
+      'ಮಾನ್ಯ 10 ಅಂಕಿಯ ಮೊಬೈಲ್ ಸಂಖ್ಯೆ ನಮೂದಿಸಿ.';
+
+  @override
+  String get authErrorEnterOtpDigits => '6 ಅಂಕಿಯ ಕೋಡ್ ನಮೂದಿಸಿ.';
+
+  @override
+  String get authErrorMobileIndian =>
+      'ಮಾನ್ಯ ಭಾರತೀಯ ಮೊಬೈಲ್ ಸಂಖ್ಯೆ ನಮೂದಿಸಿ (6–9 ರಿಂದ ಪ್ರಾರಂಭ).';
+
+  @override
+  String get authErrorSameMobile => 'ಇದು ಈಗಾಗಲೇ ನಿಮ್ಮ ಪ್ರಸ್ತುತ ಮೊಬೈಲ್ ಸಂಖ್ಯೆ.';
+
+  @override
+  String get authErrorEnterOtp6 => 'ದಯವಿಟ್ಟು 6 ಅಂಕಿಯ ಪರಿಶೀಲನಾ ಕೋಡ್ ನಮೂದಿಸಿ.';
+
+  @override
+  String get nameUpdatedSuccess => 'ಹೆಸರು ಯಶಸ್ವಿಯಾಗಿ ನವೀಕರಿಸಲಾಗಿದೆ.';
+
+  @override
+  String get mobileUpdatedSuccess => 'ಮೊಬೈಲ್ ಸಂಖ್ಯೆ ಯಶಸ್ವಿಯಾಗಿ ನವೀಕರಿಸಲಾಗಿದೆ.';
+
+  @override
+  String get nameEmptyError => 'ಹೆಸರು ಖಾಲಿ ಇರಬಾರದು.';
+
+  @override
+  String get deleteMemberTitle => 'ಸದಸ್ಯರನ್ನು ತೆಗೆದುಹಾಕಬೇಕೇ?';
+
+  @override
+  String deleteMemberContent(String name) {
+    return '$name ಅನ್ನು ನಿಮ್ಮ ಖಾತೆಯಿಂದ ತೆಗೆದುಹಾಕುತ್ತದೆ.';
+  }
+
+  @override
+  String get deleteMemberConfirm => 'ತೆಗೆದುಹಾಕು';
+
+  @override
+  String get changeMobileNumber => 'ಮೊಬೈಲ್ ಸಂಖ್ಯೆ ಬದಲಿಸಿ';
+
+  @override
+  String get numberNotRegistered => 'ಸಂಖ್ಯೆ ನೋಂದಾಯಿಸಲಾಗಿಲ್ಲ';
+
+  @override
+  String get noAccountForNumber => 'ಈ ಸಂಖ್ಯೆಗೆ ಖಾತೆ ಕಂಡುಬಂದಿಲ್ಲ.';
+
+  @override
+  String get createAnAccount => 'ಖಾತೆ ರಚಿಸಿ';
+
+  @override
+  String get numberAlreadyRegistered => 'ಸಂಖ್ಯೆ ಈಗಾಗಲೇ ನೋಂದಾಯಿಸಲಾಗಿದೆ';
+
+  @override
+  String get accountAlreadyExistsForNumber => 'ಈ ಸಂಖ್ಯೆಗೆ ಖಾತೆ ಈಗಾಗಲೇ ಇದೆ.';
+
+  @override
+  String get logInInstead => 'ಲಾಗಿನ್ ಮಾಡಿ';
+
+  @override
+  String resendCodeIn(int seconds) {
+    return '$seconds ಸೆಕೆಂಡ್‌ನಲ್ಲಿ ಕೋಡ್ ಮರಳಿ ಕಳಿಸಿ';
+  }
+
+  @override
+  String get resendCode => 'ಕೋಡ್ ಮರಳಿ ಕಳಿಸಿ';
+
+  @override
+  String get editProfileTitle => 'ಪ್ರೊಫೈಲ್ ಸಂಪಾದಿಸಿ';
+
+  @override
+  String get displayNameLabel => 'ಪ್ರದರ್ಶನ ಹೆಸರು';
+
+  @override
+  String get displayNameHint => 'ನಿಮ್ಮ ಹೆಸರು';
+
+  @override
+  String get mobileNumberLabel2 => 'ಮೊಬೈಲ್ ಸಂಖ್ಯೆ';
+
+  @override
+  String get changeMobileSheetTitle => 'ಮೊಬೈಲ್ ಸಂಖ್ಯೆ ಬದಲಿಸಿ';
+
+  @override
+  String get enterNewMobileHint =>
+      'ನಿಮ್ಮ ಹೊಸ ಮೊಬೈಲ್ ಸಂಖ್ಯೆ ನಮೂದಿಸಿ. ದೃಢೀಕರಿಸಲು ಪರಿಶೀಲನಾ ಕೋಡ್ ಕಳಿಸಲಾಗುತ್ತದೆ.';
+
+  @override
+  String get sendingOtpButton => 'ಕಳಿಸಲಾಗುತ್ತಿದೆ…';
+
+  @override
+  String get confirmNewNumber => 'ಹೊಸ ಸಂಖ್ಯೆ ದೃಢೀಕರಿಸಿ';
+
+  @override
+  String get verifyingButton2 => 'ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ…';
+
+  @override
+  String get writingStyleSection => 'ಬರಹ ಶೈಲಿ';
+
+  @override
+  String get retrainWritingStyle => 'ಬರಹ ಶೈಲಿ ಮರು-ತರಬೇತಿ';
+
+  @override
+  String resendCodeCountdown(int seconds) {
+    return '$seconds ಸೆ.ನಲ್ಲಿ ಕೋಡ್ ಮರಳಿ ಕಳಿಸಿ';
+  }
 }

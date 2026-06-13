@@ -25,6 +25,9 @@ abstract class ProfileRepository {
 
   Future<void> update(Profile profile);
 
+  /// Write a server-fetched profile locally without enqueuing to the outbox.
+  Future<void> upsertRemote(Profile profile);
+
   Future<void> delete(String profileId);
 
   /// Max profiles per user (per Figma constraint).

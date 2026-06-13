@@ -2,10 +2,15 @@ import 'package:equatable/equatable.dart';
 
 enum RewardKind {
   earn,
-  spend;
+  spend,
+  milestone,
+  gift,
+  refund;
 
   static RewardKind fromName(String name) =>
       RewardKind.values.firstWhere((k) => k.name == name, orElse: () => RewardKind.earn);
+
+  bool get isCredit => this != spend;
 }
 
 /// One line in the reward ledger — mirrors Prisma `RewardEvent` table.
@@ -34,7 +39,7 @@ class RewardEvent extends Equatable {
   final DateTime occurredAt;
   final String? storeItemId;
 
-  int get signedAmount => kind == RewardKind.earn ? amount : -amount;
+  int get signedAmount => kind.isCredit ? amount : -amount;
 
   @override
   List<Object?> get props => [id];

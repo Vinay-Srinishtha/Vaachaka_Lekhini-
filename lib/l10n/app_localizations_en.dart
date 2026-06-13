@@ -104,6 +104,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Enter the 6-digit code sent to your number.';
 
   @override
+  String enterSixDigitCodeSentToMobile(String mobile) {
+    return 'Enter the 6-digit code sent to +91$mobile';
+  }
+
+  @override
   String resendOtpCountdown(int seconds) {
     return 'Resend OTP in ${seconds}s';
   }
@@ -127,6 +132,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String welcomeGreetingUser(String name) {
     return 'Welcome, $name!';
   }
+
+  @override
+  String get homeSublineEmpty => 'Start your spiritual journey';
+
+  @override
+  String homeSublineActive(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'You\'re doing great! $count Programs Active',
+      one: 'You\'re doing great! 1 Program Active',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get saveNameButton => 'Save Name';
+
+  @override
+  String get savingNameButton => 'Saving…';
+
+  @override
+  String get pressBackAgainToExit => 'Press back again to exit';
 
   @override
   String get rewardPoints => 'Reward Points';
@@ -354,6 +382,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get myRecitationPrograms => 'My Recitation Programs';
+
+  @override
+  String get completedPrograms => 'Completed Programs';
 
   @override
   String get noProgramsYet => 'No programs yet';
@@ -723,6 +754,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dedicateProgram => 'Dedicate this program';
 
   @override
+  String get dedicateSheetTitle => 'Dedicate this Program';
+
+  @override
+  String get dedicateOfferPractice =>
+      'Offer your chanting practice to someone special';
+
+  @override
+  String dedicateOfferNamedPractice(String mantraName) {
+    return 'Offer your $mantraName practice to someone special';
+  }
+
+  @override
+  String get dedicatedTo => 'Dedicated to';
+
+  @override
+  String get dedicatedToHint => 'e.g. My Mother, Sri Guru, Self';
+
+  @override
+  String get intention => 'Intention (optional)';
+
+  @override
+  String get intentionHint => 'e.g. For her health and happiness…';
+
+  @override
+  String get removeDedication => 'Remove dedication';
+
+  @override
+  String get updateDedication => 'Update Dedication';
+
+  @override
+  String get saveDedication => 'Save Dedication';
+
+  @override
   String get editGoal => 'Edit Goal';
 
   @override
@@ -1006,4 +1070,170 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get rewardStore => 'Reward Store';
+
+  @override
+  String get encouragementSentLabel => 'Encouragement sent! 🙏';
+
+  @override
+  String get membersLabel => 'Members';
+
+  @override
+  String get bestStreakLabel => 'Best Streak';
+
+  @override
+  String get daysLabel => 'days';
+
+  @override
+  String get closeLabel => 'Close';
+
+  @override
+  String get authErrorInvalidOtp =>
+      'Wrong verification code. Please try again.';
+
+  @override
+  String get authErrorInvalidMobile =>
+      'Please enter a valid 10-digit mobile number.';
+
+  @override
+  String get authErrorAccountNotFound =>
+      'No account found for this number. Please create an account first.';
+
+  @override
+  String get authErrorAccountExists =>
+      'An account already exists for this number. Please log in instead.';
+
+  @override
+  String get authErrorServerUnavailable =>
+      'Server is unreachable. Please check your connection and try again.';
+
+  @override
+  String get authErrorNoInternet =>
+      'No internet connection. Please check your network and try again.';
+
+  @override
+  String get authErrorOtpExpired =>
+      'Verification code has expired. Please request a new one.';
+
+  @override
+  String get authErrorServerError =>
+      'Server error. Please try again in a moment.';
+
+  @override
+  String get authErrorTooManyAttempts =>
+      'Too many attempts. Please wait a moment before trying again.';
+
+  @override
+  String get authErrorUnknown => 'Something went wrong. Please try again.';
+
+  @override
+  String get authErrorEnterName => 'Please enter your name.';
+
+  @override
+  String get authErrorEnterMobileValid =>
+      'Enter a valid 10-digit mobile number.';
+
+  @override
+  String get authErrorEnterOtpDigits => 'Enter the 6-digit code.';
+
+  @override
+  String get authErrorMobileIndian =>
+      'Enter a valid Indian mobile number (starts with 6–9).';
+
+  @override
+  String get authErrorSameMobile =>
+      'This is already your current mobile number.';
+
+  @override
+  String get authErrorEnterOtp6 =>
+      'Please enter the 6-digit verification code.';
+
+  @override
+  String get nameUpdatedSuccess => 'Name updated successfully.';
+
+  @override
+  String get mobileUpdatedSuccess => 'Mobile number updated successfully.';
+
+  @override
+  String get nameEmptyError => 'Name cannot be empty.';
+
+  @override
+  String get deleteMemberTitle => 'Remove member?';
+
+  @override
+  String deleteMemberContent(String name) {
+    return 'This will remove $name from your account.';
+  }
+
+  @override
+  String get deleteMemberConfirm => 'Remove';
+
+  @override
+  String get changeMobileNumber => 'Change Mobile Number';
+
+  @override
+  String get numberNotRegistered => 'Number not registered';
+
+  @override
+  String get noAccountForNumber =>
+      'We couldn\'t find an account for this number.';
+
+  @override
+  String get createAnAccount => 'Create an account';
+
+  @override
+  String get numberAlreadyRegistered => 'Number already registered';
+
+  @override
+  String get accountAlreadyExistsForNumber =>
+      'An account already exists for this number.';
+
+  @override
+  String get logInInstead => 'Log in instead';
+
+  @override
+  String resendCodeIn(int seconds) {
+    return 'Resend code in ${seconds}s';
+  }
+
+  @override
+  String get resendCode => 'Resend code';
+
+  @override
+  String get editProfileTitle => 'Edit Profile';
+
+  @override
+  String get displayNameLabel => 'Display Name';
+
+  @override
+  String get displayNameHint => 'Your name';
+
+  @override
+  String get mobileNumberLabel2 => 'Mobile Number';
+
+  @override
+  String get changeMobileSheetTitle => 'Change Mobile Number';
+
+  @override
+  String get enterNewMobileHint =>
+      'Enter your new mobile number. We will send a verification code to confirm.';
+
+  @override
+  String get sendingOtpButton => 'Sending…';
+
+  @override
+  String get confirmNewNumber => 'Confirm New Number';
+
+  @override
+  String get verifyingButton2 => 'Verifying…';
+
+  @override
+  String get writingStyleSection => 'Writing Style';
+
+  @override
+  String get retrainWritingStyle => 'Retrain Writing Style';
+
+  @override
+  String resendCodeCountdown(int seconds) {
+    return 'Resend code in ${seconds}s';
+  }
 }

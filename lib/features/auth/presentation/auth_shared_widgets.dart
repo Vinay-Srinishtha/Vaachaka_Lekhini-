@@ -6,6 +6,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/theme/theme.dart';
+import '../../../l10n/l10n.dart';
+
+/// Translate an [AuthFailure] error code to the user's active language.
+/// Falls back to [fallback] (the original English message) if the code is
+/// unrecognised, so new server errors degrade gracefully.
+String localizeAuthError(BuildContext context, {String? code, String? fallback}) {
+  return switch (code) {
+    'invalid_otp' => context.l10n.authErrorInvalidOtp,
+    'invalid_mobile' => context.l10n.authErrorInvalidMobile,
+    'account_not_found' => context.l10n.authErrorAccountNotFound,
+    'account_exists' => context.l10n.authErrorAccountExists,
+    'server_unavailable' => context.l10n.authErrorServerUnavailable,
+    'no_internet' => context.l10n.authErrorNoInternet,
+    'otp_expired' => context.l10n.authErrorOtpExpired,
+    'server_error' => context.l10n.authErrorServerError,
+    'too_many_attempts' => context.l10n.authErrorTooManyAttempts,
+    _ => fallback ?? context.l10n.authErrorUnknown,
+  };
+}
 
 // ─────────────────────────────────────────────────────────────
 // AuthMobileFormatter
@@ -29,13 +48,14 @@ class AuthMobileFormatter extends TextInputFormatter {
 // ─────────────────────────────────────────────────────────────
 
 class AuthErrorBar extends StatelessWidget {
-  const AuthErrorBar(this.message, {super.key});
+  const AuthErrorBar(this.message, {super.key, this.onDismiss});
   final String message;
+  final VoidCallback? onDismiss;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
       decoration: BoxDecoration(
         color: KvlColors.danger.withValues(alpha: 0.07),
         borderRadius: KvlRadius.brSM,
@@ -48,6 +68,14 @@ class AuthErrorBar extends StatelessWidget {
           child: Text(message,
               style: KvlText.caption(11.5).copyWith(color: KvlColors.danger)),
         ),
+        if (onDismiss != null)
+          GestureDetector(
+            onTap: onDismiss,
+            child: Padding(
+              padding: const EdgeInsets.all(6),
+              child: Icon(Icons.close_rounded, size: 14, color: KvlColors.danger.withValues(alpha: 0.7)),
+            ),
+          ),
       ]),
     );
   }

@@ -14,6 +14,7 @@ import '../../../core/theme/theme.dart';
 import '../../../core/utils/indian_number_format.dart';
 import '../../../core/widgets/widgets.dart';
 import '../domain/program.dart';
+import '../domain/program_repository.dart';
 import '../domain/session.dart';
 import '../../settings/domain/settings_repository.dart';
 import '../../../l10n/l10n.dart';
@@ -61,13 +62,13 @@ class _DailyProgressScreenState extends ConsumerState<DailyProgressScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(sessionCompletedProvider); // rebuilds when a session finishes
     return FutureBuilder<Program?>(
       future: _loadProgram(),
       builder: (_, snap) {
         final program = snap.data;
         final settings =
             ref.watch(settingsProvider).value ?? KvlSettings.fallback;
-        final profile = ref.watch(activeProfileProvider).value;
         final mantraName = program == null
             ? ''
             : ref
@@ -116,7 +117,6 @@ class _DailyProgressScreenState extends ConsumerState<DailyProgressScreen> {
                         height: headerHeight,
                         child: _ProgressHeader(
                           title: title,
-                          initial: profile?.initials ?? '?',
                           onBack: () => context.popOrGo(KvlRoute.practice),
                         ),
                       ),
@@ -223,31 +223,46 @@ class _DailyProgressScreenState extends ConsumerState<DailyProgressScreen> {
                         },
                       ),
                       const Spacer(),
-                      KvlButton(
-                        label: context.l10n.startPractice,
-                        variant: KvlButtonVariant.teal,
-                        icon: Icons.play_arrow_rounded,
-                        onPressed: () => context.go(
-                          '${KvlRoute.practice}/${widget.programId}',
+                      if (program?.isCompleted == true)
+                        KvlButton(
+                          label: context.l10n.completedWithCheck,
+                          variant: KvlButtonVariant.secondary,
+                          onPressed: null,
+                        )
+                      else
+                        KvlButton(
+                          label: context.l10n.startPractice,
+                          variant: KvlButtonVariant.teal,
+                          icon: Icons.play_arrow_rounded,
+                          onPressed: () => context.go(
+                            '${KvlRoute.practice}/${widget.programId}',
+                          ),
                         ),
-                      ),
                       SizedBox(height: tight ? KvlSpacing.sm : KvlSpacing.md),
-                      KvlButton(
-                        label: context.l10n.dedicateProgram,
-                        onPressed: () => _DedicateSheet.show(
-                          context,
-                          programId: widget.programId,
-                          mantraName: mantraName,
+                      if (program?.isCompleted != true)
+                        KvlButton(
+                          label: context.l10n.dedicateProgram,
+                          onPressed: () => _DedicateSheet.show(
+                            context,
+                            programId: widget.programId,
+                            mantraName: mantraName,
+                          ),
                         ),
-                      ),
-                      SizedBox(height: tight ? KvlSpacing.sm : KvlSpacing.md),
+                      if (program?.isCompleted != true)
+                        SizedBox(height: tight ? KvlSpacing.sm : KvlSpacing.md),
                       Row(
                         children: [
                           Expanded(
                             child: KvlButton(
                               variant: KvlButtonVariant.secondary,
                               label: context.l10n.editGoal,
-                              onPressed: () {},
+                              onPressed: (program == null || program.isCompleted)
+                                  ? null
+                                  : () => _EditGoalSheet.show(
+                                        context,
+                                        ref: ref,
+                                        program: program,
+                                      ),
                             ),
                           ),
                           const SizedBox(width: KvlSpacing.md),
@@ -281,12 +296,10 @@ class _DailyProgressScreenState extends ConsumerState<DailyProgressScreen> {
 class _ProgressHeader extends StatelessWidget {
   const _ProgressHeader({
     required this.title,
-    required this.initial,
     required this.onBack,
   });
 
   final String title;
-  final String initial;
   final VoidCallback onBack;
 
   @override
@@ -320,29 +333,6 @@ class _ProgressHeader extends StatelessWidget {
               style: KvlText.caption(11).copyWith(color: KvlColors.muted),
             ),
           ],
-        ),
-        Align(
-          alignment: Alignment.centerRight,
-          child: Container(
-            width: 48,
-            height: 48,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFFFFB572), KvlColors.primary],
-              ),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              initial,
-              style: KvlText.ui(
-                18,
-                FontWeight.w700,
-              ).copyWith(color: Colors.white),
-            ),
-          ),
         ),
       ],
     );
@@ -792,6 +782,7 @@ class _DedicateSheetState extends State<_DedicateSheet> {
 
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     final raw = prefs.getString(_prefKey(widget.programId));
     if (raw != null && raw.contains('||')) {
       final parts = raw.split('||');
@@ -799,7 +790,7 @@ class _DedicateSheetState extends State<_DedicateSheet> {
       _noteCtrl.text = parts.length > 1 ? parts[1] : '';
       _saved = true;
     }
-    if (mounted) setState(() => _loading = false);
+    setState(() => _loading = false);
   }
 
   Future<void> _save() async {
@@ -817,7 +808,7 @@ class _DedicateSheetState extends State<_DedicateSheet> {
         content: Text('Dedicated to $name 🙏'),
         duration: const Duration(milliseconds: 1800),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: const Color(0xFF15803D),
+        backgroundColor: KvlColors.success,
       ),
     );
     Navigator.of(context).pop();
@@ -841,18 +832,23 @@ class _DedicateSheetState extends State<_DedicateSheet> {
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.of(context).viewInsets.bottom;
-    return Container(
+    return Padding(
+      // Outer padding moves the sheet body above the keyboard.
+      padding: EdgeInsets.only(bottom: bottom),
+      child: Container(
       decoration: const BoxDecoration(
         color: KvlColors.bg,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: EdgeInsets.fromLTRB(
-        KvlSpacing.lg, KvlSpacing.lg, KvlSpacing.lg,
-        KvlSpacing.lg + bottom,
+      padding: const EdgeInsets.fromLTRB(
+        KvlSpacing.lg, KvlSpacing.lg, KvlSpacing.lg, KvlSpacing.lg,
       ),
       child: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
+          ? const SizedBox(
+              height: 120,
+              child: Center(child: CircularProgressIndicator()))
+          : SingleChildScrollView(
+              child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -878,13 +874,13 @@ class _DedicateSheetState extends State<_DedicateSheet> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Dedicate this Program',
+                            context.l10n.dedicateSheetTitle,
                             style: KvlText.ui(17, FontWeight.w700),
                           ),
                           Text(
                             widget.mantraName.isEmpty
-                                ? 'Offer your chanting practice to someone special'
-                                : 'Offer your ${widget.mantraName} practice to someone special',
+                                ? context.l10n.dedicateOfferPractice
+                                : context.l10n.dedicateOfferNamedPractice(widget.mantraName),
                             style: KvlText.caption(12)
                                 .copyWith(color: KvlColors.muted),
                           ),
@@ -897,7 +893,7 @@ class _DedicateSheetState extends State<_DedicateSheet> {
 
                 // Dedicated to name
                 Text(
-                  'Dedicated to',
+                  context.l10n.dedicatedTo,
                   style: KvlText.ui(13, FontWeight.w600),
                 ),
                 const SizedBox(height: KvlSpacing.xs),
@@ -905,7 +901,7 @@ class _DedicateSheetState extends State<_DedicateSheet> {
                   controller: _nameCtrl,
                   textCapitalization: TextCapitalization.words,
                   decoration: InputDecoration(
-                    hintText: 'e.g. My Mother, Sri Guru, Self',
+                    hintText: context.l10n.dedicatedToHint,
                     hintStyle: KvlText.caption(13)
                         .copyWith(color: KvlColors.muted),
                     filled: true,
@@ -925,7 +921,7 @@ class _DedicateSheetState extends State<_DedicateSheet> {
 
                 // Intention / note
                 Text(
-                  'Intention (optional)',
+                  context.l10n.intention,
                   style: KvlText.ui(13, FontWeight.w600),
                 ),
                 const SizedBox(height: KvlSpacing.xs),
@@ -934,7 +930,7 @@ class _DedicateSheetState extends State<_DedicateSheet> {
                   maxLines: 3,
                   textCapitalization: TextCapitalization.sentences,
                   decoration: InputDecoration(
-                    hintText: 'e.g. For her health and happiness…',
+                    hintText: context.l10n.intentionHint,
                     hintStyle: KvlText.caption(13)
                         .copyWith(color: KvlColors.muted),
                     filled: true,
@@ -959,7 +955,7 @@ class _DedicateSheetState extends State<_DedicateSheet> {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       child: Text(
-                        'Remove dedication',
+                        context.l10n.removeDedication,
                         textAlign: TextAlign.center,
                         style: KvlText.caption(12).copyWith(
                           color: KvlColors.danger,
@@ -972,11 +968,210 @@ class _DedicateSheetState extends State<_DedicateSheet> {
 
                 const SizedBox(height: KvlSpacing.lg),
                 KvlButton(
-                  label: _saved ? 'Update Dedication' : 'Save Dedication',
+                  label: _saved ? context.l10n.updateDedication : context.l10n.saveDedication,
                   onPressed: _save,
                 ),
               ],
             ),
+          ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Edit Goal bottom sheet
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _EditGoalSheet extends StatefulWidget {
+  const _EditGoalSheet({
+    required this.program,
+    required this.repository,
+  });
+
+  final Program program;
+  final ProgramRepository repository;
+
+  static Future<void> show(
+    BuildContext context, {
+    required WidgetRef ref,
+    required Program program,
+  }) {
+    return showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _EditGoalSheet(
+        program: program,
+        repository: ref.read(programRepositoryProvider),
+      ),
+    );
+  }
+
+  @override
+  State<_EditGoalSheet> createState() => _EditGoalSheetState();
+}
+
+class _EditGoalSheetState extends State<_EditGoalSheet> {
+  late final TextEditingController _writingsCtrl;
+  late final TextEditingController _daysCtrl;
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _writingsCtrl = TextEditingController(
+      text: widget.program.targetWritings.toString(),
+    );
+    _daysCtrl = TextEditingController(
+      text: widget.program.targetDays.toString(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _writingsCtrl.dispose();
+    _daysCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final tw = int.tryParse(_writingsCtrl.text.trim());
+    final td = int.tryParse(_daysCtrl.text.trim());
+    if (tw == null || tw <= 0) {
+      setState(() => _error = 'Enter a valid target count (e.g. 1008).');
+      return;
+    }
+    if (td == null || td <= 0) {
+      setState(() => _error = 'Enter a valid number of days (e.g. 30).');
+      return;
+    }
+    setState(() { _saving = true; _error = null; });
+    try {
+      await widget.repository.update(
+        widget.program.copyWith(targetWritings: tw, targetDays: td),
+      );
+      if (mounted) Navigator.of(context).pop();
+    } catch (_) {
+      if (mounted) setState(() { _saving = false; _error = 'Could not save. Try again.'; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottom),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: KvlColors.bg,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(
+          KvlSpacing.xxl, KvlSpacing.lg, KvlSpacing.xxl, KvlSpacing.xxl,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Handle bar
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: KvlSpacing.lg),
+                  decoration: BoxDecoration(
+                    color: KvlColors.muted.withValues(alpha: .35),
+                    borderRadius: KvlRadius.brPill,
+                  ),
+                ),
+              ),
+
+              Text(
+                context.l10n.editGoal,
+                style: KvlText.ui(18, FontWeight.w700),
+              ),
+              const SizedBox(height: KvlSpacing.xs),
+              Text(
+                'Update your recitation target and number of days.',
+                style: KvlText.caption(12).copyWith(color: KvlColors.muted),
+              ),
+              const SizedBox(height: KvlSpacing.xxl),
+
+              // Target recitations
+              Text(
+                'Target recitations',
+                style: KvlText.ui(13, FontWeight.w600),
+              ),
+              const SizedBox(height: KvlSpacing.xs),
+              TextField(
+                controller: _writingsCtrl,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  hintText: 'e.g. 1008',
+                  hintStyle: KvlText.caption(13).copyWith(color: KvlColors.muted),
+                  filled: true,
+                  fillColor: KvlColors.surface,
+                  suffixText: 'counts',
+                  border: OutlineInputBorder(
+                    borderRadius: KvlRadius.brMD,
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: KvlSpacing.lg,
+                    vertical: KvlSpacing.sm,
+                  ),
+                ),
+                style: KvlText.ui(15, FontWeight.w600),
+              ),
+              const SizedBox(height: KvlSpacing.lg),
+
+              // Target days
+              Text(
+                'Target days',
+                style: KvlText.ui(13, FontWeight.w600),
+              ),
+              const SizedBox(height: KvlSpacing.xs),
+              TextField(
+                controller: _daysCtrl,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  hintText: 'e.g. 30',
+                  hintStyle: KvlText.caption(13).copyWith(color: KvlColors.muted),
+                  filled: true,
+                  fillColor: KvlColors.surface,
+                  suffixText: 'days',
+                  border: OutlineInputBorder(
+                    borderRadius: KvlRadius.brMD,
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: KvlSpacing.lg,
+                    vertical: KvlSpacing.sm,
+                  ),
+                ),
+                style: KvlText.ui(15, FontWeight.w600),
+              ),
+
+              if (_error != null) ...[
+                const SizedBox(height: KvlSpacing.sm),
+                Text(
+                  _error!,
+                  style: KvlText.caption(11.5).copyWith(color: KvlColors.danger),
+                ),
+              ],
+
+              const SizedBox(height: KvlSpacing.xxl),
+              KvlButton(
+                label: _saving ? 'Saving…' : 'Save Goal',
+                onPressed: _saving ? null : _save,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

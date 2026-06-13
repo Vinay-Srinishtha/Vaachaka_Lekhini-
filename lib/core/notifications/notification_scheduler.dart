@@ -23,7 +23,7 @@ class NotificationScheduler {
     tz.Location? local;
     for (final loc in tz.timeZoneDatabase.locations.values) {
       if (loc.zones.isNotEmpty &&
-          loc.zones.last.offset == offset.inSeconds) {
+          loc.zones.last.offset.inSeconds == offset.inSeconds) {
         local = loc;
         if (loc.name == 'Asia/Kolkata') break; // prefer IST for Indian users
       }

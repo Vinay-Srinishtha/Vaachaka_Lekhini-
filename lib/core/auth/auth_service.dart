@@ -25,6 +25,8 @@ class AuthService {
   AuthTokens? _tokens;
   bool _bootstrapped = false;
 
+  ApiClient get api => _api;
+
   Stream<AuthAccount?> get accountStream => _accountController.stream;
   AuthAccount? get currentAccount => _account;
   AuthTokens? get currentTokens => _tokens;

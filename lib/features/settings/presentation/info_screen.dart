@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/widgets.dart';
@@ -13,6 +14,7 @@ class InfoScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = _topicFor(context, topic);
+    final actionLabel = _actionLabel(context, topic);
     return KvlScaffold(
       title: t.title,
       scrollable: true,
@@ -38,9 +40,46 @@ class InfoScreen extends StatelessWidget {
             textAlign: TextAlign.center,
             style: KvlText.body(12).copyWith(height: 1.6),
           ),
+          if (actionLabel != null) ...[
+            const SizedBox(height: KvlSpacing.xl),
+            KvlButton(
+              label: actionLabel,
+              icon: Icons.open_in_new_rounded,
+              onPressed: () => _launchAction(context, topic),
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  String? _actionLabel(BuildContext context, String key) => switch (key) {
+    'report' => 'Send Email Report',
+    'feedback' => 'Share Feedback via Email',
+    _ => null,
+  };
+
+  Future<void> _launchAction(BuildContext context, String key) async {
+    final Uri uri;
+    switch (key) {
+      case 'report':
+        uri = Uri(
+          scheme: 'mailto',
+          path: 'support@vaachikalekhini.com',
+          query: 'subject=Bug Report - Vaachika Lekhini',
+        );
+      case 'feedback':
+        uri = Uri(
+          scheme: 'mailto',
+          path: 'support@vaachikalekhini.com',
+          query: 'subject=Feedback - Vaachika Lekhini',
+        );
+      default:
+        return;
+    }
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
   }
 
   _Topic _topicFor(BuildContext context, String key) {

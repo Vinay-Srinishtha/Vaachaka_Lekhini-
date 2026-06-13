@@ -1,11 +1,23 @@
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:path/path.dart' as p;
 import 'package:vachika_lekhini/app/app.dart';
+import 'package:vachika_lekhini/app/providers.dart';
+import 'package:vachika_lekhini/core/notifications/notification_scheduler.dart';
 import 'package:vachika_lekhini/core/storage/storage_keys.dart';
+
+/// No-op scheduler so FlutterLocalNotifications doesn't touch the platform
+/// channel in tests (it requires a real iOS/Android environment to init).
+class _NoOpScheduler extends NotificationScheduler {
+  @override
+  Future<void> reschedule(TimeOfDay time, {String sound = 'bell'}) async {}
+  @override
+  Future<void> cancel() async {}
+}
 
 void main() {
   late Directory tmp;
@@ -18,6 +30,7 @@ void main() {
       Hive.openBox<dynamic>(KvlBoxes.profiles),
       Hive.openBox<dynamic>(KvlBoxes.settings),
       Hive.openBox<dynamic>(KvlBoxes.cache),
+      Hive.openBox<dynamic>(KvlBoxes.outbox),
     ]);
   });
 
@@ -29,7 +42,14 @@ void main() {
   testWidgets('KvlApp boots and redirects unauthenticated user to Welcome', (
     tester,
   ) async {
-    await tester.pumpWidget(const ProviderScope(child: KvlApp()));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          notificationSchedulerProvider.overrideWithValue(_NoOpScheduler()),
+        ],
+        child: const KvlApp(),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(find.text('Login'), findsOneWidget);
     expect(find.text('Register'), findsOneWidget);

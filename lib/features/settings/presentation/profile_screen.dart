@@ -247,7 +247,7 @@ class ProfileScreen extends ConsumerWidget {
                   if (activePrograms.isEmpty) return;
                   if (activePrograms.length == 1) {
                     context.push(
-                      '${KvlRoute.voiceTraining}/${activePrograms.first.mantraId}',
+                      '${KvlRoute.voiceTraining}/${activePrograms.first.mantraId}?retrain=1',
                     );
                     return;
                   }
@@ -276,11 +276,11 @@ class ProfileScreen extends ConsumerWidget {
           ),
 
           SettingsSection(
-            title: 'Writing Style',
+            title: context.l10n.writingStyleSection,
             children: [
               SettingRow(
                 icon: Icons.edit_rounded,
-                label: 'Retrain Writing Style',
+                label: context.l10n.retrainWritingStyle,
                 onTap: () {
                   final activePrograms = programs
                       .where((p) => !p.isCompleted)
@@ -310,37 +310,6 @@ class ProfileScreen extends ConsumerWidget {
                   languages: languages,
                   currentCode: settings.languageCode,
                   onPicked: settingsRepo.setLanguage,
-                ),
-              ),
-              SettingRow(
-                icon: Icons.brightness_6_rounded,
-                label: context.l10n.themeSetting,
-                value: switch (settings.themeMode) {
-                  ThemeMode.light => context.l10n.themeLight,
-                  ThemeMode.dark => context.l10n.themeDark,
-                  ThemeMode.system => context.l10n.themeSystem,
-                },
-                onTap: () => _pickFromList(
-                  context,
-                  title: context.l10n.themeSetting,
-                  options: [
-                    context.l10n.themeSystem,
-                    context.l10n.themeLight,
-                    context.l10n.themeDark,
-                  ],
-                  current: switch (settings.themeMode) {
-                    ThemeMode.light => context.l10n.themeLight,
-                    ThemeMode.dark => context.l10n.themeDark,
-                    ThemeMode.system => context.l10n.themeSystem,
-                  },
-                  onPicked: (label) async {
-                    await settingsRepo.setThemeMode(switch (label) {
-                      _ when label == context.l10n.themeLight =>
-                        ThemeMode.light,
-                      _ when label == context.l10n.themeDark => ThemeMode.dark,
-                      _ => ThemeMode.system,
-                    });
-                  },
                 ),
               ),
               SettingRow(
@@ -791,12 +760,11 @@ class ProfileScreen extends ConsumerWidget {
     await db.delete(db.sessions).go();
     await db.delete(db.programs).go();
     await db.delete(db.rewardEvents).go();
-    // Wipe Hive boxes.
     final boxes = [profilesBox(), settingsBox(), cacheBox()];
     for (final b in boxes) {
       await b.clear();
     }
-    await ref.read(authRepositoryProvider).logout();
+    await ref.read(authRepositoryProvider).deleteAccount();
   }
 }
 
@@ -1208,7 +1176,7 @@ class _RetrainMantraPicker {
         programs: programs,
         onPicked: (mantraId) {
           Navigator.pop(sheetCtx);
-          context.push('${KvlRoute.voiceTraining}/$mantraId');
+          context.push('${KvlRoute.voiceTraining}/$mantraId?retrain=1');
         },
       ),
     );
@@ -1455,7 +1423,7 @@ class _EditProfileSheetBodyState extends ConsumerState<_EditProfileSheetBody> {
   Future<void> _saveName() async {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
-      setState(() => _nameError = 'Name cannot be empty.');
+      setState(() => _nameError = context.l10n.nameEmptyError);
       return;
     }
     setState(() { _nameBusy = true; _nameError = null; });
@@ -1473,7 +1441,11 @@ class _EditProfileSheetBodyState extends ConsumerState<_EditProfileSheetBody> {
         setState(() => _nameBusy = false);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Name updated successfully.')),
+            SnackBar(
+              content: Text(context.l10n.nameUpdatedSuccess),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
           );
         }
       case Err(:final failure):
@@ -1536,7 +1508,7 @@ class _EditProfileSheetBodyState extends ConsumerState<_EditProfileSheetBody> {
                   ),
                   const SizedBox(width: KvlSpacing.sm),
                   Expanded(
-                    child: Text('Edit Profile', style: KvlText.title(16)),
+                    child: Text(context.l10n.editProfileTitle, style: KvlText.title(16)),
                   ),
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
@@ -1549,8 +1521,8 @@ class _EditProfileSheetBodyState extends ConsumerState<_EditProfileSheetBody> {
 
               // Name field
               KvlInput(
-                label: 'Display Name',
-                hint: 'Your name',
+                label: context.l10n.displayNameLabel,
+                hint: context.l10n.displayNameHint,
                 controller: _nameCtrl,
                 textInputAction: TextInputAction.done,
                 onSubmitted: (_) => _saveName(),
@@ -1564,7 +1536,7 @@ class _EditProfileSheetBodyState extends ConsumerState<_EditProfileSheetBody> {
               ],
               const SizedBox(height: KvlSpacing.sm),
               KvlButton(
-                label: _nameBusy ? 'Saving…' : 'Save Name',
+                label: _nameBusy ? context.l10n.savingNameButton : context.l10n.saveNameButton,
                 onPressed: _nameBusy ? null : _saveName,
               ),
 
@@ -1581,7 +1553,7 @@ class _EditProfileSheetBodyState extends ConsumerState<_EditProfileSheetBody> {
                     color: KvlColors.primaryDeep,
                   ),
                   const SizedBox(width: 8),
-                  Text('Mobile Number', style: KvlText.ui(13, FontWeight.w600)),
+                  Text(context.l10n.mobileNumberLabel2, style: KvlText.ui(13, FontWeight.w600)),
                 ],
               ),
               const SizedBox(height: 4),
@@ -1592,7 +1564,7 @@ class _EditProfileSheetBodyState extends ConsumerState<_EditProfileSheetBody> {
               const SizedBox(height: KvlSpacing.sm),
               KvlButton(
                 variant: KvlButtonVariant.ghost,
-                label: 'Change Mobile Number',
+                label: context.l10n.changeMobileNumber,
                 icon: Icons.edit_rounded,
                 onPressed: () {
                   Navigator.of(context).pop();
@@ -1657,13 +1629,13 @@ class _ChangeMobileSheetState extends ConsumerState<_ChangeMobileSheet> {
   bool get _mobileOk => _validateMobile() == null;
 
   String? _validateMobile() {
-    if (_digits.isEmpty) return 'Please enter a mobile number.';
-    if (_digits.length != 10) return 'Enter a valid 10-digit mobile number.';
+    if (_digits.isEmpty) return context.l10n.authErrorInvalidMobile;
+    if (_digits.length != 10) return context.l10n.authErrorEnterMobileValid;
     if (!RegExp(r'^[6-9]\d{9}$').hasMatch(_digits)) {
-      return 'Enter a valid Indian mobile number (starts with 6–9).';
+      return context.l10n.authErrorMobileIndian;
     }
     if (_e164 == _currentMobile) {
-      return 'This is already your current mobile number.';
+      return context.l10n.authErrorSameMobile;
     }
     return null;
   }
@@ -1695,14 +1667,14 @@ class _ChangeMobileSheetState extends ConsumerState<_ChangeMobileSheet> {
         _otp = '';
         _startCountdown();
       } else if (res is Err<void>) {
-        _error = res.failure.message;
+        _error = localizeAuthError(context, code: res.failure.code, fallback: res.failure.message);
       }
     });
   }
 
   Future<void> _verify() async {
     if (_otp.length != 6) {
-      setState(() => _error = 'Please enter the 6-digit code.');
+      setState(() => _error = context.l10n.authErrorEnterOtp6);
       return;
     }
     setState(() { _busy = true; _error = null; });
@@ -1714,10 +1686,14 @@ class _ChangeMobileSheetState extends ConsumerState<_ChangeMobileSheet> {
     if (res is Ok<Session>) {
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Mobile number updated successfully.')),
+        SnackBar(
+          content: Text(context.l10n.mobileUpdatedSuccess),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
       );
     } else if (res is Err<Session>) {
-      setState(() { _busy = false; _error = res.failure.message; });
+      setState(() { _busy = false; _error = localizeAuthError(context, code: res.failure.code, fallback: res.failure.message); });
     }
   }
 
@@ -1774,7 +1750,7 @@ class _ChangeMobileSheetState extends ConsumerState<_ChangeMobileSheet> {
                   ),
                   const SizedBox(width: KvlSpacing.sm),
                   Expanded(
-                    child: Text('Change Mobile Number', style: KvlText.title(16)),
+                    child: Text(context.l10n.changeMobileSheetTitle, style: KvlText.title(16)),
                   ),
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
@@ -1787,7 +1763,7 @@ class _ChangeMobileSheetState extends ConsumerState<_ChangeMobileSheet> {
 
               if (!_otpSent) ...[
                 Text(
-                  'Enter your new mobile number. We will send a verification code to confirm.',
+                  context.l10n.enterNewMobileHint,
                   style: KvlText.caption(12).copyWith(color: KvlColors.inkSoft),
                 ),
                 const SizedBox(height: KvlSpacing.md),
@@ -1819,7 +1795,7 @@ class _ChangeMobileSheetState extends ConsumerState<_ChangeMobileSheet> {
                 ],
                 const SizedBox(height: KvlSpacing.md),
                 KvlButton(
-                  label: _busy ? 'Sending…' : 'Send OTP',
+                  label: _busy ? context.l10n.sendingOtpButton : context.l10n.sendOtpButton,
                   onPressed: (_busy || !_mobileOk) ? null : _sendOtp,
                 ),
               ] else ...[
@@ -1829,7 +1805,7 @@ class _ChangeMobileSheetState extends ConsumerState<_ChangeMobileSheet> {
                     Icon(Icons.sms_outlined, size: 14, color: KvlColors.inkSoft),
                     const SizedBox(width: 5),
                     Text(
-                      'Enter the 6-digit code sent to +91$_digits',
+                      context.l10n.enterSixDigitCodeSentToMobile(_digits),
                       style: KvlText.caption(11.5).copyWith(color: KvlColors.inkSoft),
                     ),
                   ],
@@ -1843,7 +1819,7 @@ class _ChangeMobileSheetState extends ConsumerState<_ChangeMobileSheet> {
                 Center(
                   child: _resendSeconds > 0
                       ? Text(
-                          'Resend code in ${_resendSeconds}s',
+                          context.l10n.resendCodeCountdown(_resendSeconds),
                           style: KvlText.caption(11).copyWith(color: KvlColors.inkSoft),
                         )
                       : GestureDetector(
@@ -1852,7 +1828,7 @@ class _ChangeMobileSheetState extends ConsumerState<_ChangeMobileSheet> {
                             _sendOtp();
                           },
                           child: Text(
-                            'Resend code',
+                            context.l10n.resendCode,
                             style: KvlText.caption(11.5).copyWith(
                               color: KvlColors.primaryDeep,
                               fontWeight: FontWeight.w600,
@@ -1866,7 +1842,7 @@ class _ChangeMobileSheetState extends ConsumerState<_ChangeMobileSheet> {
                 ],
                 const SizedBox(height: KvlSpacing.lg),
                 KvlButton(
-                  label: _busy ? 'Verifying…' : 'Confirm New Number',
+                  label: _busy ? context.l10n.verifyingButton2 : context.l10n.confirmNewNumber,
                   onPressed: (_busy || _otp.length != 6) ? null : _verify,
                 ),
               ],

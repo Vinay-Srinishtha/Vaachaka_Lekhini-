@@ -28,12 +28,12 @@ class HomeScreen extends ConsumerWidget {
         .toList();
     final recent = activePrograms.isEmpty ? null : activePrograms.first;
 
-    final greeting = profile == null
+    final greeting = (profile == null || profile.name.trim().isEmpty)
         ? context.l10n.welcomeGreeting
-        : context.l10n.welcomeGreetingUser(profile.name);
+        : context.l10n.welcomeGreetingUser(profile.name.trim());
     final subline = activePrograms.isEmpty
-        ? 'Start your spiritual journey'
-        : "You're doing great! ${activePrograms.length} ${activePrograms.length == 1 ? 'Program' : 'Programs'} Active";
+        ? context.l10n.homeSublineEmpty
+        : context.l10n.homeSublineActive(activePrograms.length);
     final points = ref.watch(rewardTotalProvider).value ?? 0;
 
     return SafeArea(

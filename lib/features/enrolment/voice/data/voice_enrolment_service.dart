@@ -171,21 +171,8 @@ class VoiceEnrolmentService {
   }
 
   /// Count how many times [mantra]'s Devanagari form appears in [text].
-  int _countOccurrences(String text, Mantra mantra) {
-    final needle   = mantra.name.devanagari.trim().toLowerCase();
-    final haystack = text.trim().toLowerCase();
-    if (needle.isEmpty || haystack.isEmpty) return 0;
-
-    int count = 0;
-    int start = 0;
-    while (true) {
-      final idx = haystack.indexOf(needle, start);
-      if (idx == -1) break;
-      count++;
-      start = idx + needle.length;
-    }
-    return count;
-  }
+  int _countOccurrences(String text, Mantra mantra) =>
+      VoicePhraseMatcher.countOccurrences(text, mantra.name.devanagari);
 
   Future<void> stop() async {
     if (!_running) return;
@@ -208,6 +195,28 @@ class VoiceEnrolmentService {
     await _audio.dispose();
     await _recognizer?.dispose();
     await _events.close();
+  }
+}
+
+/// Public static helper for counting mantra occurrences in ASR output.
+/// Exposed separately so it can be unit-tested without a running audio session.
+abstract final class VoicePhraseMatcher {
+  /// Returns how many non-overlapping times [phrase] appears in [text].
+  /// Both are normalised (trimmed, lowercased) before comparison so
+  /// punctuation and capitalisation in Vosk output don't affect the count.
+  static int countOccurrences(String text, String phrase) {
+    final needle   = phrase.trim().toLowerCase();
+    final haystack = text.trim().toLowerCase();
+    if (needle.isEmpty || haystack.isEmpty) return 0;
+    int count = 0;
+    int start = 0;
+    while (true) {
+      final idx = haystack.indexOf(needle, start);
+      if (idx == -1) break;
+      count++;
+      start = idx + needle.length;
+    }
+    return count;
   }
 }
 

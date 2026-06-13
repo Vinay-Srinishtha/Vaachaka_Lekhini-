@@ -40,13 +40,20 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     if (!mounted) return;
     switch (result) {
       case Ok():
+        // Refetch store catalog so stock counts reflect the redemption.
+        ref.invalidate(storeItemsProvider);
+        if (!mounted) return;
         await showDialog<void>(
           context: context,
           builder: (_) => _RedeemSuccessDialog(item: item),
         );
       case Err(:final failure):
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(failure.message)),
+          SnackBar(
+            content: Text(failure.message),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
         );
     }
   }

@@ -3,20 +3,45 @@
 	import DataTable from '$lib/components/DataTable.svelte';
 	import StatCard from '$lib/components/StatCard.svelte';
 	import type { Column } from '$lib/components/DataTable.types';
-	import { Coins, TrendingUp, TrendingDown, Settings2 } from '@lucide/svelte';
+	import { Coins, TrendingUp, TrendingDown, Settings2, Gift } from '@lucide/svelte';
 	import { page } from '$app/state';
 	import { enhance } from '$app/forms';
 
-	let { data } = $props();
+	let { data, form } = $props();
 
 	let rateInput = $state(data.rewardRate);
 	let rateSaving = $state(false);
 	let rateSaved = $state(false);
 
+	// Grant points dialog state
+	let grantOpen = $state(false);
+	let grantSaving = $state(false);
+	let grantMemberId = $state('');
+	let grantKind = $state<'gift' | 'refund'>('gift');
+	let grantAmount = $state(100);
+	let grantNote = $state('');
+	const formAny = form as any;
+	let grantError = $state<string | null>(formAny?.grantError ?? null);
+	let grantSuccess = $state(false);
+
 	function onRateSuccess() {
 		rateSaving = false;
 		rateSaved = true;
 		setTimeout(() => (rateSaved = false), 2000);
+	}
+
+	function openGrant() {
+		grantMemberId = data.members[0]?.id ?? '';
+		grantKind = 'gift';
+		grantAmount = 100;
+		grantNote = '';
+		grantError = null;
+		grantSuccess = false;
+		grantOpen = true;
+	}
+
+	function closeGrant() {
+		grantOpen = false;
 	}
 
 	const columns: Column[] = [
@@ -58,7 +83,91 @@
 	}
 </script>
 
-<PageHeader title="Rewards Ledger" subtitle="Append-only ledger of all point earn and spend events" />
+<PageHeader title="Rewards Ledger" subtitle="Append-only ledger of all point earn and spend events">
+	{#snippet actions()}
+		<button onclick={openGrant} class="btn-primary flex items-center gap-2">
+			<Gift size={16} /> Grant Points
+		</button>
+	{/snippet}
+</PageHeader>
+
+<!-- Grant Points Modal -->
+{#if grantOpen}
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" role="dialog" aria-modal="true">
+	<div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+		<h2 class="text-lg font-semibold text-gray-900 mb-1">Grant Points</h2>
+		<p class="text-sm text-gray-500 mb-5">Manually credit reward points to a member.</p>
+		<form
+			method="POST"
+			action="?/grantPoints"
+			use:enhance={() => {
+				grantSaving = true;
+				grantError = null;
+				return async ({ result, update }) => {
+					await update({ reset: false });
+					grantSaving = false;
+					if (result.type === 'success') {
+						grantSuccess = true;
+						setTimeout(closeGrant, 1200);
+					} else if (result.type === 'failure') {
+						grantError = (result.data as any)?.grantError ?? 'Something went wrong';
+					}
+				};
+			}}
+		>
+			<div class="space-y-4">
+				<div>
+					<label class="block text-sm font-medium text-gray-700 mb-1" for="grantMember">Member</label>
+					<select id="grantMember" name="memberId" bind:value={grantMemberId}
+						class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-400 outline-none">
+						{#each data.members as m}
+							<option value={m.id}>{m.displayName} · {m.rewardPointsBalance.toLocaleString()} pts</option>
+						{/each}
+					</select>
+				</div>
+				<div class="grid grid-cols-2 gap-3">
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1" for="grantKind">Type</label>
+						<select id="grantKind" name="kind" bind:value={grantKind}
+							class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-400 outline-none">
+							<option value="gift">Gift</option>
+							<option value="refund">Refund</option>
+						</select>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1" for="grantAmount">Points</label>
+						<input id="grantAmount" name="amount" type="number" min="1" max="100000"
+							bind:value={grantAmount}
+							class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-400 outline-none" />
+					</div>
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-700 mb-1" for="grantNote">Note (optional)</label>
+					<input id="grantNote" name="note" type="text" placeholder="Reason for grant…"
+						bind:value={grantNote} maxlength="300"
+						class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-400 outline-none" />
+				</div>
+				{#if grantError}
+					<p class="text-sm text-red-600">{grantError}</p>
+				{/if}
+				{#if grantSuccess}
+					<p class="text-sm text-green-600 font-medium">✓ Points granted successfully</p>
+				{/if}
+			</div>
+			<div class="flex justify-end gap-3 mt-6">
+				<button type="button" onclick={closeGrant}
+					class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+					Cancel
+				</button>
+				<button type="submit" disabled={grantSaving || grantSuccess}
+					class="px-4 py-2 text-sm font-medium text-white bg-brand-600 rounded-lg hover:bg-brand-700 disabled:opacity-60">
+					{grantSaving ? 'Granting…' : 'Grant Points'}
+				</button>
+			</div>
+		</form>
+	</div>
+</div>
+{/if}
 
 <!-- Reward Rate Config Card -->
 <div class="bg-white border border-gray-200 rounded-xl p-5 mb-6 flex flex-col sm:flex-row sm:items-center gap-4">

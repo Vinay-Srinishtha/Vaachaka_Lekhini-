@@ -284,20 +284,57 @@ class _StoreCard extends StatelessWidget {
                       ),
                     ),
                     const Spacer(),
-                    KvlButton(
-                      label: canAfford
-                          ? context.l10n.redeemButton
-                          : context.l10n.notEnoughPoints,
-                      variant: canAfford
-                          ? KvlButtonVariant.primary
-                          : KvlButtonVariant.secondary,
-                      onPressed: canAfford ? onRedeem : null,
+                    _RedeemButton(
+                      canAfford: canAfford,
+                      label: context.l10n.redeemButton,
+                      onRedeem: onRedeem,
                     ),
                   ],
                 ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RedeemButton extends StatelessWidget {
+  const _RedeemButton({
+    required this.canAfford,
+    required this.label,
+    required this.onRedeem,
+  });
+  final bool canAfford;
+  final String label;
+  final VoidCallback onRedeem;
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: canAfford ? 1.0 : 0.38,
+      child: SizedBox(
+        width: double.infinity,
+        height: 36,
+        child: Material(
+          color: KvlColors.primary,
+          borderRadius: KvlRadius.brMD,
+          child: InkWell(
+            borderRadius: KvlRadius.brMD,
+            onTap: canAfford ? onRedeem : null,
+            child: Center(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );

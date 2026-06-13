@@ -11,6 +11,7 @@ class Session extends Equatable {
     required this.language,
     required this.createdAt,
     this.referralCode,
+    this.primaryMemberId,
   });
 
   /// Stable user id (uuid).
@@ -26,6 +27,11 @@ class Session extends Equatable {
   final String? referralCode;
   final DateTime createdAt;
 
+  /// Server-assigned primary Member id. Set on registration/login so the
+  /// client can pin the correct server UUID as the active profile instead of
+  /// generating a new local one.
+  final String? primaryMemberId;
+
   Session copyWith({
     String? userId,
     String? username,
@@ -33,6 +39,7 @@ class Session extends Equatable {
     String? language,
     String? referralCode,
     DateTime? createdAt,
+    String? primaryMemberId,
   }) =>
       Session(
         userId: userId ?? this.userId,
@@ -41,6 +48,7 @@ class Session extends Equatable {
         language: language ?? this.language,
         referralCode: referralCode ?? this.referralCode,
         createdAt: createdAt ?? this.createdAt,
+        primaryMemberId: primaryMemberId ?? this.primaryMemberId,
       );
 
   Map<String, dynamic> toJson() => {
@@ -50,6 +58,7 @@ class Session extends Equatable {
         'language': language,
         'referralCode': referralCode,
         'createdAt': createdAt.toIso8601String(),
+        'primaryMemberId': primaryMemberId,
       };
 
   factory Session.fromJson(Map<String, dynamic> j) => Session(
@@ -59,8 +68,9 @@ class Session extends Equatable {
         language: j['language'] as String? ?? 'en',
         referralCode: j['referralCode'] as String?,
         createdAt: DateTime.parse(j['createdAt'] as String),
+        primaryMemberId: j['primaryMemberId'] as String?,
       );
 
   @override
-  List<Object?> get props => [userId, username, mobile, language, referralCode, createdAt];
+  List<Object?> get props => [userId, username, mobile, language, referralCode, createdAt, primaryMemberId];
 }

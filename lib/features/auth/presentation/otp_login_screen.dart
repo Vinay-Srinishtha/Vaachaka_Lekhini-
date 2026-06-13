@@ -112,11 +112,26 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
         final pr = ref.read(profileRepositoryProvider);
         final list = await pr.listForUser(value.userId);
         if (list.isEmpty) {
-          final me = await pr.create(
+          // On a fresh device, seed the primary member using the server UUID
+          // so the local profile ID matches the server from the start.
+          final serverId = value.primaryMemberId;
+          if (serverId != null) {
+            await pr.upsertRemote(Profile(
+              id: serverId,
               userId: value.userId,
               name: value.username,
-              relation: FamilyRelation.me);
-          await pr.setActive(me.id);
+              relation: FamilyRelation.me,
+              language: value.language,
+              createdAt: value.createdAt,
+            ));
+            await pr.setActive(serverId);
+          } else {
+            final me = await pr.create(
+                userId: value.userId,
+                name: value.username,
+                relation: FamilyRelation.me);
+            await pr.setActive(me.id);
+          }
         } else if (await pr.getActive() == null) {
           await pr.setActive(list.first.id);
         }

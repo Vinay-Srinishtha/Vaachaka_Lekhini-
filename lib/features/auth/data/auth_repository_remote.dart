@@ -146,6 +146,9 @@ class AuthRepositoryRemote implements AuthRepository {
             ? null
             : referralCode?.trim(),
         createdAt: existing?.createdAt ?? DateTime.now(),
+        // Server's primary Member UUID — used to pin the correct profile
+        // instead of generating a new Flutter-side UUID on registration.
+        primaryMemberId: account.primaryMemberId ?? existing?.primaryMemberId,
       );
       await _writeSession(session);
       return Ok(session);

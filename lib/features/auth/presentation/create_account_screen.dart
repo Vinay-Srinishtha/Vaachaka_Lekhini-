@@ -135,12 +135,28 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
     switch (result) {
       case Ok(:final value):
         final profileRepo = ref.read(profileRepositoryProvider);
-        final me = await profileRepo.create(
-          userId: value.userId,
-          name: value.username,
-          relation: FamilyRelation.me,
-        );
-        await profileRepo.setActive(me.id);
+        final serverId = value.primaryMemberId;
+        if (serverId != null) {
+          // Use the server-assigned member UUID so local profile ID matches
+          // the server — without this the active profile would be a Flutter-
+          // generated UUID with no server data and every count shows 0.
+          await profileRepo.upsertRemote(Profile(
+            id: serverId,
+            userId: value.userId,
+            name: value.username,
+            relation: FamilyRelation.me,
+            language: value.language,
+            createdAt: value.createdAt,
+          ));
+          await profileRepo.setActive(serverId);
+        } else {
+          final me = await profileRepo.create(
+            userId: value.userId,
+            name: value.username,
+            relation: FamilyRelation.me,
+          );
+          await profileRepo.setActive(me.id);
+        }
         if (!mounted) return;
         context.go(KvlRoute.home);
       case Err(:final failure):

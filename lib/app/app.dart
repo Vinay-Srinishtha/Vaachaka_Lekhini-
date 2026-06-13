@@ -100,7 +100,8 @@ class _KvlAppState extends ConsumerState<KvlApp> with WidgetsBindingObserver {
       title: 'Vaachaka Lekhini',
       debugShowCheckedModeBanner: false,
       theme: buildKvlLightTheme(),
-      themeMode: ThemeMode.light,
+      darkTheme: buildKvlDarkTheme(),
+      themeMode: settings.themeMode,
       routerConfig: router,
       locale: Locale(settings.languageCode),
       localizationsDelegates: const [

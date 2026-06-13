@@ -78,7 +78,7 @@ class WelcomeScreen extends ConsumerWidget {
                         onRegister: () => context.push(KvlRoute.createAccount),
                       ),
                       const Spacer(flex: 3),
-                      const _KnowAppButton(),
+                      _KnowAppButton(onTap: () => context.push('/info/about')),
                       const Spacer(flex: 4),
                     ],
                   ),
@@ -311,24 +311,28 @@ class _AuthButton extends StatelessWidget {
 }
 
 class _KnowAppButton extends StatelessWidget {
-  const _KnowAppButton();
+  const _KnowAppButton({required this.onTap});
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(minWidth: 180),
-      padding: const EdgeInsets.symmetric(
-        horizontal: KvlSpacing.lg,
-        vertical: 5,
-      ),
-      decoration: BoxDecoration(
-        borderRadius: KvlRadius.brPill,
-        border: Border.all(color: Colors.white, width: 1.4),
-      ),
-      child: Text(
-        context.l10n.knowOurApp,
-        textAlign: TextAlign.center,
-        style: KvlText.body(16).copyWith(color: Colors.white, height: 1.1),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        constraints: const BoxConstraints(minWidth: 180),
+        padding: const EdgeInsets.symmetric(
+          horizontal: KvlSpacing.lg,
+          vertical: 5,
+        ),
+        decoration: BoxDecoration(
+          borderRadius: KvlRadius.brPill,
+          border: Border.all(color: Colors.white, width: 1.4),
+        ),
+        child: Text(
+          context.l10n.knowOurApp,
+          textAlign: TextAlign.center,
+          style: KvlText.body(16).copyWith(color: Colors.white, height: 1.1),
+        ),
       ),
     );
   }

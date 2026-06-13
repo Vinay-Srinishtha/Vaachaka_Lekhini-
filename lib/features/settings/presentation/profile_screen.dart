@@ -302,6 +302,37 @@ class ProfileScreen extends ConsumerWidget {
             title: context.l10n.displaySection,
             children: [
               SettingRow(
+                icon: Icons.brightness_6_rounded,
+                label: context.l10n.themeSetting,
+                value: switch (settings.themeMode) {
+                  ThemeMode.light => context.l10n.themeLight,
+                  ThemeMode.dark => context.l10n.themeDark,
+                  ThemeMode.system => context.l10n.themeSystem,
+                },
+                onTap: () => _pickFromList(
+                  context,
+                  title: context.l10n.themeSetting,
+                  options: [
+                    context.l10n.themeLight,
+                    context.l10n.themeDark,
+                    context.l10n.themeSystem,
+                  ],
+                  current: switch (settings.themeMode) {
+                    ThemeMode.light => context.l10n.themeLight,
+                    ThemeMode.dark => context.l10n.themeDark,
+                    ThemeMode.system => context.l10n.themeSystem,
+                  },
+                  onPicked: (label) async {
+                    final mode = switch (label) {
+                      _ when label == context.l10n.themeDark => ThemeMode.dark,
+                      _ when label == context.l10n.themeSystem => ThemeMode.system,
+                      _ => ThemeMode.light,
+                    };
+                    await settingsRepo.setThemeMode(mode);
+                  },
+                ),
+              ),
+              SettingRow(
                 icon: Icons.language_rounded,
                 label: context.l10n.languageSetting,
                 value: KvlLanguage.byCode(settings.languageCode).nativeLabel,

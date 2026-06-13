@@ -219,11 +219,14 @@ final accountHydrationProvider = Provider<void>((ref) {
         final member = Map<String, dynamic>.from(rawMember as Map);
         final memberId = member['id'] as String?;
         if (memberId == null) continue;
+        final isPrimary = member['is_primary'] == true;
         final profile = Profile(
           id: memberId,
           userId: accountId,
           name: (member['display_name'] as String?) ?? '',
-          relation: _familyRelationFromServer(member['relation'] as String?),
+          relation: isPrimary
+              ? FamilyRelation.me
+              : _familyRelationFromServer(member['relation'] as String?),
           avatarSeed: member['avatar_key'] as String?,
           language: member['language'] as String? ?? 'en',
           createdAt:

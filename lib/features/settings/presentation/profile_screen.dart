@@ -13,6 +13,7 @@ import '../../../core/storage/repository.dart';
 import '../../auth/domain/auth_repository.dart';
 import '../../auth/domain/session.dart';
 import '../../auth/presentation/auth_shared_widgets.dart';
+import '../../profiles/domain/profile.dart';
 import '../../programs/domain/program.dart';
 import '../../../l10n/l10n.dart';
 import '../../../app/router.dart';
@@ -184,11 +185,13 @@ class ProfileScreen extends ConsumerWidget {
           SettingsSection(
             title: context.l10n.familyCommunitySection,
             children: [
-              SettingRow(
-                icon: Icons.group_outlined,
-                label: context.l10n.familyMembers,
-                onTap: () => context.push(KvlRoute.addFamily),
-              ),
+              // Only the primary member (Me) can manage family members.
+              if (profile?.relation == FamilyRelation.me)
+                SettingRow(
+                  icon: Icons.group_outlined,
+                  label: context.l10n.familyMembers,
+                  onTap: () => context.push(KvlRoute.addFamily),
+                ),
               SettingRow(
                 icon: Icons.person_add_alt_1_outlined,
                 label: context.l10n.inviteFriends,

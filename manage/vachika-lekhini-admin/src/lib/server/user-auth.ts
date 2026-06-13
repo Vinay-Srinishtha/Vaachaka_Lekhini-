@@ -104,7 +104,8 @@ export async function ensureAccount(
 			members: {
 				create: {
 					displayName: username,
-					isPrimary: true
+					isPrimary: true,
+					relation: 'self'
 				}
 			}
 		},

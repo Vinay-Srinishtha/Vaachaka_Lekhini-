@@ -321,7 +321,7 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
           .where((p) => p.id == widget.programId)
           .fold<int>(0, (total, p) => total + p.totalProgress);
       // Real global count: community DB total + unsaved session writings.
-      final globalStats = ref.watch(globalStatsProvider).value;
+      final globalStats = ref.watch(globalStatsProvider(widget.mantraId)).value;
       final globalCount =
           (globalStats?.globalChantCount ?? 0) + _writingCount;
       return _ProtoWriteScaffold(

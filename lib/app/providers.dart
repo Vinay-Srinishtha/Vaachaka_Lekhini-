@@ -482,25 +482,26 @@ final storeItemsProvider = FutureProvider<List<StoreItem>>((ref) async {
       .toList();
 });
 
-/// Global community statistics from /api/v1/stats (public, no auth).
+/// Global community statistics from /api/v1/stats?mantra_id= (public, no auth).
+/// Pass a mantraId to scope counts to that specific mantra.
 /// Never throws — returns zeros on any network/server error so the UI
 /// always has a safe value to display.
-final globalStatsProvider =
-    FutureProvider.autoDispose<({int globalChantCount, int memberCount})>((
-      ref,
-    ) async {
-      try {
-        final api = ref.watch(apiClientProvider);
-        final res = await api.dio.get<Map<String, dynamic>>('/api/v1/stats');
-        final data = res.data ?? {};
-        return (
-          globalChantCount: (data['global_chant_count'] as num?)?.toInt() ?? 0,
-          memberCount: (data['member_count'] as num?)?.toInt() ?? 0,
-        );
-      } catch (_) {
-        return (globalChantCount: 0, memberCount: 0);
-      }
-    });
+final globalStatsProvider = FutureProvider.autoDispose
+    .family<({int globalChantCount, int memberCount}), String>((ref, mantraId) async {
+  try {
+    final api = ref.watch(apiClientProvider);
+    final res = await api.dio.get<Map<String, dynamic>>(
+      '/api/v1/stats?mantra_id=${Uri.encodeComponent(mantraId)}',
+    );
+    final data = res.data ?? {};
+    return (
+      globalChantCount: (data['global_chant_count'] as num?)?.toInt() ?? 0,
+      memberCount: (data['member_count'] as num?)?.toInt() ?? 0,
+    );
+  } catch (_) {
+    return (globalChantCount: 0, memberCount: 0);
+  }
+});
 
 /// Real leaderboard from /api/v1/leaderboard (Bearer required).
 /// Returns [] when unauthenticated or on any network error — never throws.

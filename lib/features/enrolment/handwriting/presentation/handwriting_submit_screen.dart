@@ -94,7 +94,7 @@ class _HandwritingSubmitScreenState extends ConsumerState<HandwritingSubmitScree
               physics: const NeverScrollableScrollPhysics(),
               crossAxisSpacing: KvlSpacing.sm,
               mainAxisSpacing: KvlSpacing.sm,
-              childAspectRatio: 1.05,
+              childAspectRatio: 0.88,
               children: [
                 for (final mode in modes)
                   _ModeCard(
@@ -154,11 +154,19 @@ class _ModeCard extends StatelessWidget {
               HandwritingMode.useDefaultFont => context.l10n.modeDefaultFontLabel,
             },
             textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: KvlText.ui(12, FontWeight.w600),
           ),
           const SizedBox(height: 4),
           Expanded(
-            child: Text(sub, textAlign: TextAlign.center, style: KvlText.caption(10).copyWith(height: 1.3)),
+            child: Text(
+              sub,
+              textAlign: TextAlign.center,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: KvlText.caption(10).copyWith(height: 1.3),
+            ),
           ),
         ],
       ),

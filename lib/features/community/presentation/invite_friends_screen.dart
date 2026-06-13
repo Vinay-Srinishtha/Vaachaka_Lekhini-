@@ -16,8 +16,28 @@ class InviteFriendsScreen extends ConsumerWidget {
     final userId = session?.userId ?? 'guest';
     final link = invite.linkFor(userId);
 
-    Future<void> doShare() async {
-      await invite.share(userId, sender: session?.username);
+    Future<void> doWhatsApp() async {
+      await invite.shareViaWhatsApp(userId, sender: session?.username);
+    }
+
+    Future<void> doFacebook() async {
+      await invite.shareViaFacebook(userId);
+    }
+
+    Future<void> doInstagram() async {
+      final opened = await invite.shareViaInstagram(userId, sender: session?.username);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              opened
+                  ? 'Message copied — paste it in Instagram DMs'
+                  : 'Invite text copied to clipboard',
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
 
     Future<void> doCopy() async {
@@ -106,14 +126,14 @@ class InviteFriendsScreen extends ConsumerWidget {
             label: context.l10n.shareViaWhatsApp,
             color: const Color(0xFF25D366),
             icon: Icons.chat_bubble_rounded,
-            onTap: doShare,
+            onTap: doWhatsApp,
           ),
           const SizedBox(height: KvlSpacing.sm),
           _ShareTile(
             label: context.l10n.shareViaFacebook,
             color: const Color(0xFF1877F2),
             icon: Icons.facebook_rounded,
-            onTap: doShare,
+            onTap: doFacebook,
           ),
           const SizedBox(height: KvlSpacing.sm),
           _ShareTile(
@@ -124,7 +144,7 @@ class InviteFriendsScreen extends ConsumerWidget {
               colors: [Color(0xFFFFB95E), Color(0xFFC13584), Color(0xFF5851DB)],
             ),
             icon: Icons.camera_alt_rounded,
-            onTap: doShare,
+            onTap: doInstagram,
           ),
           const SizedBox(height: KvlSpacing.md),
           Center(

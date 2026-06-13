@@ -114,12 +114,13 @@ class _Body extends StatelessWidget {
     final rest = list.skip(3).where((f) => !selfInPodium || !f.isSelf).toList();
     final topInset2 = topInset; // alias for use inside ListView builder
 
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
     return ListView(
       padding: EdgeInsets.fromLTRB(
         KvlSpacing.lg,
         topInset2 + 84,
         KvlSpacing.lg,
-        KvlSpacing.lg,
+        bottomInset + 104,
       ),
       children: [
         _InviteBanner(),

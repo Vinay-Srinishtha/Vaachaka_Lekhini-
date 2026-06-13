@@ -97,7 +97,7 @@ class _NeedDropdown extends StatelessWidget {
             for (final n in MantraNeed.values)
               DropdownMenuItem(
                 value: n,
-                child: Text(n.label, style: KvlText.ui(13)),
+                child: Text(n.localizedLabel(context), style: KvlText.ui(13)),
               ),
           ],
           onChanged: onChanged,

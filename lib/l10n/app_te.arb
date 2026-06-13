@@ -33,7 +33,11 @@
   "enterSixDigitCodeSent": "మీ నంబర్‌కు పంపిన 6 అంకెల కోడ్ నమోదు చేయండి.",
   "enterSixDigitCodeSentToMobile": "+91{mobile} కు పంపిన 6 అంకెల కోడ్ నమోదు చేయండి",
   "@enterSixDigitCodeSentToMobile": {
-    "placeholders": { "mobile": { "type": "String" } }
+    "placeholders": {
+      "mobile": {
+        "type": "String"
+      }
+    }
   },
   "resendOtpCountdown": "{seconds}సె. లో OTP మళ్లీ పంపండి",
   "resendOtp": "OTP మళ్లీ పంపండి",
@@ -45,7 +49,11 @@
   "homeSublineEmpty": "మీ ఆధ్యాత్మిక ప్రయాణాన్ని ప్రారంభించండి",
   "homeSublineActive": "{count, plural, =1{బాగుంది! 1 కార్యక్రమం చురుకుగా ఉంది} other{బాగుంది! {count} కార్యక్రమాలు చురుకుగా ఉన్నాయి}}",
   "@homeSublineActive": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "saveNameButton": "పేరు సేవ్ చేయండి",
   "savingNameButton": "సేవ్ అవుతోంది…",
@@ -228,7 +236,11 @@
   "dedicateOfferPractice": "మీ జప సాధనను ఒక ప్రత్యేక వ్యక్తికి అర్పించండి",
   "dedicateOfferNamedPractice": "మీ {mantraName} సాధనను ఒక ప్రత్యేక వ్యక్తికి అర్పించండి",
   "@dedicateOfferNamedPractice": {
-    "placeholders": { "mantraName": { "type": "String" } }
+    "placeholders": {
+      "mantraName": {
+        "type": "String"
+      }
+    }
   },
   "dedicatedTo": "అంకితం",
   "dedicatedToHint": "ఉదా: నా అమ్మ, శ్రీ గురు, స్వయం",
@@ -331,7 +343,6 @@
   "bestStreakLabel": "అత్యుత్తమ స్ట్రీక్",
   "daysLabel": "రోజులు",
   "closeLabel": "మూసివేయి",
-
   "authErrorInvalidOtp": "తప్పు ధృవీకరణ కోడ్. దయచేసి మళ్ళీ ప్రయత్నించండి.",
   "authErrorInvalidMobile": "దయచేసి సరైన 10 అంకెల మొబైల్ నంబర్ నమోదు చేయండి.",
   "authErrorAccountNotFound": "ఈ నంబర్‌కు ఖాతా కనుగొనబడలేదు. ముందు ఖాతా సృష్టించండి.",
@@ -354,7 +365,11 @@
   "deleteMemberTitle": "సభ్యుడిని తొలగించాలా?",
   "deleteMemberContent": "{name}ని మీ ఖాతా నుండి తొలగిస్తుంది.",
   "@deleteMemberContent": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "deleteMemberConfirm": "తొలగించు",
   "changeMobileNumber": "మొబైల్ నంబర్ మార్చండి",
@@ -366,7 +381,11 @@
   "logInInstead": "లాగిన్ చేయండి",
   "resendCodeIn": "{seconds} సెకండ్లలో కోడ్ మళ్ళీ పంపండి",
   "@resendCodeIn": {
-    "placeholders": { "seconds": { "type": "int" } }
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
   },
   "resendCode": "కోడ్ మళ్ళీ పంపండి",
   "editProfileTitle": "ప్రొఫైల్ సవరించు",
@@ -382,6 +401,19 @@
   "retrainWritingStyle": "రాత శైలి మళ్ళీ శిక్షణ ఇవ్వండి",
   "resendCodeCountdown": "{seconds} సె. లో కోడ్ మళ్ళీ పంపండి",
   "@resendCodeCountdown": {
-    "placeholders": { "seconds": { "type": "int" } }
-  }
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "mantraNeedWealthProsperity": "సంపద & సమృద్ధి",
+  "mantraNeedPeaceCalm": "శాంతి & ప్రశాంతత",
+  "mantraNeedHealing": "వైద్యం",
+  "mantraNeedProtection": "రక్షణ",
+  "mantraNeedStrengthCourage": "బలం & ధైర్యం",
+  "mantraNeedSpiritualLiberation": "ఆధ్యాత్మిక విముక్తి",
+  "mantraNeedWisdomEnlightenment": "జ్ఞానం & జ్ఞానోదయం",
+  "mantraNeedDevotion": "భక్తి",
+  "appTitle": "వాచిక లేఖిని"
 }

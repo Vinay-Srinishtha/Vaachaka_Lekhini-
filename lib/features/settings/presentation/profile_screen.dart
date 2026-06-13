@@ -14,7 +14,6 @@ import '../../auth/domain/auth_repository.dart';
 import '../../auth/domain/session.dart';
 import '../../auth/presentation/auth_shared_widgets.dart';
 import '../../programs/domain/program.dart';
-import '../../rewards/domain/reward_rules.dart';
 import '../../../l10n/l10n.dart';
 import '../../../app/router.dart';
 import '../../../core/i18n/language_options.dart';
@@ -644,8 +643,9 @@ class ProfileScreen extends ConsumerWidget {
           : '0.0';
 
       // Next milestone
+      final milestoneThresholds = ref.watch(rewardRulesProvider).milestoneThresholds;
       int? nextMilestone;
-      for (final t in RewardRules.milestoneThresholds) {
+      for (final t in milestoneThresholds) {
         if (p.totalChants < t) { nextMilestone = t; break; }
       }
 

@@ -1193,4 +1193,23 @@ class AppLocalizationsHi extends AppLocalizations {
   String resendCodeCountdown(int seconds) {
     return '$seconds से. में कोड दोबारा भेजें';
   }
+
+  @override
+  String get mantraNeedWealthProsperity => 'धन और समृद्धि';
+  @override
+  String get mantraNeedPeaceCalm => 'शांति और सुकून';
+  @override
+  String get mantraNeedHealing => 'उपचार';
+  @override
+  String get mantraNeedProtection => 'सुरक्षा';
+  @override
+  String get mantraNeedStrengthCourage => 'शक्ति और साहस';
+  @override
+  String get mantraNeedSpiritualLiberation => 'आध्यात्मिक मुक्ति';
+  @override
+  String get mantraNeedWisdomEnlightenment => 'ज्ञान और प्रबोधन';
+  @override
+  String get mantraNeedDevotion => 'भक्ति';
+  @override
+  String get appTitle => 'वाचिक लेखिनी';
 }

@@ -13,7 +13,6 @@ import '../../../core/utils/indian_number_format.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../mantras/domain/mantra.dart';
 import '../../programs/domain/program.dart';
-import '../../rewards/domain/reward_rules.dart';
 import '../../settings/domain/settings_repository.dart';
 import '../../../l10n/l10n.dart';
 
@@ -322,7 +321,7 @@ class _PracticeDashboardView extends ConsumerState<_PracticeDashboard> {
   }
 
   int _chantsToNextMilestone(int total) {
-    for (final threshold in RewardRules.milestoneThresholds) {
+    for (final threshold in ref.read(rewardRulesProvider).milestoneThresholds) {
       if (total < threshold) return threshold - total;
     }
     return 0;

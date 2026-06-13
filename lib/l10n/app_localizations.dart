@@ -2291,6 +2291,15 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Resend code in {seconds}s'**
   String resendCodeCountdown(int seconds);
+  String get mantraNeedWealthProsperity;
+  String get mantraNeedPeaceCalm;
+  String get mantraNeedHealing;
+  String get mantraNeedProtection;
+  String get mantraNeedStrengthCourage;
+  String get mantraNeedSpiritualLiberation;
+  String get mantraNeedWisdomEnlightenment;
+  String get mantraNeedDevotion;
+  String get appTitle;
 }
 
 class _AppLocalizationsDelegate

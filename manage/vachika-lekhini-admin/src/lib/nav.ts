@@ -13,7 +13,9 @@ import {
 	Mic2,
 	UserPlus,
 	Smartphone,
-	BarChart3
+	BarChart3,
+	HelpCircle,
+	Sliders
 } from '@lucide/svelte';
 import type { AdminRole } from './roles';
 
@@ -33,6 +35,8 @@ export const NAV_ITEMS: NavItem[] = [
 	{ href: '/mantras', label: 'Mantras', icon: BookOpen, minRole: 'viewer', group: 'Catalog' },
 	{ href: '/store', label: 'Store', icon: ShoppingBag, minRole: 'viewer', group: 'Catalog' },
 	{ href: '/config', label: 'Config & Flags', icon: Settings2, minRole: 'viewer', group: 'Catalog' },
+	{ href: '/faqs', label: 'FAQs', icon: HelpCircle, minRole: 'viewer', group: 'Catalog' },
+	{ href: '/app-settings', label: 'App Settings', icon: Sliders, minRole: 'editor', group: 'Catalog' },
 
 	{ href: '/accounts', label: 'Accounts', icon: Users, minRole: 'editor', group: 'Users' },
 	{ href: '/programs', label: 'Programs', icon: Layers, minRole: 'editor', group: 'Users' },

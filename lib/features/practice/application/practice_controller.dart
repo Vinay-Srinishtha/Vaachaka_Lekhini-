@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers.dart';
+import '../../../core/storage/app_database.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../enrolment/voice/data/voice_enrolment_service.dart';
@@ -13,7 +14,6 @@ import '../../mantras/domain/mantra.dart';
 import '../../programs/domain/program.dart';
 import '../../programs/domain/program_repository.dart';
 import '../../programs/domain/session.dart';
-import '../../rewards/domain/reward_rules.dart';
 import '../../settings/domain/settings_repository.dart';
 
 /// View-state for a single program's practice screen.
@@ -30,6 +30,8 @@ class PracticeState {
     this.errorMessage,
     this.micPermanentlyDenied = false,
     this.targetReached = false,
+    this.draftCount,
+    this.draftModality,
   });
 
   final Program program;
@@ -53,6 +55,10 @@ class PracticeState {
   /// True when todaysTotal just crossed dailyTarget — triggers dedication prompt.
   final bool targetReached;
 
+  /// Non-null when a draft session exists for this program (app was killed mid-session).
+  final int? draftCount;
+  final SessionModality? draftModality;
+
   PracticeState copyWith({
     Program? program,
     SessionModality? modality,
@@ -66,6 +72,9 @@ class PracticeState {
     bool clearError = false,
     bool? micPermanentlyDenied,
     bool? targetReached,
+    int? draftCount,
+    SessionModality? draftModality,
+    bool clearDraft = false,
   }) => PracticeState(
     program: program ?? this.program,
     modality: modality ?? this.modality,
@@ -79,6 +88,8 @@ class PracticeState {
     errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
     micPermanentlyDenied: micPermanentlyDenied ?? this.micPermanentlyDenied,
     targetReached: targetReached ?? this.targetReached,
+    draftCount: clearDraft ? null : (draftCount ?? this.draftCount),
+    draftModality: clearDraft ? null : (draftModality ?? this.draftModality),
   );
 }
 
@@ -98,6 +109,8 @@ class PracticeController extends AsyncNotifier<PracticeState> {
 
   ProgramRepository get _programs => ref.read(programRepositoryProvider);
 
+  AppDatabase get _db => ref.read(appDatabaseProvider);
+
   @override
   Future<PracticeState> build() async {
     ref.onDispose(_cleanup);
@@ -109,6 +122,25 @@ class PracticeController extends AsyncNotifier<PracticeState> {
     final todaysTotal = await _programs.countForDay(programId, today);
     final streak = await _programs.currentStreak(programId);
 
+    // Load any draft saved before last app kill.
+    final draft = await _db.getDraft(programId);
+
+    // When the DB changes (e.g. sync pulls updated streak / session data from
+    // the server), refresh program stats so the counter screen never shows
+    // stale values.  Skip while a session is active to avoid mid-session jumps.
+    ref.listen(programsForActiveProfileProvider, (_, programs) async {
+      final s = state.value;
+      if (s == null || s.isRunning || s.activeSessionId != null) return;
+      final updated = programs.value?.where((p) => p.id == programId).firstOrNull;
+      if (updated == null) return;
+      final today = DateTime.now();
+      final newTotal = await _programs.countForDay(programId, today);
+      final newStreak = await _programs.currentStreak(programId);
+      state = AsyncData(
+        s.copyWith(program: updated, todaysTotal: newTotal, streak: newStreak),
+      );
+    });
+
     return PracticeState(
       program: program,
       modality: SessionModality.voice,
@@ -116,6 +148,8 @@ class PracticeController extends AsyncNotifier<PracticeState> {
       sessionCount: 0,
       todaysTotal: todaysTotal,
       streak: streak,
+      draftCount: (draft != null && draft.sessionCount > 0) ? draft.sessionCount : null,
+      draftModality: draft != null ? SessionModality.fromName(draft.modality) : null,
     );
   }
 
@@ -313,6 +347,14 @@ class PracticeController extends AsyncNotifier<PracticeState> {
     final delta = _pendingFlush;
     _pendingFlush = 0;
     await _programs.incrementSession(id, by: delta);
+    // Keep draft in sync so the count survives an app kill.
+    if (s != null && s.sessionCount > 0) {
+      await _db.saveDraft(
+        programId: programId,
+        count: s.sessionCount,
+        modality: s.modality.name,
+      );
+    }
   }
 
   /// Reload just the program object from DB (e.g. after a handwriting session
@@ -351,9 +393,13 @@ class PracticeController extends AsyncNotifier<PracticeState> {
     if (today >= program.dailyTarget && s.todaysTotal < program.dailyTarget) {
       unawaited(HapticFeedback.mediumImpact());
     }
-    if (RewardRules.milestoneCrossedLabel(before, after) != null) {
+    final rules = ref.read(rewardRulesProvider);
+    if (rules.milestoneCrossedLabel(before, after) != null) {
       unawaited(HapticFeedback.heavyImpact());
     }
+
+    // Session completed — discard any draft for this program.
+    await _db.deleteDraft(programId);
 
     state = AsyncData(
       s.copyWith(
@@ -364,12 +410,49 @@ class PracticeController extends AsyncNotifier<PracticeState> {
         streak: streak,
         clearSession: true,
         targetReached: false,
+        clearDraft: true,
       ),
     );
 
     // Drain outbox → server computes reward points → pull /api/v1/me →
     // reconcileFromServer writes local earn event → rewardTotalProvider updates live.
     unawaited(ref.read(syncEngineProvider).syncNow());
+  }
+
+  /// Restore a draft session: opens a new Session row with the saved count.
+  Future<void> restoreDraft() async {
+    final s = state.value;
+    if (s == null || s.draftCount == null || s.activeSessionId != null) return;
+
+    final profile = ref.read(activeProfileProvider).value;
+    final modality = s.draftModality ?? SessionModality.manual;
+    final session = await _programs.startSession(
+      programId: s.program.id,
+      memberId: profile?.id ?? s.program.memberId,
+      modality: modality,
+    );
+
+    final count = s.draftCount!;
+    _pendingFlush = count;
+    await _flush();
+
+    state = AsyncData(
+      s.copyWith(
+        isRunning: false,
+        sessionCount: count,
+        modality: modality,
+        activeSessionId: session.id,
+        clearDraft: true,
+        clearError: true,
+      ),
+    );
+  }
+
+  /// Discard a draft without restoring it.
+  Future<void> discardDraft() async {
+    await _db.deleteDraft(programId);
+    final s = state.value;
+    if (s != null) state = AsyncData(s.copyWith(clearDraft: true));
   }
 
   void _failVoice(String message) {

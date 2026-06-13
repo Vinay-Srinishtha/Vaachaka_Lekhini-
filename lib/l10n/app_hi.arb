@@ -33,7 +33,11 @@
   "enterSixDigitCodeSent": "अपने नंबर पर भेजा गया 6 अंकों का कोड दर्ज करें।",
   "enterSixDigitCodeSentToMobile": "+91{mobile} पर भेजा गया 6 अंकों का कोड दर्ज करें",
   "@enterSixDigitCodeSentToMobile": {
-    "placeholders": { "mobile": { "type": "String" } }
+    "placeholders": {
+      "mobile": {
+        "type": "String"
+      }
+    }
   },
   "resendOtpCountdown": "{seconds}से. में OTP दोबारा भेजें",
   "resendOtp": "OTP दोबारा भेजें",
@@ -45,7 +49,11 @@
   "homeSublineEmpty": "अपनी आध्यात्मिक यात्रा शुरू करें",
   "homeSublineActive": "{count, plural, =1{शानदार! 1 कार्यक्रम सक्रिय है} other{शानदार! {count} कार्यक्रम सक्रिय हैं}}",
   "@homeSublineActive": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "saveNameButton": "नाम सहेजें",
   "savingNameButton": "सहेजा जा रहा है…",
@@ -228,7 +236,11 @@
   "dedicateOfferPractice": "अपनी जप साधना किसी खास व्यक्ति को अर्पित करें",
   "dedicateOfferNamedPractice": "अपनी {mantraName} साधना किसी खास व्यक्ति को अर्पित करें",
   "@dedicateOfferNamedPractice": {
-    "placeholders": { "mantraName": { "type": "String" } }
+    "placeholders": {
+      "mantraName": {
+        "type": "String"
+      }
+    }
   },
   "dedicatedTo": "समर्पित",
   "dedicatedToHint": "जैसे: मेरी माँ, श्री गुरु, स्वयं",
@@ -331,7 +343,6 @@
   "bestStreakLabel": "सर्वश्रेष्ठ स्ट्रीक",
   "daysLabel": "दिन",
   "closeLabel": "बंद करें",
-
   "authErrorInvalidOtp": "गलत सत्यापन कोड। कृपया पुनः प्रयास करें।",
   "authErrorInvalidMobile": "कृपया एक मान्य 10-अंकीय मोबाइल नंबर दर्ज करें।",
   "authErrorAccountNotFound": "इस नंबर के लिए कोई खाता नहीं मिला। पहले खाता बनाएं।",
@@ -354,7 +365,11 @@
   "deleteMemberTitle": "सदस्य हटाएं?",
   "deleteMemberContent": "{name} को आपके खाते से हटा देगा।",
   "@deleteMemberContent": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "deleteMemberConfirm": "हटाएं",
   "changeMobileNumber": "मोबाइल नंबर बदलें",
@@ -366,7 +381,11 @@
   "logInInstead": "लॉग इन करें",
   "resendCodeIn": "{seconds} सेकंड में कोड दोबारा भेजें",
   "@resendCodeIn": {
-    "placeholders": { "seconds": { "type": "int" } }
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
   },
   "resendCode": "कोड दोबारा भेजें",
   "editProfileTitle": "प्रोफ़ाइल संपादित करें",
@@ -382,6 +401,19 @@
   "retrainWritingStyle": "लेखन शैली पुनः प्रशिक्षित करें",
   "resendCodeCountdown": "{seconds} से. में कोड दोबारा भेजें",
   "@resendCodeCountdown": {
-    "placeholders": { "seconds": { "type": "int" } }
-  }
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "mantraNeedWealthProsperity": "धन और समृद्धि",
+  "mantraNeedPeaceCalm": "शांति और सुकून",
+  "mantraNeedHealing": "उपचार",
+  "mantraNeedProtection": "सुरक्षा",
+  "mantraNeedStrengthCourage": "शक्ति और साहस",
+  "mantraNeedSpiritualLiberation": "आध्यात्मिक मुक्ति",
+  "mantraNeedWisdomEnlightenment": "ज्ञान और प्रबोधन",
+  "mantraNeedDevotion": "भक्ति",
+  "appTitle": "वाचिक लेखिनी"
 }

@@ -1,36 +1,46 @@
-/// Pure earn/spend rates. Centralised so we can tune the economy in
-/// one place. Phase 9 keeps these client-side; the server validates.
-abstract final class RewardRules {
-  /// Earn for hitting a program's daily target.
-  static const int dailyTarget = 50;
+import '../../../core/remote_config/remote_config.dart';
 
-  /// Earn for crossing a lifetime-count milestone (10L, 50L, 1Cr…).
-  /// 500 for any milestone for now; tweak if needed.
-  static const int milestoneCross = 500;
+/// Reward economy rates and milestone thresholds.
+/// Driven by FeatureFlags at /api/v1/config so the economy can be tuned
+/// from the admin panel without a release. All business logic validation
+/// runs server-side; this class is used only for client-side UI feedback
+/// (haptic triggers, milestone labels).
+class RewardRules {
+  const RewardRules({
+    this.dailyTarget = 50,
+    this.milestoneCross = 500,
+    this.friendReferral = 100,
+    this.charityDonation = 50,
+    this.milestoneThresholds = const [
+      100000,
+      500000,
+      1000000,
+      2500000,
+      5000000,
+      10000000,
+    ],
+  });
 
-  /// Earn when a referred friend signs up. (Phase 9 wires the trigger.)
-  static const int friendReferral = 100;
+  final int dailyTarget;
+  final int milestoneCross;
+  final int friendReferral;
+  final int charityDonation;
+  final List<int> milestoneThresholds;
 
-  /// Optional small spend for donating points to charity.
-  static const int charityDonation = 50;
+  factory RewardRules.fromConfig(RemoteConfig cfg) => RewardRules(
+        dailyTarget: cfg.intFlag('reward_daily_points', fallback: 50),
+        milestoneCross: cfg.intFlag('reward_milestone_points', fallback: 500),
+        friendReferral: cfg.intFlag('reward_friend_referral', fallback: 100),
+        charityDonation: cfg.intFlag('reward_charity_donation', fallback: 50),
+        milestoneThresholds: cfg.listIntFlag(
+          'reward_milestone_thresholds',
+          fallback: const [100000, 500000, 1000000, 2500000, 5000000, 10000000],
+        ),
+      );
 
-  /// Milestone thresholds in lifetime chants (Indian-system labelling).
-  static const milestoneThresholds = <int>[
-    100000,   // 1 Lakh
-    500000,
-    1000000,  // 10 Lakh
-    2500000,
-    5000000,  // 50 Lakh
-    10000000, // 1 Crore
-  ];
-
-  /// Returns the milestone label crossed when totals move from [before] to [after],
-  /// or null if no boundary was crossed.
-  static String? milestoneCrossedLabel(int before, int after) {
+  String? milestoneCrossedLabel(int before, int after) {
     for (final t in milestoneThresholds) {
-      if (before < t && after >= t) {
-        return _label(t);
-      }
+      if (before < t && after >= t) return _label(t);
     }
     return null;
   }

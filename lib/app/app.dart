@@ -65,11 +65,17 @@ class _KvlAppState extends ConsumerState<KvlApp> with WidgetsBindingObserver {
     // Keep the active profile's language in sync with app-level settings.
     ref.watch(profileLanguageSyncProvider);
 
-    // Switch UI language when the active profile changes (each family member
-    // may have a different preferred language).
+    // Switch UI language when the user switches to a different family member.
+    // Guard against cold start: on first emission prev is null/AsyncLoading, so
+    // the stored Hive setting (the real source of truth) must not be overwritten
+    // by the server-returned profile.language which may default to 'en'.
     ref.listen(activeProfileProvider, (prev, next) {
       final profile = next.value;
       if (profile == null) return;
+      // Only act when transitioning from one loaded member to another.
+      final prevProfile = prev?.value;
+      if (prevProfile == null) return;          // cold start — trust stored settings
+      if (prevProfile.id == profile.id) return; // same member — no switch
       final current = ref.read(settingsProvider).value;
       if (current != null && current.languageCode != profile.language) {
         unawaited(
@@ -97,7 +103,7 @@ class _KvlAppState extends ConsumerState<KvlApp> with WidgetsBindingObserver {
     });
 
     return MaterialApp.router(
-      title: 'Vaachaka Lekhini',
+      onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       debugShowCheckedModeBanner: false,
       theme: buildKvlLightTheme(),
       darkTheme: buildKvlDarkTheme(),

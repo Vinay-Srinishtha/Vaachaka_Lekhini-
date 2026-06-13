@@ -108,7 +108,6 @@ class TwoFactorOtpService implements OtpService {
 			}
 		});
 		if (recent) {
-			console.log(`[otp:2factor] cooldown active for ${mobile}, reusing challenge`);
 			return { challengeId: recent.id };
 		}
 
@@ -131,7 +130,6 @@ class TwoFactorOtpService implements OtpService {
 				expiresAt: new Date(Date.now() + OTP_TTL_SECONDS * 1000)
 			}
 		});
-		console.log(`[otp:2factor] OTP sent to ${mobile}, session ${data.Details}`);
 		return { challengeId: challenge.id };
 	}
 

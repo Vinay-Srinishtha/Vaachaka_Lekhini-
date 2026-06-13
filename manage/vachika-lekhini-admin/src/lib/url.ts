@@ -19,19 +19,6 @@ export function patchQuery(url: URL, patch: QueryPatch): string {
 	return `${url.pathname}${qs ? '?' + qs : ''}`;
 }
 
-/// Read an integer query param with bounds + fallback.
-export function qInt(url: URL, key: string, fallback: number, min = 1, max = 1_000_000): number {
-	const raw = url.searchParams.get(key);
-	if (raw === null) return fallback;
-	const n = parseInt(raw, 10);
-	if (!Number.isFinite(n)) return fallback;
-	return Math.max(min, Math.min(max, n));
-}
-
-export function qString(url: URL, key: string, fallback = ''): string {
-	return url.searchParams.get(key) ?? fallback;
-}
-
 export interface Sort {
 	col: string;
 	dir: 'asc' | 'desc';

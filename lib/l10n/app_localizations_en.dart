@@ -1195,4 +1195,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String resendCodeCountdown(int seconds) {
     return 'Resend code in ${seconds}s';
   }
+
+  @override
+  String get mantraNeedWealthProsperity => 'Wealth & Prosperity';
+  @override
+  String get mantraNeedPeaceCalm => 'Peace & Calm';
+  @override
+  String get mantraNeedHealing => 'Healing';
+  @override
+  String get mantraNeedProtection => 'Protection';
+  @override
+  String get mantraNeedStrengthCourage => 'Strength & Courage';
+  @override
+  String get mantraNeedSpiritualLiberation => 'Spiritual Liberation';
+  @override
+  String get mantraNeedWisdomEnlightenment => 'Wisdom & Enlightenment';
+  @override
+  String get mantraNeedDevotion => 'Devotion';
+  @override
+  String get appTitle => 'Vaachaka Lekhini';
 }

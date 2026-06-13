@@ -1,7 +1,8 @@
-import 'package:characters/characters.dart';
 import 'package:equatable/equatable.dart';
+import 'package:flutter/widgets.dart';
 
 import '../../../core/widgets/mantra_thumb.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// A mantra's name in every script we display. Devanagari is the
 /// canonical chant form; Roman is the transliteration; Telugu / Kannada
@@ -21,7 +22,7 @@ class MantraName extends Equatable {
 
   /// Single-character glyph for circular thumbnails. Falls back to the
   /// first character of the roman name if none is provided.
-  String thumbGlyph() => devanagari.characters.first;
+  String thumbGlyph() => devanagari.isEmpty ? '' : String.fromCharCode(devanagari.runes.first);
 
   @override
   List<Object?> get props => [devanagari, roman, telugu, kannada];
@@ -39,16 +40,19 @@ enum MantraNeed {
   wisdomEnlightenment,
   devotion;
 
-  String get label => switch (this) {
-        MantraNeed.wealthProsperity => 'Wealth & Prosperity',
-        MantraNeed.peaceCalm => 'Peace & Calm',
-        MantraNeed.healing => 'Healing',
-        MantraNeed.protection => 'Protection',
-        MantraNeed.strengthCourage => 'Strength & Courage',
-        MantraNeed.spiritualLiberation => 'Spiritual Liberation',
-        MantraNeed.wisdomEnlightenment => 'Wisdom & Enlightenment',
-        MantraNeed.devotion => 'Devotion',
-      };
+  String localizedLabel(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return switch (this) {
+      MantraNeed.wealthProsperity => l.mantraNeedWealthProsperity,
+      MantraNeed.peaceCalm => l.mantraNeedPeaceCalm,
+      MantraNeed.healing => l.mantraNeedHealing,
+      MantraNeed.protection => l.mantraNeedProtection,
+      MantraNeed.strengthCourage => l.mantraNeedStrengthCourage,
+      MantraNeed.spiritualLiberation => l.mantraNeedSpiritualLiberation,
+      MantraNeed.wisdomEnlightenment => l.mantraNeedWisdomEnlightenment,
+      MantraNeed.devotion => l.mantraNeedDevotion,
+    };
+  }
 }
 
 /// Tags that classify a mantra. A mantra-by-need lookup matches one or

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/providers.dart';
 import '../../../app/router.dart';
+import '../../../core/remote_config/remote_config.dart';
 import '../../../core/navigation/back_navigation.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/utils/indian_number_format.dart';
@@ -30,12 +31,33 @@ class _SetProgramTargetScreenState
   // ── Days ────────────────────────────────────────────────────────────────────
   static const _minDays = 1;
   static const _maxSliderDays = 2000;
-  static const _dayPresets = <(int, String, KvlChipVariant)>[
-    (100, 'Fastest', KvlChipVariant.primary),
-    (180, 'Balanced', KvlChipVariant.primary),
-    (365, 'Gentle', KvlChipVariant.teal),
-    (500, 'Sustainable', KvlChipVariant.green),
+  static const _presetVariants = [
+    KvlChipVariant.primary,
+    KvlChipVariant.primary,
+    KvlChipVariant.teal,
+    KvlChipVariant.green,
   ];
+
+  List<(int, String, KvlChipVariant)> _resolvePresets(RemoteConfig cfg) {
+    final raw = cfg.jsonListFlag('program_day_presets');
+    if (raw.isNotEmpty) {
+      return raw.asMap().entries.map((e) {
+        final m = e.value;
+        final days = (m['days'] as num?)?.toInt() ?? 180;
+        final label = m['label'] as String? ?? '$days days';
+        final variant = e.key < _presetVariants.length
+            ? _presetVariants[e.key]
+            : KvlChipVariant.primary;
+        return (days, label, variant);
+      }).toList();
+    }
+    return const [
+      (100, 'Fastest', KvlChipVariant.primary),
+      (180, 'Balanced', KvlChipVariant.primary),
+      (365, 'Gentle', KvlChipVariant.teal),
+      (500, 'Sustainable', KvlChipVariant.green),
+    ];
+  }
 
   int _days = 180;
   bool _busy = false;
@@ -83,7 +105,8 @@ class _SetProgramTargetScreenState
     return '~${IndianNumberFormat.format(perDay)} chants/day · $timeStr';
   }
 
-  bool get _isCustomDays => !_dayPresets.any((p) => p.$1 == _days);
+  bool _isCustomDays(List<(int, String, KvlChipVariant)> presets) =>
+      !presets.any((p) => p.$1 == _days);
 
   // ── Actions ───────────────────────────────────────────────────────────────────
   Future<void> _confirm() async {
@@ -127,6 +150,8 @@ class _SetProgramTargetScreenState
   // ── Build ─────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    final cfg = ref.watch(remoteConfigProvider).value ?? RemoteConfig.empty;
+    final dayPresets = _resolvePresets(cfg);
     final sliderMax =
         _days > _maxSliderDays ? _days.toDouble() : _maxSliderDays.toDouble();
     final pace = _pace(_days);
@@ -199,7 +224,7 @@ class _SetProgramTargetScreenState
             spacing: KvlSpacing.xs,
             runSpacing: KvlSpacing.xs,
             children: [
-              for (final (days, label, chipVariant) in _dayPresets)
+              for (final (days, label, chipVariant) in dayPresets)
                 GestureDetector(
                   onTap: () => setState(() => _days = days),
                   child: KvlChip(
@@ -215,7 +240,7 @@ class _SetProgramTargetScreenState
 
           // Slider
           KvlCard(
-            variant: _isCustomDays ? KvlCardVariant.soft : KvlCardVariant.plain,
+            variant: _isCustomDays(dayPresets) ? KvlCardVariant.soft : KvlCardVariant.plain,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

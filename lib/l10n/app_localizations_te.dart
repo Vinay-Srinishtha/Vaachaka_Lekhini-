@@ -1194,4 +1194,23 @@ class AppLocalizationsTe extends AppLocalizations {
   String resendCodeCountdown(int seconds) {
     return '$seconds సె. లో కోడ్ మళ్ళీ పంపండి';
   }
+
+  @override
+  String get mantraNeedWealthProsperity => 'సంపద & సమృద్ధి';
+  @override
+  String get mantraNeedPeaceCalm => 'శాంతి & ప్రశాంతత';
+  @override
+  String get mantraNeedHealing => 'వైద్యం';
+  @override
+  String get mantraNeedProtection => 'రక్షణ';
+  @override
+  String get mantraNeedStrengthCourage => 'బలం & ధైర్యం';
+  @override
+  String get mantraNeedSpiritualLiberation => 'ఆధ్యాత్మిక విముక్తి';
+  @override
+  String get mantraNeedWisdomEnlightenment => 'జ్ఞానం & జ్ఞానోదయం';
+  @override
+  String get mantraNeedDevotion => 'భక్తి';
+  @override
+  String get appTitle => 'వాచిక లేఖిని';
 }

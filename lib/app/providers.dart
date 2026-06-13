@@ -33,6 +33,7 @@ import '../features/programs/domain/program.dart';
 import '../features/programs/domain/program_repository.dart';
 import '../features/rewards/data/reward_repository_drift.dart';
 import '../features/rewards/domain/reward_repository.dart';
+import '../features/rewards/domain/reward_rules.dart';
 import '../features/rewards/domain/store_item.dart';
 import '../features/settings/data/settings_repository_local.dart';
 import '../features/settings/domain/settings_repository.dart';
@@ -171,7 +172,10 @@ final handwritingRepositoryProvider = Provider<HandwritingRepository>((ref) {
   return HandwritingRepositoryLocal(cacheBox());
 });
 
-final inviteServiceProvider = Provider<InviteService>((ref) => InviteService());
+final inviteServiceProvider = Provider<InviteService>((ref) {
+  final host = ref.watch(appSettingsProvider).value?.inviteHost ?? 'kvl.app';
+  return InviteService(host: host);
+});
 
 final rewardRepositoryProvider = Provider<RewardRepository>((ref) {
   // ADDED: outbox so earn/spend auto-queue to Prisma
@@ -500,6 +504,56 @@ final globalStatsProvider = FutureProvider.autoDispose
     );
   } catch (_) {
     return (globalChantCount: 0, memberCount: 0);
+  }
+});
+
+/// Reward economy rates sourced from FeatureFlags at /api/v1/config.
+/// Flutter uses this only for UI feedback (haptics, milestone labels).
+/// All actual earn/spend validation runs server-side.
+final rewardRulesProvider = Provider<RewardRules>((ref) {
+  final cfg = ref.watch(remoteConfigProvider).value ?? RemoteConfig.empty;
+  return RewardRules.fromConfig(cfg);
+});
+
+/// Active FAQs from /api/v1/faqs. Cached 5 min via HTTP headers.
+final faqsProvider = FutureProvider<List<({String question, String answer})>>((ref) async {
+  try {
+    final api = ref.watch(apiClientProvider);
+    final res = await api.dio.get<Map<String, dynamic>>('/api/v1/faqs');
+    final list = (res.data?['faqs'] as List<dynamic>?) ?? [];
+    return list.map((e) {
+      final m = e as Map<String, dynamic>;
+      return (question: m['question'] as String, answer: m['answer'] as String);
+    }).toList();
+  } catch (_) {
+    return const [];
+  }
+});
+
+/// App-wide settings (support email, privacy policy, logo URL) from /api/v1/app-settings.
+final appSettingsProvider =
+    FutureProvider<({String supportEmail, String privacyPolicy, String? logoUrl, String inviteHost})>((ref) async {
+  try {
+    final api = ref.watch(apiClientProvider);
+    final res = await api.dio.get<Map<String, dynamic>>('/api/v1/app-settings');
+    final d = res.data ?? <String, dynamic>{};
+    return (
+      supportEmail: (d['support_email'] as String?)?.isNotEmpty == true
+          ? d['support_email'] as String
+          : 'support@vaachikalekhini.com',
+      privacyPolicy: d['privacy_policy'] as String? ?? '',
+      logoUrl: d['app_logo_url'] as String?,
+      inviteHost: (d['invite_host'] as String?)?.isNotEmpty == true
+          ? d['invite_host'] as String
+          : 'kvl.app',
+    );
+  } catch (_) {
+    return (
+      supportEmail: 'support@vaachikalekhini.com',
+      privacyPolicy: '',
+      logoUrl: null,
+      inviteHost: 'kvl.app',
+    );
   }
 });
 

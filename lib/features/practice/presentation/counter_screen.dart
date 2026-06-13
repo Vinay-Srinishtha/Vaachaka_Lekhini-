@@ -13,7 +13,6 @@ import '../../../core/utils/indian_number_format.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../l10n/l10n.dart';
 import '../../programs/domain/session.dart';
-import '../../rewards/domain/reward_rules.dart';
 import '../../settings/domain/settings_repository.dart';
 import '../application/practice_controller.dart';
 
@@ -51,6 +50,57 @@ class _Body extends ConsumerStatefulWidget {
 
 class _BodyState extends ConsumerState<_Body> {
   bool _dedicationShown = false;
+  bool _draftDialogShown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if ((widget.state.draftCount ?? 0) > 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_draftDialogShown) {
+          _draftDialogShown = true;
+          _showRestoreDraftDialog(context);
+        }
+      });
+    }
+  }
+
+  Future<void> _showRestoreDraftDialog(BuildContext context) async {
+    final controller = ref.read(
+      practiceControllerProvider(widget.programId).notifier,
+    );
+    final count = widget.state.draftCount ?? 0;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: KvlRadius.brLG),
+        title: const Text('Restore Draft Session?'),
+        content: Text(
+          'You have an unsaved session with '
+          '${IndianNumberFormat.format(count)} chants.\n'
+          'Would you like to restore it?',
+          style: KvlText.body(13).copyWith(height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              controller.discardDraft();
+            },
+            child: const Text('Discard'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              controller.restoreDraft();
+            },
+            child: const Text('Restore'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -286,7 +336,7 @@ class _BodyState extends ConsumerState<_Body> {
   }
 
   int _nextMilestone(int total) {
-    for (final t in RewardRules.milestoneThresholds) {
+    for (final t in ref.read(rewardRulesProvider).milestoneThresholds) {
       if (total < t) return t - total;
     }
     return 0;

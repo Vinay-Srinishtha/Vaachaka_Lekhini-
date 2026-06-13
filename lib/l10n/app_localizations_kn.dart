@@ -1193,4 +1193,23 @@ class AppLocalizationsKn extends AppLocalizations {
   String resendCodeCountdown(int seconds) {
     return '$seconds ಸೆ.ನಲ್ಲಿ ಕೋಡ್ ಮರಳಿ ಕಳಿಸಿ';
   }
+
+  @override
+  String get mantraNeedWealthProsperity => 'ಸಂಪತ್ತು & ಸಮೃದ್ಧಿ';
+  @override
+  String get mantraNeedPeaceCalm => 'ಶಾಂತಿ & ನೆಮ್ಮದಿ';
+  @override
+  String get mantraNeedHealing => 'ಚಿಕಿತ್ಸೆ';
+  @override
+  String get mantraNeedProtection => 'ರಕ್ಷಣೆ';
+  @override
+  String get mantraNeedStrengthCourage => 'ಶಕ್ತಿ & ಧೈರ್ಯ';
+  @override
+  String get mantraNeedSpiritualLiberation => 'ಆಧ್ಯಾತ್ಮಿಕ ಮುಕ್ತಿ';
+  @override
+  String get mantraNeedWisdomEnlightenment => 'ಜ್ಞಾನ & ಜ್ಞಾನೋದಯ';
+  @override
+  String get mantraNeedDevotion => 'ಭಕ್ತಿ';
+  @override
+  String get appTitle => 'ವಾಚಿಕ ಲೇಖಿನಿ';
 }

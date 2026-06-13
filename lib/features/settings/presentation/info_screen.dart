@@ -1,19 +1,58 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../app/providers.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../l10n/l10n.dart';
 
 /// About App, Help & FAQs, Report Issue, Share Feedback, Privacy Policy.
-class InfoScreen extends StatelessWidget {
+class InfoScreen extends ConsumerWidget {
   const InfoScreen({super.key, required this.topic});
   final String topic;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (topic == 'help') return const _FaqScreen();
     if (topic == 'report') return const _ReportScreen();
+
+    // Privacy policy — load body from API, fall back to l10n string.
+    if (topic == 'privacy') {
+      final settingsAsync = ref.watch(appSettingsProvider);
+      final privacyBody = settingsAsync.value?.privacyPolicy;
+      final t = _topicFor(context, topic);
+      return KvlScaffold(
+        title: t.title,
+        scrollable: true,
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: KvlSpacing.lg),
+            Container(
+              width: 64,
+              height: 64,
+              decoration: const BoxDecoration(
+                color: KvlColors.primaryGhost,
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Icon(t.icon, color: KvlColors.primaryDeep, size: 28),
+            ),
+            const SizedBox(height: KvlSpacing.md),
+            Center(child: Text(t.title, style: KvlText.title(17))),
+            const SizedBox(height: KvlSpacing.sm),
+            Text(
+              (privacyBody != null && privacyBody.isNotEmpty)
+                  ? privacyBody
+                  : t.body,
+              textAlign: TextAlign.center,
+              style: KvlText.body(12).copyWith(height: 1.6),
+            ),
+          ],
+        ),
+      );
+    }
 
     final t = _topicFor(context, topic);
     final actionLabel = _actionLabel(context, topic);
@@ -119,15 +158,15 @@ class InfoScreen extends StatelessWidget {
 // Report Issue — full text-input form that launches a mailto: on send.
 // ---------------------------------------------------------------------------
 
-class _ReportScreen extends StatefulWidget {
+class _ReportScreen extends ConsumerStatefulWidget {
   const _ReportScreen();
 
   @override
-  State<_ReportScreen> createState() => _ReportScreenState();
+  ConsumerState<_ReportScreen> createState() => _ReportScreenState();
 }
 
-class _ReportScreenState extends State<_ReportScreen> {
-  static const _recipientEmail = 'vinaaysai@gmail.com';
+class _ReportScreenState extends ConsumerState<_ReportScreen> {
+  static const _fallbackEmail = 'support@vaachikalekhini.com';
 
   final _formKey = GlobalKey<FormState>();
   final _subjectCtrl = TextEditingController(text: 'Bug Report');
@@ -141,13 +180,19 @@ class _ReportScreenState extends State<_ReportScreen> {
     super.dispose();
   }
 
+  String get _recipientEmail {
+    final settings = ref.read(appSettingsProvider).value;
+    return settings?.supportEmail ?? _fallbackEmail;
+  }
+
   Future<void> _send() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _sending = true);
 
+    final email = _recipientEmail;
     final subject = Uri.encodeComponent(_subjectCtrl.text.trim());
     final body = Uri.encodeComponent(_bodyCtrl.text.trim());
-    final uri = Uri.parse('mailto:$_recipientEmail?subject=$subject&body=$body');
+    final uri = Uri.parse('mailto:$email?subject=$subject&body=$body');
 
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
@@ -162,8 +207,8 @@ class _ReportScreenState extends State<_ReportScreen> {
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No email app found. Please email vinaaysai@gmail.com directly.'),
+          SnackBar(
+            content: Text('No email app found. Please email $email directly.'),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -175,6 +220,10 @@ class _ReportScreenState extends State<_ReportScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch so the email address updates if the provider resolves after build.
+    final settingsAsync = ref.watch(appSettingsProvider);
+    final email = settingsAsync.value?.supportEmail ?? _fallbackEmail;
+
     return KvlScaffold(
       title: 'Report Issue',
       scrollable: true,
@@ -246,7 +295,7 @@ class _ReportScreenState extends State<_ReportScreen> {
             const SizedBox(height: KvlSpacing.sm),
             Center(
               child: Text(
-                'Sends to $_recipientEmail',
+                'Sends to $email',
                 style: KvlText.muted(10),
               ),
             ),
@@ -258,64 +307,52 @@ class _ReportScreenState extends State<_ReportScreen> {
 }
 
 // ---------------------------------------------------------------------------
+// Help & FAQs — loaded from /api/v1/faqs with local fallback list.
+// ---------------------------------------------------------------------------
 
-class _FaqScreen extends StatelessWidget {
+class _FaqScreen extends ConsumerWidget {
   const _FaqScreen();
 
-  static const _faqs = [
+  static const _fallbackFaqs = [
     (
       q: 'How do I start a new mantra program?',
-      a: 'Go to Programs → tap "Create New Program" → pick a mantra → set your daily target → begin. Your progress is saved automatically.',
-    ),
-    (
-      q: 'How does voice counting work?',
-      a: 'Vaachaka Lekhini listens for your mantra using offline speech recognition (Vosk). No audio is ever sent to a server. Tap START on the counter screen, chant aloud, and the counter increments automatically.',
-    ),
-    (
-      q: 'Why isn\'t my voice being counted?',
-      a: 'Make sure microphone permission is granted in your phone\'s Settings. Try re-training your voice sample in Profile → Voice Settings → Re-train Voice. Speak at a normal pace with a brief pause between repetitions.',
-    ),
-    (
-      q: 'How does handwriting verification work?',
-      a: 'When you write the mantra on-screen, the app compares it to your enrolled sample using a pixel-grid similarity check. If your score is below the threshold, try writing more slowly and clearly.',
-    ),
-    (
-      q: 'Where is my data stored?',
-      a: 'All practice data (chant counts, session history, handwriting samples) lives on your device in a local database. It is synced to the cloud when you are connected, so you can restore everything on a new device by logging in with your registered number.',
-    ),
-    (
-      q: 'How do I change my registered mobile number?',
-      a: 'Go to Profile → Edit (top right) → tap the phone number field → enter your new number → verify via OTP. The change is saved to the server immediately.',
-    ),
-    (
-      q: 'How do reward points work?',
-      a: 'You earn points by completing milestones (1,000 / 10,000 / 1,00,000 / 10,00,000 chants) and when friends you invite join the app. Points can be redeemed in the Store tab.',
-    ),
-    (
-      q: 'Can I add family members?',
-      a: 'Yes. Go to Profile → Family Members → Add Family Member. Each member has their own programs, progress, and reward balance. Switch between members using the profile selector.',
-    ),
-    (
-      q: 'What if the app doesn\'t notify me at the right time?',
-      a: 'Go to Profile → Practice Settings → Reminder Time and set your preferred time. Make sure notification permission is granted for this app in your phone\'s Settings.',
+      a: 'Go to Programs → tap "Create New Program" → pick a mantra → set your daily target → begin.',
     ),
     (
       q: 'How do I contact support?',
-      a: 'Go to Profile → Report Issue to send an email report, or tap Share Feedback to send a suggestion. We respond to every message.',
+      a: 'Go to Profile → Report Issue to send an email report. We respond to every message.',
     ),
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final faqsAsync = ref.watch(faqsProvider);
+
     return KvlScaffold(
       title: context.l10n.infoHelpTitle,
       scrollable: false,
-      body: ListView.separated(
-        padding: const EdgeInsets.symmetric(vertical: KvlSpacing.sm),
-        itemCount: _faqs.length,
-        separatorBuilder: (_, _) => const SizedBox(height: KvlSpacing.xs),
-        itemBuilder: (context, i) => _FaqTile(q: _faqs[i].q, a: _faqs[i].a),
+      body: faqsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, st) => _buildList(context, _fallbackFaqs.map((e) => (question: e.q, answer: e.a)).toList()),
+        data: (faqs) {
+          if (faqs.isEmpty) {
+            return _buildList(
+              context,
+              _fallbackFaqs.map((e) => (question: e.q, answer: e.a)).toList(),
+            );
+          }
+          return _buildList(context, faqs);
+        },
       ),
+    );
+  }
+
+  Widget _buildList(BuildContext context, List<({String question, String answer})> faqs) {
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(vertical: KvlSpacing.sm),
+      itemCount: faqs.length,
+      separatorBuilder: (_, _) => const SizedBox(height: KvlSpacing.xs),
+      itemBuilder: (context, i) => _FaqTile(q: faqs[i].question, a: faqs[i].answer),
     );
   }
 }

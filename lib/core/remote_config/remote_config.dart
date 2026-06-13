@@ -40,5 +40,20 @@ class RemoteConfig {
     return v.toString();
   }
 
+  List<int> listIntFlag(String key, {required List<int> fallback}) {
+    final v = _values[key];
+    if (v is List && v.isNotEmpty) {
+      final result = v.whereType<num>().map((e) => e.toInt()).toList();
+      if (result.isNotEmpty) return result;
+    }
+    return fallback;
+  }
+
+  List<Map<String, Object?>> jsonListFlag(String key) {
+    final v = _values[key];
+    if (v is List) return v.whereType<Map<String, Object?>>().toList();
+    return const [];
+  }
+
   Map<String, Object?> get all => Map.unmodifiable(_values);
 }

@@ -107,11 +107,18 @@ class _Body extends StatelessWidget {
       );
     }
 
-    final podium = list.take(3).toList();
-    // Avoid showing the current user twice: if they appear in the podium,
-    // skip their entry in the rest list.
+    // One entry per account: keep only the first (highest-ranked) self row.
+    bool selfSeen = false;
+    final deduped = list.where((f) {
+      if (!f.isSelf) return true;
+      if (selfSeen) return false;
+      selfSeen = true;
+      return true;
+    }).toList();
+
+    final podium = deduped.take(3).toList();
     final selfInPodium = podium.any((f) => f.isSelf);
-    final rest = list.skip(3).where((f) => !selfInPodium || !f.isSelf).toList();
+    final rest = deduped.skip(3).where((f) => !selfInPodium || !f.isSelf).toList();
     final topInset2 = topInset; // alias for use inside ListView builder
 
     final bottomInset = MediaQuery.paddingOf(context).bottom;

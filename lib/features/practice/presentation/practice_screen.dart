@@ -39,11 +39,8 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
       error: (e, _) => Center(child: Text('$e', style: KvlText.body())),
       data: (state) {
         if (state == null) return const _EmptyPractice();
-        final liveUsers =
-            ref.watch(_openSessionCountProvider(state.program.id)).value ?? 0;
         return _PracticeDashboard(
           state: state,
-          liveUsers: liveUsers,
           programs: programs,
           onSelectProgram: (program) {
             setState(() => _selectedProgramId = program.id);
@@ -95,26 +92,14 @@ final _practiceDashboardProvider =
       );
     });
 
-final _openSessionCountProvider = StreamProvider.family<int, String>((
-  ref,
-  programId,
-) async* {
-  final repo = ref.watch(programRepositoryProvider);
-  yield* repo
-      .watchSessionsForProgram(programId)
-      .map((sessions) => sessions.where((s) => s.isOpen).length);
-});
-
 class _PracticeDashboard extends ConsumerStatefulWidget {
   const _PracticeDashboard({
     required this.state,
-    required this.liveUsers,
     required this.programs,
     required this.onSelectProgram,
   });
 
   final _PracticeDashboardState state;
-  final int liveUsers;
   final List<Program> programs;
   final ValueChanged<Program> onSelectProgram;
 
@@ -138,10 +123,14 @@ class _PracticeDashboardView extends ConsumerState<_PracticeDashboard> {
     final progress = target <= 0
         ? 0.0
         : (total / target).clamp(0, 1).toDouble();
+
     final statsAsync = ref.watch(globalStatsProvider(program.mantraId));
-    // Global count must be at least the user's own total (in case server data lags).
-    final globalCount = (statsAsync.value?.globalChantCount ?? 0).clamp(total, 1 << 53);
-    final liveUsers = statsAsync.value?.memberCount ?? widget.liveUsers;
+    final statsLoading = statsAsync.isLoading;
+    // Global count: floor at user's own total so it's never less than what the user did.
+    final serverGlobal = statsAsync.value?.globalChantCount ?? 0;
+    final globalCount = serverGlobal < total ? total : serverGlobal;
+    // Practitioners = distinct accounts enrolled in this mantra program (from API).
+    final practitioners = statsAsync.value?.memberCount ?? 0;
 
     return SafeArea(
       bottom: false,
@@ -150,23 +139,8 @@ class _PracticeDashboardView extends ConsumerState<_PracticeDashboard> {
           final height = constraints.maxHeight;
           final compact = height < 760;
           final tight = height < 700;
-          final metricHeight = tight
-              ? 116.0
-              : compact
-              ? 124.0
-              : 132.0;
-          final actionHeight = tight ? 52.0 : 58.0;
-          final statHeight = tight
-              ? 96.0
-              : compact
-              ? 104.0
-              : 114.0;
-          final ringSize = tight
-              ? 228.0
-              : compact
-              ? 264.0
-              : 292.0;
           final gap = tight ? KvlSpacing.sm : KvlSpacing.md;
+          final ringSize = tight ? 200.0 : compact ? 232.0 : 260.0;
 
           return Padding(
             padding: EdgeInsets.fromLTRB(
@@ -185,102 +159,54 @@ class _PracticeDashboardView extends ConsumerState<_PracticeDashboard> {
                       onProfileTap: () => context.push(KvlRoute.profile),
                     ),
                     SizedBox(height: tight ? KvlSpacing.xs : gap),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _MetricCard(
-                            icon: Icons.self_improvement_rounded,
-                            iconColor: KvlColors.primary,
-                            label: 'Global Count',
-                            value: IndianNumberFormat.format(globalCount),
-                            valueColor: Colors.red,
-                            height: metricHeight,
-                            compact: compact,
-                          ),
-                        ),
-                        const SizedBox(width: KvlSpacing.md),
-                        Expanded(
-                          child: _MetricCard(
-                            icon: Icons.people_alt_rounded,
-                            iconColor: KvlColors.accent,
-                            label: 'Live users',
-                            value: IndianNumberFormat.format(liveUsers),
-                            valueColor: Colors.red,
-                            height: metricHeight,
-                            compact: compact,
-                          ),
-                        ),
-                      ],
+
+                    // ── Community stats ───────────────────────────────────────
+                    _CommunityStatsRow(
+                      globalCount: globalCount,
+                      practitioners: practitioners,
+                      loading: statsLoading,
+                      compact: compact,
                     ),
                     SizedBox(height: tight ? KvlSpacing.xs : gap),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _ActionTile(
-                            icon: Icons.music_note_rounded,
-                            label: 'Change Mantra',
-                            height: actionHeight,
-                            compact: compact,
-                            onTap: () => setState(
-                              () => _showProgramPicker = !_showProgramPicker,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: KvlSpacing.md),
-                        Expanded(
-                          child: _ActionTile(
-                            icon: Icons.bar_chart_rounded,
-                            label: context.l10n.sessionStats,
-                            height: actionHeight,
-                            compact: compact,
-                            onTap: () => context.push(
-                              '${KvlRoute.dailyProgress}/${program.id}',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: tight ? KvlSpacing.xs : gap),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _SmallStatCard(
-                            icon: Icons.calendar_today_outlined,
-                            iconColor: KvlColors.accent,
-                            label: context.l10n.todaysCount,
-                            value:
-                                '${IndianNumberFormat.format(widget.state.todaysCount)} / ${IndianNumberFormat.format(program.dailyTarget)}',
-                            height: statHeight,
-                            compact: compact,
-                          ),
-                        ),
-                        const SizedBox(width: KvlSpacing.md),
-                        Expanded(
-                          child: _SmallStatCard(
-                            icon: Icons.celebration_outlined,
-                            iconColor: const Color(0xFFFFB572),
-                            label: context.l10n.toMilestone,
-                            value: toGoal == 0
-                                ? context.l10n.milestoneCompleted
-                                : context.l10n.milestoneLeft(toGoal),
-                            height: statHeight,
-                            compact: compact,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: tight ? KvlSpacing.xs : gap),
+
+                    // ── Progress ring (hero) ──────────────────────────────────
                     Expanded(
                       child: _ProgressRing(
                         progress: progress,
                         total: total,
                         target: target,
+                        todaysCount: widget.state.todaysCount,
                         compact: compact,
                         size: ringSize,
                       ),
                     ),
-                    _TotalDaysNote(days: program.daysElapsed, compact: compact),
                     SizedBox(height: tight ? KvlSpacing.xs : gap),
+
+                    // ── Today / Milestone ─────────────────────────────────────
+                    _StatsRow(
+                      todaysCount: widget.state.todaysCount,
+                      dailyTarget: program.dailyTarget,
+                      toGoal: toGoal,
+                      compact: compact,
+                    ),
+                    SizedBox(height: tight ? KvlSpacing.xs : gap),
+
+                    // ── Quick actions ─────────────────────────────────────────
+                    _ActionsRow(
+                      compact: compact,
+                      onChangeMantra: () =>
+                          setState(() => _showProgramPicker = !_showProgramPicker),
+                      onSessionStats: () => context.push(
+                        '${KvlRoute.dailyProgress}/${program.id}',
+                      ),
+                    ),
+                    SizedBox(height: tight ? KvlSpacing.xs : gap),
+
+                    // ── Days note ─────────────────────────────────────────────
+                    _TotalDaysNote(days: program.daysElapsed, compact: compact),
+                    SizedBox(height: tight ? KvlSpacing.sm : KvlSpacing.md),
+
+                    // ── START ─────────────────────────────────────────────────
                     Center(
                       child: SizedBox(
                         width: tight ? 220 : 260,
@@ -294,6 +220,8 @@ class _PracticeDashboardView extends ConsumerState<_PracticeDashboard> {
                     ),
                   ],
                 ),
+
+                // ── Program picker overlay ────────────────────────────────────
                 if (_showProgramPicker)
                   Positioned.fill(
                     child: GestureDetector(
@@ -323,8 +251,724 @@ class _PracticeDashboardView extends ConsumerState<_PracticeDashboard> {
       ),
     );
   }
-
 }
+
+// ── Community stats row ───────────────────────────────────────────────────────
+
+class _CommunityStatsRow extends StatelessWidget {
+  const _CommunityStatsRow({
+    required this.globalCount,
+    required this.practitioners,
+    required this.loading,
+    required this.compact,
+  });
+
+  final int globalCount;
+  final int practitioners;
+  final bool loading;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final h = compact ? 96.0 : 108.0;
+    return Row(
+      children: [
+        Expanded(
+          child: _GradientStatCard(
+            height: h,
+            gradientColors: const [Color(0xFFFEF1E0), Color(0xFFFADFB5)],
+            borderColor: KvlColors.primary.withValues(alpha: .22),
+            iconBg: KvlColors.primarySoft,
+            icon: Icons.public_rounded,
+            iconColor: KvlColors.primaryDeep,
+            label: 'Global Count',
+            value: IndianNumberFormat.format(globalCount),
+            valueColor: KvlColors.primaryDeep,
+            loading: loading,
+            compact: compact,
+          ),
+        ),
+        const SizedBox(width: KvlSpacing.md),
+        Expanded(
+          child: _GradientStatCard(
+            height: h,
+            gradientColors: const [Color(0xFFE8F5F4), Color(0xFFBDD9D7)],
+            borderColor: KvlColors.accent.withValues(alpha: .25),
+            iconBg: KvlColors.accentSoft,
+            icon: Icons.people_alt_rounded,
+            iconColor: KvlColors.accent,
+            label: 'Practitioners',
+            value: IndianNumberFormat.format(practitioners),
+            valueColor: KvlColors.accent,
+            loading: loading,
+            compact: compact,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _GradientStatCard extends StatelessWidget {
+  const _GradientStatCard({
+    required this.height,
+    required this.gradientColors,
+    required this.borderColor,
+    required this.iconBg,
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.value,
+    required this.valueColor,
+    required this.loading,
+    required this.compact,
+  });
+
+  final double height;
+  final List<Color> gradientColors;
+  final Color borderColor;
+  final Color iconBg;
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final String value;
+  final Color valueColor;
+  final bool loading;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: height,
+      padding: EdgeInsets.all(compact ? 12.0 : 14.0),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: gradientColors,
+        ),
+        borderRadius: KvlRadius.brLG,
+        border: Border.all(color: borderColor, width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: gradientColors.last.withValues(alpha: .6),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: .05),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: compact ? 38 : 44,
+            height: compact ? 38 : 44,
+            decoration: BoxDecoration(
+              color: iconBg,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: iconColor.withValues(alpha: .15),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, color: iconColor, size: compact ? 20 : 23),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: KvlText.caption(compact ? 11 : 12).copyWith(
+                    color: KvlColors.inkSoft,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                if (loading)
+                  Container(
+                    height: compact ? 20 : 24,
+                    width: 64,
+                    decoration: BoxDecoration(
+                      color: iconColor.withValues(alpha: .15),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  )
+                else
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      value,
+                      maxLines: 1,
+                      style: KvlText.ui(compact ? 20 : 23, FontWeight.w800)
+                          .copyWith(color: valueColor),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Stats row (Today / Milestone) ─────────────────────────────────────────────
+
+class _StatsRow extends StatelessWidget {
+  const _StatsRow({
+    required this.todaysCount,
+    required this.dailyTarget,
+    required this.toGoal,
+    required this.compact,
+  });
+
+  final int todaysCount;
+  final int dailyTarget;
+  final int toGoal;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final h = compact ? 82.0 : 92.0;
+    return Row(
+      children: [
+        Expanded(
+          child: _StatChip(
+            height: h,
+            icon: Icons.calendar_today_rounded,
+            iconColor: KvlColors.accent,
+            iconBg: KvlColors.accentSoft,
+            label: context.l10n.todaysCount,
+            value:
+                '${IndianNumberFormat.format(todaysCount)} / ${IndianNumberFormat.format(dailyTarget)}',
+            valueColor: KvlColors.accent,
+            compact: compact,
+          ),
+        ),
+        const SizedBox(width: KvlSpacing.md),
+        Expanded(
+          child: _StatChip(
+            height: h,
+            icon: Icons.emoji_events_rounded,
+            iconColor: KvlColors.gold,
+            iconBg: const Color(0xFFFFF3CC),
+            label: context.l10n.toMilestone,
+            value: toGoal == 0
+                ? context.l10n.milestoneCompleted
+                : context.l10n.milestoneLeft(toGoal),
+            valueColor: KvlColors.primaryDeep,
+            compact: compact,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatChip extends StatelessWidget {
+  const _StatChip({
+    required this.height,
+    required this.icon,
+    required this.iconColor,
+    required this.iconBg,
+    required this.label,
+    required this.value,
+    required this.valueColor,
+    required this.compact,
+  });
+
+  final double height;
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBg;
+  final String label;
+  final String value;
+  final Color valueColor;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: height,
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 12.0 : 14.0,
+        vertical: compact ? 10.0 : 12.0,
+      ),
+      decoration: BoxDecoration(
+        color: KvlColors.surface,
+        borderRadius: KvlRadius.brLG,
+        border: Border.all(color: KvlColors.border.withValues(alpha: .5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: .06),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: compact ? 34 : 38,
+            height: compact ? 34 : 38,
+            decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
+            alignment: Alignment.center,
+            child: Icon(icon, color: iconColor, size: compact ? 18 : 20),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: KvlText.caption(compact ? 10.5 : 11.5).copyWith(
+                    color: KvlColors.muted,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    value,
+                    maxLines: 1,
+                    style: KvlText.ui(compact ? 13 : 14.5, FontWeight.w700)
+                        .copyWith(color: valueColor),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Actions row ───────────────────────────────────────────────────────────────
+
+class _ActionsRow extends StatelessWidget {
+  const _ActionsRow({
+    required this.compact,
+    required this.onChangeMantra,
+    required this.onSessionStats,
+  });
+
+  final bool compact;
+  final VoidCallback onChangeMantra;
+  final VoidCallback onSessionStats;
+
+  @override
+  Widget build(BuildContext context) {
+    final h = compact ? 50.0 : 56.0;
+    return Row(
+      children: [
+        Expanded(
+          child: _ActionTile(
+            height: h,
+            icon: Icons.music_note_rounded,
+            iconBg: KvlColors.primarySoft,
+            iconColor: KvlColors.primaryDeep,
+            label: 'Change Mantra',
+            compact: compact,
+            onTap: onChangeMantra,
+          ),
+        ),
+        const SizedBox(width: KvlSpacing.md),
+        Expanded(
+          child: _ActionTile(
+            height: h,
+            icon: Icons.bar_chart_rounded,
+            iconBg: KvlColors.accentSoft,
+            iconColor: KvlColors.accent,
+            label: context.l10n.sessionStats,
+            compact: compact,
+            onTap: onSessionStats,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ActionTile extends StatelessWidget {
+  const _ActionTile({
+    required this.height,
+    required this.icon,
+    required this.iconBg,
+    required this.iconColor,
+    required this.label,
+    required this.compact,
+    required this.onTap,
+  });
+
+  final double height;
+  final IconData icon;
+  final Color iconBg;
+  final Color iconColor;
+  final String label;
+  final bool compact;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: KvlRadius.brLG,
+        child: Container(
+          height: height,
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 10.0 : 12.0,
+            vertical: compact ? 8.0 : 10.0,
+          ),
+          decoration: BoxDecoration(
+            color: KvlColors.surface,
+            borderRadius: KvlRadius.brLG,
+            border: Border.all(color: KvlColors.border.withValues(alpha: .5)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: .05),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: compact ? 30 : 34,
+                height: compact ? 30 : 34,
+                decoration: BoxDecoration(
+                  color: iconBg,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                alignment: Alignment.center,
+                child: Icon(icon, color: iconColor, size: compact ? 17 : 19),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    style: KvlText.ui(compact ? 13.5 : 15, FontWeight.w600)
+                        .copyWith(color: KvlColors.ink),
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: KvlColors.muted,
+                size: compact ? 18 : 20,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Progress ring ─────────────────────────────────────────────────────────────
+
+class _ProgressRing extends StatelessWidget {
+  const _ProgressRing({
+    required this.progress,
+    required this.total,
+    required this.target,
+    required this.todaysCount,
+    required this.compact,
+    required this.size,
+  });
+
+  final double progress;
+  final int total;
+  final int target;
+  final int todaysCount;
+  final bool compact;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = (progress * 100).round();
+    return Center(
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Glow layer
+            CustomPaint(
+              size: Size.square(size),
+              painter: _RingGlowPainter(progress: progress),
+            ),
+            // Main ring
+            CustomPaint(
+              size: Size.square(size),
+              painter: _ProgressRingPainter(progress: progress),
+            ),
+            // Center content
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    IndianNumberFormat.format(total),
+                    style: KvlText.ui(compact ? 26 : 30, FontWeight.w800)
+                        .copyWith(color: KvlColors.ink),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '/ ${IndianNumberFormat.format(target)}',
+                  style: KvlText.caption(compact ? 13 : 14.5)
+                      .copyWith(color: KvlColors.muted),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: KvlColors.primarySoft,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '$pct%',
+                    style: KvlText.ui(compact ? 11 : 12, FontWeight.w700)
+                        .copyWith(color: KvlColors.primaryDeep),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RingGlowPainter extends CustomPainter {
+  const _RingGlowPainter({required this.progress});
+
+  final double progress;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (progress <= 0) return;
+    final center = size.center(Offset.zero);
+    final radius = size.width / 2 - 14;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    final glow = Paint()
+      ..color = const Color(0xFFE8893B).withValues(alpha: .18)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 28
+      ..strokeCap = StrokeCap.round
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+
+    canvas.drawArc(
+      rect,
+      -math.pi / 2,
+      2 * math.pi * progress.clamp(0, 1),
+      false,
+      glow,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_RingGlowPainter old) => old.progress != progress;
+}
+
+class _ProgressRingPainter extends CustomPainter {
+  const _ProgressRingPainter({required this.progress});
+
+  final double progress;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final radius = size.width / 2 - 14;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
+    // Track
+    final track = Paint()
+      ..color = const Color(0xFFEAD8B8)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 16
+      ..strokeCap = StrokeCap.round;
+    canvas.drawCircle(center, radius, track);
+
+    if (progress <= 0) return;
+
+    // Gradient progress arc
+    final sweepAngle = 2 * math.pi * progress.clamp(0, 1);
+    final shader = SweepGradient(
+      startAngle: -math.pi / 2,
+      endAngle: -math.pi / 2 + sweepAngle,
+      colors: const [Color(0xFFFFB572), Color(0xFFE8893B), Color(0xFFC97328)],
+      tileMode: TileMode.clamp,
+    ).createShader(rect);
+
+    final fg = Paint()
+      ..shader = shader
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 16
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawArc(rect, -math.pi / 2, sweepAngle, false, fg);
+
+    // End dot
+    final endAngle = -math.pi / 2 + sweepAngle;
+    final dotCenter = Offset(
+      center.dx + radius * math.cos(endAngle),
+      center.dy + radius * math.sin(endAngle),
+    );
+    canvas.drawCircle(
+      dotCenter,
+      9,
+      Paint()..color = const Color(0xFFC97328),
+    );
+    canvas.drawCircle(
+      dotCenter,
+      5,
+      Paint()..color = Colors.white,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_ProgressRingPainter old) => old.progress != progress;
+}
+
+// ── Days note ─────────────────────────────────────────────────────────────────
+
+class _TotalDaysNote extends StatelessWidget {
+  const _TotalDaysNote({required this.days, required this.compact});
+
+  final int days;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: EdgeInsets.symmetric(horizontal: compact ? 2 : 6),
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? KvlSpacing.md : KvlSpacing.lg,
+        vertical: compact ? 7 : 9,
+      ),
+      decoration: BoxDecoration(
+        color: KvlColors.surface.withValues(alpha: .34),
+        borderRadius: KvlRadius.brPill,
+        border: Border.all(color: KvlColors.border.withValues(alpha: .28)),
+      ),
+      child: Text.rich(
+        TextSpan(
+          style: KvlText.ui(compact ? 13.5 : 15, FontWeight.w500)
+              .copyWith(color: KvlColors.inkSoft),
+          children: [
+            TextSpan(text: context.l10n.practisingFor),
+            TextSpan(
+              text: days == 1
+                  ? context.l10n.practiceDay(days)
+                  : context.l10n.practiceDays(days),
+              style: const TextStyle(
+                color: KvlColors.ink,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        textAlign: TextAlign.center,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+}
+
+// ── Header ────────────────────────────────────────────────────────────────────
+
+class _DashboardHeader extends ConsumerWidget {
+  const _DashboardHeader({
+    required this.title,
+    required this.onBack,
+    required this.onProfileTap,
+  });
+
+  final String title;
+  final VoidCallback onBack;
+  final VoidCallback onProfileTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(activeProfileProvider).value;
+    return Row(
+      children: [
+        IconButton(
+          onPressed: onBack,
+          icon: const Icon(Icons.arrow_back_rounded, size: 28),
+          color: const Color(0xFF333333),
+        ),
+        Expanded(
+          child: Text(
+            title,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: KvlText.ui(18, FontWeight.w700)
+                .copyWith(color: const Color(0xFF323232)),
+          ),
+        ),
+        InkWell(
+          onTap: onProfileTap,
+          borderRadius: BorderRadius.circular(24),
+          child: Container(
+            width: 48,
+            height: 48,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [Color(0xFFFFB572), KvlColors.primary],
+              ),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              profile?.initials ?? '?',
+              style: KvlText.ui(18, FontWeight.w700)
+                  .copyWith(color: Colors.white),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Program picker ────────────────────────────────────────────────────────────
 
 class _ProgramPickerPanel extends ConsumerWidget {
   const _ProgramPickerPanel({
@@ -396,9 +1040,7 @@ class _ProgramPickerPanel extends ConsumerWidget {
                                 color: KvlColors.primarySoft,
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: KvlColors.primary.withValues(
-                                    alpha: .18,
-                                  ),
+                                  color: KvlColors.primary.withValues(alpha: .18),
                                 ),
                               ),
                               alignment: Alignment.center,
@@ -415,18 +1057,15 @@ class _ProgramPickerPanel extends ConsumerWidget {
                                 children: [
                                   Text(
                                     context.l10n.chooseMantra,
-                                    style: KvlText.ui(
-                                      16,
-                                      FontWeight.w800,
-                                    ).copyWith(color: KvlColors.primaryDeep),
+                                    style: KvlText.ui(16, FontWeight.w800)
+                                        .copyWith(color: KvlColors.primaryDeep),
                                   ),
                                   Text(
                                     context.l10n.selectActiveProgramDescription,
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
-                                    style: KvlText.caption(
-                                      11,
-                                    ).copyWith(color: KvlColors.inkSoft),
+                                    style: KvlText.caption(11)
+                                        .copyWith(color: KvlColors.inkSoft),
                                   ),
                                 ],
                               ),
@@ -498,19 +1137,16 @@ class _ProgramPickerPanel extends ConsumerWidget {
                                           title,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
-                                          style: KvlText.ui(
-                                            17,
-                                            FontWeight.w800,
-                                          ).copyWith(color: KvlColors.ink),
+                                          style: KvlText.ui(17, FontWeight.w800)
+                                              .copyWith(color: KvlColors.ink),
                                         ),
                                         const SizedBox(height: 3),
                                         Text(
                                           '${IndianNumberFormat.format(program.totalProgress)} / ${IndianNumberFormat.format(program.targetWritings)}',
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
-                                          style: KvlText.caption(
-                                            12.5,
-                                          ).copyWith(color: KvlColors.inkSoft),
+                                          style: KvlText.caption(12.5)
+                                              .copyWith(color: KvlColors.inkSoft),
                                         ),
                                       ],
                                     ),
@@ -530,419 +1166,7 @@ class _ProgramPickerPanel extends ConsumerWidget {
   }
 }
 
-class _DashboardHeader extends ConsumerWidget {
-  const _DashboardHeader({
-    required this.title,
-    required this.onBack,
-    required this.onProfileTap,
-  });
-
-  final String title;
-  final VoidCallback onBack;
-  final VoidCallback onProfileTap;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final profile = ref.watch(activeProfileProvider).value;
-    return Row(
-      children: [
-        IconButton(
-          onPressed: onBack,
-          icon: const Icon(Icons.arrow_back_rounded, size: 28),
-          color: const Color(0xFF333333),
-        ),
-        Expanded(
-          child: Text(
-            title,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: KvlText.ui(
-              18,
-              FontWeight.w700,
-            ).copyWith(color: const Color(0xFF323232)),
-          ),
-        ),
-        InkWell(
-          onTap: onProfileTap,
-          borderRadius: BorderRadius.circular(24),
-          child: Container(
-            width: 48,
-            height: 48,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [Color(0xFFFFB572), KvlColors.primary],
-              ),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              profile?.initials ?? '?',
-              style: KvlText.ui(
-                18,
-                FontWeight.w700,
-              ).copyWith(color: Colors.white),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _MetricCard extends StatelessWidget {
-  const _MetricCard({
-    required this.icon,
-    required this.iconColor,
-    required this.label,
-    required this.value,
-    required this.valueColor,
-    required this.height,
-    required this.compact,
-  });
-
-  final IconData icon;
-  final Color iconColor;
-  final String label;
-  final String value;
-  final Color valueColor;
-  final double height;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    return _DashboardCard(
-      height: height,
-      padding: EdgeInsets.all(compact ? KvlSpacing.md : KvlSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: iconColor, size: compact ? 23 : 26),
-          const SizedBox(height: KvlSpacing.xs),
-          SizedBox(
-            height: compact ? 30 : 34,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  style: KvlText.ui(compact ? 16 : 18, FontWeight.w400),
-                ),
-              ),
-            ),
-          ),
-          const Spacer(),
-          SizedBox(
-            height: compact ? 28 : 32,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  value,
-                  maxLines: 1,
-                  style: KvlText.ui(
-                    compact ? 22 : 25,
-                    FontWeight.w600,
-                  ).copyWith(color: valueColor),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActionTile extends StatelessWidget {
-  const _ActionTile({
-    required this.icon,
-    required this.label,
-    required this.height,
-    required this.compact,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final double height;
-  final bool compact;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return _DashboardCard(
-      height: height,
-      padding: EdgeInsets.symmetric(
-        horizontal: compact ? KvlSpacing.md : KvlSpacing.lg,
-        vertical: KvlSpacing.sm,
-      ),
-      onTap: onTap,
-      child: Row(
-        children: [
-          Icon(icon, color: KvlColors.accent, size: compact ? 23 : 26),
-          const SizedBox(width: KvlSpacing.sm),
-          Expanded(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                label,
-                maxLines: 1,
-                style: KvlText.ui(compact ? 15 : 17, FontWeight.w400),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SmallStatCard extends StatelessWidget {
-  const _SmallStatCard({
-    required this.icon,
-    required this.iconColor,
-    required this.label,
-    required this.value,
-    required this.height,
-    required this.compact,
-  });
-
-  final IconData icon;
-  final Color iconColor;
-  final String label;
-  final String value;
-  final double height;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    return _DashboardCard(
-      height: height,
-      padding: EdgeInsets.all(compact ? KvlSpacing.md : KvlSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: iconColor, size: compact ? 22 : 25),
-          const Spacer(),
-          SizedBox(
-            height: compact ? 24 : 28,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  style: KvlText.ui(compact ? 14.5 : 16.5, FontWeight.w400),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: KvlSpacing.xs),
-          SizedBox(
-            height: compact ? 20 : 22,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  value,
-                  maxLines: 1,
-                  style: KvlText.caption(
-                    compact ? 12.5 : 14,
-                  ).copyWith(color: KvlColors.muted),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TotalDaysNote extends StatelessWidget {
-  const _TotalDaysNote({required this.days, required this.compact});
-
-  final int days;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      margin: EdgeInsets.symmetric(horizontal: compact ? 2 : 6),
-      padding: EdgeInsets.symmetric(
-        horizontal: compact ? KvlSpacing.md : KvlSpacing.lg,
-        vertical: compact ? 7 : 9,
-      ),
-      decoration: BoxDecoration(
-        color: KvlColors.surface.withValues(alpha: .34),
-        borderRadius: KvlRadius.brPill,
-        border: Border.all(color: KvlColors.border.withValues(alpha: .28)),
-      ),
-      child: Text.rich(
-        TextSpan(
-          style: KvlText.ui(
-            compact ? 13.5 : 15,
-            FontWeight.w500,
-          ).copyWith(color: KvlColors.inkSoft),
-          children: [
-            TextSpan(text: context.l10n.practisingFor),
-            TextSpan(
-              text: days == 1 ? context.l10n.practiceDay(days) : context.l10n.practiceDays(days),
-              style: const TextStyle(
-                color: KvlColors.ink,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-        textAlign: TextAlign.center,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
-}
-
-class _DashboardCard extends StatelessWidget {
-  const _DashboardCard({
-    required this.child,
-    this.height,
-    this.onTap,
-    this.padding = const EdgeInsets.all(KvlSpacing.lg),
-  });
-
-  final Widget child;
-  final double? height;
-  final VoidCallback? onTap;
-  final EdgeInsetsGeometry padding;
-
-  @override
-  Widget build(BuildContext context) {
-    final card = Container(
-      height: height,
-      padding: padding,
-      decoration: BoxDecoration(
-        color: KvlColors.surface.withValues(alpha: .72),
-        borderRadius: KvlRadius.brLG,
-        border: Border.all(color: KvlColors.border.withValues(alpha: .45)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: .08),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: child,
-    );
-
-    if (onTap == null) return card;
-    return Material(
-      type: MaterialType.transparency,
-      child: InkWell(onTap: onTap, borderRadius: KvlRadius.brLG, child: card),
-    );
-  }
-}
-
-class _ProgressRing extends StatelessWidget {
-  const _ProgressRing({
-    required this.progress,
-    required this.total,
-    required this.target,
-    required this.compact,
-    required this.size,
-  });
-
-  final double progress;
-  final int total;
-  final int target;
-  final bool compact;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: SizedBox(
-        width: size,
-        height: size,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            CustomPaint(
-              size: Size.square(size),
-              painter: _ProgressRingPainter(progress: progress),
-            ),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  IndianNumberFormat.format(total),
-                  style: KvlText.ui(compact ? 18 : 19, FontWeight.w400),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  '/ ${IndianNumberFormat.format(target)}',
-                  style: KvlText.caption(
-                    compact ? 13.5 : 15,
-                  ).copyWith(color: KvlColors.muted),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ProgressRingPainter extends CustomPainter {
-  const _ProgressRingPainter({required this.progress});
-
-  final double progress;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = size.center(Offset.zero);
-    final radius = size.width / 2 - 15;
-    final rect = Rect.fromCircle(center: center, radius: radius);
-    final bg = Paint()
-      ..color = const Color(0xFFE0E2E5)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 18
-      ..strokeCap = StrokeCap.round;
-    final fg = Paint()
-      ..color = const Color(0xFFFF9A34)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 18
-      ..strokeCap = StrokeCap.round;
-
-    canvas.drawCircle(center, radius, bg);
-    canvas.drawArc(
-      rect,
-      -math.pi / 2,
-      2 * math.pi * progress.clamp(0, 1),
-      false,
-      fg,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_ProgressRingPainter oldDelegate) {
-    return oldDelegate.progress != progress;
-  }
-}
+// ── Empty state ───────────────────────────────────────────────────────────────
 
 class _EmptyPractice extends StatelessWidget {
   const _EmptyPractice();

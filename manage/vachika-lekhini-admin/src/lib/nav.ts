@@ -17,7 +17,9 @@ import {
 	HelpCircle,
 	Sliders,
 	Flag,
-	MessageCircleHeart
+	MessageCircleHeart,
+	Gift,
+	ScrollText
 } from '@lucide/svelte';
 import type { AdminRole } from './roles';
 
@@ -31,25 +33,32 @@ export interface NavItem {
 
 /// Sidebar nav. Items with minRole are hidden for admins below that rank.
 export const NAV_ITEMS: NavItem[] = [
+	// ── Overview ─────────────────────────────────────────────────────────────
 	{ href: '/', label: 'Dashboard', icon: LayoutDashboard },
 	{ href: '/analytics', label: 'Analytics', icon: BarChart3, minRole: 'viewer' },
 
-	{ href: '/mantras', label: 'Mantras', icon: BookOpen, minRole: 'viewer', group: 'Catalog' },
-	{ href: '/store', label: 'Store', icon: ShoppingBag, minRole: 'viewer', group: 'Catalog' },
-	{ href: '/config', label: 'Config & Flags', icon: Settings2, minRole: 'viewer', group: 'Catalog' },
-	{ href: '/faqs', label: 'FAQs', icon: HelpCircle, minRole: 'viewer', group: 'Catalog' },
-	{ href: '/app-settings', label: 'App Settings', icon: Sliders, minRole: 'editor', group: 'Catalog' },
+	// ── Content — what the app shows ─────────────────────────────────────────
+	{ href: '/mantras', label: 'Mantras', icon: BookOpen, minRole: 'viewer', group: 'Content' },
+	{ href: '/store', label: 'Store', icon: ShoppingBag, minRole: 'viewer', group: 'Content' },
+	{ href: '/faqs', label: 'FAQs', icon: HelpCircle, minRole: 'viewer', group: 'Content' },
+	{ href: '/app-settings', label: 'App Settings', icon: Sliders, minRole: 'editor', group: 'Content' },
+	{ href: '/config', label: 'Config & Flags', icon: Settings2, minRole: 'viewer', group: 'Content' },
 
-	{ href: '/accounts', label: 'Accounts', icon: Users, minRole: 'editor', group: 'Users' },
-	{ href: '/programs', label: 'Programs', icon: Layers, minRole: 'editor', group: 'Users' },
-	{ href: '/sessions', label: 'Sessions', icon: Activity, minRole: 'editor', group: 'Users' },
-	{ href: '/rewards', label: 'Rewards Ledger', icon: Coins, minRole: 'editor', group: 'Users' },
-	{ href: '/enrolments', label: 'Enrolments', icon: Mic2, minRole: 'editor', group: 'Users' },
-	{ href: '/invites', label: 'Invites', icon: UserPlus, minRole: 'editor', group: 'Users' },
+	// ── Practice — user activity ──────────────────────────────────────────────
+	{ href: '/accounts', label: 'Accounts', icon: Users, minRole: 'editor', group: 'Practice' },
+	{ href: '/programs', label: 'Programs', icon: Layers, minRole: 'editor', group: 'Practice' },
+	{ href: '/sessions', label: 'Sessions', icon: Activity, minRole: 'editor', group: 'Practice' },
+	{ href: '/enrolments', label: 'Enrolments', icon: Mic2, minRole: 'editor', group: 'Practice' },
 
-	{ href: '/support', label: 'Support Reports', icon: Flag, minRole: 'viewer', group: 'Users' },
-	{ href: '/feedback', label: 'Feedback', icon: MessageCircleHeart, minRole: 'viewer', group: 'Users' },
+	// ── Rewards ───────────────────────────────────────────────────────────────
+	{ href: '/rewards', label: 'Rewards Ledger', icon: Coins, minRole: 'editor', group: 'Rewards' },
+	{ href: '/invites', label: 'Invites', icon: UserPlus, minRole: 'editor', group: 'Rewards' },
 
+	// ── Support ───────────────────────────────────────────────────────────────
+	{ href: '/support', label: 'Reports', icon: Flag, minRole: 'viewer', group: 'Support' },
+	{ href: '/feedback', label: 'Feedback', icon: MessageCircleHeart, minRole: 'viewer', group: 'Support' },
+
+	// ── Audit ─────────────────────────────────────────────────────────────────
 	{ href: '/otp-log', label: 'OTP Log', icon: MessageSquareDot, minRole: 'editor', group: 'Audit' },
 	{ href: '/devices', label: 'Devices', icon: Smartphone, minRole: 'editor', group: 'Audit' },
 	{ href: '/admins', label: 'Admins', icon: ShieldCheck, minRole: 'super_admin', group: 'Audit' },

@@ -134,10 +134,13 @@ class _PracticeDashboardView extends ConsumerState<_PracticeDashboard> {
         program.mantraId;
     final total = program.totalProgress;
     final target = program.targetWritings;
-    final milestoneLeft = _chantsToNextMilestone(total);
+    final toGoal = (target - total).clamp(0, target);
     final progress = target <= 0
         ? 0.0
         : (total / target).clamp(0, 1).toDouble();
+    final statsAsync = ref.watch(globalStatsProvider(program.mantraId));
+    final globalCount = statsAsync.value?.globalChantCount ?? 0;
+    final liveUsers = statsAsync.value?.memberCount ?? widget.liveUsers;
 
     return SafeArea(
       bottom: false,
@@ -188,7 +191,7 @@ class _PracticeDashboardView extends ConsumerState<_PracticeDashboard> {
                             icon: Icons.self_improvement_rounded,
                             iconColor: KvlColors.primary,
                             label: 'Global Count',
-                            value: IndianNumberFormat.format(total),
+                            value: IndianNumberFormat.format(globalCount),
                             valueColor: Colors.red,
                             height: metricHeight,
                             compact: compact,
@@ -199,8 +202,8 @@ class _PracticeDashboardView extends ConsumerState<_PracticeDashboard> {
                           child: _MetricCard(
                             icon: Icons.people_alt_rounded,
                             iconColor: KvlColors.accent,
-                            label: 'Open sessions',
-                            value: IndianNumberFormat.format(widget.liveUsers),
+                            label: 'Live users',
+                            value: IndianNumberFormat.format(liveUsers),
                             valueColor: Colors.red,
                             height: metricHeight,
                             compact: compact,
@@ -256,9 +259,9 @@ class _PracticeDashboardView extends ConsumerState<_PracticeDashboard> {
                             icon: Icons.celebration_outlined,
                             iconColor: const Color(0xFFFFB572),
                             label: context.l10n.toMilestone,
-                            value: milestoneLeft == 0
+                            value: toGoal == 0
                                 ? context.l10n.milestoneCompleted
-                                : context.l10n.milestoneLeft(milestoneLeft),
+                                : context.l10n.milestoneLeft(toGoal),
                             height: statHeight,
                             compact: compact,
                           ),
@@ -320,12 +323,6 @@ class _PracticeDashboardView extends ConsumerState<_PracticeDashboard> {
     );
   }
 
-  int _chantsToNextMilestone(int total) {
-    for (final threshold in ref.read(rewardRulesProvider).milestoneThresholds) {
-      if (total < threshold) return threshold - total;
-    }
-    return 0;
-  }
 }
 
 class _ProgramPickerPanel extends ConsumerWidget {

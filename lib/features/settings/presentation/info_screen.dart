@@ -16,6 +16,7 @@ class InfoScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     if (topic == 'help') return const _FaqScreen();
     if (topic == 'report') return const _ReportScreen();
+    if (topic == 'feedback') return const _FeedbackScreen();
 
     // Privacy policy — load body from API, fall back to l10n string.
     if (topic == 'privacy') {
@@ -262,6 +263,147 @@ class _ReportScreenState extends ConsumerState<_ReportScreen> {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Share Feedback — form that POSTs kind=feedback to /api/v1/support.
+// ---------------------------------------------------------------------------
+
+class _FeedbackScreen extends ConsumerStatefulWidget {
+  const _FeedbackScreen();
+
+  @override
+  ConsumerState<_FeedbackScreen> createState() => _FeedbackScreenState();
+}
+
+class _FeedbackScreenState extends ConsumerState<_FeedbackScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _subjectCtrl = TextEditingController(text: 'Suggestion');
+  final _bodyCtrl = TextEditingController();
+  bool _sending = false;
+  bool _sent = false;
+
+  @override
+  void dispose() {
+    _subjectCtrl.dispose();
+    _bodyCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    setState(() => _sending = true);
+    try {
+      final dio = ref.read(apiClientProvider).dio;
+      await dio.post<void>(
+        '/api/v1/support',
+        data: {
+          'kind': 'feedback',
+          'subject': _subjectCtrl.text.trim(),
+          'body': _bodyCtrl.text.trim(),
+        },
+      );
+      if (mounted) setState(() { _sending = false; _sent = true; });
+    } on DioException catch (e) {
+      if (mounted) {
+        setState(() => _sending = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send: ${e.message ?? 'network error'}'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return KvlScaffold(
+      title: 'Share Feedback',
+      scrollable: true,
+      body: _sent
+          ? Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Icon(Icons.favorite_rounded, color: KvlColors.primaryDeep, size: 56),
+                const SizedBox(height: KvlSpacing.md),
+                Center(child: Text('Thank you!', style: KvlText.title(17))),
+                const SizedBox(height: KvlSpacing.sm),
+                Center(
+                  child: Text(
+                    'We read every suggestion and use it to improve the app.',
+                    textAlign: TextAlign.center,
+                    style: KvlText.muted(12),
+                  ),
+                ),
+              ],
+            )
+          : Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: KvlSpacing.md),
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: const BoxDecoration(
+                      color: KvlColors.primaryGhost,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(Icons.feedback_outlined, color: KvlColors.primaryDeep, size: 26),
+                  ),
+                  const SizedBox(height: KvlSpacing.sm),
+                  Center(child: Text('Share your thoughts', style: KvlText.title(16))),
+                  const SizedBox(height: 4),
+                  Center(
+                    child: Text(
+                      'We listen to every suggestion.',
+                      textAlign: TextAlign.center,
+                      style: KvlText.muted(11.5),
+                    ),
+                  ),
+                  const SizedBox(height: KvlSpacing.lg),
+                  TextFormField(
+                    controller: _subjectCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Subject',
+                      hintText: 'e.g. Suggestion, Idea, Compliment…',
+                    ),
+                    textCapitalization: TextCapitalization.sentences,
+                    validator: (v) =>
+                        (v == null || v.trim().isEmpty) ? 'Subject is required' : null,
+                  ),
+                  const SizedBox(height: KvlSpacing.md),
+                  TextFormField(
+                    controller: _bodyCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Your feedback',
+                      hintText: 'What do you love? What could be better?',
+                      alignLabelWithHint: true,
+                    ),
+                    maxLines: 8,
+                    minLines: 5,
+                    textCapitalization: TextCapitalization.sentences,
+                    validator: (v) =>
+                        (v == null || v.trim().length < 10)
+                            ? 'Please share a bit more (at least 10 characters)'
+                            : null,
+                  ),
+                  const SizedBox(height: KvlSpacing.lg),
+                  KvlButton(
+                    label: _sending ? 'Sending…' : 'Send Feedback',
+                    icon: Icons.send_rounded,
+                    onPressed: _sending ? null : _send,
+                  ),
+                ],
+              ),
+            ),
     );
   }
 }

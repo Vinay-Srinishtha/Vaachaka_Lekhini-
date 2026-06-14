@@ -16,7 +16,8 @@ import {
 	BarChart3,
 	HelpCircle,
 	Sliders,
-	Flag
+	Flag,
+	MessageCircleHeart
 } from '@lucide/svelte';
 import type { AdminRole } from './roles';
 
@@ -47,6 +48,7 @@ export const NAV_ITEMS: NavItem[] = [
 	{ href: '/invites', label: 'Invites', icon: UserPlus, minRole: 'editor', group: 'Users' },
 
 	{ href: '/support', label: 'Support Reports', icon: Flag, minRole: 'viewer', group: 'Users' },
+	{ href: '/feedback', label: 'Feedback', icon: MessageCircleHeart, minRole: 'viewer', group: 'Users' },
 
 	{ href: '/otp-log', label: 'OTP Log', icon: MessageSquareDot, minRole: 'editor', group: 'Audit' },
 	{ href: '/devices', label: 'Devices', icon: Smartphone, minRole: 'editor', group: 'Audit' },

@@ -417,9 +417,10 @@ model AppSetting {
   updatedAt DateTime @updatedAt
 }
 
-/// In-app bug/feedback reports submitted from the Report Issue screen.
+/// In-app bug reports and feedback submissions.
 model SupportReport {
   id        String   @id @default(cuid())
+  kind      String   @default("report")   // "report" | "feedback"
   subject   String
   body      String   @db.Text
   memberId  String?
@@ -427,5 +428,5 @@ model SupportReport {
   status    String   @default("open")
   createdAt DateTime @default(now())
 
-  @@index([status, createdAt])
+  @@index([kind, status, createdAt])
 }

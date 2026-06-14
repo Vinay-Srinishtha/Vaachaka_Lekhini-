@@ -1,24 +1,18 @@
 import '../../../core/remote_config/remote_config.dart';
+import '../../../core/remote_config/remote_config_keys.dart';
 
 /// Reward economy rates and milestone thresholds.
-/// Driven by FeatureFlags at /api/v1/config so the economy can be tuned
-/// from the admin panel without a release. All business logic validation
-/// runs server-side; this class is used only for client-side UI feedback
-/// (haptic triggers, milestone labels).
+/// All values come from FeatureFlags at /api/v1/config — tunable from the
+/// admin panel without a release. Business-logic validation runs server-side;
+/// this class is used only for client-side UI feedback (haptic triggers,
+/// milestone labels). Use [RewardRules.fromConfig] — never construct directly.
 class RewardRules {
-  const RewardRules({
-    this.dailyTarget = 50,
-    this.milestoneCross = 500,
-    this.friendReferral = 100,
-    this.charityDonation = 50,
-    this.milestoneThresholds = const [
-      100000,
-      500000,
-      1000000,
-      2500000,
-      5000000,
-      10000000,
-    ],
+  const RewardRules._({
+    required this.dailyTarget,
+    required this.milestoneCross,
+    required this.friendReferral,
+    required this.charityDonation,
+    required this.milestoneThresholds,
   });
 
   final int dailyTarget;
@@ -27,14 +21,18 @@ class RewardRules {
   final int charityDonation;
   final List<int> milestoneThresholds;
 
-  factory RewardRules.fromConfig(RemoteConfig cfg) => RewardRules(
-        dailyTarget: cfg.intFlag('reward_daily_points', fallback: 50),
-        milestoneCross: cfg.intFlag('reward_milestone_points', fallback: 500),
-        friendReferral: cfg.intFlag('reward_friend_referral', fallback: 100),
-        charityDonation: cfg.intFlag('reward_charity_donation', fallback: 50),
+  static const _defaultThresholds = [
+    100000, 500000, 1000000, 2500000, 5000000, 10000000,
+  ];
+
+  factory RewardRules.fromConfig(RemoteConfig cfg) => RewardRules._(
+        dailyTarget: cfg.intFlag(RemoteConfigKeys.rewardDailyPoints, fallback: 50),
+        milestoneCross: cfg.intFlag(RemoteConfigKeys.rewardMilestonePoints, fallback: 500),
+        friendReferral: cfg.intFlag(RemoteConfigKeys.rewardFriendReferral, fallback: 100),
+        charityDonation: cfg.intFlag(RemoteConfigKeys.rewardCharityDonation, fallback: 50),
         milestoneThresholds: cfg.listIntFlag(
-          'reward_milestone_thresholds',
-          fallback: const [100000, 500000, 1000000, 2500000, 5000000, 10000000],
+          RemoteConfigKeys.rewardMilestoneThresholds,
+          fallback: _defaultThresholds,
         ),
       );
 

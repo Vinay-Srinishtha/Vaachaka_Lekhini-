@@ -12,17 +12,15 @@ import {
 } from '$lib/server/sync';
 import { emitChange } from '$lib/server/live';
 
-/// Kinds that a client is permitted to submit.
-/// `earn` and `milestone` are computed exclusively server-side (triggered by
-/// /api/v1/sessions ingestion) — accepting them from a client would allow a
-/// tampered app to credit arbitrary point amounts.
-const CLIENT_ALLOWED_KINDS = new Set(['spend', 'gift', 'refund']);
+/// Only `spend` events may come from the Flutter client.
+/// `earn` and `milestone` are server-side only (computed from /api/v1/sessions).
+/// `gift` and `refund` are admin-only actions that must come from the admin panel,
+/// not from a client that could tamper with amounts.
+const CLIENT_ALLOWED_KINDS = new Set(['spend']);
 
 /// Per-kind amount ceiling for client-submitted events (anti-tamper guard).
 const CLIENT_AMOUNT_CAPS: Record<string, number> = {
 	spend: 10_000,
-	gift: 500,
-	refund: 10_000
 };
 
 const bodySchema = z.object({

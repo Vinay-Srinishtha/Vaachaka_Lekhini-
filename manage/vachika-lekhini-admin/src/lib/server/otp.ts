@@ -34,8 +34,6 @@ class DevOtpService implements OtpService {
 			}
 		});
 		if (recent) {
-			// Re-emit a code on cooldown? We just return the existing challenge id.
-			console.log(`[otp:dev] cooldown active for ${mobile}, returning existing challenge`);
 			return { challengeId: recent.id };
 		}
 
@@ -48,7 +46,8 @@ class DevOtpService implements OtpService {
 				expiresAt: new Date(Date.now() + OTP_TTL_SECONDS * 1000)
 			}
 		});
-		console.log(`[otp:dev] OTP for ${mobile} → ${code}  (challenge ${challenge.id})`);
+		// Log OTP to server console (dev only — OTP_PROVIDER=dev means no SMS is sent).
+		process.stdout.write(`[otp:dev] OTP for ${mobile} → ${code}\n`);
 		return { challengeId: challenge.id };
 	}
 
@@ -56,12 +55,6 @@ class DevOtpService implements OtpService {
 		mobile: string,
 		code: string
 	): Promise<{ ok: true } | { ok: false; error: string }> {
-		// Dev default — 123456 always works, no challenge needed.
-		if (code === '123456') {
-			console.log(`[otp:dev] accepted default OTP for ${mobile}`);
-			return { ok: true };
-		}
-
 		const candidates = await prisma.otpChallenge.findMany({
 			where: {
 				mobile,

@@ -6,12 +6,7 @@ import { readJsonBody } from '$lib/server/json-input';
 import { requireAccount } from '$lib/server/user-auth';
 import { assertOwnsMembers, assertOwnsPrograms, sessionCreateSchema, recomputeMemberBalance, recomputeProgramStreaks } from '$lib/server/sync';
 import { emitChange } from '$lib/server/live';
-import { getRewardRate } from '$lib/server/reward-config';
-
-/// Mirrors RewardRules.milestoneThresholds in reward_rules.dart.
-/// Source of truth for server-side milestone verification.
-const MILESTONE_THRESHOLDS = [100_000, 500_000, 1_000_000, 2_500_000, 5_000_000, 10_000_000] as const;
-const MILESTONE_AMOUNT = 500;
+import { getRewardRate, getRewardEarnConfig } from '$lib/server/reward-config';
 
 function milestoneLabel(threshold: number): string {
 	if (threshold >= 10_000_000) return `${threshold / 10_000_000} Cr Chants`;
@@ -19,10 +14,8 @@ function milestoneLabel(threshold: number): string {
 	return `${threshold} Chants`;
 }
 
-/// Returns the first milestone threshold crossed when totals move from [before] to [after],
-/// or null if none was crossed.
-function milestoneCrossed(before: number, after: number): number | null {
-	for (const t of MILESTONE_THRESHOLDS) {
+function milestoneCrossed(thresholds: number[], before: number, after: number): number | null {
+	for (const t of thresholds) {
 		if (before < t && after >= t) return t;
 	}
 	return null;
@@ -95,47 +88,36 @@ export const POST: RequestHandler = async (event) => {
 		);
 	}
 
-	// Auto-award per-chant reward points for newly inserted sessions only.
-	// Only sessions that were actually inserted (not duplicates) contribute.
+	// Auto-award per-chant reward points for newly inserted sessions.
+	// Earn events are keyed per-session so re-posting a session batch never
+	// double-awards — each session has its own idempotency key.
 	const pointsEarned: Record<string, number> = {};
 	if (inserted.count > 0) {
-		const rate = await getRewardRate();
-		// Tally chants per member across the inserted sessions.
-		// We trust skipDuplicates above: duplicates don't get double-awarded because
-		// we gate on the idempotency key (session.id) — re-posting the same session
-		// returns inserted.count=0 and this block is skipped.
-		const chantsByMember = new Map<string, number>();
+		const [rate, earnConfig] = await Promise.all([getRewardRate(), getRewardEarnConfig()]);
+
+		// One earn event per chant session — stable per-session idempotency key.
+		const touchedMembers = new Set<string>();
 		for (const s of body.sessions) {
-			// Handwriting sessions earn writing-rate rewards, not chant-rate points.
-			if (s.modality === 'handwriting') continue;
-			chantsByMember.set(s.member_id, (chantsByMember.get(s.member_id) ?? 0) + s.count_added);
-		}
-		for (const [memberId, chants] of chantsByMember) {
-			const pts = Math.floor(chants / rate);
+			if (s.modality === 'handwriting') continue; // handwriting uses its own rate
+			const pts = Math.floor(s.count_added / rate);
 			if (pts <= 0) continue;
-			// Key MUST include memberId — all-sessions key is shared across members,
-			// causing the second member's upsert to silently no-op.
-			const memberSessionIds = body.sessions
-				.filter((s) => s.member_id === memberId && s.modality !== 'handwriting')
-				.map((s) => s.id)
-				.sort()
-				.join('_');
-			const eventId = `chant_${memberId}_${memberSessionIds}`.slice(0, 80);
+			const eventId = `earn:session:${s.id}`;
 			await prisma.rewardEvent.upsert({
 				where: { id: eventId },
 				create: {
 					id: eventId,
-					memberId,
+					memberId: s.member_id,
 					kind: 'earn',
 					amount: pts,
-					source: `chant_session (${chants} chants @ 1pt/${rate})`
+					source: `chant_session (${s.count_added} chants @ 1pt/${rate})`
 				},
-				update: {} // idempotent — don't re-award on retry
+				update: {}
 			});
-			pointsEarned[memberId] = pts;
+			pointsEarned[s.member_id] = (pointsEarned[s.member_id] ?? 0) + pts;
+			touchedMembers.add(s.member_id);
 		}
-		if (Object.keys(pointsEarned).length > 0) {
-			await Promise.all(Object.keys(pointsEarned).map((id) => recomputeMemberBalance(id)));
+		if (touchedMembers.size > 0) {
+			await Promise.all([...touchedMembers].map((id) => recomputeMemberBalance(id)));
 			emitChange('reward_event');
 		}
 
@@ -144,7 +126,6 @@ export const POST: RequestHandler = async (event) => {
 		for (const s of body.sessions) {
 			countAddedByProgram.set(s.program_id, (countAddedByProgram.get(s.program_id) ?? 0) + s.count_added);
 		}
-		// Batch-fetch all affected programs in one query instead of N findUnique calls.
 		const programIdsForMilestone = Array.from(countAddedByProgram.keys());
 		const milestonePrograms = await prisma.program.findMany({
 			where: { id: { in: programIdsForMilestone } },
@@ -156,7 +137,7 @@ export const POST: RequestHandler = async (event) => {
 				const countAdded = countAddedByProgram.get(program.id) ?? 0;
 				const after = program.totalChants + program.totalWritings;
 				const before = after - countAdded;
-				const threshold = milestoneCrossed(before, after);
+				const threshold = milestoneCrossed(earnConfig.milestoneThresholds, before, after);
 				if (threshold === null) return;
 				const milestoneEventId = `milestone:${program.memberId}:${threshold}`;
 				await prisma.rewardEvent.upsert({
@@ -165,7 +146,7 @@ export const POST: RequestHandler = async (event) => {
 						id: milestoneEventId,
 						memberId: program.memberId,
 						kind: 'milestone',
-						amount: MILESTONE_AMOUNT,
+						amount: earnConfig.milestoneCross,
 						source: `Milestone: ${milestoneLabel(threshold)}`
 					},
 					update: {}
@@ -180,17 +161,14 @@ export const POST: RequestHandler = async (event) => {
 	}
 
 	// ── Daily-target bonus ──────────────────────────────────────────────────
-	// For each program touched by this batch, sum countAdded for today and check
-	// whether it just crossed the program's dailyTarget for the first time.
-	// dailyTarget = ceil(targetWritings / targetDays) — mirrors Flutter's
-	// ProgramRepository.computeDailyTarget.
 	// Idempotency key: daily_target_bonus:<programId>:<YYYY-MM-DD> (UTC).
 	if (inserted.count > 0) {
+		const earnConfig = await getRewardEarnConfig();
 		const uniqueProgramIds = Array.from(new Set(body.sessions.map((s) => s.program_id)));
 		const now = new Date();
 		const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 		const dayEnd = new Date(dayStart.getTime() + 86_400_000);
-		const calendarDate = dayStart.toISOString().slice(0, 10); // "YYYY-MM-DD"
+		const calendarDate = dayStart.toISOString().slice(0, 10);
 
 		const programs = await prisma.program.findMany({
 			where: { id: { in: uniqueProgramIds } },
@@ -218,7 +196,7 @@ export const POST: RequestHandler = async (event) => {
 						id: bonusId,
 						memberId: program.memberId,
 						kind: 'milestone',
-						amount: 50,
+						amount: earnConfig.dailyTarget,
 						source: 'daily_target_bonus'
 					},
 					update: {}

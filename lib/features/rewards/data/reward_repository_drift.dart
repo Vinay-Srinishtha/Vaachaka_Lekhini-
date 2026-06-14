@@ -145,16 +145,11 @@ class RewardRepositoryDrift implements RewardRepository {
             storeItemId: Value(storeItemId),
           ),
         );
-    // Queue to Prisma — field names match Prisma RewardEvent exactly
-    await _outbox.enqueue('reward_events.append', {
-      'id': id,
-      'member_id': memberId,
-      'store_item_id': storeItemId,
-      'kind': 'earn',
-      'amount': amount,
-      'source': source,
-      'occurred_at': now.toUtc().toIso8601String(),
-    });
+    // Note: earn events are NOT pushed to the server outbox.
+    // The server generates earn events server-side when sessions sync,
+    // and blocks client-submitted earn events (kind:'earn' returns 403).
+    // The local row is kept for offline balance display only;
+    // reconcileFromServer() corrects any divergence on next pull.
   }
 
   @override

@@ -17,4 +17,11 @@ abstract final class RemoteConfigKeys {
   /// written Japa count. Compared against HandwritingComparator score × 100.
   /// Default: 20 (20%). Adjustable from admin without an app update.
   static const minHandwritingAccuracy = 'config.min_handwriting_accuracy';
+
+  // Reward economy — must stay in sync with admin reward-config.ts seedDefaultFlags()
+  static const rewardDailyPoints = 'reward_daily_points';
+  static const rewardMilestonePoints = 'reward_milestone_points';
+  static const rewardFriendReferral = 'reward_friend_referral';
+  static const rewardCharityDonation = 'reward_charity_donation';
+  static const rewardMilestoneThresholds = 'reward_milestone_thresholds';
 }

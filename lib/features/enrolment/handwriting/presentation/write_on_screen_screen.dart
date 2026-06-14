@@ -227,19 +227,8 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
   }
 
   /// Brief green toast when a marginal-but-passing score is achieved.
-  /// Silent on clearly good scores to avoid interrupting the practice flow.
   void _showAcceptedFeedback(double score, double threshold) {
-    if (score < threshold + 0.20) {
-      _showSnack(SnackBar(
-        duration: const Duration(milliseconds: 1400),
-        backgroundColor: KvlColors.success,
-        behavior: SnackBarBehavior.floating,
-        content: Text(
-          '✓  ${(score * 100).toStringAsFixed(0)}% — accepted',
-          style: const TextStyle(color: Colors.white, fontSize: 13),
-        ),
-      ));
-    }
+    // No per-stroke snackbar — the session summary shows totals on finish.
   }
 
   Future<void> _save() async {
@@ -280,20 +269,8 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
       // Refresh the practice controller so the counter shows updated DB counts.
       await ref.read(practiceControllerProvider(programId).notifier).reloadProgram();
       if (!mounted) return;
-      if (total > 0) {
-        _showSnack(SnackBar(
-          duration: const Duration(milliseconds: 1500),
-          content: Text(context.l10n.handwritingSaved(total)),
-          backgroundColor: KvlColors.accent,
-          behavior: SnackBarBehavior.floating,
-          action: SnackBarAction(
-            label: '✕',
-            textColor: Colors.white,
-            onPressed: () => ScaffoldMessenger.of(context).clearSnackBars(),
-          ),
-        ));
-      }
       // Pop back to the practice counter screen (it pushed us here).
+      // The session summary snackbar is shown there on Finish.
       context.pop();
       return;
     }

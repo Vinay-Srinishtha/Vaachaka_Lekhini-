@@ -202,13 +202,19 @@ class _BodyState extends ConsumerState<_Body> {
                         : () => controller.start(mantra: mantra),
                     onFinish: () async {
                       if (state.activeSessionId != null) {
-                        final saved = state.sessionCount;
+                        final beforeTotal = state.program.totalProgress;
                         await controller.finish();
                         if (!context.mounted) return;
                         ref.read(sessionCompletedProvider.notifier).increment();
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        final afterState = ref.read(practiceControllerProvider(programId)).value;
+                        final sessionTotal = (afterState != null)
+                            ? (afterState.program.totalProgress - beforeTotal).clamp(0, 999999)
+                            : state.sessionCount;
+                        ScaffoldMessenger.of(context)
+                          ..clearSnackBars()
+                          ..showSnackBar(
                           SnackBar(
-                            duration: const Duration(milliseconds: 1500),
+                            duration: const Duration(milliseconds: 2500),
                             behavior: SnackBarBehavior.floating,
                             backgroundColor: const Color(0xFF15803D),
                             elevation: 10,
@@ -234,7 +240,7 @@ class _BodyState extends ConsumerState<_Body> {
                                 const SizedBox(width: KvlSpacing.sm),
                                 Expanded(
                                   child: Text(
-                                    'Session saved · +${IndianNumberFormat.format(saved)} chants',
+                                    '${IndianNumberFormat.format(sessionTotal)} chants completed this session',
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                     style: KvlText.ui(

@@ -125,12 +125,15 @@ class _PracticeDashboardView extends ConsumerState<_PracticeDashboard> {
         : (total / target).clamp(0, 1).toDouble();
 
     final statsAsync = ref.watch(globalStatsProvider(program.mantraId));
-    final statsLoading = statsAsync.isLoading;
-    // Global count: floor at user's own total so it's never less than what the user did.
+    // Only show skeleton on the very first load — keep stale value during background re-polls.
+    final statsLoading = statsAsync.isLoading && !statsAsync.hasValue;
+    // Global count: server total + any local today-count not yet synced to server.
+    final todaysCount = widget.state.todaysCount;
     final serverGlobal = statsAsync.value?.globalChantCount ?? 0;
-    final globalCount = serverGlobal < total ? total : serverGlobal;
-    // Practitioners = distinct accounts enrolled in this mantra program (from API).
-    final practitioners = statsAsync.value?.memberCount ?? 0;
+    // Floor at user's own total; also add today's local sessions that may not have synced yet.
+    final globalCount = [serverGlobal, total, serverGlobal + todaysCount].reduce((a, b) => a > b ? a : b);
+    // Live users = distinct accounts enrolled in this mantra program (from API).
+    final liveUsers = statsAsync.value?.memberCount ?? 0;
 
     return SafeArea(
       bottom: false,
@@ -163,7 +166,7 @@ class _PracticeDashboardView extends ConsumerState<_PracticeDashboard> {
                     // ── Community stats ───────────────────────────────────────
                     _CommunityStatsRow(
                       globalCount: globalCount,
-                      practitioners: practitioners,
+                      liveUsers: liveUsers,
                       loading: statsLoading,
                       compact: compact,
                     ),
@@ -258,13 +261,13 @@ class _PracticeDashboardView extends ConsumerState<_PracticeDashboard> {
 class _CommunityStatsRow extends StatelessWidget {
   const _CommunityStatsRow({
     required this.globalCount,
-    required this.practitioners,
+    required this.liveUsers,
     required this.loading,
     required this.compact,
   });
 
   final int globalCount;
-  final int practitioners;
+  final int liveUsers;
   final bool loading;
   final bool compact;
 
@@ -297,8 +300,8 @@ class _CommunityStatsRow extends StatelessWidget {
             iconBg: KvlColors.accentSoft,
             icon: Icons.people_alt_rounded,
             iconColor: KvlColors.accent,
-            label: 'Practitioners',
-            value: IndianNumberFormat.format(practitioners),
+            label: 'Live Users',
+            value: IndianNumberFormat.format(liveUsers),
             valueColor: KvlColors.accent,
             loading: loading,
             compact: compact,
@@ -763,6 +766,23 @@ class _ProgressRing extends StatelessWidget {
                         .copyWith(color: KvlColors.primaryDeep),
                   ),
                 ),
+                if (todaysCount > 0) ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: KvlColors.accentSoft,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'Today: ${IndianNumberFormat.format(todaysCount)}',
+                      style: KvlText.caption(compact ? 10 : 11).copyWith(
+                        color: KvlColors.accent,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ],

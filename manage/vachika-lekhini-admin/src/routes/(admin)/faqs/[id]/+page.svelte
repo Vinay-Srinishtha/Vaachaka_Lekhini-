@@ -6,7 +6,7 @@
 	let { data, form } = $props();
 
 	const faq = $derived(data.faq);
-	const v = $derived(form?.values ?? {});
+	const v = $derived((form as any)?.values ?? {});
 
 	function close() { goto('/faqs', { keepFocus: true, noScroll: true }); }
 	function handleSuccess() { toasts.show('FAQ saved'); close(); }

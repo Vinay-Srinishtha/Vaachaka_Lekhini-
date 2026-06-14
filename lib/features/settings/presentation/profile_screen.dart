@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -519,85 +521,26 @@ class ProfileScreen extends ConsumerWidget {
     final prefs = await SharedPreferences.getInstance();
 
     final now = DateTime.now();
-    final buf = StringBuffer();
 
-    // ─── Header ──────────────────────────────────────────────────────────────
-    buf.writeln('╔══════════════════════════════════════════════════════╗');
-    buf.writeln('║          VACHIKA LEKHINI  –  DATA EXPORT             ║');
-    buf.writeln('╚══════════════════════════════════════════════════════╝');
-    buf.writeln('Exported on : ${_fmt(now)}');
-    buf.writeln();
-
-    // ─── Profile & Account ───────────────────────────────────────────────────
-    buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    buf.writeln('  PROFILE & ACCOUNT');
-    buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    buf.writeln('  Name      : ${profile?.name ?? '—'}');
-    buf.writeln('  Relation  : ${profile?.relation.name ?? '—'}');
-    buf.writeln('  Mobile    : ${session?.mobile ?? '—'}');
-    buf.writeln('  Username  : ${session?.username ?? '—'}');
-    buf.writeln('  Language  : ${settings.languageCode}');
-    buf.writeln();
-
-    // Reward points
-    if (profile != null) {
-      final totalPts = await rewardRepo.totalPoints(profile.id);
-      final rewardHistory = await rewardRepo.history(profile.id);
-      buf.writeln('  Reward Points : $totalPts pts');
-      buf.writeln();
-      if (rewardHistory.isNotEmpty) {
-        buf.writeln('  Reward History:');
-        for (final e in rewardHistory) {
-          final sign = e.signedAmount >= 0 ? '+' : '';
-          buf.writeln('    ${_fmt(e.occurredAt)}  $sign${e.signedAmount} pts  —  ${e.source}');
-        }
-      }
-    }
-    buf.writeln();
-
-    // ─── Settings ────────────────────────────────────────────────────────────
-    buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    buf.writeln('  SETTINGS');
-    buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    buf.writeln('  Reminder Time   : ${settings.reminderTime.hour.toString().padLeft(2, "0")}:${settings.reminderTime.minute.toString().padLeft(2, "0")}');
-    buf.writeln('  Notification    : ${settings.notificationSound}');
-    buf.writeln('  Mic Sensitivity : ${settings.micSensitivity.name}');
-    buf.writeln();
-
-    // ─── Programs ────────────────────────────────────────────────────────────
-    buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    buf.writeln('  MANTRA PROGRAMS  (${programs.length} total)');
-    buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
-    for (int pi = 0; pi < programs.length; pi++) {
-      final p = programs[pi];
+    // ─── Collect data for each program ───────────────────────────────────────
+    final List<_ProgramExportData> programData = [];
+    for (final p in programs) {
       final mantra = ref.read(mantraByIdProvider(p.mantraId));
-      final mantraName = mantra != null
-          ? '${mantra.name.devanagari}  (${mantra.name.roman})'
-          : p.mantraId;
-
-      // Streaks
+      final mantraDevanagari = mantra?.name.devanagari ?? p.mantraId;
+      final mantraRoman = mantra?.name.roman ?? '';
       final curStreak = await programRepo.currentStreak(p.id);
       final longestStreak = await programRepo.longestStreak(p.id);
-
-      // Daily target
       final dailyTarget = (p.targetDays > 0)
           ? (p.targetWritings / p.targetDays).ceil()
           : 0;
-
-      // Progress percentage
       final progressPct = p.targetWritings > 0
           ? ((p.totalChants / p.targetWritings) * 100).clamp(0, 100).toStringAsFixed(1)
           : '0.0';
-
-      // Next milestone
-      final milestoneThresholds = ref.watch(rewardRulesProvider).milestoneThresholds;
+      final milestoneThresholds = ref.read(rewardRulesProvider).milestoneThresholds;
       int? nextMilestone;
       for (final t in milestoneThresholds) {
         if (p.totalChants < t) { nextMilestone = t; break; }
       }
-
-      // Dedication
       final dedKey = 'dedication_${p.id}';
       final dedRaw = prefs.getString(dedKey);
       String dedicationLine = 'Not set';
@@ -605,77 +548,296 @@ class ProfileScreen extends ConsumerWidget {
         final parts = dedRaw.split('||');
         final name = parts[0].trim();
         final note = parts.length > 1 ? parts[1].trim() : '';
-        dedicationLine = note.isNotEmpty ? '$name  ($note)' : name;
+        dedicationLine = note.isNotEmpty ? '$name ($note)' : name;
       }
-
-      // Last 90 days daily counts
       final from90 = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 89));
       final countsByDay = await programRepo.sessionCountsByDay(
         programId: p.id,
         from: from90,
         to: now,
       );
-
-      buf.writeln();
-      buf.writeln('  ┌─ Program ${pi + 1} ─────────────────────────────────');
-      buf.writeln('  │  Mantra      : $mantraName');
-      buf.writeln('  │  Started     : ${_fmtDate(p.startedAt)}');
-      buf.writeln('  │  Status      : ${p.isCompleted ? "completed" : "active"}');
-      buf.writeln('  │  Target      : ${_fmtNum(p.targetWritings)} chants over ${p.targetDays} days');
-      buf.writeln('  │  Daily Goal  : ${_fmtNum(dailyTarget)} chants/day');
-      buf.writeln('  │  Completed   : ${_fmtNum(p.totalChants)} chants  ($progressPct%)');
-      buf.writeln('  │  Remaining   : ${_fmtNum((p.targetWritings - p.totalChants).clamp(0, p.targetWritings))} chants');
-      buf.writeln('  │  Current Streak   : $curStreak days 🔥');
-      buf.writeln('  │  Longest Streak   : $longestStreak days');
-      if (nextMilestone != null) {
-        final toMilestone = nextMilestone - p.totalChants;
-        buf.writeln('  │  Next Milestone   : ${_fmtNum(nextMilestone)}  (${_fmtNum(toMilestone)} to go)');
-      } else {
-        buf.writeln('  │  Milestones  : All crossed ✨');
-      }
-      buf.writeln('  │  Dedicated To: $dedicationLine');
-
-      // Session history
-      if (countsByDay.isNotEmpty) {
-        buf.writeln('  │');
-        buf.writeln('  │  Daily Practice (last 90 days, active days only):');
-        final sortedDays = countsByDay.keys.toList()..sort();
-        for (final day in sortedDays) {
-          final cnt = countsByDay[day] ?? 0;
-          if (cnt > 0) {
-            final bar = '█' * (cnt ~/ (dailyTarget > 0 ? (dailyTarget / 10).ceil() : 10)).clamp(1, 20);
-            final metGoal = dailyTarget > 0 && cnt >= dailyTarget ? ' ✓' : '';
-            buf.writeln('  │    ${_fmtDate(day)}  ${_fmtNum(cnt).padLeft(7)} chants  $bar$metGoal');
-          }
-        }
-      }
-      buf.writeln('  └──────────────────────────────────────────────────');
+      programData.add(_ProgramExportData(
+        program: p,
+        mantraDevanagari: mantraDevanagari,
+        mantraRoman: mantraRoman,
+        curStreak: curStreak,
+        longestStreak: longestStreak,
+        dailyTarget: dailyTarget,
+        progressPct: progressPct,
+        nextMilestone: nextMilestone,
+        dedicationLine: dedicationLine,
+        countsByDay: countsByDay,
+      ));
     }
 
-    buf.writeln();
-    buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    buf.writeln('  Generated by Vachika Lekhini 🙏');
-    buf.writeln('  May your practice bring peace and purpose.');
-    buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    int totalPts = 0;
+    if (profile != null) {
+      totalPts = await rewardRepo.totalPoints(profile.id);
+    }
 
-    // Write to a temp .txt file and share
+    // ─── Build PDF ────────────────────────────────────────────────────────────
+    final pdf = pw.Document();
+
+    const primary = PdfColor.fromInt(0xFF5E35B1);
+    const primaryLight = PdfColor.fromInt(0xFFEDE7F6);
+    const inkDark = PdfColor.fromInt(0xFF1A1A2E);
+    const inkSoft = PdfColor.fromInt(0xFF4A4A6A);
+    const muted = PdfColor.fromInt(0xFF9E9E9E);
+
+    // For each program: one or more pages with the mantra written N times
+    for (final pd in programData) {
+      final mantraText = pd.mantraDevanagari.isNotEmpty
+          ? pd.mantraDevanagari
+          : pd.mantraRoman;
+      final totalChants = pd.program.totalChants;
+
+      // Split mantra repetitions across pages (50 per page in a grid)
+      const chantsPerPage = 50;
+      final pageCount = totalChants == 0 ? 1 : ((totalChants - 1) ~/ chantsPerPage + 1);
+
+      for (int pg = 0; pg < pageCount; pg++) {
+        final startIdx = pg * chantsPerPage;
+        final endIdx = (startIdx + chantsPerPage).clamp(0, totalChants);
+        final countOnPage = endIdx - startIdx;
+
+        pdf.addPage(
+          pw.Page(
+            pageFormat: PdfPageFormat.a4,
+            margin: const pw.EdgeInsets.all(36),
+            build: (ctx) {
+              return pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+                children: [
+                  // Header bar
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: const pw.BoxDecoration(color: primary),
+                    child: pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        pw.Text(
+                          'Vachika Lekhini',
+                          style: pw.TextStyle(
+                            color: PdfColors.white,
+                            fontSize: 14,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                        pw.Text(
+                          'Page ${pg + 1} / $pageCount',
+                          style: const pw.TextStyle(color: PdfColors.white, fontSize: 10),
+                        ),
+                      ],
+                    ),
+                  ),
+                  pw.SizedBox(height: 10),
+                  // Mantra name subtitle
+                  pw.Text(
+                    pd.mantraRoman.isNotEmpty
+                        ? '${pd.mantraDevanagari}  •  ${pd.mantraRoman}'
+                        : pd.mantraDevanagari,
+                    style: const pw.TextStyle(color: inkSoft, fontSize: 11),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                  pw.Text(
+                    'Written ${_fmtNum(totalChants)} times',
+                    style: const pw.TextStyle(color: muted, fontSize: 9),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                  pw.SizedBox(height: 12),
+                  pw.Divider(color: primaryLight, thickness: 1),
+                  pw.SizedBox(height: 8),
+                  // Grid of mantra repetitions
+                  if (countOnPage > 0)
+                    pw.Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: List.generate(countOnPage, (i) {
+                        final num = startIdx + i + 1;
+                        return pw.Container(
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                          decoration: pw.BoxDecoration(
+                            border: pw.Border.all(color: primaryLight, width: 0.5),
+                            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+                          ),
+                          child: pw.Text(
+                            '$num. $mantraText',
+                            style: pw.TextStyle(
+                              fontSize: 10,
+                              color: inkDark,
+                              fontWeight: pw.FontWeight.bold,
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                  if (totalChants == 0)
+                    pw.Center(
+                      child: pw.Text(
+                        'No chants recorded yet',
+                        style: const pw.TextStyle(color: muted, fontSize: 12),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        );
+      }
+    }
+
+    // ─── Summary page ─────────────────────────────────────────────────────────
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(36),
+        build: (ctx) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+            children: [
+              // Header
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: const pw.BoxDecoration(color: primary),
+                child: pw.Text(
+                  'Practice Summary',
+                  style: pw.TextStyle(
+                    color: PdfColors.white,
+                    fontSize: 16,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+              ),
+              pw.SizedBox(height: 4),
+              pw.Text(
+                'Exported on ${_fmtDate(now)} at ${now.hour.toString().padLeft(2, "0")}:${now.minute.toString().padLeft(2, "0")}',
+                style: const pw.TextStyle(color: muted, fontSize: 9),
+              ),
+              pw.SizedBox(height: 16),
+
+              // Account section
+              _pdfSectionHeader('Account', primary, primaryLight),
+              pw.SizedBox(height: 6),
+              _pdfTable([
+                ['Name', profile?.name ?? '—'],
+                ['Mobile', session?.mobile ?? '—'],
+                ['Username', session?.username ?? '—'],
+                ['Language', settings.languageCode],
+                ['Reward Points', '$totalPts pts'],
+              ], inkDark, inkSoft, primaryLight),
+              pw.SizedBox(height: 16),
+
+              // Programs section
+              _pdfSectionHeader('Mantra Programs', primary, primaryLight),
+              pw.SizedBox(height: 6),
+              ...programData.map((pd) => pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+                children: [
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: const pw.BoxDecoration(color: primaryLight),
+                    child: pw.Text(
+                      pd.mantraRoman.isNotEmpty
+                          ? '${pd.mantraDevanagari}  (${pd.mantraRoman})'
+                          : pd.mantraDevanagari,
+                      style: pw.TextStyle(
+                        fontSize: 11,
+                        fontWeight: pw.FontWeight.bold,
+                        color: primary,
+                      ),
+                    ),
+                  ),
+                  _pdfTable([
+                    ['Started', _fmtDate(pd.program.startedAt)],
+                    ['Status', pd.program.isCompleted ? 'Completed' : 'Active'],
+                    ['Target', '${_fmtNum(pd.program.targetWritings)} chants over ${pd.program.targetDays} days'],
+                    ['Completed', '${_fmtNum(pd.program.totalChants)} chants (${pd.progressPct}%)'],
+                    ['Remaining', _fmtNum((pd.program.targetWritings - pd.program.totalChants).clamp(0, pd.program.targetWritings))],
+                    ['Daily Goal', '${_fmtNum(pd.dailyTarget)} chants/day'],
+                    ['Current Streak', '${pd.curStreak} days'],
+                    ['Longest Streak', '${pd.longestStreak} days'],
+                    if (pd.nextMilestone != null)
+                      ['Next Milestone', '${_fmtNum(pd.nextMilestone!)} (${_fmtNum(pd.nextMilestone! - pd.program.totalChants)} to go)']
+                    else
+                      ['Milestones', 'All crossed'],
+                    ['Dedicated To', pd.dedicationLine],
+                  ], inkDark, inkSoft, primaryLight),
+                  pw.SizedBox(height: 12),
+                ],
+              )),
+
+              pw.Spacer(),
+              pw.Divider(color: primaryLight),
+              pw.Text(
+                'Generated by Vachika Lekhini  •  May your practice bring peace and purpose.',
+                style: const pw.TextStyle(color: muted, fontSize: 8),
+                textAlign: pw.TextAlign.center,
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    // ─── Save and share ───────────────────────────────────────────────────────
     final dir = await getTemporaryDirectory();
     final stamp = now.toIso8601String().replaceAll(':', '-').substring(0, 19);
-    final file = File('${dir.path}/vachika_lekhini_export_$stamp.txt');
-    await file.writeAsString(buf.toString(), flush: true);
+    final file = File('${dir.path}/vachika_lekhini_export_$stamp.pdf');
+    await file.writeAsBytes(await pdf.save(), flush: true);
 
     await SharePlus.instance.share(
       ShareParams(
-        files: [XFile(file.path, mimeType: 'text/plain')],
+        files: [XFile(file.path, mimeType: 'application/pdf')],
         subject: 'Vachika Lekhini – My Practice Report',
-        text: 'My mantra practice data from Vachika Lekhini 🙏',
+        text: 'My mantra practice data from Vachika Lekhini',
       ),
     );
   }
 
-  static String _fmt(DateTime d) =>
-      '${d.day.toString().padLeft(2, '0')}-${d.month.toString().padLeft(2, '0')}-${d.year}  '
-      '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+  static pw.Widget _pdfSectionHeader(String title, PdfColor primary, PdfColor bg) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: pw.BoxDecoration(
+        color: bg,
+        border: pw.Border(left: pw.BorderSide(color: primary, width: 3)),
+      ),
+      child: pw.Text(
+        title,
+        style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: primary),
+      ),
+    );
+  }
+
+  static pw.Widget _pdfTable(
+    List<List<String>> rows,
+    PdfColor inkDark,
+    PdfColor inkSoft,
+    PdfColor stripe,
+  ) {
+    return pw.Table(
+      columnWidths: {
+        0: const pw.FlexColumnWidth(1.4),
+        1: const pw.FlexColumnWidth(2.6),
+      },
+      children: rows.asMap().entries.map((entry) {
+        final i = entry.key;
+        final row = entry.value;
+        return pw.TableRow(
+          decoration: i.isEven ? null : pw.BoxDecoration(color: stripe),
+          children: [
+            pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: pw.Text(row[0], style: pw.TextStyle(fontSize: 9, color: inkSoft)),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: pw.Text(row[1], style: pw.TextStyle(fontSize: 9, color: inkDark, fontWeight: pw.FontWeight.bold)),
+            ),
+          ],
+        );
+      }).toList(),
+    );
+  }
 
   static String _fmtDate(DateTime d) =>
       '${d.day.toString().padLeft(2, '0')}-${d.month.toString().padLeft(2, '0')}-${d.year}';
@@ -1831,4 +1993,29 @@ class _ChangeMobileSheetState extends ConsumerState<_ChangeMobileSheet> {
       ),
     );
   }
+}
+
+class _ProgramExportData {
+  const _ProgramExportData({
+    required this.program,
+    required this.mantraDevanagari,
+    required this.mantraRoman,
+    required this.curStreak,
+    required this.longestStreak,
+    required this.dailyTarget,
+    required this.progressPct,
+    required this.nextMilestone,
+    required this.dedicationLine,
+    required this.countsByDay,
+  });
+  final Program program;
+  final String mantraDevanagari;
+  final String mantraRoman;
+  final int curStreak;
+  final int longestStreak;
+  final int dailyTarget;
+  final String progressPct;
+  final int? nextMilestone;
+  final String dedicationLine;
+  final Map<DateTime, int> countsByDay;
 }

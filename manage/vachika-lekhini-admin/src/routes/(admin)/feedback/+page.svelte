@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	export let data: import('./$types').PageData;
+	import type { PageData } from './$types';
+	const { data }: { data: PageData } = $props();
 
 	const statusColor: Record<string, string> = {
 		open: 'bg-amber-100 text-amber-800',

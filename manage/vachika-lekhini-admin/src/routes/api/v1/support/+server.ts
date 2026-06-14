@@ -3,7 +3,7 @@ import type { RequestHandler } from './$types';
 import { z } from 'zod';
 import { prisma } from '$lib/server/prisma';
 import { readJsonBody } from '$lib/server/json-input';
-import { verifyAccessToken } from '$lib/server/jwt';
+import { verifyUserToken } from '$lib/server/user-jwt';
 
 const schema = z.object({
 	subject: z.string().min(1).max(200),
@@ -22,7 +22,8 @@ export const POST: RequestHandler = async (event) => {
 	const authHeader = event.request.headers.get('Authorization');
 	if (authHeader?.startsWith('Bearer ')) {
 		try {
-			const payload = await verifyAccessToken(authHeader.slice(7));
+			const payload = await verifyUserToken(authHeader.slice(7), 'access');
+			if (!payload) throw new Error('invalid token');
 			const account = await prisma.account.findUnique({
 				where: { id: payload.sub },
 				select: { mobile: true, members: { where: { isPrimary: true }, select: { id: true }, take: 1 } }

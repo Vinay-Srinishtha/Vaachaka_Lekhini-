@@ -11,33 +11,38 @@
 	const hasLogo = $derived(logoUrl.length > 0);
 </script>
 
-<!-- Header -->
-<div class="mb-8">
-	<h1 class="text-2xl font-bold text-slate-900">App Settings</h1>
-	<p class="mt-1 text-sm text-slate-500">Global configuration served to the Flutter app at <code class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-600">/api/v1/app-settings</code></p>
+<!-- Header + Save -->
+<div class="mb-8 flex items-start justify-between gap-4">
+	<div>
+		<h1 class="text-2xl font-bold text-slate-900">App Settings</h1>
+		<p class="mt-1 text-sm text-slate-500">Global configuration served to the Flutter app at <code class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-600">/api/v1/app-settings</code></p>
+	</div>
+	<div class="flex shrink-0 items-center gap-3">
+		{#if saved}
+			<span class="flex items-center gap-1.5 text-sm text-green-700">
+				<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"/></svg>
+				Saved
+			</span>
+		{/if}
+		{#if error}
+			<span class="flex items-center gap-1.5 text-sm text-red-700">
+				<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd"/></svg>
+				{error}
+			</span>
+		{/if}
+		<button type="submit" form="app-settings-form" class="rounded-lg bg-brand-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 transition-colors">
+			Save settings
+		</button>
+	</div>
 </div>
 
-{#if saved}
-	<div class="mb-6 flex items-center gap-2 rounded-xl bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
-		<svg class="h-4 w-4 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"/></svg>
-		Settings saved successfully.
-	</div>
-{/if}
-
-{#if error}
-	<div class="mb-6 flex items-center gap-2 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-		<svg class="h-4 w-4 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd"/></svg>
-		{error}
-	</div>
-{/if}
-
-<form method="POST" action="?/save" use:enhance>
+<form id="app-settings-form" method="POST" action="?/save" use:enhance>
 
 	<!-- ── Two-column grid ───────────────────────────────────────────────── -->
-	<div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+	<div class="grid grid-cols-1 gap-6 xl:grid-cols-2 h-full">
 
 		<!-- LEFT column: App Logo + Privacy Policy -->
-		<div class="flex flex-col gap-6">
+		<div class="flex flex-col gap-6 min-h-0">
 
 			<!-- App Logo -->
 			<div class="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -100,7 +105,7 @@
 		</div>
 
 		<!-- RIGHT column: Support Email + About App -->
-		<div class="flex flex-col gap-6">
+		<div class="flex flex-col gap-6 min-h-0">
 
 			<!-- Support Email -->
 			<div class="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -183,12 +188,5 @@
 		</div>
 	</div>
 
-	<!-- Save button -->
-	<div class="mt-8 flex items-center justify-end gap-3 rounded-2xl border border-slate-200 bg-white px-6 py-4 shadow-sm">
-		<p class="text-xs text-slate-500">Changes apply immediately to all Flutter app instances on next launch.</p>
-		<button type="submit" class="rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 transition-colors">
-			Save settings
-		</button>
-	</div>
 
 </form>

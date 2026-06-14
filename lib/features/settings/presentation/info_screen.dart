@@ -17,9 +17,10 @@ class InfoScreen extends ConsumerWidget {
     if (topic == 'help') return const _FaqScreen();
     if (topic == 'report') return const _ReportScreen();
     if (topic == 'feedback') return const _FeedbackScreen();
-    if (topic == 'privacy') return _PrivacyScreen(ref: ref);
+    if (topic == 'privacy') return const _PrivacyScreen();
+    if (topic == 'about') return const _AboutScreen();
 
-    // About / fallback
+    // Fallback
     return _SimpleInfoScreen(
       title: context.l10n.infoAboutTitle,
       icon: Icons.self_improvement_rounded,
@@ -89,12 +90,59 @@ SnackBar _errorSnack(String msg) => SnackBar(
     );
 
 // ---------------------------------------------------------------------------
+// About App
+// ---------------------------------------------------------------------------
+
+class _AboutScreen extends ConsumerWidget {
+  const _AboutScreen();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settingsAsync = ref.watch(appSettingsProvider);
+    final aboutBody = settingsAsync.value?.aboutApp;
+
+    return KvlScaffold(
+      title: context.l10n.infoAboutTitle,
+      scrollable: true,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: KvlSpacing.lg),
+          _heroIcon(
+            icon: Icons.self_improvement_rounded,
+            bg: KvlColors.primaryGhost,
+            color: KvlColors.primaryDeep,
+          ),
+          const SizedBox(height: KvlSpacing.md),
+          Center(child: Text(context.l10n.infoAboutTitle, style: KvlText.title(18))),
+          const SizedBox(height: KvlSpacing.lg),
+          Container(
+            padding: const EdgeInsets.all(KvlSpacing.md),
+            decoration: BoxDecoration(
+              color: KvlColors.surface,
+              borderRadius: KvlRadius.brLG,
+              border: Border.all(color: KvlColors.border),
+            ),
+            child: Text(
+              (aboutBody != null && aboutBody.isNotEmpty)
+                  ? aboutBody
+                  : context.l10n.infoAboutBody,
+              style: KvlText.body(13).copyWith(height: 1.7, color: KvlColors.inkSoft),
+            ),
+          ),
+          const SizedBox(height: KvlSpacing.lg),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Privacy Policy
 // ---------------------------------------------------------------------------
 
 class _PrivacyScreen extends ConsumerWidget {
-  const _PrivacyScreen({required this.ref});
-  final WidgetRef ref;
+  const _PrivacyScreen();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

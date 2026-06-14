@@ -92,6 +92,24 @@
 		</div>
 	</div>
 
+	<!-- About App -->
+	<div class="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+		<div>
+			<h2 class="text-sm font-semibold text-slate-800">About App</h2>
+			<p class="mt-0.5 text-xs text-slate-500">Shown in the Flutter app under Settings → About App. Supports plain text or Markdown.</p>
+		</div>
+		<div>
+			<label class="block text-sm font-medium text-slate-700 mb-1" for="about_app">About text (Markdown supported)</label>
+			<textarea
+				id="about_app"
+				name="about_app"
+				rows="10"
+				placeholder="## About Vachika Lekhini&#10;&#10;Vachika Lekhini is a spiritual practice app..."
+				class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 resize-y"
+			>{s.about_app ?? ''}</textarea>
+		</div>
+	</div>
+
 	<div class="flex justify-end">
 		<button type="submit" class="rounded-lg bg-brand-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700 transition-colors">
 			Save settings

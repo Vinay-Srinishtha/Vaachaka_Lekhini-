@@ -542,9 +542,9 @@ final faqsProvider = FutureProvider<List<({String question, String answer})>>((r
   }
 });
 
-/// App-wide settings (support email, privacy policy, logo URL) from /api/v1/app-settings.
+/// App-wide settings (support email, privacy policy, about app, logo URL) from /api/v1/app-settings.
 final appSettingsProvider =
-    FutureProvider<({String supportEmail, String privacyPolicy, String? logoUrl, String inviteHost})>((ref) async {
+    FutureProvider<({String supportEmail, String privacyPolicy, String? aboutApp, String? logoUrl, String inviteHost})>((ref) async {
   try {
     final api = ref.watch(apiClientProvider);
     final res = await api.dio.get<Map<String, dynamic>>('/api/v1/app-settings');
@@ -554,6 +554,7 @@ final appSettingsProvider =
           ? d['support_email'] as String
           : 'support@vaachikalekhini.com',
       privacyPolicy: d['privacy_policy'] as String? ?? '',
+      aboutApp: (d['about_app'] as String?)?.isNotEmpty == true ? d['about_app'] as String : null,
       logoUrl: d['app_logo_url'] as String?,
       inviteHost: (d['invite_host'] as String?)?.isNotEmpty == true
           ? d['invite_host'] as String
@@ -563,6 +564,7 @@ final appSettingsProvider =
     return (
       supportEmail: 'support@vaachikalekhini.com',
       privacyPolicy: '',
+      aboutApp: null,
       logoUrl: null,
       inviteHost: 'kvl.app',
     );

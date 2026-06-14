@@ -17,108 +17,192 @@ class InfoScreen extends ConsumerWidget {
     if (topic == 'help') return const _FaqScreen();
     if (topic == 'report') return const _ReportScreen();
     if (topic == 'feedback') return const _FeedbackScreen();
+    if (topic == 'privacy') return _PrivacyScreen(ref: ref);
 
-    // Privacy policy — load body from API, fall back to l10n string.
-    if (topic == 'privacy') {
-      final settingsAsync = ref.watch(appSettingsProvider);
-      final privacyBody = settingsAsync.value?.privacyPolicy;
-      final t = _topicFor(context, topic);
-      return KvlScaffold(
-        title: t.title,
-        scrollable: true,
-        body: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: KvlSpacing.lg),
-            Container(
-              width: 64,
-              height: 64,
-              decoration: const BoxDecoration(
-                color: KvlColors.primaryGhost,
-                shape: BoxShape.circle,
-              ),
-              alignment: Alignment.center,
-              child: Icon(t.icon, color: KvlColors.primaryDeep, size: 28),
-            ),
-            const SizedBox(height: KvlSpacing.md),
-            Center(child: Text(t.title, style: KvlText.title(17))),
-            const SizedBox(height: KvlSpacing.sm),
-            Text(
-              (privacyBody != null && privacyBody.isNotEmpty)
-                  ? privacyBody
-                  : t.body,
-              textAlign: TextAlign.center,
-              style: KvlText.body(12).copyWith(height: 1.6),
-            ),
-          ],
-        ),
-      );
-    }
+    // About / fallback
+    return _SimpleInfoScreen(
+      title: context.l10n.infoAboutTitle,
+      icon: Icons.self_improvement_rounded,
+      iconBg: KvlColors.primaryGhost,
+      iconColor: KvlColors.primaryDeep,
+      body: context.l10n.infoAboutBody,
+    );
+  }
+}
 
-    final t = _topicFor(context, topic);
+// ---------------------------------------------------------------------------
+// Shared helpers
+// ---------------------------------------------------------------------------
+
+Widget _heroIcon({
+  required IconData icon,
+  required Color bg,
+  required Color color,
+  double size = 72,
+  double iconSize = 32,
+}) {
+  return Center(
+    child: Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
+      alignment: Alignment.center,
+      child: Icon(icon, color: color, size: iconSize),
+    ),
+  );
+}
+
+Widget _infoChip(IconData icon, String label, Color bg, Color fg) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    decoration: BoxDecoration(
+      color: bg,
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: fg),
+        const SizedBox(width: 6),
+        Text(label, style: KvlText.ui(12, FontWeight.w600).copyWith(color: fg)),
+      ],
+    ),
+  );
+}
+
+SnackBar _errorSnack(String msg) => SnackBar(
+      content: Row(
+        children: [
+          const Icon(Icons.error_outline_rounded, color: Colors.white, size: 18),
+          const SizedBox(width: 8),
+          Expanded(child: Text(msg, style: const TextStyle(color: Colors.white, fontSize: 13))),
+        ],
+      ),
+      backgroundColor: KvlColors.danger,
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 4),
+      action: SnackBarAction(
+        label: '✕',
+        textColor: Colors.white,
+        onPressed: () {},  // Flutter auto-dismisses the snackbar on action tap
+      ),
+    );
+
+// ---------------------------------------------------------------------------
+// Privacy Policy
+// ---------------------------------------------------------------------------
+
+class _PrivacyScreen extends ConsumerWidget {
+  const _PrivacyScreen({required this.ref});
+  final WidgetRef ref;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settingsAsync = ref.watch(appSettingsProvider);
+    final privacyBody = settingsAsync.value?.privacyPolicy;
+
     return KvlScaffold(
-      title: t.title,
+      title: context.l10n.infoPrivacyTitle,
       scrollable: true,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: KvlSpacing.lg),
-          Container(
-            width: 64,
-            height: 64,
-            decoration: const BoxDecoration(
-              color: KvlColors.primaryGhost,
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Icon(t.icon, color: KvlColors.primaryDeep, size: 28),
+          _heroIcon(
+            icon: Icons.lock_rounded,
+            bg: KvlColors.accentSoft,
+            color: KvlColors.accent,
           ),
           const SizedBox(height: KvlSpacing.md),
-          Center(child: Text(t.title, style: KvlText.title(17))),
+          Center(
+            child: Text(
+              context.l10n.infoPrivacyTitle,
+              style: KvlText.title(18),
+            ),
+          ),
           const SizedBox(height: KvlSpacing.sm),
-          Text(
-            t.body,
-            textAlign: TextAlign.center,
-            style: KvlText.body(12).copyWith(height: 1.6),
+          Center(
+            child: _infoChip(
+              Icons.verified_user_rounded,
+              'Your data stays private',
+              KvlColors.accentSoft,
+              KvlColors.accent,
+            ),
+          ),
+          const SizedBox(height: KvlSpacing.lg),
+          Container(
+            padding: const EdgeInsets.all(KvlSpacing.md),
+            decoration: BoxDecoration(
+              color: KvlColors.surface,
+              borderRadius: KvlRadius.brLG,
+              border: Border.all(color: KvlColors.border),
+            ),
+            child: Text(
+              (privacyBody != null && privacyBody.isNotEmpty)
+                  ? privacyBody
+                  : context.l10n.infoPrivacyBody,
+              style: KvlText.body(13).copyWith(height: 1.7, color: KvlColors.inkSoft),
+            ),
+          ),
+          const SizedBox(height: KvlSpacing.lg),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Simple info (About)
+// ---------------------------------------------------------------------------
+
+class _SimpleInfoScreen extends StatelessWidget {
+  const _SimpleInfoScreen({
+    required this.title,
+    required this.icon,
+    required this.iconBg,
+    required this.iconColor,
+    required this.body,
+  });
+  final String title;
+  final IconData icon;
+  final Color iconBg;
+  final Color iconColor;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    return KvlScaffold(
+      title: title,
+      scrollable: true,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: KvlSpacing.lg),
+          _heroIcon(icon: icon, bg: iconBg, color: iconColor),
+          const SizedBox(height: KvlSpacing.md),
+          Center(child: Text(title, style: KvlText.title(18))),
+          const SizedBox(height: KvlSpacing.md),
+          Container(
+            padding: const EdgeInsets.all(KvlSpacing.md),
+            decoration: BoxDecoration(
+              color: KvlColors.surface,
+              borderRadius: KvlRadius.brLG,
+              border: Border.all(color: KvlColors.border),
+            ),
+            child: Text(
+              body,
+              style: KvlText.body(13).copyWith(height: 1.7, color: KvlColors.inkSoft),
+              textAlign: TextAlign.center,
+            ),
           ),
         ],
       ),
     );
   }
-
-  _Topic _topicFor(BuildContext context, String key) {
-    switch (key) {
-      case 'report':
-        return _Topic(
-          title: context.l10n.infoReportTitle,
-          icon: Icons.flag_outlined,
-          body: context.l10n.infoReportBody,
-        );
-      case 'feedback':
-        return _Topic(
-          title: context.l10n.infoFeedbackTitle,
-          icon: Icons.feedback_outlined,
-          body: context.l10n.infoFeedbackBody,
-        );
-      case 'privacy':
-        return _Topic(
-          title: context.l10n.infoPrivacyTitle,
-          icon: Icons.lock_outline_rounded,
-          body: context.l10n.infoPrivacyBody,
-        );
-      case 'about':
-      default:
-        return _Topic(
-          title: context.l10n.infoAboutTitle,
-          icon: Icons.self_improvement_rounded,
-          body: context.l10n.infoAboutBody,
-        );
-    }
-  }
 }
 
 // ---------------------------------------------------------------------------
-// Report Issue — full text-input form that POSTs to /api/v1/support.
+// Report Issue
 // ---------------------------------------------------------------------------
 
 class _ReportScreen extends ConsumerStatefulWidget {
@@ -158,12 +242,9 @@ class _ReportScreenState extends ConsumerState<_ReportScreen> {
     } on DioException catch (e) {
       if (mounted) {
         setState(() => _sending = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to send: ${e.message ?? 'network error'}'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        ScaffoldMessenger.of(context)
+          ..clearSnackBars()
+          ..showSnackBar(_errorSnack('Failed to send: ${e.message ?? 'network error'}'));
       }
     }
   }
@@ -173,94 +254,130 @@ class _ReportScreenState extends ConsumerState<_ReportScreen> {
     return KvlScaffold(
       title: 'Report Issue',
       scrollable: true,
-      body: _sent
-          ? _buildSuccess(context)
-          : Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: KvlSpacing.md),
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: const BoxDecoration(
-                      color: KvlColors.primaryGhost,
-                      shape: BoxShape.circle,
-                    ),
-                    alignment: Alignment.center,
-                    child: const Icon(Icons.flag_outlined, color: KvlColors.primaryDeep, size: 26),
-                  ),
-                  const SizedBox(height: KvlSpacing.sm),
-                  Center(
-                    child: Text(
-                      'Tell us what went wrong',
-                      style: KvlText.title(16),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Center(
-                    child: Text(
-                      'We read every report and respond within 48 hours.',
-                      textAlign: TextAlign.center,
-                      style: KvlText.muted(11.5),
-                    ),
-                  ),
-                  const SizedBox(height: KvlSpacing.lg),
-                  TextFormField(
-                    controller: _subjectCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Subject',
-                      hintText: 'e.g. Bug Report, Feature Request…',
-                    ),
-                    textCapitalization: TextCapitalization.sentences,
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? 'Subject is required' : null,
-                  ),
-                  const SizedBox(height: KvlSpacing.md),
-                  TextFormField(
-                    controller: _bodyCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Describe the issue',
-                      hintText:
-                          'What happened? What did you expect to happen? Which screen were you on?',
-                      alignLabelWithHint: true,
-                    ),
-                    maxLines: 8,
-                    minLines: 5,
-                    textCapitalization: TextCapitalization.sentences,
-                    validator: (v) =>
-                        (v == null || v.trim().length < 10)
-                            ? 'Please describe the issue (at least 10 characters)'
-                            : null,
-                  ),
-                  const SizedBox(height: KvlSpacing.lg),
-                  KvlButton(
-                    label: _sending ? 'Sending…' : 'Send Report',
-                    icon: Icons.send_rounded,
-                    onPressed: _sending ? null : _send,
-                  ),
-                ],
-              ),
-            ),
+      body: _sent ? _buildSuccess() : _buildForm(),
     );
   }
 
-  Widget _buildSuccess(BuildContext context) {
+  Widget _buildForm() {
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: KvlSpacing.lg),
+
+          // Hero icon
+          _heroIcon(
+            icon: Icons.flag_rounded,
+            bg: const Color(0xFFFFEBE9),
+            color: KvlColors.danger,
+          ),
+          const SizedBox(height: KvlSpacing.md),
+          Center(child: Text('Report an Issue', style: KvlText.title(18))),
+          const SizedBox(height: KvlSpacing.xs),
+          Center(
+            child: Text(
+              'We read every report and respond within 48 hours.',
+              textAlign: TextAlign.center,
+              style: KvlText.muted(12),
+            ),
+          ),
+          const SizedBox(height: KvlSpacing.md),
+
+          // Info chips row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _infoChip(Icons.timer_outlined, '48h response', KvlColors.primaryGhost, KvlColors.primaryDeep),
+              const SizedBox(width: 8),
+              _infoChip(Icons.lock_outline_rounded, 'Private', KvlColors.accentSoft, KvlColors.accent),
+            ],
+          ),
+          const SizedBox(height: KvlSpacing.lg),
+
+          // Form card
+          Container(
+            padding: const EdgeInsets.all(KvlSpacing.md),
+            decoration: BoxDecoration(
+              color: KvlColors.surface,
+              borderRadius: KvlRadius.brLG,
+              border: Border.all(color: KvlColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextFormField(
+                  controller: _subjectCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Subject',
+                    hintText: 'e.g. Bug Report, Feature Request…',
+                    prefixIcon: Icon(Icons.title_rounded, size: 18),
+                  ),
+                  textCapitalization: TextCapitalization.sentences,
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Subject is required' : null,
+                ),
+                const SizedBox(height: KvlSpacing.md),
+                TextFormField(
+                  controller: _bodyCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Describe the issue',
+                    hintText: 'What happened? What did you expect? Which screen?',
+                    alignLabelWithHint: true,
+                    prefixIcon: Padding(
+                      padding: EdgeInsets.only(bottom: 80),
+                      child: Icon(Icons.edit_note_rounded, size: 18),
+                    ),
+                  ),
+                  maxLines: 8,
+                  minLines: 5,
+                  textCapitalization: TextCapitalization.sentences,
+                  validator: (v) => (v == null || v.trim().length < 10)
+                      ? 'Please describe the issue (at least 10 characters)'
+                      : null,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: KvlSpacing.lg),
+
+          KvlButton(
+            label: _sending ? 'Sending…' : 'Send Report',
+            icon: Icons.send_rounded,
+            onPressed: _sending ? null : _send,
+          ),
+          const SizedBox(height: KvlSpacing.lg),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSuccess() {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Icon(Icons.check_circle_outline_rounded, color: KvlColors.primaryDeep, size: 56),
+        const SizedBox(height: KvlSpacing.xl),
+        _heroIcon(
+          icon: Icons.check_circle_rounded,
+          bg: KvlColors.successSoft,
+          color: KvlColors.success,
+          size: 80,
+          iconSize: 36,
+        ),
         const SizedBox(height: KvlSpacing.md),
-        Center(child: Text('Report Submitted', style: KvlText.title(17))),
+        Center(child: Text('Report Submitted', style: KvlText.title(18))),
         const SizedBox(height: KvlSpacing.sm),
         Center(
           child: Text(
             "We'll read your report and respond within 48 hours.",
             textAlign: TextAlign.center,
-            style: KvlText.muted(12),
+            style: KvlText.muted(13),
           ),
+        ),
+        const SizedBox(height: KvlSpacing.lg),
+        Center(
+          child: _infoChip(Icons.favorite_rounded, 'Thank you for helping us improve', KvlColors.primaryGhost, KvlColors.primaryDeep),
         ),
       ],
     );
@@ -268,7 +385,7 @@ class _ReportScreenState extends ConsumerState<_ReportScreen> {
 }
 
 // ---------------------------------------------------------------------------
-// Share Feedback — form that POSTs kind=feedback to /api/v1/support.
+// Share Feedback
 // ---------------------------------------------------------------------------
 
 class _FeedbackScreen extends ConsumerStatefulWidget {
@@ -309,12 +426,9 @@ class _FeedbackScreenState extends ConsumerState<_FeedbackScreen> {
     } on DioException catch (e) {
       if (mounted) {
         setState(() => _sending = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to send: ${e.message ?? 'network error'}'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        ScaffoldMessenger.of(context)
+          ..clearSnackBars()
+          ..showSnackBar(_errorSnack('Failed to send: ${e.message ?? 'network error'}'));
       }
     }
   }
@@ -324,92 +438,135 @@ class _FeedbackScreenState extends ConsumerState<_FeedbackScreen> {
     return KvlScaffold(
       title: 'Share Feedback',
       scrollable: true,
-      body: _sent
-          ? Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+      body: _sent ? _buildSuccess() : _buildForm(),
+    );
+  }
+
+  Widget _buildForm() {
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: KvlSpacing.lg),
+
+          _heroIcon(
+            icon: Icons.favorite_rounded,
+            bg: KvlColors.primaryGhost,
+            color: KvlColors.primary,
+          ),
+          const SizedBox(height: KvlSpacing.md),
+          Center(child: Text('Share Your Thoughts', style: KvlText.title(18))),
+          const SizedBox(height: KvlSpacing.xs),
+          Center(
+            child: Text(
+              'We listen to every suggestion and use it to improve the app.',
+              textAlign: TextAlign.center,
+              style: KvlText.muted(12),
+            ),
+          ),
+          const SizedBox(height: KvlSpacing.md),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _infoChip(Icons.auto_awesome_rounded, 'Shapes the roadmap', KvlColors.primaryGhost, KvlColors.primaryDeep),
+              const SizedBox(width: 8),
+              _infoChip(Icons.visibility_off_outlined, 'Anonymous ok', KvlColors.accentSoft, KvlColors.accent),
+            ],
+          ),
+          const SizedBox(height: KvlSpacing.lg),
+
+          Container(
+            padding: const EdgeInsets.all(KvlSpacing.md),
+            decoration: BoxDecoration(
+              color: KvlColors.surface,
+              borderRadius: KvlRadius.brLG,
+              border: Border.all(color: KvlColors.border),
+            ),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Icon(Icons.favorite_rounded, color: KvlColors.primaryDeep, size: 56),
-                const SizedBox(height: KvlSpacing.md),
-                Center(child: Text('Thank you!', style: KvlText.title(17))),
-                const SizedBox(height: KvlSpacing.sm),
-                Center(
-                  child: Text(
-                    'We read every suggestion and use it to improve the app.',
-                    textAlign: TextAlign.center,
-                    style: KvlText.muted(12),
+                TextFormField(
+                  controller: _subjectCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Subject',
+                    hintText: 'e.g. Suggestion, Idea, Compliment…',
+                    prefixIcon: Icon(Icons.label_outline_rounded, size: 18),
                   ),
+                  textCapitalization: TextCapitalization.sentences,
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Subject is required' : null,
+                ),
+                const SizedBox(height: KvlSpacing.md),
+                TextFormField(
+                  controller: _bodyCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Your feedback',
+                    hintText: 'What do you love? What could be better?',
+                    alignLabelWithHint: true,
+                    prefixIcon: Padding(
+                      padding: EdgeInsets.only(bottom: 80),
+                      child: Icon(Icons.chat_bubble_outline_rounded, size: 18),
+                    ),
+                  ),
+                  maxLines: 8,
+                  minLines: 5,
+                  textCapitalization: TextCapitalization.sentences,
+                  validator: (v) => (v == null || v.trim().length < 10)
+                      ? 'Please share a bit more (at least 10 characters)'
+                      : null,
                 ),
               ],
-            )
-          : Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: KvlSpacing.md),
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: const BoxDecoration(
-                      color: KvlColors.primaryGhost,
-                      shape: BoxShape.circle,
-                    ),
-                    alignment: Alignment.center,
-                    child: const Icon(Icons.feedback_outlined, color: KvlColors.primaryDeep, size: 26),
-                  ),
-                  const SizedBox(height: KvlSpacing.sm),
-                  Center(child: Text('Share your thoughts', style: KvlText.title(16))),
-                  const SizedBox(height: 4),
-                  Center(
-                    child: Text(
-                      'We listen to every suggestion.',
-                      textAlign: TextAlign.center,
-                      style: KvlText.muted(11.5),
-                    ),
-                  ),
-                  const SizedBox(height: KvlSpacing.lg),
-                  TextFormField(
-                    controller: _subjectCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Subject',
-                      hintText: 'e.g. Suggestion, Idea, Compliment…',
-                    ),
-                    textCapitalization: TextCapitalization.sentences,
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? 'Subject is required' : null,
-                  ),
-                  const SizedBox(height: KvlSpacing.md),
-                  TextFormField(
-                    controller: _bodyCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Your feedback',
-                      hintText: 'What do you love? What could be better?',
-                      alignLabelWithHint: true,
-                    ),
-                    maxLines: 8,
-                    minLines: 5,
-                    textCapitalization: TextCapitalization.sentences,
-                    validator: (v) =>
-                        (v == null || v.trim().length < 10)
-                            ? 'Please share a bit more (at least 10 characters)'
-                            : null,
-                  ),
-                  const SizedBox(height: KvlSpacing.lg),
-                  KvlButton(
-                    label: _sending ? 'Sending…' : 'Send Feedback',
-                    icon: Icons.send_rounded,
-                    onPressed: _sending ? null : _send,
-                  ),
-                ],
-              ),
             ),
+          ),
+          const SizedBox(height: KvlSpacing.lg),
+
+          KvlButton(
+            label: _sending ? 'Sending…' : 'Send Feedback',
+            icon: Icons.send_rounded,
+            onPressed: _sending ? null : _send,
+          ),
+          const SizedBox(height: KvlSpacing.lg),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSuccess() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: KvlSpacing.xl),
+        _heroIcon(
+          icon: Icons.favorite_rounded,
+          bg: KvlColors.primaryGhost,
+          color: KvlColors.primary,
+          size: 80,
+          iconSize: 36,
+        ),
+        const SizedBox(height: KvlSpacing.md),
+        Center(child: Text('Thank You!', style: KvlText.title(18))),
+        const SizedBox(height: KvlSpacing.sm),
+        Center(
+          child: Text(
+            'We read every suggestion and use it to improve the app.',
+            textAlign: TextAlign.center,
+            style: KvlText.muted(13),
+          ),
+        ),
+        const SizedBox(height: KvlSpacing.lg),
+        Center(
+          child: _infoChip(Icons.auto_awesome_rounded, 'Your voice shapes the app', KvlColors.primaryGhost, KvlColors.primaryDeep),
+        ),
+      ],
     );
   }
 }
 
 // ---------------------------------------------------------------------------
-// Help & FAQs — loaded from /api/v1/faqs with local fallback list.
+// Help & FAQs
 // ---------------------------------------------------------------------------
 
 class _FaqScreen extends ConsumerWidget {
@@ -422,41 +579,94 @@ class _FaqScreen extends ConsumerWidget {
     return KvlScaffold(
       title: context.l10n.infoHelpTitle,
       scrollable: false,
-      body: faqsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => Center(
-          child: Text(
-            'Could not load FAQs. Please check your connection.',
-            style: KvlText.muted(13),
-            textAlign: TextAlign.center,
-          ),
-        ),
-        data: (faqs) => faqs.isEmpty
-            ? Center(
-                child: Text(
-                  'No FAQs available yet.',
-                  style: KvlText.muted(13),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header banner
+          Container(
+            margin: const EdgeInsets.only(bottom: KvlSpacing.md),
+            padding: const EdgeInsets.symmetric(horizontal: KvlSpacing.md, vertical: KvlSpacing.sm),
+            decoration: BoxDecoration(
+              gradient: KvlColors.primaryGradient,
+              borderRadius: KvlRadius.brLG,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: .2),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(Icons.help_outline_rounded, color: Colors.white, size: 22),
                 ),
-              )
-            : _buildList(context, faqs),
-      ),
-    );
-  }
+                const SizedBox(width: KvlSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Help & FAQs',
+                          style: KvlText.ui(14, FontWeight.w700).copyWith(color: Colors.white)),
+                      Text('Tap a question to expand the answer',
+                          style: KvlText.ui(11, FontWeight.w400).copyWith(
+                              color: Colors.white.withValues(alpha: .85))),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
 
-  Widget _buildList(BuildContext context, List<({String question, String answer})> faqs) {
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(vertical: KvlSpacing.sm),
-      itemCount: faqs.length,
-      separatorBuilder: (_, _) => const SizedBox(height: KvlSpacing.xs),
-      itemBuilder: (context, i) => _FaqTile(q: faqs[i].question, a: faqs[i].answer),
+          Expanded(
+            child: faqsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, s) => Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.wifi_off_rounded, color: KvlColors.muted, size: 40),
+                    const SizedBox(height: KvlSpacing.sm),
+                    Text(
+                      'Could not load FAQs.\nPlease check your connection.',
+                      style: KvlText.muted(13),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+              data: (faqs) => faqs.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.inbox_rounded, color: KvlColors.muted, size: 40),
+                          const SizedBox(height: KvlSpacing.sm),
+                          Text('No FAQs available yet.', style: KvlText.muted(13)),
+                        ],
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: EdgeInsets.zero,
+                      itemCount: faqs.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: KvlSpacing.xs),
+                      itemBuilder: (context, i) =>
+                          _FaqTile(q: faqs[i].question, a: faqs[i].answer, index: i),
+                    ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _FaqTile extends StatefulWidget {
-  const _FaqTile({required this.q, required this.a});
+  const _FaqTile({required this.q, required this.a, required this.index});
   final String q;
   final String a;
+  final int index;
 
   @override
   State<_FaqTile> createState() => _FaqTileState();
@@ -465,67 +675,97 @@ class _FaqTile extends StatefulWidget {
 class _FaqTileState extends State<_FaqTile> {
   bool _open = false;
 
+  static const _accentColors = [
+    KvlColors.primary,
+    KvlColors.accent,
+    KvlColors.gold,
+    KvlColors.success,
+  ];
+
   @override
   Widget build(BuildContext context) {
-    return KvlCard(
-      padding: EdgeInsets.zero,
-      child: InkWell(
+    final accentColor = _accentColors[widget.index % _accentColors.length];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: KvlColors.surface,
         borderRadius: KvlRadius.brLG,
-        onTap: () => setState(() => _open = !_open),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: KvlSpacing.md,
-            vertical: KvlSpacing.sm,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      widget.q,
-                      style: KvlText.ui(13, FontWeight.w600),
+        border: Border.all(
+          color: _open ? accentColor.withValues(alpha: .4) : KvlColors.border,
+          width: _open ? 1.5 : 1,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: KvlRadius.brLG,
+        child: Column(
+          children: [
+            InkWell(
+              onTap: () => setState(() => _open = !_open),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KvlSpacing.md,
+                  vertical: KvlSpacing.sm,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: accentColor.withValues(alpha: .12),
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '${widget.index + 1}',
+                        style: KvlText.ui(11, FontWeight.w700).copyWith(color: accentColor),
+                      ),
                     ),
-                  ),
-                  AnimatedRotation(
-                    turns: _open ? 0.5 : 0,
-                    duration: const Duration(milliseconds: 200),
-                    child: const Icon(
-                      Icons.expand_more_rounded,
-                      size: 20,
-                      color: KvlColors.primaryDeep,
+                    const SizedBox(width: KvlSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        widget.q,
+                        style: KvlText.ui(13, FontWeight.w600),
+                      ),
                     ),
-                  ),
-                ],
+                    AnimatedRotation(
+                      turns: _open ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      child: Icon(
+                        Icons.expand_more_rounded,
+                        size: 20,
+                        color: accentColor,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              AnimatedSize(
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeOut,
-                child: _open
-                    ? Padding(
-                        padding: const EdgeInsets.only(top: KvlSpacing.sm),
-                        child: Text(
-                          widget.a,
-                          style: KvlText.body(12).copyWith(
-                            height: 1.6,
-                            color: KvlColors.inkSoft,
-                          ),
+            ),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOut,
+              child: _open
+                  ? Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: accentColor.withValues(alpha: .05),
+                        border: Border(top: BorderSide(color: accentColor.withValues(alpha: .15))),
+                      ),
+                      padding: const EdgeInsets.fromLTRB(
+                        KvlSpacing.md, KvlSpacing.sm, KvlSpacing.md, KvlSpacing.md),
+                      child: Text(
+                        widget.a,
+                        style: KvlText.body(12.5).copyWith(
+                          height: 1.65,
+                          color: KvlColors.inkSoft,
                         ),
-                      )
-                    : const SizedBox.shrink(),
-              ),
-            ],
-          ),
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          ],
         ),
       ),
     );
   }
-}
-
-class _Topic {
-  const _Topic({required this.title, required this.icon, required this.body});
-  final String title;
-  final IconData icon;
-  final String body;
 }

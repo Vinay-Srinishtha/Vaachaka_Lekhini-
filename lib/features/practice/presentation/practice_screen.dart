@@ -139,7 +139,8 @@ class _PracticeDashboardView extends ConsumerState<_PracticeDashboard> {
         ? 0.0
         : (total / target).clamp(0, 1).toDouble();
     final statsAsync = ref.watch(globalStatsProvider(program.mantraId));
-    final globalCount = statsAsync.value?.globalChantCount ?? 0;
+    // Global count must be at least the user's own total (in case server data lags).
+    final globalCount = (statsAsync.value?.globalChantCount ?? 0).clamp(total, 1 << 53);
     final liveUsers = statsAsync.value?.memberCount ?? widget.liveUsers;
 
     return SafeArea(

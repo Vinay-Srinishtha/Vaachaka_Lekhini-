@@ -499,11 +499,23 @@ final storeItemsProvider = FutureProvider<List<StoreItem>>((ref) async {
 });
 
 /// Global community statistics from /api/v1/stats?mantra_id= (public, no auth).
-/// Pass a mantraId to scope counts to that specific mantra.
-/// Never throws — returns zeros on any network/server error so the UI
-/// always has a safe value to display.
+/// Auto-refreshes every 10 seconds; call ref.invalidate(globalStatsProvider(id))
+/// to force an immediate refresh (e.g. after a practice session finishes).
 final globalStatsProvider = FutureProvider.autoDispose
     .family<({int globalChantCount, int memberCount}), String>((ref, mantraId) async {
+  // Keep the provider alive across re-builds while its widget is on screen,
+  // but still allow disposal when the screen is gone.
+  final link = ref.keepAlive();
+
+  // Schedule automatic re-fetch 10 seconds after each successful build.
+  final timer = Timer(const Duration(seconds: 10), () {
+    ref.invalidateSelf();
+  });
+  ref.onDispose(() {
+    timer.cancel();
+    link.close();
+  });
+
   try {
     final api = ref.watch(apiClientProvider);
     final res = await api.dio.get<Map<String, dynamic>>(

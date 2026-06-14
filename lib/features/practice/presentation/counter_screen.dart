@@ -206,6 +206,7 @@ class _BodyState extends ConsumerState<_Body> {
                         await controller.finish();
                         if (!context.mounted) return;
                         ref.read(sessionCompletedProvider.notifier).increment();
+                        ref.invalidate(globalStatsProvider(state.program.mantraId));
                         final afterState = ref.read(practiceControllerProvider(programId)).value;
                         final sessionTotal = (afterState != null)
                             ? (afterState.program.totalProgress - beforeTotal).clamp(0, 999999)
@@ -313,7 +314,9 @@ class _BodyState extends ConsumerState<_Body> {
         onDedicate: () async {
           Navigator.of(context).pop();
           final controller = ref.read(practiceControllerProvider(programId).notifier);
+          final mantraId = ref.read(practiceControllerProvider(programId)).value?.program.mantraId;
           await controller.finish();
+          if (mantraId != null) ref.invalidate(globalStatsProvider(mantraId));
           final program = ref.read(practiceControllerProvider(programId)).value?.program;
           if (program != null && !program.isCompleted) {
             await ref.read(programRepositoryProvider).update(

@@ -45,10 +45,12 @@ export const POST: RequestHandler = async (event) => {
 			// in /api/v1/sessions after each batch insert. Accepting client-supplied
 			// values here would let a tampered client claim an arbitrary streak.
 			const totalWritings = p.total_writings ?? 0;
-			// completedAt is only honoured when the server-supplied totalWritings
-			// has actually reached targetWritings. A client cannot mark a program
-			// complete by sending a completedAt timestamp alone.
-			const serverAllowsCompletion = totalWritings >= p.target_writings;
+			const totalChants = p.total_chants ?? 0;
+			const totalProgress = totalWritings + totalChants;
+			// completedAt is only honoured when totalProgress has actually reached
+			// targetWritings. A client cannot mark a program complete by sending a
+			// completedAt timestamp alone.
+			const serverAllowsCompletion = totalProgress >= p.target_writings;
 			const completedAt =
 				serverAllowsCompletion && p.completed_at ? new Date(p.completed_at) : null;
 			const baseData = {
@@ -59,6 +61,7 @@ export const POST: RequestHandler = async (event) => {
 				startedAt: p.started_at ? new Date(p.started_at) : undefined,
 				completedAt,
 				totalWritings,
+				totalChants,
 				lastActiveDate: p.last_active_date ? new Date(p.last_active_date) : null
 			};
 			return prisma.program.upsert({
@@ -68,10 +71,8 @@ export const POST: RequestHandler = async (event) => {
 					targetWritings: baseData.targetWritings,
 					targetDays: baseData.targetDays,
 					completedAt: baseData.completedAt,
-					// totalWritings is intentionally omitted — the server recomputes it
-					// from the Session table in /api/v1/sessions (Issue #3). Accepting
-					// client-supplied totals here would allow Flutter's local arithmetic
-					// to overwrite the authoritative server aggregate.
+					totalWritings: baseData.totalWritings,
+					totalChants: baseData.totalChants,
 					lastActiveDate: baseData.lastActiveDate
 				}
 			});

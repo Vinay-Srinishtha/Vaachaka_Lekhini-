@@ -9,7 +9,7 @@
 		{ key: 'member', label: 'Member', sortable: false },
 		{ key: 'mantra', label: 'Mantra', sortable: false },
 		{ key: 'progress', label: 'Progress' },
-		{ key: 'totalWritings', label: 'Count', align: 'right', sortable: true },
+		{ key: 'totalWritings', label: 'Count', align: 'right', sortable: false },
 		{ key: 'sessions', label: 'Sessions', align: 'right', hidden: 'md' },
 		{ key: 'status', label: 'Status' },
 		{ key: 'startedAt', label: 'Started', sortable: true, hidden: 'lg' }
@@ -54,14 +54,14 @@
 					<div class="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
 						<div
 							class="h-2 rounded-full {p.completedAt ? 'bg-green-500' : 'bg-brand-500'}"
-							style="width:{pct(p.totalWritings, p.targetWritings)}%"
+							style="width:{pct(p.totalWritings + p.totalChants, p.targetWritings)}%"
 						></div>
 					</div>
-					<span class="text-[11px] text-gray-500 tabular-nums w-8 text-right">{pct(p.totalWritings, p.targetWritings)}%</span>
+					<span class="text-[11px] text-gray-500 tabular-nums w-8 text-right">{pct(p.totalWritings + p.totalChants, p.targetWritings)}%</span>
 				</div>
 			</td>
 			<td class="px-4 py-3 text-right tabular-nums text-sm text-gray-700">
-				{p.totalWritings.toLocaleString()} / {p.targetWritings.toLocaleString()}
+				{(p.totalWritings + p.totalChants).toLocaleString()} / {p.targetWritings.toLocaleString()}
 			</td>
 			<td class="px-4 py-3 text-right tabular-nums text-sm text-gray-700 hidden md:table-cell">
 				{p._count.sessions}

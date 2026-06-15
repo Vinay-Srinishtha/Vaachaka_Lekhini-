@@ -154,6 +154,7 @@ export const programUpsertSchema = z.object({
 	started_at: z.string().datetime().optional(),
 	completed_at: z.string().datetime().nullable().optional(),
 	total_writings: z.number().int().min(0).optional(),
+	total_chants: z.number().int().min(0).optional(),
 	current_streak: z.number().int().min(0).optional(),
 	longest_streak: z.number().int().min(0).optional(),
 	last_active_date: z.string().datetime().nullable().optional()

@@ -544,6 +544,8 @@ class ProgramRepositoryDrift implements ProgramRepository {
     'last_active_date': p.lastActiveDate?.toUtc().toIso8601String(),
     'completed_at': p.completedAt?.toUtc().toIso8601String(),
     'started_at': p.startedAt.toUtc().toIso8601String(),
+    'total_chants': p.totalChants,
+    'total_writings': p.totalWritings,
   };
 }
 

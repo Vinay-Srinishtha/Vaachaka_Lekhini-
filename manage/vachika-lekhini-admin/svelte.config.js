@@ -10,7 +10,8 @@ const config = {
 		// Keep Prisma and PostgreSQL access in the standard Node.js runtime.
 		adapter: adapter({
 			split: false,
-			regions: ['sin1']
+			regions: ['sin1'],
+			runtime: 'nodejs22.x'
 		})
 	}
 };

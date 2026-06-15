@@ -52,7 +52,7 @@ class KvlSettings {
     languageCode: 'en',
     reminderTime: TimeOfDay(hour: 6, minute: 0),
     notificationSound: 'bell',
-    micSensitivity: MicSensitivity.medium,
+    micSensitivity: MicSensitivity.high,
     linkFacebook: false,
     linkWhatsApp: false,
     linkInstagram: false,

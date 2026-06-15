@@ -98,10 +98,7 @@ class VoiceEnrolmentService {
 
     final stream = await _audio.start(
       minAmplitude: sensitivity.minAmplitudeThreshold,
-      // 400 ms holdover: covers brief inter-syllable and inter-chant dips for
-      // all chanting styles (slow, fast, staccato, jotted, continuous).
-      // The decoder sees a smooth audio stream without artificial silence gaps.
-      holdoverMs: 400,
+      holdoverMs: 10,
     );
 
     // ── PCM stream → Vosk ──────────────────────────────────────────────────

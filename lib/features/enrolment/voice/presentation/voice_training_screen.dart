@@ -221,7 +221,7 @@ class _MicBubbleState extends State<_MicBubble>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 1800),
+    duration: const Duration(milliseconds: 900),
   )..repeat(reverse: true);
 
   @override
@@ -283,7 +283,7 @@ class _WaveformState extends State<_Waveform>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 1100),
+    duration: const Duration(milliseconds: 550),
   )..repeat();
 
   @override

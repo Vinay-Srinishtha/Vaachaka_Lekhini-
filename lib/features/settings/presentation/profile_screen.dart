@@ -539,12 +539,12 @@ class ProfileScreen extends ConsumerWidget {
           ? (p.targetWritings / p.targetDays).ceil()
           : 0;
       final progressPct = p.targetWritings > 0
-          ? ((p.totalChants / p.targetWritings) * 100).clamp(0, 100).toStringAsFixed(1)
+          ? ((p.totalProgress / p.targetWritings) * 100).clamp(0, 100).toStringAsFixed(1)
           : '0.0';
       final milestoneThresholds = ref.read(rewardRulesProvider).milestoneThresholds;
       int? nextMilestone;
       for (final t in milestoneThresholds) {
-        if (p.totalChants < t) { nextMilestone = t; break; }
+        if (p.totalProgress < t) { nextMilestone = t; break; }
       }
       final dedKey = 'dedication_${p.id}';
       final dedRaw = prefs.getString(dedKey);
@@ -594,15 +594,15 @@ class ProfileScreen extends ConsumerWidget {
       final mantraText = pd.mantraDevanagari.isNotEmpty
           ? pd.mantraDevanagari
           : pd.mantraRoman;
-      final totalChants = pd.program.totalChants;
+      final totalCount = pd.program.totalProgress;
 
       // Split mantra repetitions across pages (50 per page in a grid)
       const chantsPerPage = 50;
-      final pageCount = totalChants == 0 ? 1 : ((totalChants - 1) ~/ chantsPerPage + 1);
+      final pageCount = totalCount == 0 ? 1 : ((totalCount - 1) ~/ chantsPerPage + 1);
 
       for (int pg = 0; pg < pageCount; pg++) {
         final startIdx = pg * chantsPerPage;
-        final endIdx = (startIdx + chantsPerPage).clamp(0, totalChants);
+        final endIdx = (startIdx + chantsPerPage).clamp(0, totalCount);
         final countOnPage = endIdx - startIdx;
 
         pdf.addPage(
@@ -645,7 +645,7 @@ class ProfileScreen extends ConsumerWidget {
                     textAlign: pw.TextAlign.center,
                   ),
                   pw.Text(
-                    'Written ${_fmtNum(totalChants)} times',
+                    'Written ${_fmtNum(totalCount)} times',
                     style: const pw.TextStyle(color: muted, fontSize: 9),
                     textAlign: pw.TextAlign.center,
                   ),
@@ -676,7 +676,7 @@ class ProfileScreen extends ConsumerWidget {
                         );
                       }),
                     ),
-                  if (totalChants == 0)
+                  if (totalCount == 0)
                     pw.Center(
                       child: pw.Text(
                         'No chants recorded yet',
@@ -756,13 +756,13 @@ class ProfileScreen extends ConsumerWidget {
                     ['Started', _fmtDate(pd.program.startedAt)],
                     ['Status', pd.program.isCompleted ? 'Completed' : 'Active'],
                     ['Target', '${_fmtNum(pd.program.targetWritings)} chants over ${pd.program.targetDays} days'],
-                    ['Completed', '${_fmtNum(pd.program.totalChants)} chants (${pd.progressPct}%)'],
-                    ['Remaining', _fmtNum((pd.program.targetWritings - pd.program.totalChants).clamp(0, pd.program.targetWritings))],
+                    ['Completed', '${_fmtNum(pd.program.totalProgress)} (${pd.progressPct}%)'],
+                    ['Remaining', _fmtNum((pd.program.targetWritings - pd.program.totalProgress).clamp(0, pd.program.targetWritings))],
                     ['Daily Goal', '${_fmtNum(pd.dailyTarget)} chants/day'],
                     ['Current Streak', '${pd.curStreak} days'],
                     ['Longest Streak', '${pd.longestStreak} days'],
                     if (pd.nextMilestone != null)
-                      ['Next Milestone', '${_fmtNum(pd.nextMilestone!)} (${_fmtNum(pd.nextMilestone! - pd.program.totalChants)} to go)']
+                      ['Next Milestone', '${_fmtNum(pd.nextMilestone!)} (${_fmtNum(pd.nextMilestone! - pd.program.totalProgress)} to go)']
                     else
                       ['Milestones', 'All crossed'],
                     ['Dedicated To', pd.dedicationLine],

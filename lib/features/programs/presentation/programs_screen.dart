@@ -144,8 +144,8 @@ class _Body extends ConsumerWidget {
           )
         else ...[
           ...() {
-            final active = programs.where((p) => !p.isCompleted).toList();
-            final completed = programs.where((p) => p.isCompleted).toList();
+            final active = programs.where((p) => !p.isGoalReached).toList();
+            final completed = programs.where((p) => p.isGoalReached).toList();
             return [
               if (active.isNotEmpty) ...[
                 for (final p in active) ...[

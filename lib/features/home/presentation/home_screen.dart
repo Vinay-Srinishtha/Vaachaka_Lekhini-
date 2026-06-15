@@ -73,7 +73,7 @@ class HomeScreen extends ConsumerWidget {
                   initial: profile?.initials ?? '?',
                   compact: compact,
                   onProfileTap: () => context.push(KvlRoute.profile),
-                  milestoneCompleted: programs.where((p) => p.isCompleted).length,
+                  milestoneCompleted: programs.where((p) => p.isGoalReached).length,
                   milestoneTotal: programs.length,
                 ),
                 SizedBox(height: headerGap),

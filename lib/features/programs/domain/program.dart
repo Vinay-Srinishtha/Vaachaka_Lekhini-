@@ -46,8 +46,14 @@ class Program extends Equatable {
 
   // Derived helpers used by UI — same logic as before
 
-  /// true when admin or user has marked this program done.
+  /// Server has confirmed completion (completedAt timestamp set).
   bool get isCompleted => completedAt != null;
+
+  /// Goal reached locally — target met or server confirmed.
+  /// Use this for all UI completion checks (milestones, ring, tabs) so
+  /// the display stays consistent with the "✓ Goal Achieved" banner even
+  /// before the next server sync stamps completedAt.
+  bool get isGoalReached => completedAt != null || totalProgress >= targetWritings;
 
   int get totalProgress => totalChants + totalWritings;
 

@@ -73,7 +73,7 @@ class ProfileScreen extends ConsumerWidget {
           // Avatar + name
           Center(
             child: MilestoneRing(
-              completed: programs.where((p) => p.isCompleted).length,
+              completed: programs.where((p) => p.isGoalReached).length,
               total: programs.length,
               strokeWidth: 3.5,
               gap: 3.0,
@@ -129,7 +129,7 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(width: 6),
               Expanded(
                 child: _Kpi(
-                  value: '${programs.where((p) => p.isCompleted).length}'
+                  value: '${programs.where((p) => p.isGoalReached).length}'
                       '/${programs.length}',
                   label: context.l10n.milestones,
                 ),
@@ -264,10 +264,10 @@ class ProfileScreen extends ConsumerWidget {
               SettingRow(
                 icon: Icons.mic_rounded,
                 label: context.l10n.reTrainVoice,
-                disabled: programs.where((p) => !p.isCompleted).isEmpty,
+                disabled: programs.where((p) => !p.isGoalReached).isEmpty,
                 onTap: () {
                   final activePrograms = programs
-                      .where((p) => !p.isCompleted)
+                      .where((p) => !p.isGoalReached)
                       .toList();
                   if (activePrograms.isEmpty) return;
                   if (activePrograms.length == 1) {
@@ -306,10 +306,10 @@ class ProfileScreen extends ConsumerWidget {
               SettingRow(
                 icon: Icons.edit_rounded,
                 label: context.l10n.retrainWritingStyle,
-                disabled: programs.where((p) => !p.isCompleted).isEmpty,
+                disabled: programs.where((p) => !p.isGoalReached).isEmpty,
                 onTap: () {
                   final activePrograms = programs
-                      .where((p) => !p.isCompleted)
+                      .where((p) => !p.isGoalReached)
                       .toList();
                   if (activePrograms.isEmpty) return;
                   if (activePrograms.length == 1) {

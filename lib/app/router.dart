@@ -464,7 +464,7 @@ class _AvatarChip extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final programs = ref.watch(programsForActiveProfileProvider).value ?? const [];
-    final completed = programs.where((p) => p.isCompleted).length;
+    final completed = programs.where((p) => p.isGoalReached).length;
     final total = programs.length;
 
     final avatar = Container(

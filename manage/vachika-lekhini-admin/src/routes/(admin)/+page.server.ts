@@ -72,6 +72,39 @@ export const load: PageServerLoad = async () => {
 		LIMIT 5`;
 	const topMantras = topMantrasRaw.map((r) => ({ name: r.name, count: Number(r.count) }));
 
+	// Leaderboards — top 8 per category
+	const [lbStreakRaw, lbProgressRaw, lbSessionsRaw] = await Promise.all([
+		prisma.$queryRaw<{ name: string; mobile: string; value: number }[]>`
+			SELECT m."displayName" AS name, a.mobile, MAX(p."currentStreak")::int AS value
+			FROM "Program" p
+			JOIN "Member" m ON m.id = p."memberId"
+			JOIN "Account" a ON a.id = m."accountId"
+			GROUP BY m."displayName", a.mobile
+			ORDER BY value DESC LIMIT 8`,
+		prisma.$queryRaw<{ name: string; mobile: string; value: number }[]>`
+			SELECT m."displayName" AS name, a.mobile,
+			       SUM(p."totalChants" + p."totalWritings")::int AS value
+			FROM "Program" p
+			JOIN "Member" m ON m.id = p."memberId"
+			JOIN "Account" a ON a.id = m."accountId"
+			GROUP BY m."displayName", a.mobile
+			ORDER BY value DESC LIMIT 8`,
+		prisma.$queryRaw<{ name: string; mobile: string; value: number }[]>`
+			SELECT m."displayName" AS name, a.mobile, COUNT(s.id)::int AS value
+			FROM "Session" s
+			JOIN "Member" m ON m.id = s."memberId"
+			JOIN "Account" a ON a.id = m."accountId"
+			GROUP BY m."displayName", a.mobile
+			ORDER BY value DESC LIMIT 8`,
+	]);
+	const toBoard = (rows: { name: string; mobile: string; value: number }[]) =>
+		rows.map((r) => ({ name: r.name, mobile: r.mobile, value: Number(r.value) }));
+	const leaderboards = {
+		streak:   toBoard(lbStreakRaw),
+		progress: toBoard(lbProgressRaw),
+		sessions: toBoard(lbSessionsRaw),
+	};
+
 	const sessionsDelta =
 		sessionsYesterday > 0
 			? Math.round(((sessionsToday - sessionsYesterday) / sessionsYesterday) * 100)
@@ -97,5 +130,6 @@ export const load: PageServerLoad = async () => {
 		modalitySplit,
 		recentAccounts,
 		topMantras,
+		leaderboards,
 	};
 };

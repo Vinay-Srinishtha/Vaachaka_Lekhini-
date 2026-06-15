@@ -5,7 +5,7 @@
 	import {
 		BookOpen, ShoppingBag, Settings2, Users, UserCheck,
 		Activity, Smartphone, Layers, Mic2, PenLine, Hand,
-		TrendingUp, CalendarDays
+		TrendingUp, CalendarDays, Flame, Trophy, Zap
 	} from '@lucide/svelte';
 
 	let { data } = $props();
@@ -192,6 +192,56 @@
 				</ul>
 			{/if}
 		</div>
+	</section>
+
+	<!-- ── Leaderboards ── -->
+	<section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+		{@const boards = [
+			{ key: 'streak',   title: 'Longest Current Streak', unit: 'days',     icon: Flame,  color: '#f97316' },
+			{ key: 'progress', title: 'Highest Total Progress',  unit: 'chants',   icon: Trophy, color: '#a855f7' },
+			{ key: 'sessions', title: 'Most Sessions',           unit: 'sessions', icon: Zap,    color: '#3b82f6' },
+		]}
+		{#each boards as board}
+			{@const rows = (data.leaderboards as Record<string, { name: string; mobile: string; value: number }[]>)[board.key] ?? []}
+			{@const maxVal = Math.max(...rows.map((r) => r.value), 1)}
+			<div class="card overflow-hidden">
+				<div class="px-5 py-3.5 border-b border-gray-100 flex items-center gap-2">
+					<board.icon size={15} style="color:{board.color}" />
+					<h2 class="font-bold text-gray-900 text-sm">{board.title}</h2>
+				</div>
+				{#if rows.length === 0}
+					<div class="px-5 py-8 text-center text-sm text-gray-400">No data yet.</div>
+				{:else}
+					<ul class="divide-y divide-gray-50">
+						{#each rows as row, i (row.mobile + row.name)}
+							<li class="px-5 py-2.5">
+								<div class="flex items-center justify-between gap-2 mb-1">
+									<div class="flex items-center gap-2 min-w-0">
+										<span class="w-5 h-5 rounded-full text-[10px] font-bold grid place-items-center shrink-0
+											{i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-gray-100 text-gray-600' : i === 2 ? 'bg-orange-50 text-orange-600' : 'bg-gray-50 text-gray-400'}"
+										>{i + 1}</span>
+										<div class="min-w-0">
+											<div class="text-xs font-semibold text-gray-900 truncate">{row.name}</div>
+											<div class="text-[10px] text-gray-400 truncate">{row.mobile}</div>
+										</div>
+									</div>
+									<span class="text-xs font-bold tabular-nums shrink-0" style="color:{board.color}">
+										{row.value.toLocaleString()}
+										<span class="font-normal text-gray-400">{board.unit}</span>
+									</span>
+								</div>
+								<div class="h-1 rounded-full bg-gray-100 overflow-hidden">
+									<div class="h-1 rounded-full transition-all"
+										style="width:{Math.round((row.value / maxVal) * 100)}%; background:{board.color}; opacity:0.6"
+									></div>
+								</div>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</div>
+		{/each}
 	</section>
 
 </div>

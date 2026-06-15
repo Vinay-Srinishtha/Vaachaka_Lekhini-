@@ -16,9 +16,7 @@ import '../features/auth/presentation/welcome_screen.dart';
 import '../features/community/domain/friend.dart';
 import '../features/community/presentation/community_screen.dart';
 import '../features/community/presentation/invite_friends_screen.dart';
-import '../features/enrolment/handwriting/presentation/capture_handwriting_screen.dart';
 import '../features/enrolment/handwriting/presentation/handwriting_submit_screen.dart';
-import '../features/enrolment/handwriting/presentation/upload_handwriting_screen.dart';
 import '../features/enrolment/handwriting/presentation/write_on_screen_screen.dart';
 import '../features/enrolment/voice/presentation/voice_training_screen.dart';
 import '../features/home/presentation/home_screen.dart';
@@ -64,8 +62,6 @@ abstract final class KvlRoute {
   static const voiceTraining = '/voice-training'; // + /:mantraId
   static const handwritingSubmit = '/handwriting-submit'; // + /:mantraId
   static const handwritingWrite = '/handwriting-write'; // + /:mantraId
-  static const handwritingCapture = '/handwriting-capture'; // + /:mantraId
-  static const handwritingUpload = '/handwriting-upload'; // + /:mantraId
 
   // Later phases — reserved.
   static const setTargetWritings = '/set-target-writings';
@@ -156,20 +152,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, state) => WriteOnScreenScreen(
           mantraId: state.pathParameters['mantraId']!,
           programId: state.uri.queryParameters['programId'],
-          isRetrain: state.uri.queryParameters['retrain'] == '1',
-        ),
-      ),
-      GoRoute(
-        path: '${KvlRoute.handwritingCapture}/:mantraId',
-        builder: (_, state) => CaptureHandwritingScreen(
-          mantraId: state.pathParameters['mantraId']!,
-          isRetrain: state.uri.queryParameters['retrain'] == '1',
-        ),
-      ),
-      GoRoute(
-        path: '${KvlRoute.handwritingUpload}/:mantraId',
-        builder: (_, state) => UploadHandwritingScreen(
-          mantraId: state.pathParameters['mantraId']!,
           isRetrain: state.uri.queryParameters['retrain'] == '1',
         ),
       ),

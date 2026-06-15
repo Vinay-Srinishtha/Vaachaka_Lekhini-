@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/permissions/startup_permissions.dart';
 import '../core/theme/theme.dart';
 import '../features/settings/domain/settings_repository.dart';
 import '../l10n/app_localizations.dart';
@@ -22,6 +23,10 @@ class _KvlAppState extends ConsumerState<KvlApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Prompt for Mic + Notifications permissions once, after the first frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(StartupPermissions.requestAll());
+    });
   }
 
   @override

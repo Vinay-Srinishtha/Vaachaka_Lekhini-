@@ -2,14 +2,10 @@ import 'package:equatable/equatable.dart';
 
 enum HandwritingMode {
   writeOnScreen,
-  captureCamera,
-  uploadGallery,
   useDefaultFont;
 
   String get label => switch (this) {
         HandwritingMode.writeOnScreen => 'Write on Screen',
-        HandwritingMode.captureCamera => 'Capture from Camera',
-        HandwritingMode.uploadGallery => 'Upload from Gallery',
         HandwritingMode.useDefaultFont => 'Use Default Font',
       };
 

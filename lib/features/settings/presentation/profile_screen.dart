@@ -313,8 +313,10 @@ class ProfileScreen extends ConsumerWidget {
                       .toList();
                   if (activePrograms.isEmpty) return;
                   if (activePrograms.length == 1) {
+                    // Write-on-screen is the only handwriting option — go
+                    // straight there instead of a single-choice picker.
                     context.push(
-                      '${KvlRoute.handwritingSubmit}/${activePrograms.first.mantraId}?retrain=1',
+                      '${KvlRoute.handwritingWrite}/${activePrograms.first.mantraId}?retrain=1',
                     );
                     return;
                   }
@@ -1421,7 +1423,7 @@ class _RetrainWritingPicker {
         programs: programs,
         onPicked: (mantraId) {
           Navigator.pop(sheetCtx);
-          context.push('${KvlRoute.handwritingSubmit}/$mantraId?retrain=1');
+          context.push('${KvlRoute.handwritingWrite}/$mantraId?retrain=1');
         },
       ),
     );

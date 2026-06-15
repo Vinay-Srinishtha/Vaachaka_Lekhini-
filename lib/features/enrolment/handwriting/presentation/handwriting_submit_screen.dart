@@ -5,8 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/providers.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../app/router.dart';
-import '../../../../core/remote_config/remote_config.dart';
-import '../../../../core/remote_config/remote_config_keys.dart';
 import '../../../../core/theme/theme.dart';
 import '../../../../core/widgets/widgets.dart';
 import '../domain/handwriting_asset.dart';
@@ -33,8 +31,6 @@ class _HandwritingSubmitScreenState extends ConsumerState<HandwritingSubmitScree
     if (mode == null) return;
     final route = switch (mode) {
       HandwritingMode.writeOnScreen => KvlRoute.handwritingWrite,
-      HandwritingMode.captureCamera => KvlRoute.handwritingCapture,
-      HandwritingMode.uploadGallery => KvlRoute.handwritingUpload,
       HandwritingMode.useDefaultFont => null,
     };
     if (route != null) {
@@ -77,16 +73,12 @@ class _HandwritingSubmitScreenState extends ConsumerState<HandwritingSubmitScree
           ),
           const SizedBox(height: KvlSpacing.lg),
           () {
-            final cfg = ref.watch(remoteConfigProvider).value ?? RemoteConfig.empty;
-            final cameraEnabled = cfg.boolFlag(RemoteConfigKeys.handwritingCamera, fallback: true);
-            final galleryEnabled = cfg.boolFlag(RemoteConfigKeys.handwritingGallery, fallback: true);
+            // Only on-screen writing remains (plus the default font outside
+            // retrain) — photo capture and gallery upload were removed.
             final modes = [
               for (final m in HandwritingMode.values)
-                if ((m != HandwritingMode.captureCamera || cameraEnabled) &&
-                    (m != HandwritingMode.uploadGallery || galleryEnabled) &&
-                    // In retrain mode the default-font option is irrelevant
-                    (m != HandwritingMode.useDefaultFont || !widget.isRetrain))
-                  m,
+                // In retrain mode the default-font option is irrelevant.
+                if (m != HandwritingMode.useDefaultFont || !widget.isRetrain) m,
             ];
             return GridView.count(
               crossAxisCount: 2,
@@ -123,8 +115,6 @@ class _ModeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final (icon, sub) = switch (mode) {
       HandwritingMode.writeOnScreen => (Icons.draw_rounded, 'Draw directly on your device'),
-      HandwritingMode.captureCamera => (Icons.camera_alt_rounded, 'Take a photo of your writing'),
-      HandwritingMode.uploadGallery => (Icons.image_rounded, 'Select an existing image'),
       HandwritingMode.useDefaultFont => (Icons.text_fields_rounded, "Use the app's standard font"),
     };
     return KvlCard(
@@ -149,8 +139,6 @@ class _ModeCard extends StatelessWidget {
           Text(
             switch (mode) {
               HandwritingMode.writeOnScreen => context.l10n.modeWriteOnScreenLabel,
-              HandwritingMode.captureCamera => context.l10n.modeCaptureCameraLabel,
-              HandwritingMode.uploadGallery => context.l10n.modeUploadGalleryLabel,
               HandwritingMode.useDefaultFont => context.l10n.modeDefaultFontLabel,
             },
             textAlign: TextAlign.center,

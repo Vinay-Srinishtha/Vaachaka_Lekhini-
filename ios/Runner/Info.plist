@@ -6,12 +6,6 @@
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Vaachaka Lekhini listens to your chants to count repetitions of the mantra you select. Audio is processed entirely on-device.</string>
-	<key>NSCameraUsageDescription</key>
-	<string>Capture a photo of your handwritten mantra to upload as a writing sample.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Choose existing photos of your handwritten mantras to upload.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Save handwriting samples and personalised PDFs to your photo library.</string>
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>Daily practice reminders to keep your spiritual journey on track.</string>
 	<key>UIBackgroundModes</key>

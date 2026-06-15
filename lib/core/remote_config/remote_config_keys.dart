@@ -3,8 +3,6 @@
 /// sync: a typo here silently falls back to the in-code default.
 abstract final class RemoteConfigKeys {
   // Feature toggles
-  static const handwritingCamera = 'feature.handwriting_camera';
-  static const handwritingGallery = 'feature.handwriting_gallery';
   static const communityTab = 'feature.community_tab';
   static const storeTab = 'feature.store_tab';
 

@@ -10,8 +10,12 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'dart:math';
+import 'dart:typed_data';
+
 import '../../../app/providers.dart';
 import '../../../core/storage/repository.dart';
+import '../../enrolment/handwriting/domain/handwriting_asset.dart';
 import '../../auth/domain/auth_repository.dart';
 import '../../auth/domain/session.dart';
 import '../../auth/presentation/auth_shared_widgets.dart';
@@ -532,8 +536,18 @@ Future<void> downloadPracticeReport(WidgetRef ref) async {
     final now = DateTime.now();
 
     // ─── Collect data for each program ───────────────────────────────────────
+    // Completed / goal-reached programs appear first.
+    final sortedPrograms = [...programs]..sort((a, b) {
+        final aGoalReached = a.totalProgress >= a.targetWritings;
+        final bGoalReached = b.totalProgress >= b.targetWritings;
+        if (aGoalReached && !bGoalReached) return -1;
+        if (!aGoalReached && bGoalReached) return 1;
+        return 0;
+      });
+
+    final handwritingRepo = ref.read(handwritingRepositoryProvider);
     final List<_ProgramExportData> programData = [];
-    for (final p in programs) {
+    for (final p in sortedPrograms) {
       final mantra = ref.read(mantraByIdProvider(p.mantraId));
       final mantraDevanagari = mantra?.name.devanagari ?? p.mantraId;
       final mantraRoman = mantra?.name.roman ?? '';
@@ -565,6 +579,20 @@ Future<void> downloadPracticeReport(WidgetRef ref) async {
         from: from90,
         to: now,
       );
+      // Load handwriting pool PNGs for this mantra.
+      final List<Uint8List> pool = [];
+      if (profile != null) {
+        final assets = await handwritingRepo.listForProfile(profile.id);
+        for (final a in assets) {
+          if (a.mantraId == p.mantraId &&
+              a.mode == HandwritingMode.writeOnScreen &&
+              a.filePath != null) {
+            final f = File(a.filePath!);
+            if (await f.exists()) pool.add(await f.readAsBytes());
+          }
+        }
+      }
+
       programData.add(_ProgramExportData(
         program: p,
         mantraDevanagari: mantraDevanagari,
@@ -576,6 +604,7 @@ Future<void> downloadPracticeReport(WidgetRef ref) async {
         nextMilestone: nextMilestone,
         dedicationLine: dedicationLine,
         countsByDay: countsByDay,
+        handwritingPool: pool,
       ));
     }
 
@@ -593,21 +622,40 @@ Future<void> downloadPracticeReport(WidgetRef ref) async {
     const inkSoft = PdfColor.fromInt(0xFF4A4A6A);
     const muted = PdfColor.fromInt(0xFF9E9E9E);
 
-    // For each program: one or more pages with the mantra written N times
+    // For each program: one or more pages showing handwriting images (or text fallback)
+    final rng = Random();
     for (final pd in programData) {
       final mantraText = pd.mantraDevanagari.isNotEmpty
           ? pd.mantraDevanagari
           : pd.mantraRoman;
       final totalCount = pd.program.totalProgress;
+      final goalReached = pd.program.totalProgress >= pd.program.targetWritings;
+      final statusLabel = goalReached ? 'Goal Achieved' : 'In Progress';
+      const statusColorAchieved = PdfColor.fromInt(0xFF2E7D32);
+      const statusColorProgress = PdfColor.fromInt(0xFFE65100);
+      final statusColor = goalReached ? statusColorAchieved : statusColorProgress;
 
-      // Split mantra repetitions across pages (50 per page in a grid)
-      const chantsPerPage = 50;
-      final pageCount = totalCount == 0 ? 1 : ((totalCount - 1) ~/ chantsPerPage + 1);
+      final hasImages = pd.handwritingPool.isNotEmpty;
+      // Pre-convert pool bytes to pw.MemoryImage
+      final poolImages = pd.handwritingPool
+          .map((b) => pw.MemoryImage(b))
+          .toList();
+
+      // Build random allocation: slot i → pool[randomIndex]
+      List<int> imageAlloc = [];
+      if (hasImages && totalCount > 0) {
+        imageAlloc = List.generate(totalCount, (_) => rng.nextInt(poolImages.length));
+      }
+
+      // 20 images per page (4 cols × 5 rows) when showing images; 50 text items otherwise
+      final itemsPerPage = hasImages ? 20 : 50;
+      final pageCount = totalCount == 0 ? 1 : ((totalCount - 1) ~/ itemsPerPage + 1);
 
       for (int pg = 0; pg < pageCount; pg++) {
-        final startIdx = pg * chantsPerPage;
-        final endIdx = (startIdx + chantsPerPage).clamp(0, totalCount);
+        final startIdx = pg * itemsPerPage;
+        final endIdx = (startIdx + itemsPerPage).clamp(0, totalCount);
         final countOnPage = endIdx - startIdx;
+        final pgStartIdx = startIdx; // capture for closure
 
         pdf.addPage(
           pw.Page(
@@ -626,11 +674,7 @@ Future<void> downloadPracticeReport(WidgetRef ref) async {
                       children: [
                         pw.Text(
                           'Vachika Lekhini',
-                          style: pw.TextStyle(
-                            color: PdfColors.white,
-                            fontSize: 14,
-                            fontWeight: pw.FontWeight.bold,
-                          ),
+                          style: pw.TextStyle(color: PdfColors.white, fontSize: 14, fontWeight: pw.FontWeight.bold),
                         ),
                         pw.Text(
                           'Page ${pg + 1} / $pageCount',
@@ -639,53 +683,80 @@ Future<void> downloadPracticeReport(WidgetRef ref) async {
                       ],
                     ),
                   ),
-                  pw.SizedBox(height: 10),
-                  // Mantra name subtitle
-                  pw.Text(
-                    pd.mantraRoman.isNotEmpty
-                        ? '${pd.mantraDevanagari}  •  ${pd.mantraRoman}'
-                        : pd.mantraDevanagari,
-                    style: const pw.TextStyle(color: inkSoft, fontSize: 11),
-                    textAlign: pw.TextAlign.center,
+                  pw.SizedBox(height: 8),
+                  // Mantra name + status row
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.center,
+                    children: [
+                      pw.Text(
+                        pd.mantraRoman.isNotEmpty
+                            ? '${pd.mantraDevanagari}  •  ${pd.mantraRoman}'
+                            : pd.mantraDevanagari,
+                        style: const pw.TextStyle(color: inkSoft, fontSize: 11),
+                      ),
+                      pw.SizedBox(width: 10),
+                      pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: pw.BoxDecoration(
+                          color: statusColor,
+                          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
+                        ),
+                        child: pw.Text(
+                          statusLabel,
+                          style: pw.TextStyle(color: PdfColors.white, fontSize: 8, fontWeight: pw.FontWeight.bold),
+                        ),
+                      ),
+                    ],
                   ),
+                  pw.SizedBox(height: 4),
                   pw.Text(
-                    'Written ${_fmtNum(totalCount)} times',
+                    'Written ${_fmtNum(totalCount)} / ${_fmtNum(pd.program.targetWritings)} times',
                     style: const pw.TextStyle(color: muted, fontSize: 9),
                     textAlign: pw.TextAlign.center,
                   ),
-                  pw.SizedBox(height: 12),
+                  pw.SizedBox(height: 10),
                   pw.Divider(color: primaryLight, thickness: 1),
-                  pw.SizedBox(height: 8),
-                  // Grid of mantra repetitions
+                  pw.SizedBox(height: 6),
+                  // Grid — images if pool exists, text fallback otherwise
                   if (countOnPage > 0)
                     pw.Wrap(
-                      spacing: 8,
+                      spacing: 6,
                       runSpacing: 6,
                       children: List.generate(countOnPage, (i) {
-                        final num = startIdx + i + 1;
-                        return pw.Container(
-                          padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                          decoration: pw.BoxDecoration(
-                            border: pw.Border.all(color: primaryLight, width: 0.5),
-                            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
-                          ),
-                          child: pw.Text(
-                            '$num. $mantraText',
-                            style: pw.TextStyle(
-                              fontSize: 10,
-                              color: inkDark,
-                              fontWeight: pw.FontWeight.bold,
+                        final slotIndex = pgStartIdx + i;
+                        if (hasImages) {
+                          final img = poolImages[imageAlloc[slotIndex]];
+                          return pw.Container(
+                            width: 118,
+                            height: 80,
+                            decoration: pw.BoxDecoration(
+                              border: pw.Border.all(color: primaryLight, width: 0.8),
+                              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
                             ),
-                          ),
-                        );
+                            child: pw.ClipRRect(
+                              horizontalRadius: 4,
+                              verticalRadius: 4,
+                              child: pw.Image(img, fit: pw.BoxFit.contain),
+                            ),
+                          );
+                        } else {
+                          return pw.Container(
+                            padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                            decoration: pw.BoxDecoration(
+                              border: pw.Border.all(color: primaryLight, width: 0.5),
+                              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+                            ),
+                            child: pw.Text(
+                              '${slotIndex + 1}. $mantraText',
+                              style: pw.TextStyle(fontSize: 10, color: inkDark, fontWeight: pw.FontWeight.bold),
+                            ),
+                          );
+                        }
                       }),
                     ),
                   if (totalCount == 0)
                     pw.Center(
-                      child: pw.Text(
-                        'No chants recorded yet',
-                        style: const pw.TextStyle(color: muted, fontSize: 12),
-                      ),
+                      child: pw.Text('No entries recorded yet', style: const pw.TextStyle(color: muted, fontSize: 12)),
                     ),
                 ],
               );
@@ -758,7 +829,7 @@ Future<void> downloadPracticeReport(WidgetRef ref) async {
                   ),
                   _pdfTable([
                     ['Started', _fmtDate(pd.program.startedAt)],
-                    ['Status', pd.program.isCompleted ? 'Completed' : 'Active'],
+                    ['Status', pd.program.totalProgress >= pd.program.targetWritings ? '✓ Goal Achieved' : 'In Progress'],
                     ['Target', '${_fmtNum(pd.program.targetWritings)} chants over ${pd.program.targetDays} days'],
                     ['Completed', '${_fmtNum(pd.program.totalProgress)} (${pd.progressPct}%)'],
                     ['Remaining', _fmtNum((pd.program.targetWritings - pd.program.totalProgress).clamp(0, pd.program.targetWritings))],
@@ -1957,6 +2028,7 @@ class _ProgramExportData {
     required this.nextMilestone,
     required this.dedicationLine,
     required this.countsByDay,
+    required this.handwritingPool,
   });
   final Program program;
   final String mantraDevanagari;
@@ -1968,4 +2040,6 @@ class _ProgramExportData {
   final int? nextMilestone;
   final String dedicationLine;
   final Map<DateTime, int> countsByDay;
+  /// PNG bytes for each sample in the rolling pool (may be empty).
+  final List<Uint8List> handwritingPool;
 }

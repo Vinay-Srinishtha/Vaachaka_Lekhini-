@@ -516,7 +516,11 @@ class ProfileScreen extends ConsumerWidget {
     context.push('/info/$topic');
   }
 
-  Future<void> _downloadData(WidgetRef ref) async {
+  Future<void> _downloadData(WidgetRef ref) => downloadPracticeReport(ref);
+}
+
+/// Shared entry point so other screens can trigger the PDF export.
+Future<void> downloadPracticeReport(WidgetRef ref) async {
     final profile = ref.read(activeProfileProvider).value;
     final session = ref.read(sessionProvider).value;
     final settings = await ref.read(settingsRepositoryProvider).snapshot();
@@ -799,63 +803,64 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  static pw.Widget _pdfSectionHeader(String title, PdfColor primary, PdfColor bg) {
-    return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: pw.BoxDecoration(
-        color: bg,
-        border: pw.Border(left: pw.BorderSide(color: primary, width: 3)),
-      ),
-      child: pw.Text(
-        title,
-        style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: primary),
-      ),
-    );
-  }
+pw.Widget _pdfSectionHeader(String title, PdfColor primary, PdfColor bg) {
+  return pw.Container(
+    padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+    decoration: pw.BoxDecoration(
+      color: bg,
+      border: pw.Border(left: pw.BorderSide(color: primary, width: 3)),
+    ),
+    child: pw.Text(
+      title,
+      style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: primary),
+    ),
+  );
+}
 
-  static pw.Widget _pdfTable(
-    List<List<String>> rows,
-    PdfColor inkDark,
-    PdfColor inkSoft,
-    PdfColor stripe,
-  ) {
-    return pw.Table(
-      columnWidths: {
-        0: const pw.FlexColumnWidth(1.4),
-        1: const pw.FlexColumnWidth(2.6),
-      },
-      children: rows.asMap().entries.map((entry) {
-        final i = entry.key;
-        final row = entry.value;
-        return pw.TableRow(
-          decoration: i.isEven ? null : pw.BoxDecoration(color: stripe),
-          children: [
-            pw.Padding(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: pw.Text(row[0], style: pw.TextStyle(fontSize: 9, color: inkSoft)),
-            ),
-            pw.Padding(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: pw.Text(row[1], style: pw.TextStyle(fontSize: 9, color: inkDark, fontWeight: pw.FontWeight.bold)),
-            ),
-          ],
-        );
-      }).toList(),
-    );
-  }
+pw.Widget _pdfTable(
+  List<List<String>> rows,
+  PdfColor inkDark,
+  PdfColor inkSoft,
+  PdfColor stripe,
+) {
+  return pw.Table(
+    columnWidths: {
+      0: const pw.FlexColumnWidth(1.4),
+      1: const pw.FlexColumnWidth(2.6),
+    },
+    children: rows.asMap().entries.map((entry) {
+      final i = entry.key;
+      final row = entry.value;
+      return pw.TableRow(
+        decoration: i.isEven ? null : pw.BoxDecoration(color: stripe),
+        children: [
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: pw.Text(row[0], style: pw.TextStyle(fontSize: 9, color: inkSoft)),
+          ),
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: pw.Text(row[1], style: pw.TextStyle(fontSize: 9, color: inkDark, fontWeight: pw.FontWeight.bold)),
+          ),
+        ],
+      );
+    }).toList(),
+  );
+}
 
-  static String _fmtDate(DateTime d) =>
-      '${d.day.toString().padLeft(2, '0')}-${d.month.toString().padLeft(2, '0')}-${d.year}';
+String _fmtDate(DateTime d) =>
+    '${d.day.toString().padLeft(2, '0')}-${d.month.toString().padLeft(2, '0')}-${d.year}';
 
-  static String _fmtNum(int n) {
-    // Simple Indian-style number formatting
-    if (n >= 10000000) return '${(n / 10000000).toStringAsFixed(2)} Cr';
-    if (n >= 100000) return '${(n / 100000).toStringAsFixed(2)} L';
-    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}k';
-    return n.toString();
-  }
+String _fmtNum(int n) {
+  if (n >= 10000000) return '${(n / 10000000).toStringAsFixed(2)} Cr';
+  if (n >= 100000) return '${(n / 100000).toStringAsFixed(2)} L';
+  if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}k';
+  return n.toString();
+}
 
-  Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
+// ─── ProfileScreen private helpers (need BuildContext / WidgetRef) ────────────
+
+Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -878,7 +883,7 @@ class ProfileScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -911,7 +916,6 @@ class ProfileScreen extends ConsumerWidget {
       await b.clear();
     }
     await ref.read(authRepositoryProvider).deleteAccount();
-  }
 }
 
 class _ReminderTimePickerSheet extends StatefulWidget {

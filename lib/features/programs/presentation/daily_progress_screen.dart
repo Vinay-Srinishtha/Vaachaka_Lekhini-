@@ -14,9 +14,9 @@ import '../../../core/theme/theme.dart';
 import '../../../core/utils/indian_number_format.dart';
 import '../../../core/widgets/widgets.dart';
 import '../domain/program.dart';
-import '../domain/program_repository.dart';
 import '../domain/session.dart';
 import '../../settings/domain/settings_repository.dart';
+import '../../settings/presentation/profile_screen.dart';
 import '../../../l10n/l10n.dart';
 
 class DailyProgressScreen extends ConsumerStatefulWidget {
@@ -230,21 +230,24 @@ class _DailyProgressScreenState extends ConsumerState<DailyProgressScreen> {
                         },
                       ),
                       const Spacer(),
-                      if (program?.isCompleted == true)
-                        KvlButton(
-                          label: context.l10n.completedWithCheck,
-                          variant: KvlButtonVariant.secondary,
-                          onPressed: null,
-                        )
-                      else
-                        KvlButton(
-                          label: context.l10n.startPractice,
-                          variant: KvlButtonVariant.teal,
-                          icon: Icons.play_arrow_rounded,
-                          onPressed: () => context.go(
-                            '${KvlRoute.practice}/${widget.programId}',
-                          ),
-                        ),
+                      Builder(builder: (context) {
+                        final goalReached = program != null &&
+                            program.totalProgress >= program.targetWritings;
+                        return goalReached
+                            ? KvlButton(
+                                label: '✓ Goal Achieved',
+                                variant: KvlButtonVariant.secondary,
+                                onPressed: null,
+                              )
+                            : KvlButton(
+                                label: context.l10n.startPractice,
+                                variant: KvlButtonVariant.teal,
+                                icon: Icons.play_arrow_rounded,
+                                onPressed: () => context.go(
+                                  '${KvlRoute.practice}/${widget.programId}',
+                                ),
+                              );
+                      }),
                       SizedBox(height: tight ? KvlSpacing.sm : KvlSpacing.md),
                       if (program?.isCompleted != true)
                         KvlButton(
@@ -262,14 +265,9 @@ class _DailyProgressScreenState extends ConsumerState<DailyProgressScreen> {
                           Expanded(
                             child: KvlButton(
                               variant: KvlButtonVariant.secondary,
-                              label: context.l10n.editGoal,
-                              onPressed: (program == null || program.isCompleted)
-                                  ? null
-                                  : () => _EditGoalSheet.show(
-                                        context,
-                                        ref: ref,
-                                        program: program,
-                                      ),
+                              label: 'Download Data',
+                              icon: Icons.download_rounded,
+                              onPressed: () => downloadPracticeReport(ref),
                             ),
                           ),
                           const SizedBox(width: KvlSpacing.md),
@@ -992,199 +990,3 @@ class _DedicateSheetState extends State<DedicateSheet> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Edit Goal bottom sheet
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _EditGoalSheet extends StatefulWidget {
-  const _EditGoalSheet({
-    required this.program,
-    required this.repository,
-  });
-
-  final Program program;
-  final ProgramRepository repository;
-
-  static Future<void> show(
-    BuildContext context, {
-    required WidgetRef ref,
-    required Program program,
-  }) {
-    return showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _EditGoalSheet(
-        program: program,
-        repository: ref.read(programRepositoryProvider),
-      ),
-    );
-  }
-
-  @override
-  State<_EditGoalSheet> createState() => _EditGoalSheetState();
-}
-
-class _EditGoalSheetState extends State<_EditGoalSheet> {
-  late final TextEditingController _writingsCtrl;
-  late final TextEditingController _daysCtrl;
-  bool _saving = false;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _writingsCtrl = TextEditingController(
-      text: widget.program.targetWritings.toString(),
-    );
-    _daysCtrl = TextEditingController(
-      text: widget.program.targetDays.toString(),
-    );
-  }
-
-  @override
-  void dispose() {
-    _writingsCtrl.dispose();
-    _daysCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _save() async {
-    final tw = int.tryParse(_writingsCtrl.text.trim());
-    final td = int.tryParse(_daysCtrl.text.trim());
-    if (tw == null || tw <= 0) {
-      setState(() => _error = 'Enter a valid target count (e.g. 1008).');
-      return;
-    }
-    if (td == null || td <= 0) {
-      setState(() => _error = 'Enter a valid number of days (e.g. 30).');
-      return;
-    }
-    setState(() { _saving = true; _error = null; });
-    try {
-      await widget.repository.update(
-        widget.program.copyWith(targetWritings: tw, targetDays: td),
-      );
-      if (mounted) Navigator.of(context).pop();
-    } catch (_) {
-      if (mounted) setState(() { _saving = false; _error = 'Could not save. Try again.'; });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bottom = MediaQuery.of(context).viewInsets.bottom;
-    return Padding(
-      padding: EdgeInsets.only(bottom: bottom),
-      child: Container(
-        decoration: const BoxDecoration(
-          color: KvlColors.bg,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.fromLTRB(
-          KvlSpacing.xxl, KvlSpacing.lg, KvlSpacing.xxl, KvlSpacing.xxl,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Handle bar
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: KvlSpacing.lg),
-                  decoration: BoxDecoration(
-                    color: KvlColors.muted.withValues(alpha: .35),
-                    borderRadius: KvlRadius.brPill,
-                  ),
-                ),
-              ),
-
-              Text(
-                context.l10n.editGoal,
-                style: KvlText.ui(18, FontWeight.w700),
-              ),
-              const SizedBox(height: KvlSpacing.xs),
-              Text(
-                'Update your recitation target and number of days.',
-                style: KvlText.caption(12).copyWith(color: KvlColors.muted),
-              ),
-              const SizedBox(height: KvlSpacing.xxl),
-
-              // Target recitations
-              Text(
-                'Target recitations',
-                style: KvlText.ui(13, FontWeight.w600),
-              ),
-              const SizedBox(height: KvlSpacing.xs),
-              TextField(
-                controller: _writingsCtrl,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  hintText: 'e.g. 1008',
-                  hintStyle: KvlText.caption(13).copyWith(color: KvlColors.muted),
-                  filled: true,
-                  fillColor: KvlColors.surface,
-                  suffixText: 'counts',
-                  border: OutlineInputBorder(
-                    borderRadius: KvlRadius.brMD,
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: KvlSpacing.lg,
-                    vertical: KvlSpacing.sm,
-                  ),
-                ),
-                style: KvlText.ui(15, FontWeight.w600),
-              ),
-              const SizedBox(height: KvlSpacing.lg),
-
-              // Target days
-              Text(
-                'Target days',
-                style: KvlText.ui(13, FontWeight.w600),
-              ),
-              const SizedBox(height: KvlSpacing.xs),
-              TextField(
-                controller: _daysCtrl,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  hintText: 'e.g. 30',
-                  hintStyle: KvlText.caption(13).copyWith(color: KvlColors.muted),
-                  filled: true,
-                  fillColor: KvlColors.surface,
-                  suffixText: 'days',
-                  border: OutlineInputBorder(
-                    borderRadius: KvlRadius.brMD,
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: KvlSpacing.lg,
-                    vertical: KvlSpacing.sm,
-                  ),
-                ),
-                style: KvlText.ui(15, FontWeight.w600),
-              ),
-
-              if (_error != null) ...[
-                const SizedBox(height: KvlSpacing.sm),
-                Text(
-                  _error!,
-                  style: KvlText.caption(11.5).copyWith(color: KvlColors.danger),
-                ),
-              ],
-
-              const SizedBox(height: KvlSpacing.xxl),
-              KvlButton(
-                label: _saving ? 'Saving…' : 'Save Goal',
-                onPressed: _saving ? null : _save,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

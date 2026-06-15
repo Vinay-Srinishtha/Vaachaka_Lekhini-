@@ -2,6 +2,7 @@ import type { Component } from 'svelte';
 import {
 	LayoutDashboard,
 	BookOpen,
+	Medal,
 	ShoppingBag,
 	Settings2,
 	Users,
@@ -33,7 +34,8 @@ export interface NavItem {
 /// Sidebar nav. Items with minRole are hidden for admins below that rank.
 export const NAV_ITEMS: NavItem[] = [
 	// ── Overview ─────────────────────────────────────────────────────────────
-	{ href: '/', label: 'Dashboard', icon: LayoutDashboard },
+	{ href: '/',             label: 'Dashboard',   icon: LayoutDashboard },
+	{ href: '/leaderboard',  label: 'Leaderboard', icon: Medal },
 
 	// ── Content — what the app shows ─────────────────────────────────────────
 	{ href: '/mantras', label: 'Mantras', icon: BookOpen, minRole: 'viewer', group: 'Content' },

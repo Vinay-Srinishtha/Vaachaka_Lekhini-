@@ -213,12 +213,17 @@ class _PracticeDashboardView extends ConsumerState<_PracticeDashboard> {
                     Center(
                       child: SizedBox(
                         width: tight ? 220 : 260,
-                        child: KvlButton(
-                          label: 'START',
-                          onPressed: () => context.push(
-                            '${KvlRoute.practice}/${program.id}',
-                          ),
-                        ),
+                        child: total >= target
+                            ? KvlButton(
+                                label: '🎉 Congratulations!',
+                                onPressed: null,
+                              )
+                            : KvlButton(
+                                label: 'START',
+                                onPressed: () => context.push(
+                                  '${KvlRoute.practice}/${program.id}',
+                                ),
+                              ),
                       ),
                     ),
                   ],

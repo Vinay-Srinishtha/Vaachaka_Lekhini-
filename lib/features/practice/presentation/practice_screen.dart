@@ -951,6 +951,9 @@ class _DashboardHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(activeProfileProvider).value;
+    final programs = ref.watch(programsForActiveProfileProvider).value ?? const [];
+    final completed = programs.where((p) => p.isCompleted).length;
+
     return Row(
       children: [
         IconButton(
@@ -971,20 +974,26 @@ class _DashboardHeader extends ConsumerWidget {
         InkWell(
           onTap: onProfileTap,
           borderRadius: BorderRadius.circular(24),
-          child: Container(
-            width: 48,
-            height: 48,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [Color(0xFFFFB572), KvlColors.primary],
+          child: MilestoneRing(
+            completed: completed,
+            total: programs.length,
+            strokeWidth: 2.5,
+            gap: 2.5,
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [Color(0xFFFFB572), KvlColors.primary],
+                ),
               ),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              profile?.initials ?? '?',
-              style: KvlText.ui(18, FontWeight.w700)
-                  .copyWith(color: Colors.white),
+              alignment: Alignment.center,
+              child: Text(
+                profile?.initials ?? '?',
+                style: KvlText.ui(18, FontWeight.w700)
+                    .copyWith(color: Colors.white),
+              ),
             ),
           ),
         ),

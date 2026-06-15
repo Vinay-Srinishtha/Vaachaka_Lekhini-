@@ -10,3 +10,4 @@ export 'kvl_scaffold.dart';
 export 'kvl_top_bar.dart';
 export 'mantra_thumb.dart';
 export 'pin_code_input.dart';
+export 'milestone_ring.dart';

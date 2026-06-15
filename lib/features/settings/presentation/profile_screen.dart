@@ -72,24 +72,30 @@ class ProfileScreen extends ConsumerWidget {
 
           // Avatar + name
           Center(
-            child: Container(
-              width: 74,
-              height: 74,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFFFFB572), KvlColors.primary],
+            child: MilestoneRing(
+              completed: programs.where((p) => p.isCompleted).length,
+              total: programs.length,
+              strokeWidth: 3.5,
+              gap: 3.0,
+              child: Container(
+                width: 74,
+                height: 74,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFFFB572), KvlColors.primary],
+                  ),
                 ),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                profile?.initials ?? '?',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w600,
+                alignment: Alignment.center,
+                child: Text(
+                  profile?.initials ?? '?',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),

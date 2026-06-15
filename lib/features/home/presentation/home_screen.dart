@@ -73,6 +73,8 @@ class HomeScreen extends ConsumerWidget {
                   initial: profile?.initials ?? '?',
                   compact: compact,
                   onProfileTap: () => context.push(KvlRoute.profile),
+                  milestoneCompleted: programs.where((p) => p.isCompleted).length,
+                  milestoneTotal: programs.length,
                 ),
                 SizedBox(height: headerGap),
                 _RewardPointsTile(points: points, compact: compact),
@@ -134,6 +136,8 @@ class _HomeHeader extends StatelessWidget {
     required this.initial,
     required this.compact,
     required this.onProfileTap,
+    required this.milestoneCompleted,
+    required this.milestoneTotal,
   });
 
   final String greeting;
@@ -141,9 +145,12 @@ class _HomeHeader extends StatelessWidget {
   final String initial;
   final bool compact;
   final VoidCallback onProfileTap;
+  final int milestoneCompleted;
+  final int milestoneTotal;
 
   @override
   Widget build(BuildContext context) {
+    final size = compact ? 46.0 : 52.0;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -185,24 +192,30 @@ class _HomeHeader extends StatelessWidget {
         InkWell(
           onTap: onProfileTap,
           borderRadius: BorderRadius.circular(28),
-          child: Container(
-            width: compact ? 46 : 52,
-            height: compact ? 46 : 52,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFFFFB572), KvlColors.primary],
+          child: MilestoneRing(
+            completed: milestoneCompleted,
+            total: milestoneTotal,
+            strokeWidth: 2.5,
+            gap: 2.5,
+            child: Container(
+              width: size,
+              height: size,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFFFB572), KvlColors.primary],
+                ),
               ),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              initial,
-              style: KvlText.ui(
-                20,
-                FontWeight.w700,
-              ).copyWith(color: Colors.white),
+              alignment: Alignment.center,
+              child: Text(
+                initial,
+                style: KvlText.ui(
+                  20,
+                  FontWeight.w700,
+                ).copyWith(color: Colors.white),
+              ),
             ),
           ),
         ),

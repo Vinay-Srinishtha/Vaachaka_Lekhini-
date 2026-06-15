@@ -32,6 +32,7 @@ import '../features/profiles/presentation/add_family_screen.dart';
 import '../features/profiles/presentation/profile_select_screen.dart';
 import '../features/settings/presentation/info_screen.dart';
 import '../features/settings/presentation/profile_screen.dart';
+import '../features/programs/domain/program.dart';
 import '../features/programs/presentation/daily_progress_screen.dart';
 import '../features/programs/presentation/programs_screen.dart';
 import '../features/programs/presentation/set_program_target_screen.dart';
@@ -455,35 +456,47 @@ class _RewardHistoryChip extends StatelessWidget {
   }
 }
 
-class _AvatarChip extends StatelessWidget {
+class _AvatarChip extends ConsumerWidget {
   const _AvatarChip({required this.initial, required this.onTap});
   final String initial;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final programs = ref.watch(programsForActiveProfileProvider).value ?? const [];
+    final completed = programs.where((p) => p.isCompleted).length;
+    final total = programs.length;
+
+    final avatar = Container(
+      width: 36,
+      height: 36,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFFB572), KvlColors.primary],
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: const BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFFFB572), KvlColors.primary],
-          ),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          initial,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+      borderRadius: BorderRadius.circular(22),
+      child: MilestoneRing(
+        completed: completed,
+        total: total,
+        strokeWidth: 2.5,
+        gap: 2.0,
+        child: avatar,
       ),
     );
   }

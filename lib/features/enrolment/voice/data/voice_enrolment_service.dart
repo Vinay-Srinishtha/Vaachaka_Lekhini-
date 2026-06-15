@@ -98,7 +98,11 @@ class VoiceEnrolmentService {
 
     final stream = await _audio.start(
       minAmplitude: sensitivity.minAmplitudeThreshold,
-      holdoverMs: 10,
+      // 300 ms holdover protects word onsets and inter-syllable dips from
+      // being clipped to silence by the amplitude gate. Going too low (e.g.
+      // 10 ms) zeros out the soft attack of the first chant before the window
+      // timer even starts, so the first chant never matches.
+      holdoverMs: 300,
     );
 
     // ── PCM stream → Vosk ──────────────────────────────────────────────────

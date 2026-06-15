@@ -55,7 +55,7 @@ class AudioCapture {
   /// treated as silence by the ASR decoder.
   Future<Stream<Uint8List>> start({
     double minAmplitude = 0,
-    int holdoverMs = 10,
+    int holdoverMs = 250,
   }) async {
     if (!await ensurePermission()) {
       throw StateError('Microphone permission denied');

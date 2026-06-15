@@ -37,19 +37,25 @@ export const POST: RequestHandler = async (event) => {
 		}
 	}
 
+	// Fetch current DB totals for all programs so we can validate completedAt
+	// without trusting client-supplied counts (server recomputes those from sessions).
+	const existingPrograms = await prisma.program.findMany({
+		where: { id: { in: body.programs.map((p) => p.id) } },
+		select: { id: true, totalWritings: true, totalChants: true }
+	});
+	const existingMap = new Map(existingPrograms.map((p) => [p.id, p]));
+
 	const results = await prisma.$transaction(
 		body.programs.map((p) => {
 			const mantraDbId = mantraMap.get(p.mantra_id)!;
-			// NOTE: currentStreak / longestStreak are intentionally excluded from
-			// the update block — the server recomputes them from the Session table
-			// in /api/v1/sessions after each batch insert. Accepting client-supplied
-			// values here would let a tampered client claim an arbitrary streak.
-			const totalWritings = p.total_writings ?? 0;
-			const totalChants = p.total_chants ?? 0;
+			// Use server-authoritative totals (recomputed by /api/v1/sessions).
+			// Fall back to client values only for brand-new programs not yet in DB.
+			const existing = existingMap.get(p.id);
+			const totalWritings = existing?.totalWritings ?? (p.total_writings ?? 0);
+			const totalChants = existing?.totalChants ?? (p.total_chants ?? 0);
 			const totalProgress = totalWritings + totalChants;
 			// completedAt is only honoured when totalProgress has actually reached
-			// targetWritings. A client cannot mark a program complete by sending a
-			// completedAt timestamp alone.
+			// targetWritings. A client cannot mark a program complete alone.
 			const serverAllowsCompletion = totalProgress >= p.target_writings;
 			const completedAt =
 				serverAllowsCompletion && p.completed_at ? new Date(p.completed_at) : null;
@@ -70,9 +76,9 @@ export const POST: RequestHandler = async (event) => {
 				update: {
 					targetWritings: baseData.targetWritings,
 					targetDays: baseData.targetDays,
+					// totalWritings / totalChants intentionally omitted — server recomputes
+					// these from the Session table in /api/v1/sessions (authoritative).
 					completedAt: baseData.completedAt,
-					totalWritings: baseData.totalWritings,
-					totalChants: baseData.totalChants,
 					lastActiveDate: baseData.lastActiveDate
 				}
 			});

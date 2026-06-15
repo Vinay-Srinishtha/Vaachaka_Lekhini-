@@ -67,7 +67,7 @@ export const POST: RequestHandler = async (event) => {
 		const programIdsForTotal = Array.from(new Set(body.sessions.map((s) => s.program_id)));
 		await Promise.all(
 			programIdsForTotal.map(async (programId) => {
-				const [writingAgg, chantAgg] = await Promise.all([
+				const [writingAgg, chantAgg, program] = await Promise.all([
 					prisma.session.aggregate({
 						where: { programId, modality: 'handwriting' },
 						_sum: { countAdded: true }
@@ -75,14 +75,23 @@ export const POST: RequestHandler = async (event) => {
 					prisma.session.aggregate({
 						where: { programId, modality: { not: 'handwriting' } },
 						_sum: { countAdded: true }
+					}),
+					prisma.program.findUnique({
+						where: { id: programId },
+						select: { targetWritings: true, completedAt: true }
 					})
 				]);
+				const totalWritings = writingAgg._sum.countAdded ?? 0;
+				const totalChants = chantAgg._sum.countAdded ?? 0;
+				const totalProgress = totalWritings + totalChants;
+				const target = program?.targetWritings ?? 0;
+				// Auto-set completedAt when threshold is first crossed; never clear it once set.
+				const completedAt =
+					program?.completedAt ??
+					(totalProgress >= target && target > 0 ? new Date() : null);
 				return prisma.program.update({
 					where: { id: programId },
-					data: {
-						totalWritings: writingAgg._sum.countAdded ?? 0,
-						totalChants: chantAgg._sum.countAdded ?? 0
-					}
+					data: { totalWritings, totalChants, completedAt }
 				});
 			})
 		);

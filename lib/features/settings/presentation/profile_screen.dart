@@ -123,8 +123,8 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(width: 6),
               Expanded(
                 child: _Kpi(
-                  value:
-                      '${programs.where((p) => p.totalProgress > 0).length}/5',
+                  value: '${programs.where((p) => p.isCompleted).length}'
+                      '/${programs.length}',
                   label: context.l10n.milestones,
                 ),
               ),

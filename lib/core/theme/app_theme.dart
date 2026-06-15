@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'colors.dart';
 
-/// KVL light theme. Built on flex_color_scheme for consistent
+/// VaachakaLekhini light theme. Built on flex_color_scheme for consistent
 /// component theming with Material 3 defaults overridden where needed
 /// to match the warm cream / saffron / teal language in `docs/MOCKUPS.html`.
 ThemeData buildKvlLightTheme() {

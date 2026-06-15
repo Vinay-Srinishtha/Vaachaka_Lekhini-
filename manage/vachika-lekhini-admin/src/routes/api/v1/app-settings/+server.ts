@@ -7,7 +7,7 @@ const DEFAULTS: Record<string, string> = {
 	privacy_policy: '',
 	about_app: '',
 	app_logo_url: '',
-	invite_host: 'kvl.app'
+	invite_host: 'vaachakalekhini.com'
 };
 
 export const GET: RequestHandler = async () => {
@@ -25,7 +25,7 @@ export const GET: RequestHandler = async () => {
 			privacy_policy: map['privacy_policy'],
 			about_app: map['about_app'] || null,
 			app_logo_url: map['app_logo_url'] || null,
-			invite_host: map['invite_host'] || 'kvl.app'
+			invite_host: map['invite_host'] || 'vaachakalekhini.com'
 		},
 		{
 			headers: {

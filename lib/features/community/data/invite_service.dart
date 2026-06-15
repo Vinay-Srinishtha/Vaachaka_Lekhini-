@@ -5,7 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 /// Generates a deterministic invite link from a user id and shares it via
 /// platform-specific deep links (WhatsApp, Facebook) or the OS share sheet.
 class InviteService {
-  InviteService({this.host = 'kvl.app'});
+  InviteService({this.host = 'vaachakalekhini.com'});
   final String host;
 
   /// Stable 6-character code derived from the user id (case-insensitive).

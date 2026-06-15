@@ -172,7 +172,7 @@ final handwritingRepositoryProvider = Provider<HandwritingRepository>((ref) {
 });
 
 final inviteServiceProvider = Provider<InviteService>((ref) {
-  final host = ref.watch(appSettingsProvider).value?.inviteHost ?? 'kvl.app';
+  final host = ref.watch(appSettingsProvider).value?.inviteHost ?? 'vaachakalekhini.com';
   return InviteService(host: host);
 });
 
@@ -567,7 +567,7 @@ final appSettingsProvider =
       logoUrl: d['app_logo_url'] as String?,
       inviteHost: (d['invite_host'] as String?)?.isNotEmpty == true
           ? d['invite_host'] as String
-          : 'kvl.app',
+          : 'vaachakalekhini.com',
     );
   } catch (_) {
     return (
@@ -575,7 +575,7 @@ final appSettingsProvider =
       privacyPolicy: '',
       aboutApp: null,
       logoUrl: null,
-      inviteHost: 'kvl.app',
+      inviteHost: 'vaachakalekhini.com',
     );
   }
 });

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// KVL color tokens — single source of truth.
+/// VaachakaLekhini color tokens — single source of truth.
 /// Mirrors tokens defined in `docs/MOCKUPS.html` so design and code stay in sync.
 abstract final class KvlColors {
   // Surfaces

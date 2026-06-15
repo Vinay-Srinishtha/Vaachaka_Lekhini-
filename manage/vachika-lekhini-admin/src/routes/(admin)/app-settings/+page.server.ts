@@ -12,7 +12,7 @@ async function loadSettings() {
 		privacy_policy: '',
 		about_app: '',
 		app_logo_url: '',
-		invite_host: 'kvl.app'
+		invite_host: 'vaachakalekhini.com'
 	};
 	for (const r of rows) map[r.key] = r.value;
 	return map;
@@ -63,8 +63,8 @@ export const actions: Actions = {
 			}),
 			prisma.appSetting.upsert({
 				where: { key: 'invite_host' },
-				update: { value: inviteHost || 'kvl.app', updatedAt: new Date() },
-				create: { key: 'invite_host', value: inviteHost || 'kvl.app', updatedAt: new Date() }
+				update: { value: inviteHost || 'vaachakalekhini.com', updatedAt: new Date() },
+				create: { key: 'invite_host', value: inviteHost || 'vaachakalekhini.com', updatedAt: new Date() }
 			})
 		]);
 

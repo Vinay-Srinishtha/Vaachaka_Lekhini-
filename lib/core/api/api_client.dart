@@ -5,7 +5,7 @@ import '../auth/auth_storage.dart';
 import '../auth/auth_tokens.dart';
 import 'api_config.dart';
 
-/// Shared Dio instance for the KVL public API (`/api/v1/*`).
+/// Shared Dio instance for the VaachakaLekhini public API (`/api/v1/*`).
 ///
 /// Wires two interceptors:
 ///   • injects `Authorization: Bearer <access_token>` on protected paths

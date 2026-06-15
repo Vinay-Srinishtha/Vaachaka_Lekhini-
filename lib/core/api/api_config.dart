@@ -2,16 +2,16 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
 
-/// Resolves the base URL of the KVL admin API at runtime.
+/// Resolves the base URL of the VaachakaLekhini admin API at runtime.
 ///
 /// Precedence:
-///   1. `--dart-define=KVL_API_BASE=<url>` build flag
+///   1. `--dart-define=VAACHAKALEKHINI_API_BASE=<url>` build flag
 ///   2. Production Vercel API for release builds
 ///   3. Platform-aware local development mapping
 ///
 /// All paths under `/api/v1/*` are appended to this base.
 abstract final class ApiConfig {
-  static const String _override = String.fromEnvironment('KVL_API_BASE');
+  static const String _override = String.fromEnvironment('VAACHAKALEKHINI_API_BASE');
   static const String _productionBaseUrl =
       'https://vaachaka-lekhini.vercel.app';
 

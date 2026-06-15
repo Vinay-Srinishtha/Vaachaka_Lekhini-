@@ -154,8 +154,8 @@
 							id="invite_host"
 							name="invite_host"
 							type="text"
-							value={s.invite_host ?? 'kvl.app'}
-							placeholder="kvl.app"
+							value={s.invite_host ?? 'vaachakalekhini.com'}
+							placeholder="vaachakalekhini.com"
 							class="flex-1 px-3 py-2 text-sm focus:outline-none"
 						/>
 					</div>

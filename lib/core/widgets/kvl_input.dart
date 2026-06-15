@@ -5,7 +5,7 @@ import '../theme/colors.dart';
 import '../theme/spacing.dart';
 import '../theme/typography.dart';
 
-/// Labeled text field with the KVL look (cream surface, soft border).
+/// Labeled text field with the VaachakaLekhini look (cream surface, soft border).
 class KvlInput extends StatelessWidget {
   const KvlInput({
     super.key,

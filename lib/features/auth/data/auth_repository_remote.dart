@@ -9,7 +9,7 @@ import '../../../core/storage/storage_keys.dart';
 import '../domain/auth_repository.dart';
 import '../domain/session.dart';
 
-/// Real auth backed by the KVL backend (/api/v1/auth/*).
+/// Real auth backed by the VaachakaLekhini backend (/api/v1/auth/*).
 ///
 /// Flow:
 ///   sendOtp   → POST /api/v1/auth/otp/start  (backend sends real SMS)

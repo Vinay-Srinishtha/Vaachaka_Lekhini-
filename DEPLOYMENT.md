@@ -97,7 +97,7 @@ For a production APK:
 
 ```bash
 flutter build apk --release \
-  --dart-define=KVL_API_BASE=https://vaachaka-lekhini.vercel.app
+  --dart-define=VAACHAKALEKHINI_API_BASE=https://vaachaka-lekhini.vercel.app
 ```
 
 Do not append `/api/v1`; the Flutter client adds endpoint paths.
@@ -106,7 +106,7 @@ For a production-like device test:
 
 ```bash
 flutter run \
-  --dart-define=KVL_API_BASE=https://vaachaka-lekhini.vercel.app
+  --dart-define=VAACHAKALEKHINI_API_BASE=https://vaachaka-lekhini.vercel.app
 ```
 
 Native Android and iOS clients do not require browser CORS headers.

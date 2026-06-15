@@ -32,7 +32,6 @@ import '../features/profiles/presentation/add_family_screen.dart';
 import '../features/profiles/presentation/profile_select_screen.dart';
 import '../features/settings/presentation/info_screen.dart';
 import '../features/settings/presentation/profile_screen.dart';
-import '../features/programs/domain/program.dart';
 import '../features/programs/presentation/daily_progress_screen.dart';
 import '../features/programs/presentation/programs_screen.dart';
 import '../features/programs/presentation/set_program_target_screen.dart';

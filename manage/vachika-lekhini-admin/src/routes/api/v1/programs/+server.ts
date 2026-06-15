@@ -37,11 +37,13 @@ export const POST: RequestHandler = async (event) => {
 		}
 	}
 
-	// Fetch current DB totals for all programs so we can validate completedAt
-	// without trusting client-supplied counts (server recomputes those from sessions).
+	// Fetch current DB state for all programs — totals and existing completedAt.
+	// Totals are server-authoritative (recomputed by /api/v1/sessions).
+	// We also preserve the existing completedAt so once set it is never cleared or
+	// backdated by a client re-submitting an old timestamp.
 	const existingPrograms = await prisma.program.findMany({
 		where: { id: { in: body.programs.map((p) => p.id) } },
-		select: { id: true, totalWritings: true, totalChants: true }
+		select: { id: true, totalWritings: true, totalChants: true, completedAt: true }
 	});
 	const existingMap = new Map(existingPrograms.map((p) => [p.id, p]));
 
@@ -54,11 +56,18 @@ export const POST: RequestHandler = async (event) => {
 			const totalWritings = existing?.totalWritings ?? (p.total_writings ?? 0);
 			const totalChants = existing?.totalChants ?? (p.total_chants ?? 0);
 			const totalProgress = totalWritings + totalChants;
-			// completedAt is only honoured when totalProgress has actually reached
-			// targetWritings. A client cannot mark a program complete alone.
+			// completedAt: the server is the sole authority on when a program was
+			// completed. Rules:
+			//   1. Already completed in DB → preserve the original timestamp (never overwrite).
+			//   2. Not yet complete but totalProgress now meets target → stamp now().
+			//   3. Target not reached → null (in-progress).
+			// The client-supplied completed_at timestamp is intentionally ignored.
 			const serverAllowsCompletion = totalProgress >= p.target_writings;
-			const completedAt =
-				serverAllowsCompletion && p.completed_at ? new Date(p.completed_at) : null;
+			const completedAt = existing?.completedAt
+				? existing.completedAt                          // (1) already set — keep original
+				: serverAllowsCompletion
+					? new Date()                                // (2) newly completed — server stamps
+					: null;                                     // (3) still in progress
 			const baseData = {
 				memberId: p.member_id,
 				mantraId: mantraDbId,

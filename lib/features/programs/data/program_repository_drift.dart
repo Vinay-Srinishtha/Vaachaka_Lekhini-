@@ -304,16 +304,17 @@ class ProgramRepositoryDrift implements ProgramRepository {
                 ..where((t) => t.programId.equals(session.programId))
                 ..orderBy([(t) => OrderingTerm.desc(t.startedAt)]))
               .get();
+      // Use UTC dates throughout so the streak boundary (midnight) matches the
+      // server's SQL `date_trunc('day', ..., 'UTC')` computation exactly.
+      final nowUtc = now.toUtc();
+      final todayUtc = DateTime.utc(nowUtc.year, nowUtc.month, nowUtc.day);
       final activeDays =
           allSessions
               .where((s) => s.endedAt != null)
-              .map(
-                (s) => DateTime(
-                  s.startedAt.year,
-                  s.startedAt.month,
-                  s.startedAt.day,
-                ),
-              )
+              .map((s) {
+                final u = s.startedAt.toUtc();
+                return DateTime.utc(u.year, u.month, u.day);
+              })
               .toSet()
               .toList()
             ..sort((a, b) => b.compareTo(a));
@@ -321,9 +322,8 @@ class ProgramRepositoryDrift implements ProgramRepository {
       DateTime? cursor;
       for (final d in activeDays) {
         if (cursor == null) {
-          final todayDate = DateTime(now.year, now.month, now.day);
-          if (d == todayDate ||
-              d == todayDate.subtract(const Duration(days: 1))) {
+          if (d == todayUtc ||
+              d == todayUtc.subtract(const Duration(days: 1))) {
             streak = 1;
             cursor = d;
           } else {

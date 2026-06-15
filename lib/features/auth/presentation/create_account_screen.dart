@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -29,7 +28,8 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
   final _username = TextEditingController();
   final _mobile = TextEditingController();
   final _referral = TextEditingController();
-  String _language = 'en';
+  // Language is chosen later in Settings; default new accounts to English.
+  final String _language = 'en';
 
   String _otp = '';
   bool _otpSent = false;
@@ -229,13 +229,6 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                   controller: _referral,
                   textInputAction: TextInputAction.done,
                 ),
-                const SizedBox(height: KvlSpacing.md),
-
-                // Language picker
-                _LanguagePicker(
-                  value: _language,
-                  onChanged: (v) => setState(() => _language = v),
-                ),
                 const SizedBox(height: KvlSpacing.lg),
 
                 // ── Step 1: Send OTP ──
@@ -370,67 +363,6 @@ class _AccountExistsCard extends StatelessWidget {
           onPressed: onLogin,
         ),
       ]),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────
-// Language picker
-// ─────────────────────────────────────────────
-
-class _LanguagePicker extends StatelessWidget {
-  const _LanguagePicker({required this.value, required this.onChanged});
-  final String value;
-  final ValueChanged<String> onChanged;
-
-  static const _options = [
-    ('en', 'English'),
-    ('hi', 'हिन्दी (Hindi)'),
-    ('te', 'తెలుగు (Telugu)'),
-    ('kn', 'ಕನ್ನಡ (Kannada)'),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          context.l10n.selectLanguage,
-          style: KvlText.caption(11.5).copyWith(
-            color: KvlColors.inkSoft,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Container(
-          decoration: BoxDecoration(
-            color: KvlColors.surface,
-            borderRadius: KvlRadius.brMD,
-            border: Border.all(color: KvlColors.border),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: KvlSpacing.md),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: value,
-              isExpanded: true,
-              icon: const Icon(Icons.keyboard_arrow_down_rounded),
-              borderRadius: KvlRadius.brMD,
-              items: [
-                for (final (code, label) in _options)
-                  DropdownMenuItem(
-                    value: code,
-                    child: Text(label, style: KvlText.ui(13)),
-                  ),
-              ],
-              onChanged: (v) {
-                if (v != null) onChanged(v);
-                HapticFeedback.selectionClick();
-              },
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

@@ -75,7 +75,7 @@ export const load: PageServerLoad = async () => {
 	// Leaderboards — top 8 per category
 	const [lbStreakRaw, lbProgressRaw, lbSessionsRaw] = await Promise.all([
 		prisma.$queryRaw<{ name: string; mobile: string; value: number }[]>`
-			SELECT m."displayName" AS name, a.mobile, MAX(p."currentStreak")::int AS value
+			SELECT m."displayName" AS name, a.mobile, MAX(p."longestStreak")::int AS value
 			FROM "Program" p
 			JOIN "Member" m ON m.id = p."memberId"
 			JOIN "Account" a ON a.id = m."accountId"

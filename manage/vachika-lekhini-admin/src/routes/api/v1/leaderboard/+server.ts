@@ -27,7 +27,7 @@ export const GET: RequestHandler = async (event) => {
 			  SELECT m.id,
 			         m."displayName"                                              AS name,
 			         COALESCE(SUM(p."totalChants" + p."totalWritings"), 0)::int   AS total_progress,
-			         COALESCE(MAX(p."currentStreak"), 0)::int                     AS streak_days,
+			         COALESCE(MAX(p."longestStreak"), 0)::int                     AS streak_days,
 			         m."accountId"                                                AS account_id
 			  FROM "Member" m
 			  LEFT JOIN "Program" p ON p."memberId" = m.id
@@ -50,7 +50,7 @@ export const GET: RequestHandler = async (event) => {
 			  SELECT m.id,
 			         m."displayName"                                              AS name,
 			         COALESCE(SUM(p."totalChants" + p."totalWritings"), 0)::int   AS total_progress,
-			         COALESCE(MAX(p."currentStreak"), 0)::int                     AS streak_days,
+			         COALESCE(MAX(p."longestStreak"), 0)::int                     AS streak_days,
 			         m."accountId"                                                AS account_id
 			  FROM "Member" m
 			  LEFT JOIN "Program" p ON p."memberId" = m.id

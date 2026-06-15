@@ -10,6 +10,7 @@ import 'api_config.dart';
 /// Wires two interceptors:
 ///   • injects `Authorization: Bearer <access_token>` on protected paths
 ///   • on 401, calls /api/v1/auth/refresh once and retries the original
+///   • on 403, clears stored tokens so the session stream triggers logout
 ///
 /// The auth-storage dependency is read on every call — no caching — so
 /// fresh tokens written by [AuthService] take effect immediately without
@@ -87,6 +88,18 @@ class _AuthInterceptor extends Interceptor {
   Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
     final response = err.response;
     final storage = ApiClient._authStorage;
+
+    // 403 = account banned mid-session. Clear stored tokens immediately so
+    // the session stream transitions to unauthenticated and the router
+    // redirects to the login screen with the ban message.
+    if (response?.statusCode == 403 &&
+        storage != null &&
+        !_isUnauthed(err.requestOptions.path)) {
+      await storage.clear();
+      if (kDebugMode) debugPrint('[api] 403 received — tokens cleared (account banned)');
+      return handler.next(err);
+    }
+
     final shouldTryRefresh = response?.statusCode == 401 &&
         storage != null &&
         !_isUnauthed(err.requestOptions.path) &&

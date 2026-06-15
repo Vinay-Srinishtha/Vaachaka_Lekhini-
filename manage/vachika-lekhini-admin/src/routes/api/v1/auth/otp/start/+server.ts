@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { readJsonBody } from '$lib/server/json-input';
 import { snakeJson } from '$lib/server/snake-case';
 import { otpService } from '$lib/server/otp';
+import { prisma } from '$lib/server/prisma';
 
 const schema = z.object({
 	mobile: z
@@ -14,8 +15,21 @@ const schema = z.object({
 
 /// POST /api/v1/auth/otp/start  { mobile, country_code? }
 /// Always returns 200 (we don't leak whether the number is registered).
+/// Silently skips OTP delivery for banned accounts — they will get the
+/// ban error on /otp/verify instead, which avoids wasting SMS credits.
 export const POST: RequestHandler = async (event) => {
 	const body = await readJsonBody(event, schema);
+
+	const account = await prisma.account.findUnique({
+		where: { mobile: body.mobile },
+		select: { isBanned: true }
+	});
+
+	// Return a fake challengeId for banned accounts — same shape, no SMS sent.
+	if (account?.isBanned) {
+		return snakeJson({ challengeId: 'banned', expiresInSeconds: 300 });
+	}
+
 	const { challengeId } = await otpService().start(body.mobile);
 	return snakeJson({ challengeId, expiresInSeconds: 300 });
 };

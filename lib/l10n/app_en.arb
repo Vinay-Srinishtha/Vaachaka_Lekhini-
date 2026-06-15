@@ -486,6 +486,7 @@
   "authErrorOtpExpired": "Verification code has expired. Please request a new one.",
   "authErrorServerError": "Server error. Please try again in a moment.",
   "authErrorTooManyAttempts": "Too many attempts. Please wait a moment before trying again.",
+  "authErrorAccountBanned": "Your account has been suspended. Please contact support.",
   "authErrorUnknown": "Something went wrong. Please try again.",
   "authErrorEnterName": "Please enter your name.",
   "authErrorEnterMobileValid": "Enter a valid 10-digit mobile number.",

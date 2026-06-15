@@ -88,6 +88,7 @@ export const load: PageServerLoad = async () => {
 		SELECT m."displayName" AS name,
 		       COALESCE(SUM(p."totalChants" + p."totalWritings"), 0)::int AS total
 		FROM "Member" m
+		JOIN "Account" ab ON ab.id = m."accountId" AND ab."isBanned" = false
 		LEFT JOIN "Program" p ON p."memberId" = m.id
 		GROUP BY m.id, m."displayName"
 		ORDER BY total DESC
@@ -100,7 +101,7 @@ export const load: PageServerLoad = async () => {
 			SELECT m."displayName" AS name, a.mobile, MAX(p."longestStreak")::int AS value
 			FROM "Program" p
 			JOIN "Member" m ON m.id = p."memberId"
-			JOIN "Account" a ON a.id = m."accountId"
+			JOIN "Account" a ON a.id = m."accountId" AND a."isBanned" = false
 			GROUP BY m."displayName", a.mobile
 			ORDER BY value DESC LIMIT 8`,
 		prisma.$queryRaw<{ name: string; mobile: string; value: number }[]>`
@@ -108,14 +109,14 @@ export const load: PageServerLoad = async () => {
 			       SUM(p."totalChants" + p."totalWritings")::int AS value
 			FROM "Program" p
 			JOIN "Member" m ON m.id = p."memberId"
-			JOIN "Account" a ON a.id = m."accountId"
+			JOIN "Account" a ON a.id = m."accountId" AND a."isBanned" = false
 			GROUP BY m."displayName", a.mobile
 			ORDER BY value DESC LIMIT 8`,
 		prisma.$queryRaw<{ name: string; mobile: string; value: number }[]>`
 			SELECT m."displayName" AS name, a.mobile, COUNT(s.id)::int AS value
 			FROM "Session" s
 			JOIN "Member" m ON m.id = s."memberId"
-			JOIN "Account" a ON a.id = m."accountId"
+			JOIN "Account" a ON a.id = m."accountId" AND a."isBanned" = false
 			GROUP BY m."displayName", a.mobile
 			ORDER BY value DESC LIMIT 8`,
 	]);

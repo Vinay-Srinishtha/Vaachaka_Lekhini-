@@ -31,6 +31,7 @@ export const GET: RequestHandler = async (event) => {
 			         COALESCE(MAX(p."currentStreak"), 0)::int                     AS current_streak,
 			         m."accountId"                                                AS account_id
 			  FROM "Member" m
+			  JOIN "Account" a2 ON a2.id = m."accountId" AND a2."isBanned" = false
 			  LEFT JOIN "Program" p ON p."memberId" = m.id
 			  GROUP BY m.id, m."displayName", m."accountId"
 			),
@@ -55,6 +56,7 @@ export const GET: RequestHandler = async (event) => {
 			         COALESCE(MAX(p."currentStreak"), 0)::int                     AS current_streak,
 			         m."accountId"                                                AS account_id
 			  FROM "Member" m
+			  JOIN "Account" a2 ON a2.id = m."accountId" AND a2."isBanned" = false
 			  LEFT JOIN "Program" p ON p."memberId" = m.id
 			  GROUP BY m.id, m."displayName", m."accountId"
 			),

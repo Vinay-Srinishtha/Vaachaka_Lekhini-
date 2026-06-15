@@ -22,6 +22,7 @@ String localizeAuthError(BuildContext context, {String? code, String? fallback})
     'otp_expired' => context.l10n.authErrorOtpExpired,
     'server_error' => context.l10n.authErrorServerError,
     'too_many_attempts' => context.l10n.authErrorTooManyAttempts,
+    'account_banned' => context.l10n.authErrorAccountBanned,
     _ => fallback ?? context.l10n.authErrorUnknown,
   };
 }

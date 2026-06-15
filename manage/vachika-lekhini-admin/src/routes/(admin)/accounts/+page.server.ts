@@ -31,10 +31,17 @@ export const actions: Actions = {
 
 		const cur = await prisma.account.findUnique({ where: { id }, select: { isBanned: true } });
 		if (!cur) return fail(404, { error: 'Account not found' });
-		await prisma.account.update({
-			where: { id },
-			data: { isBanned: !cur.isBanned, bannedReason: !cur.isBanned ? reason : null }
-		});
+		const banning = !cur.isBanned;
+		await prisma.$transaction([
+			prisma.account.update({
+				where: { id },
+				data: { isBanned: banning, bannedReason: banning ? reason : null }
+			}),
+			// Clear all push tokens so banned users stop receiving notifications.
+			...(banning
+				? [prisma.device.updateMany({ where: { accountId: id }, data: { pushToken: null } })]
+				: [])
+		]);
 		return { ok: true };
 	}
 };

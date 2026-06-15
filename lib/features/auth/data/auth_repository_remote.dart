@@ -220,6 +220,7 @@ class AuthRepositoryRemote implements AuthRepository {
       if (status == 401) return AuthFailure.invalidOtp();
     }
 
+    if (status == 403) return AuthFailure.accountBanned();
     if (status == 404) return AuthFailure.accountNotFound();
     if (status == 409) return AuthFailure.accountAlreadyExists();
     if (status == 429) return AuthFailure.tooManyAttempts();

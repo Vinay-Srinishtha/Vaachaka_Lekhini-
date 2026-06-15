@@ -91,6 +91,11 @@ class AuthFailure extends Failure {
         code: 'too_many_attempts',
       );
 
+  factory AuthFailure.accountBanned() => const AuthFailure(
+        'Your account has been suspended. Please contact support.',
+        code: 'account_banned',
+      );
+
   factory AuthFailure.unknown(Object? cause) =>
       AuthFailure('Something went wrong. Please try again.', code: 'unknown', cause: cause);
 }

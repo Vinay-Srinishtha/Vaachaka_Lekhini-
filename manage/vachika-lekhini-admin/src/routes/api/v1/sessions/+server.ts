@@ -167,12 +167,10 @@ export const POST: RequestHandler = async (event) => {
 			await Promise.all([...milestoneMembers].map((id) => recomputeMemberBalance(id)));
 			emitChange('reward_event');
 		}
-	}
 
-	// ── Daily-target bonus ──────────────────────────────────────────────────
-	// Idempotency key: daily_target_bonus:<programId>:<YYYY-MM-DD> (UTC).
-	if (inserted.count > 0) {
-		const earnConfig = await getRewardEarnConfig();
+		// ── Daily-target bonus ──────────────────────────────────────────────────
+		// Idempotency key: daily_target_bonus:<programId>:<YYYY-MM-DD> (UTC).
+		// earnConfig already fetched above — no second round-trip.
 		const uniqueProgramIds = Array.from(new Set(body.sessions.map((s) => s.program_id)));
 		const now = new Date();
 		const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));

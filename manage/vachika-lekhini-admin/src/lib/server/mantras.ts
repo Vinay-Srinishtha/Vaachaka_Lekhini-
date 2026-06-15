@@ -5,7 +5,7 @@ import { MANTRA_TAGS, THUMB_PALETTES } from '$lib/constants';
 
 const slugRegex = /^[a-z][a-z0-9_]{1,40}$/;
 
-export const mantraFormSchema = z.object({
+const mantraFormSchema = z.object({
 	slug: z.string().regex(slugRegex, 'Slug: lowercase letters, digits, underscores; 2–41 chars.'),
 	nameDevanagari: z.string().min(1).max(200),
 	nameRoman: z.string().min(1).max(120),
@@ -22,7 +22,7 @@ export const mantraFormSchema = z.object({
 	sortOrder: z.coerce.number().int().default(0)
 });
 
-export type MantraFormInput = z.infer<typeof mantraFormSchema>;
+type MantraFormInput = z.infer<typeof mantraFormSchema>;
 
 /// Parse a FormData payload from a mantra form (create or edit).
 /// Throws a 400 with a flat field-error map on validation failure.

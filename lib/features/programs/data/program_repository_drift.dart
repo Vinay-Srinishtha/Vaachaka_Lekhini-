@@ -531,8 +531,8 @@ class ProgramRepositoryDrift implements ProgramRepository {
   // Outbox payload helpers — field names match Prisma column names exactly
   // ---------------------------------------------------------------------------
 
-  // NOTE: total_writings, current_streak, and longest_streak are intentionally
-  // omitted. The server recomputes them from the Session table in
+  // NOTE: total_chants, total_writings, current_streak, and longest_streak are
+  // intentionally omitted. The server recomputes them from the Session table in
   // /api/v1/sessions after each batch. Sending client-computed values would
   // allow a tampered app to overwrite authoritative server aggregates.
   Map<String, Object?> _programPayload(Program p) => {
@@ -544,8 +544,6 @@ class ProgramRepositoryDrift implements ProgramRepository {
     'last_active_date': p.lastActiveDate?.toUtc().toIso8601String(),
     'completed_at': p.completedAt?.toUtc().toIso8601String(),
     'started_at': p.startedAt.toUtc().toIso8601String(),
-    'total_chants': p.totalChants,
-    'total_writings': p.totalWritings,
   };
 }
 

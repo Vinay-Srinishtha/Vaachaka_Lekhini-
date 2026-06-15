@@ -3,9 +3,9 @@
 	import BarChart from '$lib/components/BarChart.svelte';
 	import DonutChart from '$lib/components/DonutChart.svelte';
 	import {
-		BookOpen, ShoppingBag, Settings2, Users, UserCheck,
+		BookOpen, ShoppingBag, Users, UserCheck,
 		Activity, Smartphone, Layers, Mic2, PenLine, Hand,
-		TrendingUp, CalendarDays, Flame, Trophy, Zap
+		TrendingUp, TrendingDown, CalendarDays, Flame, Trophy, Zap, CheckCircle2
 	} from '@lucide/svelte';
 
 	let { data } = $props();
@@ -15,7 +15,6 @@
 		return new Date(d).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
 	}
 
-	// Donut slices for modality split
 	const MODALITY_COLORS: Record<string, string> = {
 		voice:       '#a855f7',
 		handwriting: '#f59e0b',
@@ -28,13 +27,20 @@
 			color: MODALITY_COLORS[m.modality] ?? '#6b7280',
 		}))
 	);
-	const totalSessions = $derived(donutData.reduce((s: number, d: { value: number }) => s + d.value, 0) || 1);
+	const totalSessions = $derived(donutData.reduce((a: number, d: { value: number }) => a + d.value, 0) || 1);
 
-	// Bar chart — last 30 days
-	const barData = $derived(
+	const barData30 = $derived(
 		data.sessions30d.map((d: { day: string; count: number }) => ({
 			label: d.day,
-			secondary: d.day.split(' ')[0], // just the day number
+			secondary: d.day.split(' ')[0],
+			value: d.count,
+		}))
+	);
+
+	const barData7 = $derived(
+		data.sessions7d.map((d: { day: string; count: number; weekday: string }) => ({
+			label: d.weekday,
+			secondary: d.day.split(' ')[0],
 			value: d.count,
 		}))
 	);
@@ -47,28 +53,32 @@
 		<StatCard
 			label="Sessions Today"
 			value={s.sessionsToday.toLocaleString()}
-			hint="Chant sessions logged"
+			hint="vs yesterday"
 			icon={Activity}
 			tone="brand"
 			delta={s.sessionsDelta}
 			spark={data.spark7}
 		/>
+		<StatCard label="Sessions (24h)" value={s.sessions24h.toLocaleString()} icon={Zap} tone="blue" hint="Last 24 hours" />
 		<StatCard label="Members" value={s.memberCount.toLocaleString()} icon={UserCheck} tone="green" hint="Family members registered" />
-		<StatCard label="Active Programs" value={s.activePrograms.toLocaleString()} icon={Layers} tone="blue" hint="In progress" />
 		<StatCard label="Devices" value={s.deviceCount.toLocaleString()} icon={Smartphone} tone="gray" hint="Registered installs" />
 
 		<StatCard label="Total Sessions" value={s.sessionCount.toLocaleString()} icon={TrendingUp} tone="brand" hint="All time" />
 		<StatCard label="Accounts" value={s.accountCount.toLocaleString()} icon={Users} tone="gray"
 			hint={s.bannedAccountCount > 0 ? `${s.bannedAccountCount} banned` : 'All active'} />
-		<StatCard label="Mantras" value={s.mantraCount.toLocaleString()} icon={BookOpen} tone="amber"
-			hint={`${s.activeMantras} visible in app`} />
+		<StatCard label="Active Programs" value={s.activePrograms.toLocaleString()} icon={Layers} tone="blue" hint="In progress" />
+		<StatCard label="Completed Programs" value={s.completedPrograms.toLocaleString()} icon={CheckCircle2} tone="green" hint="Goal reached" />
+
+		<StatCard label="Points Earned" value={s.rewardEarned.toLocaleString()} icon={TrendingUp} tone="green" hint="All time" />
+		<StatCard label="Points Spent" value={s.rewardSpent.toLocaleString()} icon={TrendingDown} tone="red" hint="Redeemed" />
+		<StatCard label="Mantras" value={s.mantraCount.toLocaleString()} icon={BookOpen} tone="amber" hint={`${s.activeMantras} visible in app`} />
 		<StatCard label="Store Items" value={s.storeCount.toLocaleString()} icon={ShoppingBag} tone="blue" hint="Active listings" />
 	</section>
 
 	<!-- ── Charts row ── -->
 	<section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-		<!-- 30-day sessions bar chart -->
+		<!-- 30-day bar chart -->
 		<div class="card p-5 lg:col-span-2">
 			<div class="flex items-center justify-between mb-4">
 				<div>
@@ -76,21 +86,20 @@
 					<p class="text-xs text-gray-400 mt-0.5">{s.sessionCount.toLocaleString()} sessions all-time</p>
 				</div>
 				<div class="flex items-center gap-1.5 text-xs text-gray-400">
-					<CalendarDays size={13} />
-					30d
+					<CalendarDays size={13} />30d
 				</div>
 			</div>
-			<BarChart data={barData} height={140} showValues={false} />
+			<BarChart data={barData30} height={140} showValues={false} />
 		</div>
 
-		<!-- Modality split donut -->
+		<!-- Modality donut -->
 		<div class="card p-5">
 			<h2 class="font-bold text-gray-900 text-sm mb-4">Session type split</h2>
 			{#if donutData.length === 0}
 				<div class="h-32 grid place-items-center text-sm text-gray-400">No sessions yet.</div>
 			{:else}
 				<div class="flex items-center gap-5">
-					<div class="relative shrink-0">
+					<div class="shrink-0">
 						<DonutChart data={donutData} size={120} thickness={22} />
 					</div>
 					<div class="space-y-2.5 flex-1 min-w-0">
@@ -107,7 +116,7 @@
 									<span class="text-xs font-medium text-gray-700 capitalize truncate">{slice.label}</span>
 								</div>
 								<span class="text-xs font-bold tabular-nums text-gray-500">
-									{Math.round((slice.value / totalSessions) * 100)}%
+									{slice.value.toLocaleString()} ({Math.round((slice.value / totalSessions) * 100)}%)
 								</span>
 							</div>
 						{/each}
@@ -115,13 +124,10 @@
 				</div>
 				<div class="mt-4 space-y-1.5">
 					{#each donutData as slice}
-						<div>
-							<div class="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-								<div
-									class="h-1.5 rounded-full transition-all"
-									style="width:{Math.round((slice.value / totalSessions) * 100)}%; background:{slice.color}"
-								></div>
-							</div>
+						<div class="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+							<div class="h-1.5 rounded-full transition-all"
+								style="width:{Math.round((slice.value / totalSessions) * 100)}%; background:{slice.color}"
+							></div>
 						</div>
 					{/each}
 				</div>
@@ -129,10 +135,49 @@
 		</div>
 	</section>
 
-	<!-- ── Bottom row ── -->
-	<section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+	<!-- ── 7-day detail + top members ── -->
+	<section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-		<!-- Recent accounts -->
+		<!-- 7-day bar chart -->
+		<div class="card p-5 lg:col-span-2">
+			<div class="flex items-center justify-between mb-4">
+				<h2 class="font-bold text-gray-900 text-sm">Sessions — last 7 days</h2>
+				<span class="text-xs text-gray-400">{data.sessions7d.reduce((a: number, d: { count: number }) => a + d.count, 0).toLocaleString()} this week</span>
+			</div>
+			<BarChart data={barData7} height={140} showValues={true} />
+		</div>
+
+		<!-- Top members by progress -->
+		<div class="card overflow-hidden">
+			<div class="px-5 py-3.5 border-b border-gray-100">
+				<h2 class="font-bold text-gray-900 text-sm">Top members by progress</h2>
+			</div>
+			{#if data.topMembers.length === 0}
+				<div class="px-5 py-10 text-center text-sm text-gray-400">No data yet.</div>
+			{:else}
+				{@const maxMember = Math.max(...data.topMembers.map((m: { total: number }) => m.total), 1)}
+				<ul class="divide-y divide-gray-50">
+					{#each data.topMembers as item, i}
+						<li class="px-5 py-3">
+							<div class="flex items-center justify-between gap-3 mb-1.5">
+								<div class="flex items-center gap-2 min-w-0">
+									<span class="w-5 h-5 rounded-full bg-green-50 text-green-700 text-[10px] font-bold grid place-items-center shrink-0">{i + 1}</span>
+									<span class="text-sm font-medium text-gray-900 truncate">{item.name}</span>
+								</div>
+								<span class="text-xs font-bold tabular-nums text-gray-500 shrink-0">{item.total.toLocaleString()}</span>
+							</div>
+							<div class="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+								<div class="h-1.5 rounded-full bg-green-400" style="width:{Math.round((item.total / maxMember) * 100)}%"></div>
+							</div>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</div>
+	</section>
+
+	<!-- ── Recent accounts + top mantras ── -->
+	<section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
 		<div class="card overflow-hidden">
 			<div class="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
 				<h2 class="font-bold text-gray-900 text-sm">Recent accounts</h2>
@@ -161,7 +206,6 @@
 			{/if}
 		</div>
 
-		<!-- Top mantras -->
 		<div class="card overflow-hidden">
 			<div class="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
 				<h2 class="font-bold text-gray-900 text-sm">Top mantras by program count</h2>
@@ -182,10 +226,7 @@
 								<span class="text-xs tabular-nums font-bold text-gray-500 shrink-0">{row.count}</span>
 							</div>
 							<div class="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-								<div
-									class="h-1.5 rounded-full bg-brand-400 transition-all"
-									style="width:{Math.round((row.count / maxCount) * 100)}%"
-								></div>
+								<div class="h-1.5 rounded-full bg-brand-400 transition-all" style="width:{Math.round((row.count / maxCount) * 100)}%"></div>
 							</div>
 						</li>
 					{/each}
@@ -196,11 +237,10 @@
 
 	<!-- ── Leaderboards ── -->
 	<section class="grid grid-cols-1 md:grid-cols-3 gap-4">
-
 		{@const boards = [
-			{ key: 'streak',   title: 'Longest Current Streak', unit: 'days',     icon: Flame,  color: '#f97316' },
-			{ key: 'progress', title: 'Highest Total Progress',  unit: 'chants',   icon: Trophy, color: '#a855f7' },
-			{ key: 'sessions', title: 'Most Sessions',           unit: 'sessions', icon: Zap,    color: '#3b82f6' },
+			{ key: 'streak',   title: 'Longest Streak',      unit: 'days',     icon: Flame,  color: '#f97316' },
+			{ key: 'progress', title: 'Highest Total Progress', unit: 'chants', icon: Trophy, color: '#a855f7' },
+			{ key: 'sessions', title: 'Most Sessions',        unit: 'sessions', icon: Zap,    color: '#3b82f6' },
 		]}
 		{#each boards as board}
 			{@const rows = (data.leaderboards as Record<string, { name: string; mobile: string; value: number }[]>)[board.key] ?? []}
@@ -227,8 +267,7 @@
 										</div>
 									</div>
 									<span class="text-xs font-bold tabular-nums shrink-0" style="color:{board.color}">
-										{row.value.toLocaleString()}
-										<span class="font-normal text-gray-400">{board.unit}</span>
+										{row.value.toLocaleString()} <span class="font-normal text-gray-400">{board.unit}</span>
 									</span>
 								</div>
 								<div class="h-1 rounded-full bg-gray-100 overflow-hidden">

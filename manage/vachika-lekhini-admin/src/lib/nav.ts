@@ -13,7 +13,6 @@ import {
 	Mic2,
 	UserPlus,
 	Smartphone,
-	BarChart3,
 	HelpCircle,
 	Sliders,
 	Flag,
@@ -35,7 +34,6 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
 	// ── Overview ─────────────────────────────────────────────────────────────
 	{ href: '/', label: 'Dashboard', icon: LayoutDashboard },
-	{ href: '/analytics', label: 'Analytics', icon: BarChart3, minRole: 'viewer' },
 
 	// ── Content — what the app shows ─────────────────────────────────────────
 	{ href: '/mantras', label: 'Mantras', icon: BookOpen, minRole: 'viewer', group: 'Content' },

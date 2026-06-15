@@ -4,20 +4,21 @@ import { prisma } from '$lib/server/prisma';
 export const load: PageServerLoad = async () => {
 	const now = new Date();
 	const DAY = 86_400_000;
-	const todayStart    = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+	const todayStart     = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 	const yesterdayStart = new Date(todayStart.getTime() - DAY);
-	const days30ago     = new Date(now.getTime() - 30 * DAY);
+	const days7ago       = new Date(now.getTime() - 7 * DAY);
+	const days30ago      = new Date(now.getTime() - 30 * DAY);
 
 	const [
 		mantraCount, activeMantras,
 		storeCount, flagCount,
 		accountCount, bannedAccountCount,
 		memberCount,
-		programCount, activePrograms,
-		sessionCount,
-		sessionsToday, sessionsYesterday,
+		programCount, activePrograms, completedPrograms,
+		sessionCount, sessionsToday, sessionsYesterday, sessions24h,
 		deviceCount,
 		chantsToday,
+		rewardEarned, rewardSpent,
 		recentAccounts,
 		modalitySplit,
 	] = await Promise.all([
@@ -30,11 +31,15 @@ export const load: PageServerLoad = async () => {
 		prisma.member.count(),
 		prisma.program.count(),
 		prisma.program.count({ where: { completedAt: null } }),
+		prisma.program.count({ where: { completedAt: { not: null } } }),
 		prisma.session.count(),
 		prisma.session.count({ where: { startedAt: { gte: todayStart } } }),
 		prisma.session.count({ where: { startedAt: { gte: yesterdayStart, lt: todayStart } } }),
+		prisma.session.count({ where: { startedAt: { gte: new Date(now.getTime() - DAY) } } }),
 		prisma.device.count(),
 		prisma.session.aggregate({ where: { startedAt: { gte: todayStart } }, _sum: { countAdded: true } }),
+		prisma.rewardEvent.aggregate({ where: { kind: 'earn' }, _sum: { amount: true } }),
+		prisma.rewardEvent.aggregate({ where: { kind: 'spend' }, _sum: { amount: true } }),
 		prisma.account.findMany({
 			orderBy: { createdAt: 'desc' },
 			take: 6,
@@ -43,7 +48,7 @@ export const load: PageServerLoad = async () => {
 		prisma.session.groupBy({ by: ['modality'], _count: true }),
 	]);
 
-	// 30-day daily session counts
+	// 30-day + 7-day daily session counts (single raw query covers both)
 	const raw30d = await prisma.$queryRaw<{ day: string; cnt: number; chants: number }[]>`
 		SELECT date_trunc('day', "startedAt")::text AS day,
 		       count(*)::int                        AS cnt,
@@ -62,7 +67,13 @@ export const load: PageServerLoad = async () => {
 		sessions30d.push({ day: lbl, count: hit ? Number(hit.cnt) : 0, chants: hit ? Number(hit.chants) : 0 });
 	}
 
-	// Top 5 mantras by program count — single JOIN query instead of two round-trips.
+	// 7-day view (last 7 entries with weekday labels)
+	const sessions7d = sessions30d.slice(-7).map((d, i) => {
+		const date = new Date(now.getTime() - (6 - i) * DAY);
+		return { ...d, weekday: date.toLocaleDateString('en-IN', { weekday: 'short' }) };
+	});
+
+	// Top mantras by program count
 	const topMantrasRaw = await prisma.$queryRaw<{ name: string; count: number }[]>`
 		SELECT m."nameRoman" AS name, COUNT(p.id)::int AS count
 		FROM "Program" p
@@ -71,6 +82,17 @@ export const load: PageServerLoad = async () => {
 		ORDER BY count DESC
 		LIMIT 5`;
 	const topMantras = topMantrasRaw.map((r) => ({ name: r.name, count: Number(r.count) }));
+
+	// Top members by total progress (chants + writings)
+	const topMembersRaw = await prisma.$queryRaw<{ name: string; total: number }[]>`
+		SELECT m."displayName" AS name,
+		       COALESCE(SUM(p."totalChants" + p."totalWritings"), 0)::int AS total
+		FROM "Member" m
+		LEFT JOIN "Program" p ON p."memberId" = m.id
+		GROUP BY m.id, m."displayName"
+		ORDER BY total DESC
+		LIMIT 5`;
+	const topMembers = topMembersRaw.map((r) => ({ name: r.name, total: Number(r.total) }));
 
 	// Leaderboards — top 8 per category
 	const [lbStreakRaw, lbProgressRaw, lbSessionsRaw] = await Promise.all([
@@ -110,7 +132,6 @@ export const load: PageServerLoad = async () => {
 			? Math.round(((sessionsToday - sessionsYesterday) / sessionsYesterday) * 100)
 			: sessionsToday > 0 ? 100 : 0;
 
-	// 7-day sparkline for sessions (last entry in sessions30d)
 	const spark7 = sessions30d.slice(-7).map((d) => d.count);
 
 	return {
@@ -119,17 +140,20 @@ export const load: PageServerLoad = async () => {
 			storeCount, flagCount,
 			accountCount, bannedAccountCount,
 			memberCount,
-			programCount, activePrograms,
-			sessionCount,
-			sessionsToday, sessionsYesterday, sessionsDelta,
+			programCount, activePrograms, completedPrograms,
+			sessionCount, sessionsToday, sessionsYesterday, sessionsDelta, sessions24h,
 			deviceCount,
 			chantsToday: chantsToday._sum.countAdded ?? 0,
+			rewardEarned: rewardEarned._sum.amount ?? 0,
+			rewardSpent:  rewardSpent._sum.amount ?? 0,
 		},
 		sessions30d,
+		sessions7d,
 		spark7,
 		modalitySplit,
 		recentAccounts,
 		topMantras,
+		topMembers,
 		leaderboards,
 	};
 };

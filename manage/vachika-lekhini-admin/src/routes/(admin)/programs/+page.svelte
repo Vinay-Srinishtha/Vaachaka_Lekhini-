@@ -2,6 +2,8 @@
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import DataTable from '$lib/components/DataTable.svelte';
 	import type { Column } from '$lib/components/DataTable.types';
+	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 
 	let { data } = $props();
 
@@ -24,9 +26,36 @@
 		if (target === 0) return 0;
 		return Math.min(100, Math.round((done / target) * 100));
 	}
+
+	function setStatus(s: string) {
+		const url = new URL($page.url);
+		url.searchParams.set('status', s);
+		url.searchParams.set('page', '1');
+		goto(url.toString());
+	}
+
+	const STATUS_FILTERS = [
+		{ value: 'all', label: 'All' },
+		{ value: 'active', label: 'Active' },
+		{ value: 'completed', label: 'Completed' }
+	];
 </script>
 
 <PageHeader title="Programs" subtitle="Every member's active and completed practice goals" />
+
+<div class="px-4 pb-2 flex gap-2">
+	{#each STATUS_FILTERS as f}
+		<button
+			onclick={() => setStatus(f.value)}
+			class="px-3 py-1 rounded-full text-sm font-medium border transition-colors
+				{data.query.status === f.value
+					? 'bg-brand-600 text-white border-brand-600'
+					: 'bg-white text-gray-600 border-gray-300 hover:border-brand-400 hover:text-brand-600'}"
+		>
+			{f.label}
+		</button>
+	{/each}
+</div>
 
 <DataTable
 	{columns}

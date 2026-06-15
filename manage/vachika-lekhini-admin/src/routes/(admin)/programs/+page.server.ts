@@ -8,8 +8,9 @@ const SORT_COLS = ['createdAt', 'startedAt', 'completedAt', 'totalWritings', 'ta
 export const load: PageServerLoad = async (event) => {
 	requireRole(event, 'editor');
 	const q = parseListQuery(event.url, { col: 'createdAt', dir: 'desc' }, SORT_COLS);
+	const status = event.url.searchParams.get('status') ?? 'all'; // 'all' | 'active' | 'completed'
 
-	const where = q.q
+	const searchFilter = q.q
 		? {
 				OR: [
 					{ member: { displayName: { contains: q.q, mode: 'insensitive' as const } } },
@@ -18,6 +19,15 @@ export const load: PageServerLoad = async (event) => {
 				]
 			}
 		: {};
+
+	const statusFilter =
+		status === 'completed'
+			? { completedAt: { not: null } }
+			: status === 'active'
+				? { completedAt: null }
+				: {};
+
+	const where = { AND: [searchFilter, statusFilter] };
 
 	const orderBy =
 		q.sort.col === 'createdAt' || q.sort.col === 'startedAt' || q.sort.col === 'completedAt'
@@ -42,6 +52,6 @@ export const load: PageServerLoad = async (event) => {
 	return {
 		programs: rows,
 		total,
-		query: { q: q.q, page: q.page, pageSize: q.pageSize, sort: q.sort }
+		query: { q: q.q, page: q.page, pageSize: q.pageSize, sort: q.sort, status }
 	};
 };

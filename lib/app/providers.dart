@@ -604,6 +604,7 @@ final leaderboardProvider =
             streakDays: (m['streak_days'] as num?)?.toInt() ?? 0,
             totalChants: (m['total_chants'] as num?)?.toInt() ?? 0,
             isSelf: m['is_self'] == true,
+            streakActive: m['streak_active'] == true,
           );
         }).toList();
       } catch (_) {

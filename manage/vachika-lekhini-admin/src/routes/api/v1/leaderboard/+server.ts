@@ -20,7 +20,7 @@ export const GET: RequestHandler = async (event) => {
 
 	// Aggregate per member from pre-computed Program totals (server-authoritative).
 	// One row per account — ROW_NUMBER() keeps the best-scoring member per account.
-	type Row = { id: string; name: string; total_progress: number; streak_days: number; account_id: string };
+	type Row = { id: string; name: string; total_progress: number; streak_days: number; current_streak: number; account_id: string };
 	const rows = byStreak
 		? await prisma.$queryRaw<Row[]>`
 			WITH agg AS (
@@ -28,6 +28,7 @@ export const GET: RequestHandler = async (event) => {
 			         m."displayName"                                              AS name,
 			         COALESCE(SUM(p."totalChants" + p."totalWritings"), 0)::int   AS total_progress,
 			         COALESCE(MAX(p."longestStreak"), 0)::int                     AS streak_days,
+			         COALESCE(MAX(p."currentStreak"), 0)::int                     AS current_streak,
 			         m."accountId"                                                AS account_id
 			  FROM "Member" m
 			  LEFT JOIN "Program" p ON p."memberId" = m.id
@@ -40,7 +41,7 @@ export const GET: RequestHandler = async (event) => {
 			  ) AS rn
 			  FROM agg
 			)
-			SELECT id, name, total_progress, streak_days, account_id
+			SELECT id, name, total_progress, streak_days, current_streak, account_id
 			FROM ranked
 			WHERE rn = 1
 			ORDER BY streak_days DESC, total_progress DESC
@@ -51,6 +52,7 @@ export const GET: RequestHandler = async (event) => {
 			         m."displayName"                                              AS name,
 			         COALESCE(SUM(p."totalChants" + p."totalWritings"), 0)::int   AS total_progress,
 			         COALESCE(MAX(p."longestStreak"), 0)::int                     AS streak_days,
+			         COALESCE(MAX(p."currentStreak"), 0)::int                     AS current_streak,
 			         m."accountId"                                                AS account_id
 			  FROM "Member" m
 			  LEFT JOIN "Program" p ON p."memberId" = m.id
@@ -63,7 +65,7 @@ export const GET: RequestHandler = async (event) => {
 			  ) AS rn
 			  FROM agg
 			)
-			SELECT id, name, total_progress, streak_days, account_id
+			SELECT id, name, total_progress, streak_days, current_streak, account_id
 			FROM ranked
 			WHERE rn = 1
 			ORDER BY total_progress DESC, streak_days DESC
@@ -74,6 +76,7 @@ export const GET: RequestHandler = async (event) => {
 		name: r.name,
 		total_chants: Number(r.total_progress), // field name kept for Flutter compat
 		streak_days: Number(r.streak_days),
+		streak_active: Number(r.current_streak) > 0,
 		is_self: r.account_id === account.id
 	}));
 

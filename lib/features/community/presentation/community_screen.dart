@@ -502,9 +502,29 @@ class _RankRowState extends State<_RankRow> {
             ),
           ),
           Text(metric, style: KvlText.ui(12, FontWeight.w600)),
-          // Don't show encouragement button on the user's own row.
+          const SizedBox(width: KvlSpacing.sm),
+          // Streak status indicator — 🔥 active, 💤 ended.
+          Tooltip(
+            message: widget.friend.streakActive ? 'Streak active' : 'Streak ended',
+            child: Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: widget.friend.streakActive
+                    ? const Color(0xFFFFF3E0)
+                    : const Color(0xFFF3F4F6),
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                widget.friend.streakActive ? '🔥' : '💤',
+                style: const TextStyle(fontSize: 14),
+              ),
+            ),
+          ),
+          // Encouragement button — only for others.
           if (!widget.highlight) ...[
-            const SizedBox(width: KvlSpacing.sm),
+            const SizedBox(width: KvlSpacing.xs),
             Tooltip(
               message: context.l10n.sendEncouragement,
               child: GestureDetector(

@@ -1056,6 +1056,10 @@ class AppLocalizationsHi extends AppLocalizations {
       'बहुत अधिक प्रयास। कृपया थोड़ी देर प्रतीक्षा करें।';
 
   @override
+  String get authErrorAccountBanned =>
+      'Your account has been suspended. Please contact support.';
+
+  @override
   String get authErrorUnknown => 'कुछ गलत हो गया। कृपया पुनः प्रयास करें।';
 
   @override

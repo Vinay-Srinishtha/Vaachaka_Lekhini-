@@ -1057,6 +1057,10 @@ class AppLocalizationsKn extends AppLocalizations {
   String get authErrorTooManyAttempts => 'ಹಲವು ಪ್ರಯತ್ನಗಳು. ಸ್ವಲ್ಪ ಕಾಯಿರಿ.';
 
   @override
+  String get authErrorAccountBanned =>
+      'Your account has been suspended. Please contact support.';
+
+  @override
   String get authErrorUnknown => 'ಏನೋ ತಪ್ಪಾಗಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.';
 
   @override

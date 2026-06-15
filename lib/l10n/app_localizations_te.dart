@@ -1057,6 +1057,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'చాలా ప్రయత్నాలు. కొంత సేపు వేచి ఉండండి.';
 
   @override
+  String get authErrorAccountBanned =>
+      'Your account has been suspended. Please contact support.';
+
+  @override
   String get authErrorUnknown =>
       'ఏదో తప్పు జరిగింది. దయచేసి మళ్ళీ ప్రయత్నించండి.';
 

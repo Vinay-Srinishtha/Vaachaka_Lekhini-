@@ -2034,6 +2034,12 @@ abstract class AppLocalizations {
   /// **'Too many attempts. Please wait a moment before trying again.'**
   String get authErrorTooManyAttempts;
 
+  /// No description provided for @authErrorAccountBanned.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account has been suspended. Please contact support.'**
+  String get authErrorAccountBanned;
+
   /// No description provided for @authErrorUnknown.
   ///
   /// In en, this message translates to:

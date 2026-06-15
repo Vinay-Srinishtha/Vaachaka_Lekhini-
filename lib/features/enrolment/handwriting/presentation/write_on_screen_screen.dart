@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -144,8 +145,17 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
         return;
       }
 
-      // ── Run pixel-grid comparison ──────────────────────────────────────────
-      final refBytes = await refFile.readAsBytes();
+      // ── Pick a random reference from the pool ─────────────────────────────
+      final validCandidates = candidates
+          .where((a) => File(a.filePath!).existsSync())
+          .toList();
+      if (validCandidates.isEmpty) {
+        if (mounted) _showNoReferenceBanner();
+        setState(() => _checking = false);
+        return;
+      }
+      final ref_ = validCandidates[Random().nextInt(validCandidates.length)];
+      final refBytes = await File(ref_.filePath!).readAsBytes();
       final score = await HandwritingComparator.compare(png, refBytes);
 
       // Threshold from RemoteConfig — default 20 (= 20%)
@@ -155,7 +165,14 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
       final threshold = thresholdPct / 100.0;
 
       if (score >= threshold) {
-        // ── Accept ────────────────────────────────────────────────────────────
+        // ── Accept: save immediately into the rolling pool ────────────────────
+        await ref
+            .read(handwritingRepositoryProvider)
+            .savePngCapped(
+              profileId: profile.id,
+              mantraId: widget.mantraId,
+              bytes: png,
+            );
         setState(() {
           _writingCount++;
           _checking = false;
@@ -232,24 +249,27 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
   }
 
   Future<void> _save() async {
-    // Count any pending unsaved drawing
+    // All accepted writings were already saved via savePngCapped on accept.
+    // Only count any drawing still on canvas that hasn't been submitted yet.
     final total = _writingCount + (_controller.isEmpty ? 0 : 1);
     setState(() => _saving = true);
-    final png = await _controller.toPngBytes();
     final profile = ref.read(activeProfileProvider).value;
     if (profile == null) {
       setState(() => _saving = false);
       return;
     }
-    if (png != null && _controller.isNotEmpty) {
-      await ref
-          .read(handwritingRepositoryProvider)
-          .savePng(
-            profileId: profile.id,
-            mode: HandwritingMode.writeOnScreen,
-            bytes: png,
-            mantraId: widget.mantraId,
-          );
+    // If there's an unsubmitted drawing on canvas, save it too.
+    if (_controller.isNotEmpty) {
+      final png = await _controller.toPngBytes();
+      if (png != null) {
+        await ref
+            .read(handwritingRepositoryProvider)
+            .savePngCapped(
+              profileId: profile.id,
+              mantraId: widget.mantraId,
+              bytes: png,
+            );
+      }
     }
     if (!mounted) return;
     final programId = widget.programId;

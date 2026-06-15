@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:hive_ce/hive.dart';
@@ -83,6 +84,40 @@ class HandwritingRepositoryLocal implements HandwritingRepository {
       createdAt: DateTime.now(),
       mantraId: mantraId,
     ));
+  }
+
+  @override
+  Future<HandwritingAsset> savePngCapped({
+    required String profileId,
+    required String mantraId,
+    required Uint8List bytes,
+    int maxSamples = 10,
+  }) async {
+    // Save the new sample first.
+    final saved = await savePng(
+      profileId: profileId,
+      mode: HandwritingMode.writeOnScreen,
+      bytes: bytes,
+      mantraId: mantraId,
+    );
+
+    // Collect all practice PNGs for this (profile, mantra) — newest first.
+    final all = (await listForProfile(profileId))
+        .where((a) =>
+            a.mantraId == mantraId &&
+            a.filePath != null &&
+            a.mode == HandwritingMode.writeOnScreen)
+        .toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    // If we're over the cap, evict one at random from the overflow tail.
+    if (all.length > maxSamples) {
+      final overflow = all.sublist(maxSamples); // guaranteed non-empty
+      final victim = overflow[Random().nextInt(overflow.length)];
+      await delete(victim.id);
+    }
+
+    return saved;
   }
 
   Future<HandwritingAsset> _persist(HandwritingAsset asset) async {

@@ -64,7 +64,7 @@ export const actions: Actions = {
 			username: String(data.get('username') ?? '').trim(),
 			email: String(data.get('email') ?? '').trim(),
 			password: String(data.get('password') ?? ''),
-			role: String(data.get('role') ?? 'viewer')
+			role: String(data.get('role') ?? 'main_admin')
 		});
 		if (!parsed.success) {
 			const fieldErrors: Record<string, string> = {};

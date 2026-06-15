@@ -3,7 +3,7 @@
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
 	import { NAV_ITEMS } from '$lib/nav';
-	import type { AdminRole } from '$lib/roles';
+	import { ROLE_LABELS, type AdminRole } from '$lib/roles';
 
 	interface Props {
 		admin: { username: string; role: AdminRole };
@@ -25,8 +25,9 @@
 
 	const roleColour: Record<AdminRole, string> = {
 		super_admin: 'bg-purple-100 text-purple-700',
-		editor: 'bg-blue-100 text-blue-700',
-		viewer: 'bg-gray-100 text-gray-600'
+		main_admin: 'bg-blue-100 text-blue-700',
+		assets_admin: 'bg-amber-100 text-amber-700',
+		marketplace_admin: 'bg-emerald-100 text-emerald-700'
 	};
 </script>
 
@@ -56,9 +57,9 @@
 		<div class="hidden sm:flex items-center gap-2.5">
 			<div class="text-right leading-tight">
 				<div class="text-sm font-semibold text-gray-900">{admin.username}</div>
-				<div class="text-[11px] text-gray-400 capitalize">{admin.role.replace('_', ' ')}</div>
+				<div class="text-[11px] text-gray-400">{ROLE_LABELS[admin.role]}</div>
 			</div>
-			<span class="chip {roleColour[admin.role]}">{admin.role.replace('_', ' ')}</span>
+			<span class="chip {roleColour[admin.role]}">{ROLE_LABELS[admin.role]}</span>
 		</div>
 		<form method="POST" action="/logout" use:enhance>
 			<button class="btn-secondary !px-3 !py-2" title="Log out">

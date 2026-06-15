@@ -5,7 +5,7 @@
 	import type { Column } from '$lib/components/DataTable.types';
 	import Modal from '$lib/components/Modal.svelte';
 	import FormField from '$lib/components/FormField.svelte';
-	import { ADMIN_ROLES } from '$lib/constants';
+	import { ADMIN_ROLES, ROLE_LABELS } from '$lib/constants';
 	import { enhance } from '$app/forms';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
@@ -44,8 +44,9 @@
 	const fe = $derived((form?.fieldErrors ?? {}) as Record<string, string>);
 	const roleTone: Record<string, string> = {
 		super_admin: 'bg-purple-100 text-purple-700',
-		editor: 'bg-blue-100 text-blue-700',
-		viewer: 'bg-gray-100 text-gray-700'
+		main_admin: 'bg-blue-100 text-blue-700',
+		assets_admin: 'bg-amber-100 text-amber-700',
+		marketplace_admin: 'bg-emerald-100 text-emerald-700'
 	};
 </script>
 
@@ -106,7 +107,7 @@
 						}}
 					>
 						{#each ADMIN_ROLES as r}
-							<option value={r} selected={a.role === r}>{r.replace('_', ' ')}</option>
+							<option value={r} selected={a.role === r}>{ROLE_LABELS[r]}</option>
 						{/each}
 					</select>
 				</form>
@@ -174,7 +175,7 @@
 		<FormField label="Role" name="role" required error={fe.role}>
 			<select id="role" name="role" class="input">
 				{#each ADMIN_ROLES as r}
-					<option value={r}>{r.replace('_', ' ')}</option>
+					<option value={r}>{ROLE_LABELS[r]}</option>
 				{/each}
 			</select>
 		</FormField>

@@ -2,7 +2,7 @@
 	import { navigating, page } from '$app/state';
 	import { preloadData } from '$app/navigation';
 	import { NAV_ITEMS } from '$lib/nav';
-	import { hasRole, type AdminRole } from '$lib/roles';
+	import { canAccessSection, type AdminRole } from '$lib/roles';
 	import { ChevronsLeft, ChevronsRight, X } from '@lucide/svelte';
 
 	interface Props {
@@ -25,7 +25,7 @@
 		onNavigateStart
 	}: Props = $props();
 
-	const items = $derived(NAV_ITEMS.filter((i) => !i.minRole || hasRole(role, i.minRole)));
+	const items = $derived(NAV_ITEMS.filter((i) => canAccessSection(role, i.section)));
 	const grouped = $derived(buildGroups(items));
 
 	function buildGroups(navItems: typeof items) {

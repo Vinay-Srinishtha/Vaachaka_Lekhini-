@@ -3,11 +3,11 @@
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import DataTable from '$lib/components/DataTable.svelte';
 	import type { Column } from '$lib/components/DataTable.types';
-	import { hasRole } from '$lib/roles';
+	import { canAccessSection } from '$lib/roles';
 	import { page } from '$app/state';
 
 	let { data, children } = $props();
-	const canEdit = $derived(hasRole(data.admin?.role, 'editor'));
+	const canEdit = $derived(canAccessSection(data.admin?.role, 'config'));
 
 	const columns: Column[] = [
 		{ key: 'key', label: 'Key', sortable: true },

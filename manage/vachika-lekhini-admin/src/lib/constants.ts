@@ -47,5 +47,18 @@ export function encodeFlagValue(type: FlagType, value: unknown): string {
 	}
 }
 
-export const ADMIN_ROLES = ['super_admin', 'editor', 'viewer'] as const;
+export const ADMIN_ROLES = [
+	'super_admin',
+	'main_admin',
+	'assets_admin',
+	'marketplace_admin'
+] as const;
 export type AdminRole = (typeof ADMIN_ROLES)[number];
+
+/// Human-readable labels for each role.
+export const ROLE_LABELS: Record<AdminRole, string> = {
+	super_admin: 'Super Admin',
+	main_admin: 'Main Admin',
+	assets_admin: 'Assets Admin',
+	marketplace_admin: 'Marketplace Admin'
+};

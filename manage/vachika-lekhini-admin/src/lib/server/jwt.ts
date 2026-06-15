@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { env } from '$env/dynamic/private';
+import type { AdminRole } from '../constants';
 
 const TOKEN_TTL_SECONDS = 60 * 60 * 12; // 12h
 const ALG = 'HS256';
@@ -15,7 +16,7 @@ function secretKey(): Uint8Array {
 export interface AdminTokenPayload {
 	sub: string; // admin id
 	username: string;
-	role: 'super_admin' | 'editor' | 'viewer';
+	role: AdminRole;
 	jti: string;
 }
 

@@ -377,7 +377,7 @@ model AdminUser {
   username     String     @unique
   email        String?    @unique
   passwordHash String
-  role         AdminRole  @default(viewer)
+  role         AdminRole  @default(main_admin)
   isActive     Boolean    @default(true)
   createdAt    DateTime   @default(now())
   lastLoginAt  DateTime?
@@ -387,8 +387,9 @@ model AdminUser {
 
 enum AdminRole {
   super_admin
-  editor
-  viewer
+  main_admin
+  assets_admin
+  marketplace_admin
 }
 
 model RevokedToken {

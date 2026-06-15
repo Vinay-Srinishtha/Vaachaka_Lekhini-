@@ -21,45 +21,45 @@ import {
 	Gift,
 	ScrollText
 } from '@lucide/svelte';
-import type { AdminRole } from './roles';
-
 export interface NavItem {
 	href: string;
 	label: string;
 	icon: Component;
-	minRole?: AdminRole;
+	/// Section key used for role-based visibility (matches sectionForPath).
+	section: string;
 	group?: string;
 }
 
-/// Sidebar nav. Items with minRole are hidden for admins below that rank.
+/// Sidebar nav. Items are hidden when the admin's role can't access the
+/// item's section (see roles.ts ROLE_SECTIONS).
 export const NAV_ITEMS: NavItem[] = [
 	// ── Overview ─────────────────────────────────────────────────────────────
-	{ href: '/',             label: 'Dashboard',   icon: LayoutDashboard },
-	{ href: '/leaderboard',  label: 'Leaderboard', icon: Medal },
+	{ href: '/',             label: 'Dashboard',   icon: LayoutDashboard, section: 'dashboard' },
+	{ href: '/leaderboard',  label: 'Leaderboard', icon: Medal, section: 'leaderboard' },
 
 	// ── Content — what the app shows ─────────────────────────────────────────
-	{ href: '/mantras', label: 'Mantras', icon: BookOpen, minRole: 'viewer', group: 'Content' },
-	{ href: '/store', label: 'Store', icon: ShoppingBag, minRole: 'viewer', group: 'Content' },
-	{ href: '/faqs', label: 'FAQs', icon: HelpCircle, minRole: 'viewer', group: 'Content' },
-	{ href: '/app-settings', label: 'App Settings', icon: Sliders, minRole: 'editor', group: 'Content' },
-	{ href: '/config', label: 'Config & Flags', icon: Settings2, minRole: 'viewer', group: 'Content' },
+	{ href: '/mantras', label: 'Mantras', icon: BookOpen, section: 'mantras', group: 'Content' },
+	{ href: '/store', label: 'Store', icon: ShoppingBag, section: 'store', group: 'Content' },
+	{ href: '/faqs', label: 'FAQs', icon: HelpCircle, section: 'faqs', group: 'Content' },
+	{ href: '/app-settings', label: 'App Settings', icon: Sliders, section: 'app-settings', group: 'Content' },
+	{ href: '/config', label: 'Config & Flags', icon: Settings2, section: 'config', group: 'Content' },
 
 	// ── Practice — user activity ──────────────────────────────────────────────
-	{ href: '/accounts', label: 'Accounts', icon: Users, minRole: 'editor', group: 'Practice' },
-	{ href: '/programs', label: 'Programs', icon: Layers, minRole: 'editor', group: 'Practice' },
-	{ href: '/sessions', label: 'Sessions', icon: Activity, minRole: 'editor', group: 'Practice' },
-	{ href: '/enrolments', label: 'Enrolments', icon: Mic2, minRole: 'editor', group: 'Practice' },
+	{ href: '/accounts', label: 'Accounts', icon: Users, section: 'accounts', group: 'Practice' },
+	{ href: '/programs', label: 'Programs', icon: Layers, section: 'programs', group: 'Practice' },
+	{ href: '/sessions', label: 'Sessions', icon: Activity, section: 'sessions', group: 'Practice' },
+	{ href: '/enrolments', label: 'Enrolments', icon: Mic2, section: 'enrolments', group: 'Practice' },
 
 	// ── Rewards ───────────────────────────────────────────────────────────────
-	{ href: '/rewards', label: 'Rewards Ledger', icon: Coins, minRole: 'editor', group: 'Rewards' },
-	{ href: '/invites', label: 'Invites', icon: UserPlus, minRole: 'editor', group: 'Rewards' },
+	{ href: '/rewards', label: 'Rewards Ledger', icon: Coins, section: 'rewards', group: 'Rewards' },
+	{ href: '/invites', label: 'Invites', icon: UserPlus, section: 'invites', group: 'Rewards' },
 
 	// ── Support ───────────────────────────────────────────────────────────────
-	{ href: '/support', label: 'Issues Reported', icon: Flag, minRole: 'viewer', group: 'Support' },
-	{ href: '/feedback', label: 'Feedback', icon: MessageCircleHeart, minRole: 'viewer', group: 'Support' },
+	{ href: '/support', label: 'Issues Reported', icon: Flag, section: 'support', group: 'Support' },
+	{ href: '/feedback', label: 'Feedback', icon: MessageCircleHeart, section: 'feedback', group: 'Support' },
 
 	// ── Audit ─────────────────────────────────────────────────────────────────
-	{ href: '/otp-log', label: 'OTP Log', icon: MessageSquareDot, minRole: 'editor', group: 'Audit' },
-	{ href: '/devices', label: 'Devices', icon: Smartphone, minRole: 'editor', group: 'Audit' },
-	{ href: '/admins', label: 'Admins', icon: ShieldCheck, minRole: 'super_admin', group: 'Audit' },
+	{ href: '/otp-log', label: 'OTP Log', icon: MessageSquareDot, section: 'otp-log', group: 'Audit' },
+	{ href: '/devices', label: 'Devices', icon: Smartphone, section: 'devices', group: 'Audit' },
+	{ href: '/admins', label: 'Admins', icon: ShieldCheck, section: 'admins', group: 'Audit' },
 ];

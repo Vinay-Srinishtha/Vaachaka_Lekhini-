@@ -8,17 +8,26 @@ import {
 	verifyAdminToken
 } from './jwt';
 import type { Cookies, RequestEvent } from '@sveltejs/kit';
-import { hasRole, type AdminRole } from '../roles';
+import { canAccessPath, type AdminRole, type RoleGate } from '../roles';
 
-export { hasRole, type AdminRole };
+export { canAccessPath, type AdminRole };
 
-/// Throws 403 if the current admin lacks the required role.
-/// Use in server load fns and form actions.
-export function requireRole(event: RequestEvent, min: AdminRole): NonNullable<App.Locals['admin']> {
+/// Guard for server load fns and form actions.
+///
+///   requireRole(event, 'viewer' | 'editor')  → admin must have access to the
+///       section the current request targets (all roles get full edit within
+///       their sections, so 'viewer' and 'editor' are equivalent here).
+///   requireRole(event, 'super_admin')         → admin must literally be a
+///       super_admin (used by the /admins management page).
+export function requireRole(event: RequestEvent, gate: RoleGate): NonNullable<App.Locals['admin']> {
 	const admin = event.locals.admin;
 	if (!admin) throw redirect(303, `/login?redirect=${encodeURIComponent(event.url.pathname)}`);
-	if (!hasRole(admin.role, min)) {
-		throw error(403, `Requires ${min} role or higher`);
+	if (gate === 'super_admin') {
+		if (admin.role !== 'super_admin') throw error(403, 'Requires super admin');
+		return admin;
+	}
+	if (!canAccessPath(admin.role, event.url.pathname)) {
+		throw error(403, 'No access to this section');
 	}
 	return admin;
 }

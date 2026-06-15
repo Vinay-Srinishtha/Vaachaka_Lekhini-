@@ -47,7 +47,7 @@
 	}
 </script>
 
-<div class="relative w-full sm:max-w-xs">
+<div class="relative w-full">
 	<Search
 		size={16}
 		class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"

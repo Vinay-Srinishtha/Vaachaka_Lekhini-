@@ -53,10 +53,12 @@
 	{#if searchable || toolbar}
 		<div class="flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3 border-b border-gray-100">
 			{#if searchable}
-				<SearchInput placeholder={searchPlaceholder} />
+				<div class="flex-1 min-w-0">
+					<SearchInput placeholder={searchPlaceholder} />
+				</div>
 			{/if}
 			{#if toolbar}
-				<div class="sm:ml-auto flex items-center gap-2">
+				<div class="flex items-center gap-2 shrink-0">
 					{@render toolbar()}
 				</div>
 			{/if}

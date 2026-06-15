@@ -43,20 +43,6 @@
 
 <PageHeader title="Programs" subtitle="Every member's active and completed practice goals" />
 
-<div class="px-4 pb-2 flex gap-2">
-	{#each STATUS_FILTERS as f}
-		<button
-			onclick={() => setStatus(f.value)}
-			class="px-3 py-1 rounded-full text-sm font-medium border transition-colors
-				{data.query.status === f.value
-					? 'bg-brand-600 text-white border-brand-600'
-					: 'bg-white text-gray-600 border-gray-300 hover:border-brand-400 hover:text-brand-600'}"
-		>
-			{f.label}
-		</button>
-	{/each}
-</div>
-
 <DataTable
 	{columns}
 	rows={data.programs}
@@ -68,6 +54,19 @@
 	emptyTitle="No programs yet"
 	emptyHint="Programs are created in the Flutter app when a member starts a new practice goal."
 >
+	{#snippet toolbar()}
+		{#each STATUS_FILTERS as f}
+			<button
+				onclick={() => setStatus(f.value)}
+				class="px-3 py-1 rounded-full text-sm font-medium border transition-colors
+					{data.query.status === f.value
+						? 'bg-brand-600 text-white border-brand-600'
+						: 'bg-white text-gray-600 border-gray-300 hover:border-brand-400 hover:text-brand-600'}"
+			>
+				{f.label}
+			</button>
+		{/each}
+	{/snippet}
 	{#snippet row(p)}
 		<tr class="hover:bg-gray-50">
 			<td class="px-4 py-3">

@@ -9,6 +9,9 @@ const prisma = new PrismaClient({
 
 // Mirror of lib/features/mantras/data/mantra_seed.dart — keep in sync until
 // the Flutter app pulls catalog from /api/v1/mantras in Phase 9.
+// Canonical catalog — exactly these four mantras. Each carries all four
+// language scripts (Roman/English, Devanagari/Hindi, Telugu, Kannada) plus
+// the recommended count/days so programs can pre-fill targets.
 const mantras = [
 	{
 		slug: 'sri_rama',
@@ -20,54 +23,10 @@ const mantras = [
 			'The Sri Rama mantra is a sacred chant that invokes the divine energy of Lord Rama, an incarnation of Vishnu. It is revered for its power to bestow peace, righteousness, and spiritual liberation. Chanting this mantra helps purify the mind, body, and soul, and is a cornerstone of the Vaachaka Lekhini practice, guiding devotees on their spiritual journey.',
 		deity: 'Rama',
 		thumbPalette: 'saffron' as const,
-		tags: ['peace', 'righteousness', 'liberation'] as const
-	},
-	{
-		slug: 'om_namah_shivaya',
-		nameDevanagari: 'ॐ नमः शिवाय',
-		nameRoman: 'Om Namah Shivaya',
-		nameTelugu: 'ఓం నమః శివాయ',
-		nameKannada: 'ಓಂ ನಮಃ ಶಿವಾಯ',
-		description:
-			'A popular five-syllable mantra dedicated to Lord Shiva. Chanting it is believed to cleanse the heart of impurities and bring inner stillness.',
-		deity: 'Shiva',
-		thumbPalette: 'shiva' as const,
-		tags: ['peace', 'liberation', 'devotion'] as const
-	},
-	{
-		slug: 'gayatri',
-		nameDevanagari: 'ॐ भूर्भुवः स्वः तत्सवितुर्वरेण्यं',
-		nameRoman: 'Gayatri Mantra',
-		nameTelugu: 'గాయత్రీ మంత్రం',
-		nameKannada: 'ಗಾಯತ್ರೀ ಮಂತ್ರ',
-		description:
-			'One of the most sacred mantras in the Vedas — a prayer for the awakening of intellect and wisdom through the radiance of the divine Savitr.',
-		thumbPalette: 'gayatri' as const,
-		tags: ['wisdom', 'enlightenment'] as const
-	},
-	{
-		slug: 'maha_mrityunjaya',
-		nameDevanagari: 'ॐ त्र्यम्बकं यजामहे',
-		nameRoman: 'Maha Mrityunjaya',
-		nameTelugu: 'మహా మృత్యుంజయ',
-		nameKannada: 'ಮಹಾ ಮೃತ್ಯುಂಜಯ',
-		description:
-			'A powerful mantra of healing and protection, dedicated to Lord Shiva. Traditionally recited to overcome fear, illness, and adversity.',
-		deity: 'Shiva',
-		thumbPalette: 'maha' as const,
-		tags: ['healing', 'protection', 'strength'] as const
-	},
-	{
-		slug: 'hanuman_chalisa',
-		nameDevanagari: 'हनुमान चालीसा',
-		nameRoman: 'Hanuman Chalisa',
-		nameTelugu: 'హనుమాన్ చాలీసా',
-		nameKannada: 'ಹನುಮಾನ್ ಚಾಲೀಸಾ',
-		description:
-			'A devotional hymn of forty verses extolling Hanuman, invoked for strength, courage, and steadfast devotion.',
-		deity: 'Hanuman',
-		thumbPalette: 'hanuman' as const,
-		tags: ['strength', 'courage', 'devotion', 'protection'] as const
+		tags: ['peace', 'righteousness', 'liberation'] as const,
+		recommendedCount: 108,
+		recommendedDays: 40,
+		isActive: true
 	},
 	{
 		slug: 'shankara',
@@ -78,18 +37,10 @@ const mantras = [
 		description: 'A simple invocation of Lord Shiva as Shankara — the auspicious one.',
 		deity: 'Shiva',
 		thumbPalette: 'shiva' as const,
-		tags: ['peace', 'devotion'] as const
-	},
-	{
-		slug: 'jai_sri_krishna',
-		nameDevanagari: 'जय श्री कृष्ण',
-		nameRoman: 'Jai Sri Krishna',
-		nameTelugu: 'జై శ్రీ కృష్ణ',
-		nameKannada: 'ಜೈ ಶ್ರೀ ಕೃಷ್ಣ',
-		description: 'A joyful greeting to Lord Krishna — a mantra of devotion and deliverance.',
-		deity: 'Krishna',
-		thumbPalette: 'krishna' as const,
-		tags: ['devotion', 'liberation'] as const
+		tags: ['peace', 'devotion'] as const,
+		recommendedCount: 108,
+		recommendedDays: 40,
+		isActive: true
 	},
 	{
 		slug: 'narayana',
@@ -101,21 +52,25 @@ const mantras = [
 			'A short, single-word mantra honouring Lord Vishnu (Narayana), the sustainer.',
 		deity: 'Vishnu',
 		thumbPalette: 'vishnu' as const,
-		tags: ['peace', 'devotion', 'protection'] as const
+		tags: ['peace', 'devotion', 'protection'] as const,
+		recommendedCount: 108,
+		recommendedDays: 40,
+		isActive: true
 	},
 	{
-		slug: 'om_namo_bhagavate_vasudevaya',
-		nameDevanagari: 'ॐ नमो भगवते वासुदेवाय',
-		nameRoman: 'Om Namo Bhagavate Vasudevaya',
-		nameTelugu: 'ఓం నమో భగవతే వాసుదేవాయ',
-		nameKannada: 'ಓಂ ನಮೋ ಭಗವತೇ ವಾಸುದೇವಾಯ',
+		slug: 'govinda',
+		nameDevanagari: 'गोविन्द',
+		nameRoman: 'Govinda',
+		nameTelugu: 'గోవింద',
+		nameKannada: 'ಗೋವಿಂದ',
 		description:
-			'Chanting this mantra is believed to attract wealth, prosperity, and resolve financial difficulties by invoking the grace of Lord Vishnu.',
-		deity: 'Vishnu',
-		thumbPalette: 'vishnu' as const,
-		tags: ['wealth', 'prosperity', 'devotion'] as const,
+			'A loving invocation of Lord Krishna as Govinda — protector of cows and the cosmos, who removes sorrow and bestows boundless joy.',
+		deity: 'Krishna',
+		thumbPalette: 'krishna' as const,
+		tags: ['peace', 'devotion'] as const,
 		recommendedCount: 108,
-		recommendedDays: 40
+		recommendedDays: 40,
+		isActive: true
 	}
 ];
 

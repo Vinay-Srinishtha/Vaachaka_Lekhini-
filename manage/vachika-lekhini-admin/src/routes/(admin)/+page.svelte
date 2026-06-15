@@ -236,12 +236,12 @@
 	</section>
 
 	<!-- ── Leaderboards ── -->
+	{#each [
+		{ key: 'streak',   title: 'Longest Streak',        unit: 'days',     icon: Flame,  color: '#f97316' },
+		{ key: 'progress', title: 'Highest Total Progress', unit: 'chants',   icon: Trophy, color: '#a855f7' },
+		{ key: 'sessions', title: 'Most Sessions',          unit: 'sessions', icon: Zap,    color: '#3b82f6' },
+	] as boards}
 	<section class="grid grid-cols-1 md:grid-cols-3 gap-4">
-		{@const boards = [
-			{ key: 'streak',   title: 'Longest Streak',      unit: 'days',     icon: Flame,  color: '#f97316' },
-			{ key: 'progress', title: 'Highest Total Progress', unit: 'chants', icon: Trophy, color: '#a855f7' },
-			{ key: 'sessions', title: 'Most Sessions',        unit: 'sessions', icon: Zap,    color: '#3b82f6' },
-		]}
 		{#each boards as board}
 			{@const rows = (data.leaderboards as Record<string, { name: string; mobile: string; value: number }[]>)[board.key] ?? []}
 			{@const maxVal = Math.max(...rows.map((r) => r.value), 1)}
@@ -282,5 +282,6 @@
 			</div>
 		{/each}
 	</section>
+	{/each}
 
 </div>

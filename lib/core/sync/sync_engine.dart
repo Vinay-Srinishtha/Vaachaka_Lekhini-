@@ -31,6 +31,7 @@ class SyncEngine with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _watchAuth();
     _watchConnectivity();
+    _startPoll();
   }
 
   final ApiClient _api;
@@ -40,6 +41,7 @@ class SyncEngine with WidgetsBindingObserver {
 
   StreamSubscription<dynamic>? _connSub;
   StreamSubscription<dynamic>? _authSub;
+  Timer? _pollTimer;
   bool _draining = false;
 
   /// Emits the latest /api/v1/me payload after each successful pull.
@@ -180,8 +182,15 @@ class SyncEngine with WidgetsBindingObserver {
     }
   }
 
+  void _startPoll() {
+    _pollTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      if (_auth.isAuthenticated) unawaited(pull());
+    });
+  }
+
   Future<void> dispose() async {
     WidgetsBinding.instance.removeObserver(this);
+    _pollTimer?.cancel();
     await _connSub?.cancel();
     await _authSub?.cancel();
     await _pullController.close();

@@ -18,7 +18,6 @@ class PracticeSession extends Equatable {
   const PracticeSession({
     required this.id,
     required this.programId,
-    // ADDED: Prisma Session.memberId
     required this.memberId,
     required this.startedAt,
     required this.createdAt,
@@ -27,7 +26,6 @@ class PracticeSession extends Equatable {
     required this.modality,
     required this.updatedAt,
     this.endedAt,
-    // ADDED: session length in seconds
     this.durationSec = 0,
   });
 

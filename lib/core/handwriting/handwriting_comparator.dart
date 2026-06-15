@@ -12,56 +12,58 @@ import 'dart:ui' as ui;
 /// Before any similarity signal is computed two hard gates are applied:
 ///
 /// * **Ink-volume gate**: the user's total ink pixel count must be at least
-///   [_minInkRatio] × the reference's count (default 35 %).  Writing just
+///   [_minInkRatio] × the reference's count (default 40 %).  Writing just
 ///   one letter of a multi-letter word fails this gate immediately.
 ///
-/// * **Spatial-coverage gate**: the number of 8×8 zones where the user has
+/// * **Spatial-coverage gate**: the number of zones where the user has
 ///   meaningful ink must cover at least [_minZoneCoverage] × the zones the
-///   reference occupies (default 45 %).  This rejects ink concentrated in
+///   reference occupies (default 50 %).  This rejects ink concentrated in
 ///   one corner even if the total volume happens to pass.
 ///
 /// ## Similarity signals (only reached when both gates pass)
 ///
-/// 1. **Dilated Jaccard** (weight 0.45)
+/// 1. **Dilated Jaccard** (weight 0.40)
 ///    Both grids are morphologically dilated (each ink pixel expands to its
 ///    8-neighbours) before computing IoU.  Tolerates ±1 px positional jitter
 ///    and stroke-width variation.
 ///
-/// 2. **Zone density cosine** (weight 0.35)
-///    16-element zone-density vectors compared with cosine similarity.
+/// 2. **Zone density cosine** (weight 0.40)
+///    36-element zone-density vectors compared with cosine similarity.
 ///    Captures "ink in roughly the same regions" without pixel alignment.
 ///    Tolerates different letter forms with similar overall distribution.
+///    Weight increased vs dilated Jaccard because Devanagari script has
+///    complex spatial structure that cosine captures more robustly.
 ///
 /// 3. **Coarse Jaccard** (weight 0.20)
 ///    8×8 resolution Jaccard for overall shape silhouette match.
 ///
-/// Final score = 0.45 × dilatedJaccard + 0.35 × zoneCosine + 0.20 × coarseJaccard
+/// Final score = 0.40 × dilatedJaccard + 0.40 × zoneCosine + 0.20 × coarseJaccard
 ///
 /// Range: 0.0 (nothing matches / gates failed) → 1.0 (perfect match).
-/// A score ≥ 0.20 (configurable via RemoteConfig) is considered accepted.
+/// A score ≥ 0.25 (configurable via RemoteConfig) is considered accepted.
 class HandwritingComparator {
   HandwritingComparator._();
 
-  static const int _gridSize = 32;   // main grid resolution
+  static const int _gridSize = 48;   // main grid resolution (was 32 — higher res for Devanagari)
   static const int _coarseSize = 8;  // coarse grid resolution
-  static const int _zoneCount = 4;   // 4×4 zones in the main grid
+  static const int _zoneCount = 6;   // 6×6 zones (was 4×4 — finer spatial encoding)
   static const int _zoneSize = _gridSize ~/ _zoneCount; // 8 px per zone edge
 
   // ── Completeness gates ────────────────────────────────────────────────────
-  /// User ink must be ≥ 35 % of reference ink.
+  /// User ink must be ≥ 40 % of reference ink (raised from 35 %).
   /// Ensures a partial letter/stroke can't pass as the full word.
-  static const double _minInkRatio = 0.35;
+  static const double _minInkRatio = 0.40;
 
-  /// User ink must occupy ≥ 45 % of the zones the reference uses.
+  /// User ink must occupy ≥ 50 % of the zones the reference uses (raised from 45 %).
   /// Ensures the writing spans the full spatial extent of the reference.
-  static const double _minZoneCoverage = 0.45;
+  static const double _minZoneCoverage = 0.50;
 
   /// A zone is considered "occupied" when its ink fraction exceeds this.
   static const double _zoneOccupiedThreshold = 0.04;
 
   // ── Blend weights (must sum to 1.0) ──────────────────────────────────────
-  static const double _wDilated = 0.45;
-  static const double _wZone    = 0.35;
+  static const double _wDilated = 0.40;
+  static const double _wZone    = 0.40;
   static const double _wCoarse  = 0.20;
 
   /// Compares [userPng] against [referencePng].

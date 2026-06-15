@@ -11,6 +11,7 @@ import '../../../core/theme/theme.dart';
 import '../../../core/utils/indian_number_format.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../programs/domain/session.dart';
+import '../../programs/presentation/daily_progress_screen.dart';
 import '../../settings/domain/settings_repository.dart';
 import '../application/practice_controller.dart';
 
@@ -313,20 +314,36 @@ class _BodyState extends ConsumerState<_Body> {
       builder: (_) => _DedicationDialog(
         onDedicate: () async {
           Navigator.of(context).pop();
+
+          // Mark the session as finished and the program as completed.
           final controller = ref.read(practiceControllerProvider(programId).notifier);
           final mantraId = ref.read(practiceControllerProvider(programId)).value?.program.mantraId;
           await controller.finish();
           if (mantraId != null) ref.invalidate(globalStatsProvider(mantraId));
           final program = ref.read(practiceControllerProvider(programId)).value?.program;
+          final mantraName = mantraId != null
+              ? (ref.read(mantraByIdProvider(mantraId))?.name.devanagari ?? '')
+              : '';
           if (program != null && !program.isCompleted) {
             await ref.read(programRepositoryProvider).update(
               program.copyWith(completedAt: DateTime.now()),
             );
           }
+
           if (!context.mounted) return;
-          context.go('${KvlRoute.dailyProgress}/$programId');
+
+          // Show the dedication sheet before leaving the counter screen.
+          await DedicateSheet.show(
+            context,
+            programId: programId,
+            mantraName: mantraName,
+          );
+
+          if (!context.mounted) return;
+          // Navigate to the programs list so the user sees the completed
+          // program card (disabled) — clears the full navigation stack.
+          context.go(KvlRoute.programs);
         },
-        onContinue: () => Navigator.of(context).pop(),
       ),
     );
   }
@@ -1169,9 +1186,8 @@ class _MicErrorCard extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _DedicationDialog extends StatelessWidget {
-  const _DedicationDialog({required this.onDedicate, required this.onContinue});
+  const _DedicationDialog({required this.onDedicate});
   final VoidCallback onDedicate;
-  final VoidCallback onContinue;
 
   @override
   Widget build(BuildContext context) {
@@ -1206,12 +1222,6 @@ class _DedicationDialog extends StatelessWidget {
             ),
             const SizedBox(height: KvlSpacing.lg),
             KvlButton(label: 'Dedicate & Complete', onPressed: onDedicate),
-            const SizedBox(height: KvlSpacing.sm),
-            KvlButton(
-              label: 'Keep Practising',
-              variant: KvlButtonVariant.secondary,
-              onPressed: onContinue,
-            ),
           ],
         ),
       ),

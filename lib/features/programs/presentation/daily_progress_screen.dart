@@ -249,7 +249,7 @@ class _DailyProgressScreenState extends ConsumerState<DailyProgressScreen> {
                       if (program?.isCompleted != true)
                         KvlButton(
                           label: context.l10n.dedicateProgram,
-                          onPressed: () => _DedicateSheet.show(
+                          onPressed: () => DedicateSheet.show(
                             context,
                             programId: widget.programId,
                             mantraName: mantraName,
@@ -749,8 +749,9 @@ class _ShareOption extends StatelessWidget {
 // Dedicate Program bottom sheet
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _DedicateSheet extends StatefulWidget {
-  const _DedicateSheet({
+class DedicateSheet extends StatefulWidget {
+  const DedicateSheet({
+    super.key,
     required this.programId,
     required this.mantraName,
   });
@@ -767,7 +768,7 @@ class _DedicateSheet extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _DedicateSheet(
+      builder: (_) => DedicateSheet(
         programId: programId,
         mantraName: mantraName,
       ),
@@ -775,10 +776,10 @@ class _DedicateSheet extends StatefulWidget {
   }
 
   @override
-  State<_DedicateSheet> createState() => _DedicateSheetState();
+  State<DedicateSheet> createState() => _DedicateSheetState();
 }
 
-class _DedicateSheetState extends State<_DedicateSheet> {
+class _DedicateSheetState extends State<DedicateSheet> {
   static String _prefKey(String programId) => 'dedication_$programId';
 
   final _nameCtrl = TextEditingController();

@@ -48,6 +48,9 @@ class VoiceEnrolmentService {
   /// True while the timer is flushing — chunk callbacks skip to avoid
   /// calling into the recognizer concurrently.
   bool _finalizing = false;
+  /// True once the window timer has been started (deferred until first
+  /// real audio arrives so the first chant is never cut mid-word).
+  bool _timerStarted = false;
   int _target = 11;
   Mantra? _mantra;
 
@@ -85,6 +88,7 @@ class VoiceEnrolmentService {
     if (_running) return;
     _running = true;
     _finalizing = false;
+    _timerStarted = false;
     _matches = 0;
     _target = target;
     _mantra = mantra;
@@ -100,20 +104,28 @@ class VoiceEnrolmentService {
       holdoverMs: 400,
     );
 
-    // ── Timed-window timer ─────────────────────────────────────────────────
-    // Fires every _windowMs. Forces a final result from accumulated audio
-    // then lets Vosk reset itself — no recognizer recreation needed.
-    _windowTimer = Timer.periodic(
-      const Duration(milliseconds: _windowMs),
-      (_) => _forceFinalize(),
-    );
-
     // ── PCM stream → Vosk ──────────────────────────────────────────────────
+    // The window timer is NOT started here. It is deferred until the first
+    // non-silence audio chunk arrives so the very first chant always gets a
+    // full 1500 ms window regardless of how long the user waits before
+    // speaking. Without this, a user who starts chanting ~1 s after tapping
+    // "Start" would have their first word cut mid-syllable by the timer.
     _sub = stream.listen(
       (chunk) async {
         // Skip chunk processing while the timer is flushing to avoid
         // calling acceptChunk and finalize/getFinalResult concurrently.
         if (!_running || _finalizing) return;
+
+        // Start the window timer on the first real (non-silence) chunk.
+        // Silence chunks from the amplitude gate are all-zero bytes; real
+        // audio always has at least one non-zero byte.
+        if (!_timerStarted && chunk.any((b) => b != 0)) {
+          _timerStarted = true;
+          _windowTimer = Timer.periodic(
+            const Duration(milliseconds: _windowMs),
+            (_) => _forceFinalize(),
+          );
+        }
 
         final r = await _recognizer?.acceptChunk(chunk);
         if (r == null) return;
@@ -201,9 +213,15 @@ class VoiceEnrolmentService {
 /// Public static helper for counting mantra occurrences in ASR output.
 /// Exposed separately so it can be unit-tested without a running audio session.
 abstract final class VoicePhraseMatcher {
-  /// Returns how many non-overlapping times [phrase] appears in [text].
-  /// Both are normalised (trimmed, lowercased) before comparison so
+  /// Returns how many non-overlapping whole-word times [phrase] appears in
+  /// [text]. Both are normalised (trimmed, lowercased) before comparison so
   /// punctuation and capitalisation in Vosk output don't affect the count.
+  ///
+  /// A match is accepted only when the phrase is surrounded by word
+  /// boundaries: start/end of string, whitespace, or common punctuation
+  /// (comma, period, exclamation, question mark). This prevents "राम" from
+  /// matching inside "सीताराम" even if the grammar constraint fails to
+  /// exclude that token.
   static int countOccurrences(String text, String phrase) {
     final needle   = phrase.trim().toLowerCase();
     final haystack = text.trim().toLowerCase();
@@ -213,10 +231,24 @@ abstract final class VoicePhraseMatcher {
     while (true) {
       final idx = haystack.indexOf(needle, start);
       if (idx == -1) break;
-      count++;
-      start = idx + needle.length;
+      // Check left boundary
+      final leftOk = idx == 0 || _isBoundary(haystack.codeUnitAt(idx - 1));
+      // Check right boundary
+      final endIdx = idx + needle.length;
+      final rightOk =
+          endIdx == haystack.length || _isBoundary(haystack.codeUnitAt(endIdx));
+      if (leftOk && rightOk) count++;
+      start = endIdx;
     }
     return count;
+  }
+
+  /// Returns true for characters that constitute a word boundary:
+  /// ASCII whitespace or common punctuation marks.
+  static bool _isBoundary(int codeUnit) {
+    // space, tab, newline, comma, period, !, ?, ;, :
+    const boundaries = {0x20, 0x09, 0x0A, 0x0D, 0x2C, 0x2E, 0x21, 0x3F, 0x3B, 0x3A};
+    return boundaries.contains(codeUnit);
   }
 }
 

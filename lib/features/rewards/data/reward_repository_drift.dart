@@ -14,7 +14,6 @@ class RewardRepositoryDrift implements RewardRepository {
       : _uuid = uuid ?? const Uuid();
 
   final AppDatabase _db;
-  // ADDED: outbox so earn/spend are queued to Prisma automatically
   final SyncOutbox _outbox;
   final Uuid _uuid;
 

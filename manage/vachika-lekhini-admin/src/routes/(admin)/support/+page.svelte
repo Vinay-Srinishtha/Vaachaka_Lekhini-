@@ -9,12 +9,12 @@
 	};
 </script>
 
-<svelte:head><title>Support Reports</title></svelte:head>
+<svelte:head><title>Issues Reported</title></svelte:head>
 
 <div class="space-y-4">
 	<div class="flex items-center justify-between">
 		<div>
-			<h1 class="text-xl font-semibold">Support Reports</h1>
+			<h1 class="text-xl font-semibold">Issues Reported</h1>
 			<p class="text-sm text-gray-500 mt-0.5">Sorted newest first · click a row to view details</p>
 		</div>
 		<span class="bg-slate-100 text-slate-600 text-xs font-semibold px-3 py-1 rounded-full">{data.reports.length} total</span>

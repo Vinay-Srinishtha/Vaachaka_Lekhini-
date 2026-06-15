@@ -196,7 +196,6 @@ class PracticeController extends AsyncNotifier<PracticeState> {
       if (!ok) return;
     }
 
-    // ADDED: pass memberId so Prisma Session row has it directly
     final profile = ref.read(activeProfileProvider).value;
     final session = await _programs.startSession(
       programId: s.program.id,

@@ -12,7 +12,6 @@ class ProgramRepositoryDrift implements ProgramRepository {
     : _uuid = uuid ?? const Uuid();
 
   final AppDatabase _db;
-  // ADDED: outbox so every local write is queued to the backend automatically
   final SyncOutbox _outbox;
   final Uuid _uuid;
 

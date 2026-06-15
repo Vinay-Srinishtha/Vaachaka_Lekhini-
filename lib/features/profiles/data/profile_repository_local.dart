@@ -92,6 +92,11 @@ class ProfileRepositoryLocal implements ProfileRepository {
   }
 
   @override
+  Future<void> clearActive() async {
+    await _session.delete(KvlKeys.activeProfileId);
+  }
+
+  @override
   Future<Profile> create({
     required String userId,
     required String name,

@@ -6,6 +6,7 @@ import type { Actions, PageServerLoad } from './$types';
 export const load: PageServerLoad = async (event) => {
 	requireRole(event, 'viewer');
 	const reports = await prisma.supportReport.findMany({
+		where: { kind: 'report' },
 		orderBy: { createdAt: 'desc' },
 		take: 200
 	});

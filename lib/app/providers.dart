@@ -58,7 +58,6 @@ final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
   return ProfileRepositoryLocal(
     profilesBox: profilesBox(),
     sessionBox: sessionBox(),
-    // ADDED: outbox so create/update enqueue members.upsert → Prisma
     outbox: ref.watch(syncOutboxProvider),
   );
 });
@@ -178,7 +177,6 @@ final inviteServiceProvider = Provider<InviteService>((ref) {
 });
 
 final rewardRepositoryProvider = Provider<RewardRepository>((ref) {
-  // ADDED: outbox so earn/spend auto-queue to Prisma
   return RewardRepositoryDrift(
     ref.watch(appDatabaseProvider),
     ref.watch(syncOutboxProvider),
@@ -433,7 +431,6 @@ final appDatabaseProvider = Provider<AppDatabase>((ref) {
 });
 
 final programRepositoryProvider = Provider<ProgramRepository>((ref) {
-  // ADDED: outbox so create/update/finish auto-queue to Prisma
   return ProgramRepositoryDrift(
     ref.watch(appDatabaseProvider),
     ref.watch(syncOutboxProvider),

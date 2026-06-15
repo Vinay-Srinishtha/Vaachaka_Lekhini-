@@ -190,7 +190,12 @@ class ProfileScreen extends ConsumerWidget {
               SettingRow(
                 icon: Icons.switch_account_rounded,
                 label: 'Switch User',
-                onTap: () => context.go(KvlRoute.profileSelect),
+                onTap: () async {
+                  await ref
+                      .read(profileRepositoryProvider)
+                      .clearActive();
+                  if (context.mounted) context.go(KvlRoute.profileSelect);
+                },
               ),
               // Only the primary member (Me) can manage family members.
               if (profile?.relation == FamilyRelation.me)
@@ -1314,6 +1319,7 @@ class _RetrainMantraPicker {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (sheetCtx) => _RetrainPickerSheet(
+        title: 'Retrain voice for which mantra?',
         programs: programs,
         onPicked: (mantraId) {
           Navigator.pop(sheetCtx);
@@ -1329,7 +1335,8 @@ class _RetrainWritingPicker {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (sheetCtx) => _RetrainWritingPickerSheet(
+      builder: (sheetCtx) => _RetrainPickerSheet(
+        title: 'Retrain writing for which mantra?',
         programs: programs,
         onPicked: (mantraId) {
           Navigator.pop(sheetCtx);
@@ -1340,12 +1347,14 @@ class _RetrainWritingPicker {
   }
 }
 
-class _RetrainWritingPickerSheet extends ConsumerWidget {
-  const _RetrainWritingPickerSheet({
+class _RetrainPickerSheet extends ConsumerWidget {
+  const _RetrainPickerSheet({
+    required this.title,
     required this.programs,
     required this.onPicked,
   });
 
+  final String title;
   final List<Program> programs;
   final ValueChanged<String> onPicked;
 
@@ -1374,10 +1383,7 @@ class _RetrainWritingPickerSheet extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 20),
-          Text(
-            'Retrain writing for which mantra?',
-            style: KvlText.ui(16, FontWeight.w700),
-          ),
+          Text(title, style: KvlText.ui(16, FontWeight.w700)),
           const SizedBox(height: 6),
           Text(
             'Choose from your active programs',
@@ -1389,66 +1395,6 @@ class _RetrainWritingPickerSheet extends ConsumerWidget {
             final name =
                 mantra?.name.displayForLanguage(settings.languageCode) ??
                 p.mantraId;
-            return _MantraPickerTile(
-              name: name,
-              onTap: () => onPicked(p.mantraId),
-            );
-          }),
-          const SizedBox(height: 8),
-        ],
-      ),
-    );
-  }
-}
-
-class _RetrainPickerSheet extends ConsumerWidget {
-  const _RetrainPickerSheet({
-    required this.programs,
-    required this.onPicked,
-  });
-
-  final List<Program> programs;
-  final ValueChanged<String> onPicked;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: KvlColors.bg,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: KvlColors.border,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Retrain voice for which mantra?',
-            style: KvlText.ui(16, FontWeight.w700),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Choose from your active programs',
-            style: KvlText.caption(12).copyWith(color: KvlColors.muted),
-          ),
-          const SizedBox(height: 16),
-          ...programs.map((p) {
-            final mantra = ref.watch(mantraByIdProvider(p.mantraId));
-            final name = mantra?.name.displayForLanguage(settings.languageCode)
-                ?? p.mantraId;
             return _MantraPickerTile(
               name: name,
               onTap: () => onPicked(p.mantraId),

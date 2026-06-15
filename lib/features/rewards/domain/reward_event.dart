@@ -27,7 +27,6 @@ class RewardEvent extends Equatable {
     required this.source,
     // CHANGED: createdAt → occurredAt
     required this.occurredAt,
-    // ADDED: nullable store item link (Prisma field)
     this.storeItemId,
   });
 

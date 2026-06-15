@@ -282,6 +282,7 @@ class _ReportScreenState extends ConsumerState<_ReportScreen> {
       await dio.post<void>(
         '/api/v1/support',
         data: {
+          'kind': 'report',
           'subject': _subjectCtrl.text.trim(),
           'body': _bodyCtrl.text.trim(),
         },

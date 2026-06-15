@@ -6,7 +6,7 @@ import { requireRole } from '$lib/server/auth';
 export const load: PageServerLoad = async (event) => {
 	requireRole(event, 'viewer');
 	const report = await prisma.supportReport.findUnique({ where: { id: event.params.id } });
-	if (!report) throw error(404, 'Report not found');
+	if (!report || report.kind !== 'report') throw error(404, 'Report not found');
 	return { report };
 };
 

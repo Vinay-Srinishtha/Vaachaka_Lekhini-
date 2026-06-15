@@ -17,6 +17,10 @@ abstract class ProfileRepository {
 
   Future<void> setActive(String profileId);
 
+  /// Clears the active profile so the router shows the "Who is Practicing?"
+  /// picker on the next navigation.
+  Future<void> clearActive();
+
   Future<Profile> create({
     required String userId,
     required String name,

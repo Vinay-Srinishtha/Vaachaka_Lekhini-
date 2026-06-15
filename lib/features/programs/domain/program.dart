@@ -21,7 +21,6 @@ class Program extends Equatable {
     required this.updatedAt,
     // CHANGED: status enum → completedAt nullable timestamp
     this.completedAt,
-    // ADDED: streak fields (Prisma tracks these)
     this.currentStreak = 0,
     this.longestStreak = 0,
     this.lastActiveDate,

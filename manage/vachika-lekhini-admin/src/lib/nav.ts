@@ -55,7 +55,7 @@ export const NAV_ITEMS: NavItem[] = [
 	{ href: '/invites', label: 'Invites', icon: UserPlus, minRole: 'editor', group: 'Rewards' },
 
 	// ── Support ───────────────────────────────────────────────────────────────
-	{ href: '/support', label: 'Reports', icon: Flag, minRole: 'viewer', group: 'Support' },
+	{ href: '/support', label: 'Issues Reported', icon: Flag, minRole: 'viewer', group: 'Support' },
 	{ href: '/feedback', label: 'Feedback', icon: MessageCircleHeart, minRole: 'viewer', group: 'Support' },
 
 	// ── Audit ─────────────────────────────────────────────────────────────────

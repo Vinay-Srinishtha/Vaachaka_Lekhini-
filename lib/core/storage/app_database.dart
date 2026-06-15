@@ -29,7 +29,6 @@ class Programs extends Table {
   IntColumn get dailyTarget => integer()();
   // CHANGED: status text → completedAt nullable (matches Prisma)
   DateTimeColumn get completedAt => dateTime().nullable()();
-  // ADDED: streak fields (Prisma tracks these on the Program row)
   IntColumn get currentStreak => integer().withDefault(const Constant(0))();
   IntColumn get longestStreak => integer().withDefault(const Constant(0))();
   DateTimeColumn get lastActiveDate => dateTime().nullable()();
@@ -53,14 +52,12 @@ class Programs extends Table {
 class Sessions extends Table {
   TextColumn get id => text()();
   TextColumn get programId => text().customConstraint('NOT NULL REFERENCES programs(id) ON DELETE CASCADE')();
-  // ADDED: memberId (Prisma Session has memberId directly)
   TextColumn get memberId => text()();
   DateTimeColumn get startedAt => dateTime()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get endedAt => dateTime().nullable()();
   // CHANGED: count → countAdded (Prisma field name)
   IntColumn get countAdded => integer().withDefault(const Constant(0))();
-  // ADDED: session length in seconds (Prisma field)
   IntColumn get durationSec => integer().withDefault(const Constant(0))();
   /// 'voice' | 'manual' | 'handwriting'
   TextColumn get modality => text()();
@@ -80,7 +77,6 @@ class RewardEvents extends Table {
   TextColumn get id => text()();
   // CHANGED: profileId → memberId (Prisma field name)
   TextColumn get memberId => text()();
-  // ADDED: nullable link to the store item that was redeemed
   TextColumn get storeItemId => text().nullable()();
   /// 'earn' | 'spend'
   TextColumn get kind => text()();

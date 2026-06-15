@@ -153,7 +153,6 @@ class _BodyState extends ConsumerState<_Body> {
                   _TopBar(
                     title: title,
                     initial: profile?.initials ?? '?',
-                    onBack: () => context.pop(),
                     onProfileTap: () => context.push(KvlRoute.profile),
                   ),
                   SizedBox(height: compact ? 10 : 16),
@@ -362,23 +361,16 @@ class _TopBar extends StatelessWidget {
   const _TopBar({
     required this.title,
     required this.initial,
-    required this.onBack,
     required this.onProfileTap,
   });
   final String title;
   final String initial;
-  final VoidCallback onBack;
   final VoidCallback onProfileTap;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        IconButton(
-          onPressed: onBack,
-          icon: const Icon(Icons.arrow_back_rounded, size: 28),
-          color: KvlColors.ink,
-        ),
         Expanded(
           child: Text(
             title,
@@ -1055,9 +1047,11 @@ class _ProgressCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final progress = state.program.dailyTarget == 0
+    final total = state.program.totalProgress + state.sessionCount;
+    final goal = state.program.targetWritings;
+    final progress = goal == 0
         ? 0.0
-        : (state.todaysTotal / state.program.dailyTarget).clamp(0, 1).toDouble();
+        : (total / goal).clamp(0, 1).toDouble();
     return KvlCard(
       padding: EdgeInsets.fromLTRB(
         KvlSpacing.md,
@@ -1071,7 +1065,7 @@ class _ProgressCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  "Today's Progress",
+                  'Total Progress',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: KvlText.title(compact ? 13 : 15).copyWith(fontWeight: FontWeight.w800),
@@ -1084,7 +1078,7 @@ class _ProgressCard extends StatelessWidget {
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerRight,
                   child: Text(
-                    '${IndianNumberFormat.format(state.todaysTotal)} / ${IndianNumberFormat.format(state.program.dailyTarget)}',
+                    '${IndianNumberFormat.format(total)} / ${IndianNumberFormat.format(goal)}',
                     maxLines: 1,
                     style: KvlText.caption(compact ? 11 : 12).copyWith(color: KvlColors.inkSoft),
                   ),

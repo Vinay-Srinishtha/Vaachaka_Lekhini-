@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import 'package:vachika_lekhini/app/app.dart';
 import 'package:vachika_lekhini/app/providers.dart';
 import 'package:vachika_lekhini/core/notifications/notification_scheduler.dart';
+import 'package:vachika_lekhini/core/permissions/startup_permissions.dart';
 import 'package:vachika_lekhini/core/storage/storage_keys.dart';
 
 /// No-op scheduler so FlutterLocalNotifications doesn't touch the platform
@@ -23,6 +24,7 @@ void main() {
   late Directory tmp;
 
   setUp(() async {
+    StartupPermissions.enabled = false; // no startup permission timer in tests
     tmp = await Directory.systemTemp.createTemp('kvl_test_');
     Hive.init(p.join(tmp.path, 'hive'));
     await Future.wait([

@@ -28,22 +28,28 @@ class MilestoneRing extends StatelessWidget {
   Widget build(BuildContext context) {
     final progress = (total > 0) ? (completed / total).clamp(0.0, 1.0) : 0.0;
 
+    final inset = -(strokeWidth + gap);
+
+    // clipBehavior: Clip.none lets the ring paint slightly *outside* the child
+    // via the negative Positioned offsets — negative Padding is illegal
+    // (RenderPadding asserts non-negative) and throws on every screen.
     return Stack(
+      clipBehavior: Clip.none,
       alignment: Alignment.center,
       children: [
         child,
-        // Ring painted outside the child — IgnorePointer so taps pass through.
-        Positioned.fill(
+        Positioned(
+          left: inset,
+          top: inset,
+          right: inset,
+          bottom: inset,
           child: IgnorePointer(
-            child: Padding(
-              padding: EdgeInsets.all(-(strokeWidth + gap)),
-              child: CustomPaint(
-                painter: _RingPainter(
-                  progress: progress,
-                  strokeWidth: strokeWidth,
-                  trackColor: KvlColors.primary.withValues(alpha: 0.15),
-                  fillColor: KvlColors.primary,
-                ),
+            child: CustomPaint(
+              painter: _RingPainter(
+                progress: progress,
+                strokeWidth: strokeWidth,
+                trackColor: KvlColors.primary.withValues(alpha: 0.15),
+                fillColor: KvlColors.primary,
               ),
             ),
           ),

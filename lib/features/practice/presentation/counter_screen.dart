@@ -992,21 +992,30 @@ class _ActionButton extends StatelessWidget {
         child: SizedBox(
           height: compact ? 44 : 48,
           width: double.infinity,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (icon != null) ...[
-                Icon(icon, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-              ],
-              Text(
-                label,
-                style: KvlText.ui(
-                  compact ? 14 : 17,
-                  FontWeight.w700,
-                ).copyWith(color: Colors.white),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            // FittedBox keeps icon + label on one line and scales them down to
+            // fit narrow buttons (e.g. the 1/4-width Pause/Resume) instead of
+            // overflowing.
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (icon != null) ...[
+                    Icon(icon, color: Colors.white, size: 20),
+                    const SizedBox(width: 8),
+                  ],
+                  Text(
+                    label,
+                    style: KvlText.ui(
+                      compact ? 14 : 17,
+                      FontWeight.w700,
+                    ).copyWith(color: Colors.white),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

@@ -15,8 +15,12 @@ import 'package:permission_handler/permission_handler.dart';
 abstract final class StartupPermissions {
   static bool _requested = false;
 
+  /// Set false in widget tests so the post-frame request doesn't leave a
+  /// pending delay timer (which trips the test framework's !timersPending).
+  static bool enabled = true;
+
   static Future<void> requestAll() async {
-    if (_requested) return;
+    if (!enabled || _requested) return;
     _requested = true;
 
     // Let the first frame settle and the Activity fully resume before we

@@ -651,6 +651,8 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
     return LayoutBuilder(
       builder: (ctx, constraints) {
         final micDiam = widget.micSize * 1.4;
+        // Visible orb is smaller than the ripple base, and the waves scale to it.
+        final orbDiam = widget.micSize * 1.05;
         final maxDiam = constraints.biggest.longestSide * 3.2;
 
         return Stack(
@@ -731,11 +733,11 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
             // voice session is capturing.
             if (widget.isRunning && widget.isVoiceMode)
               Align(
-                alignment: const Alignment(0, 0.5),
+                alignment: const Alignment(0, 0.76),
                 child: IgnorePointer(
                   child: SizedBox(
-                    width: micDiam * 2.7,
-                    height: micDiam * 1.7,
+                    width: orbDiam * 2.7,
+                    height: orbDiam * 1.7,
                     child: _VoiceWaves(level: widget.level),
                   ),
                 ),
@@ -747,8 +749,8 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
               child: GestureDetector(
                 onTap: widget.onTap,
                 child: Container(
-                  width: micDiam,
-                  height: micDiam,
+                  width: orbDiam,
+                  height: orbDiam,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: const LinearGradient(
@@ -779,7 +781,7 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
                   child: Icon(
                     Icons.mic_rounded,
                     color: Colors.white,
-                    size: micDiam * 0.5,
+                    size: orbDiam * 0.5,
                   ),
                 ),
               ),

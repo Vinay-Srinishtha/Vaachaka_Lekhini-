@@ -22,7 +22,6 @@
 			v.nameKannada !== undefined ? (v.nameKannada ? String(v.nameKannada) : null) : m.nameKannada,
 		description: String(v.description ?? m.description),
 		deity: v.deity !== undefined ? (v.deity ? String(v.deity) : null) : m.deity,
-		thumbPalette: String(v.thumbPalette ?? m.thumbPalette),
 		tags,
 		recommendedCount: v.recommendedCount ? Number(v.recommendedCount) : m.recommendedCount,
 		recommendedDays: v.recommendedDays ? Number(v.recommendedDays) : m.recommendedDays,
@@ -48,6 +47,6 @@
 	}
 </script>
 
-<Modal open title={`Edit · ${m.nameRoman}`} subtitle={`Slug · ${m.slug}`} size="xl" onClose={close}>
+<Modal open title={`Edit · ${m.nameRoman}`} subtitle={`Slug · ${m.slug}`} size="2xl" onClose={close}>
 	<MantraForm {value} fieldErrors={form?.fieldErrors ?? {}} submitLabel="Save changes" isEdit onSuccess={handleSuccess} />
 </Modal>

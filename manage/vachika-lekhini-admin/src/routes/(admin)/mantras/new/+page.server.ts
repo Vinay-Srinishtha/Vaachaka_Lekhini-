@@ -45,7 +45,6 @@ export const actions: Actions = {
 				nameKannada: parsed.nameKannada ?? null,
 				description: parsed.description,
 				deity: parsed.deity ?? null,
-				thumbPalette: parsed.thumbPalette,
 				tags: parsed.tags,
 				recommendedCount: parsed.recommendedCount ?? null,
 				recommendedDays: parsed.recommendedDays ?? null,

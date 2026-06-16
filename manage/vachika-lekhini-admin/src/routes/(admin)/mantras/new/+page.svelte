@@ -18,7 +18,6 @@
 		nameKannada: v.nameKannada ? String(v.nameKannada) : null,
 		description: String(v.description ?? ''),
 		deity: v.deity ? String(v.deity) : null,
-		thumbPalette: String(v.thumbPalette ?? 'saffron'),
 		tags,
 		recommendedCount: v.recommendedCount ? Number(v.recommendedCount) : null,
 		recommendedDays: v.recommendedDays ? Number(v.recommendedDays) : null,
@@ -39,6 +38,6 @@
 	}
 </script>
 
-<Modal open title="New mantra" subtitle="Add a mantra to the catalog served to Flutter" size="xl" onClose={close}>
+<Modal open title="New mantra" subtitle="Add a mantra to the catalog served to Flutter" size="2xl" onClose={close}>
 	<MantraForm {value} fieldErrors={form?.fieldErrors ?? {}} submitLabel="Create mantra" onSuccess={handleSuccess} />
 </Modal>

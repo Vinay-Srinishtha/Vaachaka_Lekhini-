@@ -1,7 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/widgets.dart';
 
-import '../../../core/widgets/mantra_thumb.dart';
 import '../../../l10n/app_localizations.dart';
 
 /// One entry in a mantra's configurable milestone list.
@@ -91,7 +90,6 @@ class Mantra extends Equatable {
     required this.id,
     required this.name,
     required this.description,
-    required this.thumbPalette,
     required this.tags,
     this.isActive = true,
     this.deity,
@@ -105,7 +103,6 @@ class Mantra extends Equatable {
   final String id;
   final MantraName name;
   final String description;
-  final MantraThumbPalette thumbPalette;
   final Set<MantraTag> tags;
 
   /// False when the admin has deactivated this mantra. The API already filters

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { prisma } from './prisma';
-import { MANTRA_TAGS, THUMB_PALETTES } from '$lib/constants';
+import { MANTRA_TAGS } from '$lib/constants';
 
 const slugRegex = /^[a-z][a-z0-9_]{1,40}$/;
 
@@ -27,7 +27,6 @@ const mantraFormSchema = z.object({
 	nameKannada: z.string().max(200).nullable().optional(),
 	description: z.string().min(1).max(2000),
 	deity: z.string().max(60).nullable().optional(),
-	thumbPalette: z.enum(THUMB_PALETTES),
 	tags: z.array(z.enum(MANTRA_TAGS)).default([]),
 	recommendedCount: z.coerce.number().int().positive().nullable().optional(),
 	recommendedDays: z.coerce.number().int().positive().nullable().optional(),
@@ -50,7 +49,6 @@ export function parseMantraForm(data: FormData): MantraFormInput {
 		nameKannada: emptyToNull(data.get('nameKannada')),
 		description: String(data.get('description') ?? '').trim(),
 		deity: emptyToNull(data.get('deity')),
-		thumbPalette: String(data.get('thumbPalette') ?? 'saffron'),
 		tags: data.getAll('tags').map((v) => String(v)),
 		recommendedCount: emptyToNull(data.get('recommendedCount')),
 		recommendedDays: emptyToNull(data.get('recommendedDays')),
@@ -94,7 +92,6 @@ export const mantraSummarySelect = {
 	nameDevanagari: true,
 	nameRoman: true,
 	deity: true,
-	thumbPalette: true,
 	isActive: true,
 	sortOrder: true,
 	updatedAt: true

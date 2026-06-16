@@ -32,7 +32,6 @@ model Mantra {
   nameKannada      String?
   description      String
   deity            String?
-  thumbPalette     ThumbPalette
   tags             MantraTag[]
   recommendedCount Int?
   recommendedDays  Int?
@@ -52,16 +51,6 @@ model Mantra {
   @@index([isActive, sortOrder])
   @@index([nameRoman])
   @@index([nameDevanagari])
-}
-
-enum ThumbPalette {
-  saffron
-  shiva
-  gayatri
-  maha
-  hanuman
-  vishnu
-  krishna
 }
 
 enum MantraTag {

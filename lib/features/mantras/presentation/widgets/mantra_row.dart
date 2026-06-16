@@ -43,7 +43,6 @@ class MantraRow extends ConsumerWidget {
           children: [
             MantraThumb(
               glyph: mantra.name.thumbGlyph(),
-              palette: mantra.thumbPalette,
             ),
             const SizedBox(width: KvlSpacing.md),
             Expanded(

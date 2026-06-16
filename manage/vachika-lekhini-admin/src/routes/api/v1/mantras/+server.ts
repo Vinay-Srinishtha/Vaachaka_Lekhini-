@@ -18,7 +18,7 @@ export const GET: RequestHandler = async () => {
 			nameKannada: true,
 			description: true,
 			deity: true,
-			thumbPalette: true,
+
 			tags: true,
 			recommendedCount: true,
 			recommendedDays: true,

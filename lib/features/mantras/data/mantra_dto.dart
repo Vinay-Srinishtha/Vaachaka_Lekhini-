@@ -1,4 +1,3 @@
-import '../../../core/widgets/mantra_thumb.dart';
 import '../domain/mantra.dart';
 
 List<MantraMilestone>? _parseMilestones(Object? raw) {
@@ -32,7 +31,6 @@ class MantraDto {
     this.nameKannada,
     required this.description,
     this.deity,
-    required this.thumbPalette,
     required this.tags,
     this.recommendedCount,
     this.recommendedDays,
@@ -49,7 +47,6 @@ class MantraDto {
   final String? nameKannada;
   final String description;
   final String? deity;
-  final String thumbPalette;
   final List<String> tags;
   final int? recommendedCount;
   final int? recommendedDays;
@@ -67,7 +64,6 @@ class MantraDto {
         nameKannada: json['name_kannada'] as String?,
         description: json['description'] as String,
         deity: json['deity'] as String?,
-        thumbPalette: json['thumb_palette'] as String,
         tags: ((json['tags'] as List?) ?? const [])
             .map((e) => e as String)
             .toList(growable: false),
@@ -87,7 +83,6 @@ class MantraDto {
         'name_kannada': nameKannada,
         'description': description,
         'deity': deity,
-        'thumb_palette': thumbPalette,
         'tags': tags,
         'recommended_count': recommendedCount,
         'recommended_days': recommendedDays,
@@ -107,7 +102,6 @@ class MantraDto {
         ),
         description: description,
         deity: deity,
-        thumbPalette: _paletteByName[thumbPalette] ?? MantraThumbPalette.saffron,
         tags: {
           for (final t in tags)
             if (_tagByName[t] != null) _tagByName[t]!,
@@ -120,9 +114,6 @@ class MantraDto {
       );
 }
 
-final Map<String, MantraThumbPalette> _paletteByName = {
-  for (final p in MantraThumbPalette.values) p.name: p,
-};
 
 final Map<String, MantraTag> _tagByName = {
   for (final t in MantraTag.values) t.name: t,

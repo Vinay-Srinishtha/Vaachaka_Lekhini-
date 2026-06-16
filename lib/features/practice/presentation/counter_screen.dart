@@ -731,11 +731,11 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
             // voice session is capturing.
             if (widget.isRunning && widget.isVoiceMode)
               Align(
-                alignment: const Alignment(0, 0.12),
+                alignment: const Alignment(0, 0.5),
                 child: IgnorePointer(
                   child: SizedBox(
-                    width: micDiam * 3.4,
-                    height: micDiam * 1.8,
+                    width: micDiam * 2.7,
+                    height: micDiam * 1.7,
                     child: _VoiceWaves(level: widget.level),
                   ),
                 ),
@@ -857,8 +857,8 @@ class _VoiceWavesPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = size.center(Offset.zero);
     final unit = size.height; // scale everything to the band height
-    final micR = unit * 0.30; // start just outside the mic
-    final spacing = unit * 0.11; // tighter than before → smaller footprint
+    final micR = unit * 0.31; // start just outside the mic
+    final spacing = unit * 0.078; // tighter spacing → smaller wave footprint
 
     // One faint layer at rest; extra layers fade in as volume rises.
     final activeLayers = (1 + level * (_maxLayers - 1));
@@ -881,7 +881,7 @@ class _VoiceWavesPainter extends CustomPainter {
         final color = _waveColors[k % _waveColors.length];
         paint
           ..color = color.withValues(alpha: (0.22 + 0.55 * amp) * presence)
-          ..strokeWidth = unit * 0.04;
+          ..strokeWidth = unit * 0.034;
         // Arc length grows with amplitude and the live level.
         final half = (0.34 + 0.16 * amp + 0.12 * level);
         canvas.drawArc(

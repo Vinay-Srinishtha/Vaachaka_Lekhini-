@@ -699,6 +699,30 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
                 },
               ),
 
+            // Idle (before Start): show the big static mantra name in the
+            // upper area so the resting screen always reads "<Mantra> + mic".
+            if (!widget.isRunning)
+              Positioned(
+                top: constraints.maxHeight * 0.14,
+                child: SizedBox(
+                  width: constraints.maxWidth * 0.9,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      widget.mantraLabel,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      style: TextStyle(
+                        fontSize: (constraints.maxWidth * 0.42).clamp(32.0, 96.0),
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.0,
+                        color: const Color(0xFFCC7A3A),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
             // Mantra text: visible from session start, shrinks on each count
             if (widget.isRunning)
               AnimatedBuilder(

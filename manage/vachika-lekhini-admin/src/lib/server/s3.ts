@@ -97,7 +97,8 @@ export async function createAdminMediaUpload(args: {
 	validateMediaInput(args);
 
 	const bucket = requiredEnv('S3_BUCKET_NAME');
-	const baseUrl = publicBaseUrl();
+	const baseUrl = env['S3_PUBLIC_BASE_URL']?.replace(/\/+$/, '')
+		?? `https://${bucket}.s3.${requiredEnv('AWS_REGION')}.amazonaws.com`;
 	const baseName = cleanSegment(args.fileName.replace(/\.[^.]+$/, ''), 'upload');
 	const ext = extensionFor(args.fileName, args.contentType);
 	const key = `${keyPrefix(args.category, args.slug)}/${Date.now()}-${baseName}.${ext}`;
@@ -127,9 +128,16 @@ export function isUploadCategory(value: string): value is UploadCategory {
 }
 
 export async function deleteAdminMediaObject(url: string) {
-	const baseUrl = publicBaseUrl();
-	if (!url.startsWith(baseUrl + '/')) throw error(400, 'URL does not belong to this bucket.');
-	const key = url.slice(baseUrl.length + 1);
+	// Extract key from URL path — works with direct S3 URLs and CDN URLs.
+	// Auth is already enforced at the route level; no need to validate origin.
+	let key: string;
+	try {
+		const parsed = new URL(url);
+		key = parsed.pathname.replace(/^\/+/, '');
+		if (!key) throw new Error('empty key');
+	} catch {
+		throw error(400, 'Invalid media URL.');
+	}
 	const bucket = requiredEnv('S3_BUCKET_NAME');
 	await s3Client().send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
 }

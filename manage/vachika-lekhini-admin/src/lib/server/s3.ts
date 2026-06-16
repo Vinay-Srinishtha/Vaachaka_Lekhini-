@@ -32,6 +32,14 @@ function requiredEnv(name: string) {
 	return value;
 }
 
+/** S3_PUBLIC_BASE_URL is optional — falls back to the standard bucket URL. */
+function publicBaseUrl() {
+	if (env['S3_PUBLIC_BASE_URL']) return env['S3_PUBLIC_BASE_URL'].replace(/\/+$/, '');
+	const bucket = requiredEnv('S3_BUCKET_NAME');
+	const region = requiredEnv('AWS_REGION');
+	return `https://${bucket}.s3.${region}.amazonaws.com`;
+}
+
 function cleanSegment(value: string, fallback: string) {
 	const cleaned = value
 		.trim()
@@ -89,7 +97,7 @@ export async function createAdminMediaUpload(args: {
 	validateMediaInput(args);
 
 	const bucket = requiredEnv('S3_BUCKET_NAME');
-	const publicBaseUrl = requiredEnv('S3_PUBLIC_BASE_URL').replace(/\/+$/, '');
+	const publicBaseUrl = publicBaseUrl();
 	const baseName = cleanSegment(args.fileName.replace(/\.[^.]+$/, ''), 'upload');
 	const ext = extensionFor(args.fileName, args.contentType);
 	const key = `${keyPrefix(args.category, args.slug)}/${Date.now()}-${baseName}.${ext}`;
@@ -119,7 +127,7 @@ export function isUploadCategory(value: string): value is UploadCategory {
 }
 
 export async function deleteAdminMediaObject(url: string) {
-	const publicBaseUrl = requiredEnv('S3_PUBLIC_BASE_URL').replace(/\/+$/, '');
+	const publicBaseUrl = publicBaseUrl();
 	if (!url.startsWith(publicBaseUrl + '/')) throw error(400, 'URL does not belong to this bucket.');
 	const key = url.slice(publicBaseUrl.length + 1);
 	const bucket = requiredEnv('S3_BUCKET_NAME');

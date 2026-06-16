@@ -21,6 +21,17 @@ android {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
+    // vosk_flutter_2 talks to the native Vosk library via JNA, which loads its
+    // libjnidispatch.so at runtime. Release APKs default to extractNativeLibs=
+    // false (compressed, non-extracted .so), which makes JNA fail to load and
+    // crashes the app the moment voice recording starts. Legacy packaging
+    // extracts the native libs so JNA can dlopen them.
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.srinista.vachika_lekhini"

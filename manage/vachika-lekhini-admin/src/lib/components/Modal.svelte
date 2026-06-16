@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { X } from '@lucide/svelte';
 	import type { Snippet } from 'svelte';
-	import { onMount } from 'svelte';
 
 	interface Props {
 		open: boolean;
@@ -23,9 +22,10 @@
 		'2xl': 'max-w-6xl'
 	};
 
-	onMount(() => {
+	$effect(() => {
+		if (!open) return;
 		function onKey(e: KeyboardEvent) {
-			if (e.key === 'Escape' && open) onClose();
+			if (e.key === 'Escape') onClose();
 		}
 		window.addEventListener('keydown', onKey);
 		return () => window.removeEventListener('keydown', onKey);
@@ -44,7 +44,7 @@
 </script>
 
 {#if open}
-	<div class="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-0 sm:p-4 bg-black/50 overflow-y-auto">
+	<div class="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
 		<button
 			type="button"
 			class="absolute inset-0 -z-10"
@@ -55,27 +55,31 @@
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="modal-title"
-			class="bg-white w-full {sizes[size]} sm:rounded-xl shadow-xl my-0 sm:my-8 flex flex-col max-h-screen sm:max-h-[calc(100vh-4rem)]"
+			class="bg-white w-full {sizes[size]} sm:rounded-2xl shadow-2xl ring-1 ring-black/5 my-0 sm:my-8 flex flex-col max-h-screen sm:max-h-[calc(100vh-4rem)] transition-all duration-200"
 		>
-			<div class="flex items-start justify-between gap-3 px-5 py-4 border-b border-gray-200 shrink-0">
+			<!-- Header -->
+			<div class="flex items-start justify-between gap-3 px-5 py-4 bg-gradient-to-r from-slate-900 to-slate-800 sm:rounded-t-2xl shrink-0">
 				<div class="min-w-0">
-					<h2 id="modal-title" class="font-semibold text-gray-900 truncate">{title}</h2>
-					{#if subtitle}<p class="text-xs text-gray-500 mt-0.5 truncate">{subtitle}</p>{/if}
+					<h2 id="modal-title" class="text-base font-bold text-white tracking-tight truncate">{title}</h2>
+					{#if subtitle}<p class="text-xs text-slate-400 mt-0.5 truncate">{subtitle}</p>{/if}
 				</div>
 				<button
 					type="button"
-					class="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+					class="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0"
 					onclick={onClose}
 					aria-label="Close"
 				>
-					<X size={20} />
+					<X size={18} />
 				</button>
 			</div>
-			<div class="px-5 py-5 overflow-y-auto flex-1">
+
+			<!-- Content -->
+			<div class="px-6 py-5 overflow-y-auto flex-1 bg-slate-50/50">
 				{@render children()}
 			</div>
+
 			{#if footer}
-				<div class="px-5 py-3 border-t border-gray-200 flex justify-end gap-2 shrink-0">
+				<div class="px-5 py-3 border-t border-gray-100 flex justify-end gap-2 shrink-0 bg-white sm:rounded-b-2xl">
 					{@render footer()}
 				</div>
 			{/if}

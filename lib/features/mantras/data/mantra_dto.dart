@@ -88,6 +88,9 @@ class MantraDto {
         'recommended_days': recommendedDays,
         'pronunciation_url': pronunciationUrl,
         'image_url': imageUrl,
+        'milestones': milestones
+            ?.map((m) => {'count': m.count, 'day_options': m.dayOptions})
+            .toList(),
       };
 
   /// Convert to the domain object. Unknown palettes/tags are silently dropped.

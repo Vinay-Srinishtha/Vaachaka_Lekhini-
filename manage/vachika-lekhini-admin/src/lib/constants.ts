@@ -2,17 +2,6 @@
 /// import the generated Prisma types (which would pull `dotenv` etc.
 /// into the browser bundle).
 
-export const THUMB_PALETTES = [
-	'saffron',
-	'shiva',
-	'gayatri',
-	'maha',
-	'hanuman',
-	'vishnu',
-	'krishna'
-] as const;
-export type ThumbPalette = (typeof THUMB_PALETTES)[number];
-
 export const MANTRA_TAGS = [
 	'peace',
 	'righteousness',

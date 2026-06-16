@@ -21,26 +21,81 @@ export const POST: RequestHandler = async (event) => {
 	await assertOwnsMembers(account.id, body.sessions.map((s) => s.member_id));
 	await assertOwnsPrograms(account.id, body.sessions.map((s) => s.program_id));
 
-	const inserted = await prisma.session.createMany({
-		data: body.sessions.map((s) => ({
-			id: s.id,
-			memberId: s.member_id,
-			programId: s.program_id,
-			startedAt: new Date(s.started_at),
-			endedAt: s.ended_at ? new Date(s.ended_at) : null,
-			durationSec: s.duration_sec,
-			countAdded: s.count_added,
-			modality: s.modality,
-			voiceMatchScore: s.voice_match_score ?? null
-		})),
-		skipDuplicates: true
+	// ── Determine which session IDs already exist to identify truly new ones ──
+	// createMany with skipDuplicates does not return inserted IDs, so we check
+	// before insertion to avoid re-awarding chant milestone points on retries.
+	const requestedIds = body.sessions.map((s) => s.id);
+	const existingRows = await prisma.session.findMany({
+		where: { id: { in: requestedIds } },
+		select: { id: true }
+	});
+	const existingIdSet = new Set(existingRows.map((r) => r.id));
+	const newSessions = body.sessions.filter((s) => !existingIdSet.has(s.id));
+
+	// ── Insert + recompute totals inside a single transaction ─────────────────
+	// Keeping createMany and program.update (totals) in the same transaction
+	// ensures the DB is never left with sessions inserted but stale totals if the
+	// update throws. Streak recompute runs after commit because
+	// recomputeProgramStreaks uses the module-level prisma client; streak writes
+	// are idempotent so a failure there doesn't corrupt session/total data.
+	const uniqueProgramIds = Array.from(new Set(body.sessions.map((s) => s.program_id)));
+
+	const inserted = await prisma.$transaction(async (tx) => {
+		const result = await tx.session.createMany({
+			data: body.sessions.map((s) => ({
+				id: s.id,
+				memberId: s.member_id,
+				programId: s.program_id,
+				startedAt: new Date(s.started_at),
+				endedAt: s.ended_at ? new Date(s.ended_at) : null,
+				durationSec: s.duration_sec,
+				countAdded: s.count_added,
+				modality: s.modality,
+				voiceMatchScore: s.voice_match_score ?? null
+			})),
+			skipDuplicates: true
+		});
+
+		if (result.count > 0) {
+			// ── Total chants/writings recomputation ─────────────────────────────
+			await Promise.all(
+				uniqueProgramIds.map(async (programId) => {
+					const [writingAgg, chantAgg, program] = await Promise.all([
+						tx.session.aggregate({
+							where: { programId, modality: 'handwriting' },
+							_sum: { countAdded: true }
+						}),
+						tx.session.aggregate({
+							where: { programId, modality: { not: 'handwriting' } },
+							_sum: { countAdded: true }
+						}),
+						tx.program.findUnique({
+							where: { id: programId },
+							select: { targetWritings: true, completedAt: true }
+						})
+					]);
+					const totalWritings = writingAgg._sum.countAdded ?? 0;
+					const totalChants = chantAgg._sum.countAdded ?? 0;
+					const totalProgress = totalWritings + totalChants;
+					const target = program?.targetWritings ?? 0;
+					const completedAt =
+						program?.completedAt ??
+						(totalProgress >= target && target > 0 ? new Date() : null);
+					return tx.program.update({
+						where: { id: programId },
+						data: { totalWritings, totalChants, completedAt }
+					});
+				})
+			);
+		}
+
+		return result;
 	});
 
 	if (inserted.count > 0) emitChange('session');
 
 	// ── Streak recomputation + streak rewards ──────────────────────────────
 	if (inserted.count > 0) {
-		const uniqueProgramIds = Array.from(new Set(body.sessions.map((s) => s.program_id)));
 		await Promise.all(uniqueProgramIds.map((id) => recomputeProgramStreaks(id)));
 		emitChange('program');
 
@@ -54,44 +109,12 @@ export const POST: RequestHandler = async (event) => {
 		);
 	}
 
-	// ── Total chants/writings recomputation ─────────────────────────────────
-	if (inserted.count > 0) {
-		const programIds = Array.from(new Set(body.sessions.map((s) => s.program_id)));
-		await Promise.all(
-			programIds.map(async (programId) => {
-				const [writingAgg, chantAgg, program] = await Promise.all([
-					prisma.session.aggregate({
-						where: { programId, modality: 'handwriting' },
-						_sum: { countAdded: true }
-					}),
-					prisma.session.aggregate({
-						where: { programId, modality: { not: 'handwriting' } },
-						_sum: { countAdded: true }
-					}),
-					prisma.program.findUnique({
-						where: { id: programId },
-						select: { targetWritings: true, completedAt: true }
-					})
-				]);
-				const totalWritings = writingAgg._sum.countAdded ?? 0;
-				const totalChants = chantAgg._sum.countAdded ?? 0;
-				const totalProgress = totalWritings + totalChants;
-				const target = program?.targetWritings ?? 0;
-				const completedAt =
-					program?.completedAt ??
-					(totalProgress >= target && target > 0 ? new Date() : null);
-				return prisma.program.update({
-					where: { id: programId },
-					data: { totalWritings, totalChants, completedAt }
-				});
-			})
-		);
-	}
-
-	// ── Chant milestone rewards ─────────────────────────────────────────────
-	if (inserted.count > 0) {
+	// ── Chant milestone rewards — only for truly new sessions ───────────────
+	// Pass only sessions that were not in the DB before this request, so
+	// re-submitted (duplicate) sessions don't trigger milestone points again.
+	if (newSessions.length > 0) {
 		await applySessionRewards(
-			body.sessions.map((s) => ({
+			newSessions.map((s) => ({
 				id: s.id,
 				memberId: s.member_id,
 				countAdded: s.count_added

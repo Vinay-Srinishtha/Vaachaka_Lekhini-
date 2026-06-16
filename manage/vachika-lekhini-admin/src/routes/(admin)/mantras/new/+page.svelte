@@ -8,7 +8,6 @@
 	let { form } = $props();
 
 	const v = $derived(form?.values ?? {});
-	const tags = $derived<string[]>(form?.tags ?? []);
 
 	const value = $derived({
 		slug: String(v.slug ?? ''),
@@ -18,7 +17,7 @@
 		nameKannada: v.nameKannada ? String(v.nameKannada) : null,
 		description: String(v.description ?? ''),
 		deity: v.deity ? String(v.deity) : null,
-		tags,
+		tags: (form?.tags ?? []) as string[],
 		recommendedCount: v.recommendedCount ? Number(v.recommendedCount) : null,
 		recommendedDays: v.recommendedDays ? Number(v.recommendedDays) : null,
 		pronunciationUrl: v.pronunciationUrl ? String(v.pronunciationUrl) : null,

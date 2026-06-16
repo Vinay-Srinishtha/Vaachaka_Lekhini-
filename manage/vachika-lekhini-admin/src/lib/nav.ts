@@ -18,8 +18,7 @@ import {
 	Sliders,
 	Flag,
 	MessageCircleHeart,
-	Gift,
-	ScrollText
+	Gift
 } from '@lucide/svelte';
 export interface NavItem {
 	href: string;

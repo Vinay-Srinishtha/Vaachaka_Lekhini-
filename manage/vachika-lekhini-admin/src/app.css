@@ -58,14 +58,24 @@ body {
 
 /* ─── Form ───────────────────────────────────────────────── */
 @utility input {
-	@apply w-full px-3 py-2 text-sm rounded-xl border border-gray-200 bg-white;
-	@apply focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent;
-	@apply placeholder:text-gray-400;
-	transition: box-shadow 0.15s;
+	@apply w-full px-3 py-2.5 text-sm rounded-xl border border-gray-200 bg-white;
+	@apply focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-400;
+	@apply placeholder:text-slate-300;
+	transition: box-shadow 0.18s, border-color 0.18s;
 }
 
 @utility label {
 	@apply block text-sm font-medium text-gray-700 mb-1;
+}
+
+/* ─── Section label ──────────────────────────────────────── */
+@utility section-label {
+	@apply text-[10px] font-black uppercase tracking-[0.18em] text-slate-400;
+}
+
+/* ─── Modal card ─────────────────────────────────────────── */
+@utility modal-card {
+	@apply rounded-2xl border border-slate-100 bg-white shadow-sm;
 }
 
 /* ─── Chips / badges ─────────────────────────────────────── */

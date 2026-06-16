@@ -50,12 +50,12 @@ class ProfileScreen extends ConsumerWidget {
     final totalChants = programs.fold<int>(0, (a, p) => a + p.totalProgress);
     final longestStreak = programs.isEmpty
         ? 0
-        : programs.map((p) => p.daysElapsed).reduce((a, b) => a > b ? a : b);
+        : programs.map((p) => p.longestStreak).reduce((a, b) => a > b ? a : b);
 
     return KvlScaffold(
       title: context.l10n.profileTitle,
       trailing: TextButton(
-        onPressed: () => _EditProfileSheet.show(context, ref),
+        onPressed: () => _EditProfileSheet.show(context),
         child: Text(
           context.l10n.editButton,
           style: KvlText.ui(
@@ -595,12 +595,6 @@ Future<void> downloadPracticeReport(WidgetRef ref) async {
         final note = parts.length > 1 ? parts[1].trim() : '';
         dedicationLine = note.isNotEmpty ? '$name ($note)' : name;
       }
-      final from90 = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 89));
-      final countsByDay = await programRepo.sessionCountsByDay(
-        programId: p.id,
-        from: from90,
-        to: now,
-      );
       // Load handwriting pool PNGs for this mantra.
       final List<Uint8List> pool = [];
       if (profile != null) {
@@ -625,7 +619,6 @@ Future<void> downloadPracticeReport(WidgetRef ref) async {
         progressPct: progressPct,
         nextMilestone: nextMilestone,
         dedicationLine: dedicationLine,
-        countsByDay: countsByDay,
         handwritingPool: pool,
       ));
     }
@@ -1000,6 +993,7 @@ Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
     );
     if (!(ok ?? false)) return;
 
+    await ref.read(authRepositoryProvider).deleteAccount();
     final db = ref.read(appDatabaseProvider);
     await db.delete(db.sessions).go();
     await db.delete(db.programs).go();
@@ -1008,7 +1002,6 @@ Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
     for (final b in boxes) {
       await b.clear();
     }
-    await ref.read(authRepositoryProvider).deleteAccount();
 }
 
 class _ReminderTimePickerSheet extends StatefulWidget {
@@ -1567,19 +1560,18 @@ class _MantraPickerTile extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _EditProfileSheet {
-  static void show(BuildContext context, WidgetRef ref) {
+  static void show(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _EditProfileSheetBody(ref: ref),
+      builder: (_) => const _EditProfileSheetBody(),
     );
   }
 }
 
 class _EditProfileSheetBody extends ConsumerStatefulWidget {
-  const _EditProfileSheetBody({required this.ref});
-  final WidgetRef ref;
+  const _EditProfileSheetBody();
 
   @override
   ConsumerState<_EditProfileSheetBody> createState() =>
@@ -1594,7 +1586,7 @@ class _EditProfileSheetBodyState extends ConsumerState<_EditProfileSheetBody> {
   @override
   void initState() {
     super.initState();
-    final session = widget.ref.read(sessionProvider).value;
+    final session = ref.read(sessionProvider).value;
     _nameCtrl = TextEditingController(text: session?.username ?? '');
   }
 
@@ -2049,7 +2041,6 @@ class _ProgramExportData {
     required this.progressPct,
     required this.nextMilestone,
     required this.dedicationLine,
-    required this.countsByDay,
     required this.handwritingPool,
   });
   final Program program;
@@ -2061,7 +2052,6 @@ class _ProgramExportData {
   final String progressPct;
   final int? nextMilestone;
   final String dedicationLine;
-  final Map<DateTime, int> countsByDay;
   /// PNG bytes for each sample in the rolling pool (may be empty).
   final List<Uint8List> handwritingPool;
 }

@@ -69,13 +69,14 @@
 			<td class="px-4 py-3">
 				<div class="flex items-center gap-1 justify-end">
 					{#if canEdit}
-						<form method="POST" action="/mantras?/toggleActive" use:enhance>
+						<form method="POST" action="?/toggleActive" use:enhance>
 							<input type="hidden" name="id" value={m.id} />
 							<button class="p-2 rounded hover:bg-gray-100 text-gray-500" title={m.isActive ? 'Hide from app' : 'Show in app'}>
 								{#if m.isActive}<EyeOff size={16} />{:else}<Eye size={16} />{/if}
 							</button>
 						</form>
 					{/if}
+					{#if canEdit}
 					<a
 						href={`/mantras/${m.id}/edit?${page.url.searchParams.toString()}`}
 						class="p-2 rounded hover:bg-gray-100 text-gray-500"
@@ -84,6 +85,7 @@
 					>
 						<Edit2 size={16} />
 					</a>
+					{/if}
 					{#if canEdit}
 						<a
 							href={`?${(() => {

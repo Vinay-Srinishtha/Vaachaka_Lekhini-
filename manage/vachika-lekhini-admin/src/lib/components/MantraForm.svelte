@@ -111,7 +111,7 @@
 			<!-- Identity -->
 			<div class="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
 				<div class="px-5 pt-4 pb-3 flex items-center gap-2 border-b border-slate-100">
-					<span class="flex-1 text-[10px] font-black uppercase tracking-[0.15em] text-violet-400">Identity</span>
+					<span class="flex-1 section-label">Identity</span>
 				</div>
 				<div class="p-4 grid grid-cols-2 gap-3">
 					<div class="col-span-2 sm:col-span-1">
@@ -133,7 +133,7 @@
 			<!-- Names -->
 			<div class="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
 				<div class="px-5 pt-4 pb-3 border-b border-slate-100">
-					<span class="text-[10px] font-black uppercase tracking-[0.15em] text-violet-400">Names</span>
+					<span class="section-label">Names</span>
 				</div>
 				<div class="p-4 grid grid-cols-2 gap-3">
 					<FormField label="Devanagari *" name="nameDevanagari" error={fieldErrors.nameDevanagari}>
@@ -155,7 +155,7 @@
 			<!-- Visibility -->
 			<div class="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
 				<div class="px-5 pt-4 pb-3 border-b border-slate-100">
-					<span class="text-[10px] font-black uppercase tracking-[0.15em] text-violet-400">Visibility</span>
+					<span class="section-label">Visibility</span>
 				</div>
 				<label class="flex items-center justify-between gap-4 px-5 py-4 cursor-pointer select-none group">
 					<div>
@@ -167,8 +167,7 @@
 						</p>
 					</div>
 					<input type="checkbox" name="isActive" bind:checked={isActive} class="sr-only" />
-					<div onclick={() => isActive = !isActive}
-						class="relative shrink-0 w-12 h-6 rounded-full transition-all duration-300 cursor-pointer
+					<div class="relative shrink-0 w-12 h-6 rounded-full transition-all duration-300 cursor-pointer
 							{isActive ? 'bg-emerald-500 shadow-emerald-200 shadow-md' : 'bg-slate-200'}">
 						<span class="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-300
 							{isActive ? 'left-[calc(100%-1.375rem)]' : 'left-0.5'}"></span>
@@ -184,7 +183,7 @@
 			<!-- Content -->
 			<div class="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
 				<div class="px-5 pt-4 pb-3 border-b border-slate-100">
-					<span class="text-[10px] font-black uppercase tracking-[0.15em] text-violet-400">Content</span>
+					<span class="section-label">Content</span>
 				</div>
 				<div class="p-4 space-y-3">
 					<FormField label="Description *" name="description" error={fieldErrors.description}>
@@ -204,7 +203,7 @@
 			<!-- Practice Defaults -->
 			<div class="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
 				<div class="px-5 pt-4 pb-3 border-b border-slate-100">
-					<span class="text-[10px] font-black uppercase tracking-[0.15em] text-violet-400">Practice Defaults</span>
+					<span class="section-label">Practice Defaults</span>
 				</div>
 				<div class="p-4 space-y-3">
 					<div class="grid grid-cols-2 gap-3">
@@ -239,15 +238,15 @@
 		<!-- ══ FULL-WIDTH: Milestones ════════════════════════════════════════ -->
 		<div class="lg:col-span-2 rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
 			<div class="px-5 pt-4 pb-3 border-b border-slate-100 flex items-center gap-3">
-				<span class="flex-1 text-[10px] font-black uppercase tracking-[0.15em] text-violet-400">
+				<span class="flex-1 section-label">
 					Program Milestones
 					<span class="ml-2 normal-case font-normal text-slate-400 tracking-normal">
 						Count presets + day options shown on Set Target screen
 					</span>
 				</span>
 				<button type="button" onclick={addMilestone}
-					class="flex items-center gap-1.5 rounded-lg border border-dashed border-violet-200 bg-violet-50
-						px-3 py-1 text-[11px] font-semibold text-violet-600 hover:bg-violet-100 transition-colors">
+					class="flex items-center gap-1.5 rounded-lg border border-dashed border-slate-200 bg-slate-50
+						px-3 py-1 text-[11px] font-semibold text-slate-500 hover:bg-slate-100 transition-colors">
 					<Plus size={12} /> Add
 				</button>
 			</div>
@@ -255,7 +254,7 @@
 				<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
 					{#each milestones as milestone, i (i)}
 						<div class="relative rounded-xl border border-slate-100 bg-slate-50 p-3 space-y-2.5
-							hover:border-violet-200 hover:bg-violet-50/40 transition-colors">
+							hover:border-brand-200 hover:bg-brand-50/40 transition-colors">
 							<button type="button" onclick={() => removeMilestone(i)}
 								class="absolute top-2 right-2 rounded-md p-0.5 text-slate-300 hover:text-red-400 transition-colors">
 								<Trash2 size={11} />
@@ -297,14 +296,13 @@
 
 		<!-- ══ FULL-WIDTH: Actions ════════════════════════════════════════════ -->
 		<div class="lg:col-span-2 flex items-center justify-between pt-1">
-			<a href="/mantras"
-				class="text-sm text-slate-400 hover:text-slate-600 transition-colors font-medium px-1">
+			<a href="/mantras" class="btn-secondary">
 				Cancel
 			</a>
 			<button type="submit"
 				class="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm
-					bg-gradient-to-br from-violet-600 to-indigo-700 text-white shadow-md shadow-indigo-200
-					hover:from-violet-500 hover:to-indigo-600 hover:shadow-lg hover:shadow-indigo-200
+					bg-brand-600 text-white shadow-md shadow-brand-200
+					hover:bg-brand-700 hover:shadow-lg hover:shadow-brand-200
 					disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150"
 				disabled={submitting}>
 				<Save size={14} />

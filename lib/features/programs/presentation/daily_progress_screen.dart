@@ -42,27 +42,36 @@ class _DailyProgressScreenState extends ConsumerState<DailyProgressScreen> {
     DateTime.now().day,
   );
 
-  Future<Program?> _loadProgram() =>
-      ref.read(programRepositoryProvider).getById(widget.programId);
+  late Future<Program?> _programFuture;
+  late Future<Map<DateTime, int>> _countsFuture;
+  late Future<DailySummary> _summaryFuture;
 
-  Future<Map<DateTime, int>> _loadCounts() {
+  @override
+  void initState() {
+    super.initState();
+    final repo = ref.read(programRepositoryProvider);
+    _programFuture = repo.getById(widget.programId);
+    _countsFuture = _buildCountsFuture();
+    _summaryFuture = _buildSummaryFuture();
+  }
+
+  Future<Map<DateTime, int>> _buildCountsFuture() {
     final first = DateTime(_month.year, _month.month);
-    final last = DateTime(
-      _month.year,
-      _month.month + 1,
-    ).subtract(const Duration(days: 1));
+    final last = DateTime(_month.year, _month.month + 1)
+        .subtract(const Duration(days: 1));
     return ref
         .read(programRepositoryProvider)
         .sessionCountsByDay(programId: widget.programId, from: first, to: last);
   }
 
-  Future<DailySummary> _loadSummary() => ref
+  Future<DailySummary> _buildSummaryFuture() => ref
       .read(programRepositoryProvider)
       .dailySummary(widget.programId, _selected);
 
   void _shiftMonth(int by) {
     setState(() {
       _month = DateTime(_month.year, _month.month + by);
+      _countsFuture = _buildCountsFuture();
     });
   }
 
@@ -70,7 +79,7 @@ class _DailyProgressScreenState extends ConsumerState<DailyProgressScreen> {
   Widget build(BuildContext context) {
     ref.watch(sessionCompletedProvider); // rebuilds when a session finishes
     return FutureBuilder<Program?>(
-      future: _loadProgram(),
+      future: _programFuture,
       builder: (_, snap) {
         final program = snap.data;
         final settings =
@@ -130,7 +139,7 @@ class _DailyProgressScreenState extends ConsumerState<DailyProgressScreen> {
                       SizedBox(
                         height: calendarHeight,
                         child: FutureBuilder<Map<DateTime, int>>(
-                          future: _loadCounts(),
+                          future: _countsFuture,
                           builder: (_, snap) {
                             final counts = snap.data ?? const <DateTime, int>{};
                             return LayoutBuilder(
@@ -161,7 +170,10 @@ class _DailyProgressScreenState extends ConsumerState<DailyProgressScreen> {
                                         rowHeight: gridHeight / 7,
                                         compact: compact,
                                         onTapDay: (d) =>
-                                            setState(() => _selected = d),
+                                            setState(() {
+                                              _selected = d;
+                                              _summaryFuture = _buildSummaryFuture();
+                                            }),
                                       ),
                                     ),
                                   ],
@@ -173,8 +185,7 @@ class _DailyProgressScreenState extends ConsumerState<DailyProgressScreen> {
                       ),
                       SizedBox(height: tight ? KvlSpacing.sm : KvlSpacing.md),
                       FutureBuilder<DailySummary>(
-                        key: ValueKey(_selected),
-                        future: _loadSummary(),
+                        future: _summaryFuture,
                         builder: (_, snap) {
                           final s = snap.data;
                           return KvlCard(

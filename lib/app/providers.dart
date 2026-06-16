@@ -225,7 +225,10 @@ final accountHydrationProvider = Provider<void>((ref) {
           name: (member['display_name'] as String?) ?? '',
           relation: isPrimary
               ? FamilyRelation.me
-              : _familyRelationFromServer(member['relation'] as String?),
+              : _familyRelationFromServer(
+                  member['relation'] as String?,
+                  member['gender'] as String?,
+                ),
           avatarSeed: member['avatar_key'] as String?,
           language: member['language'] as String? ?? 'en',
           mantraLanguage: member['mantra_language'] as String? ?? 'hi',
@@ -310,14 +313,17 @@ final accountHydrationProvider = Provider<void>((ref) {
   });
 });
 
-FamilyRelation _familyRelationFromServer(String? value) => switch (value) {
-  'self' => FamilyRelation.me,
-  'spouse' => FamilyRelation.spouse,
-  'parent' => FamilyRelation.father,
-  'child' => FamilyRelation.son,
-  'sibling' => FamilyRelation.sibling,
-  _ => FamilyRelation.other,
-};
+FamilyRelation _familyRelationFromServer(String? value, String? gender) {
+  final isFemale = gender == 'female' || gender == 'f';
+  return switch (value) {
+    'self' => FamilyRelation.me,
+    'spouse' => FamilyRelation.spouse,
+    'parent' => isFemale ? FamilyRelation.mother : FamilyRelation.father,
+    'child' => isFemale ? FamilyRelation.daughter : FamilyRelation.son,
+    'sibling' => FamilyRelation.sibling,
+    _ => FamilyRelation.other,
+  };
+}
 
 final rewardTotalProvider = StreamProvider<int>((ref) async* {
   final profile = ref.watch(activeProfileProvider).value;

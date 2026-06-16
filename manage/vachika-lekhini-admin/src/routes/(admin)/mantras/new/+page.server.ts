@@ -49,6 +49,7 @@ export const actions: Actions = {
 				recommendedCount: parsed.recommendedCount ?? null,
 				recommendedDays: parsed.recommendedDays ?? null,
 				pronunciationUrl: parsed.pronunciationUrl ?? null,
+				imageUrl: parsed.imageUrl ?? null,
 				milestones: parsed.milestones ?? undefined,
 				isActive: parsed.isActive,
 				sortOrder: parsed.sortOrder

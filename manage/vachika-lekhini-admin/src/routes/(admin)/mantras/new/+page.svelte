@@ -21,6 +21,7 @@
 		recommendedCount: v.recommendedCount ? Number(v.recommendedCount) : null,
 		recommendedDays: v.recommendedDays ? Number(v.recommendedDays) : null,
 		pronunciationUrl: v.pronunciationUrl ? String(v.pronunciationUrl) : null,
+		imageUrl: v.imageUrl ? String(v.imageUrl) : null,
 		isActive: v.isActive !== undefined ? v.isActive === 'on' || v.isActive === 'true' : true,
 		sortOrder: v.sortOrder ? Number(v.sortOrder) : 0
 	});

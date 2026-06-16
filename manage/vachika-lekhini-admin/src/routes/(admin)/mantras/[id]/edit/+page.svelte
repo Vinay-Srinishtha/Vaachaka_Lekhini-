@@ -31,6 +31,12 @@
 					? String(v.pronunciationUrl)
 					: null
 				: m.pronunciationUrl,
+		imageUrl:
+			v.imageUrl !== undefined
+				? v.imageUrl
+					? String(v.imageUrl)
+					: null
+				: (m as any).imageUrl ?? null,
 		isActive: v.isActive !== undefined ? v.isActive === 'on' || v.isActive === 'true' : m.isActive,
 		sortOrder: v.sortOrder ? Number(v.sortOrder) : m.sortOrder
 	});

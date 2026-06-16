@@ -31,6 +31,7 @@ const mantraFormSchema = z.object({
 	recommendedCount: z.coerce.number().int().positive().nullable().optional(),
 	recommendedDays: z.coerce.number().int().positive().nullable().optional(),
 	pronunciationUrl: z.string().url().max(500).nullable().optional(),
+	imageUrl: z.string().url().max(500).nullable().optional(),
 	milestones: z.array(milestoneSchema).min(1).max(12).nullable().optional(),
 	isActive: z.coerce.boolean().default(true),
 	sortOrder: z.coerce.number().int().default(0)
@@ -53,6 +54,7 @@ export function parseMantraForm(data: FormData): MantraFormInput {
 		recommendedCount: emptyToNull(data.get('recommendedCount')),
 		recommendedDays: emptyToNull(data.get('recommendedDays')),
 		pronunciationUrl: emptyToNull(data.get('pronunciationUrl')),
+		imageUrl: emptyToNull(data.get('imageUrl')),
 		milestones: parseMilestones(data.get('milestones')),
 		isActive: data.get('isActive') === 'on' || data.get('isActive') === 'true',
 		sortOrder: Number(data.get('sortOrder') ?? 0)

@@ -708,8 +708,22 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
               ),
 
             // Mantra title — FIXED position & size in both idle and running.
-            Positioned(
-              top: constraints.maxHeight * 0.06,
+            // Vertically centred in the gap between the top bar (stack top)
+            // and the top edge of the mic orb (orb centre sits at y=0.76).
+            Align(
+              alignment: Alignment(
+                0,
+                () {
+                  final h = constraints.maxHeight;
+                  // Mic orb centre in pixels, then its top edge.
+                  final micCenterY = h / 2 + 0.76 * (h / 2);
+                  final micTopY = micCenterY - orbDiam / 2;
+                  // Midpoint between stack top (0) and the orb top edge.
+                  final midY = micTopY / 2;
+                  // Convert pixel y back to Align's [-1, 1] vertical coordinate.
+                  return (midY - h / 2) / (h / 2);
+                }(),
+              ),
               child: SizedBox(
                 width: constraints.maxWidth * 0.9,
                 child: FittedBox(
@@ -733,7 +747,9 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
             // voice session is capturing.
             if (widget.isRunning && widget.isVoiceMode)
               Align(
-                alignment: const Alignment(0, 0.76),
+                // Slightly lower than the orb (0.76) so the arcs centre on the
+                // mic button rather than riding its top edge.
+                alignment: const Alignment(0, 0.92),
                 child: IgnorePointer(
                   child: SizedBox(
                     width: orbDiam * 2.7,
@@ -845,13 +861,13 @@ class _VoiceWavesPainter extends CustomPainter {
   final double phase;
   final double level; // 0..1 smoothed mic level
 
-  // Warm theme palette — saffron → primary → deep orange.
+  // Soft, light warm palette — gentle peach/saffron tints.
   static const _waveColors = [
-    Color(0xFFFFB572),
-    KvlColors.primary,
-    Color(0xFFFF8C42),
-    KvlColors.primaryDeep,
-    Color(0xFFFFA15C),
+    Color(0xFFFFD8B8),
+    Color(0xFFFFC79C),
+    Color(0xFFFFD0A8),
+    Color(0xFFFFBE86),
+    Color(0xFFFFE0C6),
   ];
 
   static const _maxLayers = 5;
@@ -883,7 +899,7 @@ class _VoiceWavesPainter extends CustomPainter {
         final amp = (0.45 + 0.55 * ((wave + 1) / 2)).clamp(0.0, 1.0);
         final color = _waveColors[k % _waveColors.length];
         paint
-          ..color = color.withValues(alpha: (0.22 + 0.55 * amp) * presence)
+          ..color = color.withValues(alpha: (0.16 + 0.42 * amp) * presence)
           ..strokeWidth = unit * 0.034;
         // Arc length grows with amplitude and the live level.
         final half = (0.34 + 0.16 * amp + 0.12 * level);

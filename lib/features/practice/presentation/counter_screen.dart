@@ -378,14 +378,6 @@ class _TopBar extends ConsumerWidget {
       children: [
         Expanded(
           child: _Tool(
-            icon: Icons.draw_outlined,
-            label: context.l10n.ownWritingModeLabel,
-            onTap: onWritingMode,
-            compact: compact,
-          ),
-        ),
-        Expanded(
-          child: _Tool(
             icon: phoneModeEnabled
                 ? Icons.notifications_off_rounded
                 : Icons.notifications_none_rounded,
@@ -393,6 +385,14 @@ class _TopBar extends ConsumerWidget {
             onTap: onPhoneMode,
             compact: compact,
             active: phoneModeEnabled,
+          ),
+        ),
+        Expanded(
+          child: _Tool(
+            icon: Icons.draw_outlined,
+            label: context.l10n.ownWritingModeLabel,
+            onTap: onWritingMode,
+            compact: compact,
           ),
         ),
         const SizedBox(width: KvlSpacing.sm),
@@ -451,21 +451,26 @@ class _Tool extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: KvlRadius.brMD,
+      customBorder: const CircleBorder(),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
         child: Column(
           children: [
             AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              width: compact ? 38 : 44,
-              height: compact ? 38 : 44,
+              width: compact ? 44 : 50,
+              height: compact ? 44 : 50,
               decoration: BoxDecoration(
-                color: active ? KvlColors.primaryGhost : Colors.transparent,
-                borderRadius: KvlRadius.brMD,
-                border: active
-                    ? Border.all(color: KvlColors.primarySoft)
-                    : null,
+                // Circular button — soft tinted fill always, deeper when active.
+                shape: BoxShape.circle,
+                color: active
+                    ? KvlColors.primaryGhost
+                    : KvlColors.primary.withValues(alpha: 0.07),
+                border: Border.all(
+                  color: active
+                      ? KvlColors.primarySoft
+                      : KvlColors.primary.withValues(alpha: 0.18),
+                ),
               ),
               alignment: Alignment.center,
               child: Stack(

@@ -42,6 +42,8 @@ class VoiceEnrolmentService {
   StreamSubscription<Uint8List>? _sub;
   Timer? _windowTimer;
   final _events = StreamController<VoiceTrainingEvent>.broadcast();
+  // Live normalised mic level (0..1) for reactive UI (voice waves).
+  final _levels = StreamController<double>.broadcast();
 
   int _matches = 0;
   bool _running = false;
@@ -70,6 +72,9 @@ class VoiceEnrolmentService {
   static const int _windowMs = 1500;
 
   Stream<VoiceTrainingEvent> get events => _events.stream;
+
+  /// Live mic level (0..1), emitted per audio chunk. Drives reactive UI.
+  Stream<double> get levels => _levels.stream;
 
   /// Ensure model is loaded (idempotent). Call once before [start].
   Future<void> warmUp() async {
@@ -113,6 +118,12 @@ class VoiceEnrolmentService {
     // "Start" would have their first word cut mid-syllable by the timer.
     _sub = stream.listen(
       (chunk) async {
+        // Emit a live, normalised level for reactive UI (peak ≈ 6000 → full).
+        if (!_levels.isClosed) {
+          final peak = AudioCapture.peakAmplitude(chunk);
+          _levels.add((peak / 6000.0).clamp(0.0, 1.0));
+        }
+
         // Skip chunk processing while the timer is flushing to avoid
         // calling acceptChunk and finalize/getFinalResult concurrently.
         if (!_running || _finalizing) return;
@@ -190,6 +201,7 @@ class VoiceEnrolmentService {
   Future<void> stop() async {
     if (!_running) return;
     _running = false;
+    if (!_levels.isClosed) _levels.add(0); // waves settle when capture stops
     _windowTimer?.cancel();
     _windowTimer = null;
     await _sub?.cancel();
@@ -208,6 +220,7 @@ class VoiceEnrolmentService {
     await _audio.dispose();
     await _recognizer?.dispose();
     await _events.close();
+    await _levels.close();
   }
 }
 

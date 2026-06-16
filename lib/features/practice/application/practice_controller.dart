@@ -104,8 +104,18 @@ class PracticeController extends AsyncNotifier<PracticeState> {
 
   VoiceEnrolmentService? _voice;
   StreamSubscription<VoiceTrainingEvent>? _voiceSub;
+  StreamSubscription<double>? _levelSub;
   Timer? _flushTimer;
   int _pendingFlush = 0;
+
+  /// Live mic input level (0..1) while a voice session captures. Drives the
+  /// reactive voice waves without rebuilding the whole screen.
+  final ValueNotifier<double> micLevel = ValueNotifier<double>(0);
+
+  void _bindLevels() {
+    _levelSub?.cancel();
+    _levelSub = _voice?.levels.listen((lvl) => micLevel.value = lvl);
+  }
 
   ProgramRepository get _programs => ref.read(programRepositoryProvider);
 
@@ -177,6 +187,7 @@ class PracticeController extends AsyncNotifier<PracticeState> {
         _voiceSub = _voice!.events.listen((e) {
           if (e.count > 0) _bump(s.sessionCount + e.count);
         }, onError: (Object err) => _failVoice("Voice recogniser stopped: $err"));
+        _bindLevels();
         try {
           await _voice!.start(mantra, target: 1 << 30, sensitivity: sensitivity);
         } catch (e) {
@@ -219,6 +230,7 @@ class PracticeController extends AsyncNotifier<PracticeState> {
       _voiceSub = _voice!.events.listen((e) {
         if (e.count > 0) _bump(e.count);
       }, onError: (Object err) => _failVoice("Voice recogniser stopped: $err"));
+      _bindLevels();
       try {
         // High target so the service doesn't auto-stop while counting.
         await _voice!.start(mantra, target: 1 << 30, sensitivity: sensitivity);
@@ -466,6 +478,9 @@ class PracticeController extends AsyncNotifier<PracticeState> {
     _flushTimer = null;
     await _voiceSub?.cancel();
     _voiceSub = null;
+    await _levelSub?.cancel();
+    _levelSub = null;
+    micLevel.value = 0;
     await _voice?.dispose();
     _voice = null;
     await _flush();

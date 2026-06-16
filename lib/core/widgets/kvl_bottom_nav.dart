@@ -79,9 +79,9 @@ class KvlBottomNav extends StatelessWidget {
                   child: Padding(
                     padding: EdgeInsets.fromLTRB(
                       KvlSpacing.xs,
-                      practiceHidden ? 2 : KvlSpacing.sm,
+                      practiceHidden ? 2 : 5,
                       KvlSpacing.xs,
-                      2,
+                      1,
                     ),
                     child: Row(
                       children: [

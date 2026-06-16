@@ -585,7 +585,7 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
     );
     _textCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 650),
     );
     _textCtrl.addStatusListener((status) {
       if (status == AnimationStatus.completed && mounted) {
@@ -659,52 +659,58 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
           clipBehavior: Clip.none,
           alignment: Alignment.center,
           children: [
-            // Soft static background circle
-            Container(
-              width: widget.micSize * 2.6,
-              height: widget.micSize * 2.6,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    const Color(0xFFFFB572).withValues(alpha: widget.isRunning ? 0.18 : 0.08),
-                    const Color(0xFFFF8C42).withValues(alpha: widget.isRunning ? 0.08 : 0.03),
-                    KvlColors.primary.withValues(alpha: 0.0),
-                  ],
-                  stops: const [0.0, 0.6, 1.0],
+            // Soft static glow behind the mic orb (aligned to it).
+            Align(
+              alignment: const Alignment(0, 0.76),
+              child: Container(
+                width: widget.micSize * 3.0,
+                height: widget.micSize * 3.0,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFFFFC58A).withValues(alpha: widget.isRunning ? 0.26 : 0.12),
+                      const Color(0xFFFF8C42).withValues(alpha: widget.isRunning ? 0.12 : 0.05),
+                      KvlColors.primary.withValues(alpha: 0.0),
+                    ],
+                    stops: const [0.0, 0.55, 1.0],
+                  ),
                 ),
               ),
             ),
 
-            // Outward ripples — fired on each voice count
+            // Outward ripples — fired on each voice count, from the mic centre.
             for (var i = 0; i < _poolSize; i++)
-              AnimatedBuilder(
-                animation: _pool[i],
-                builder: (ctx2, _) {
-                  final raw = _pool[i].value;
-                  if (raw == 0.0) return const SizedBox.shrink();
-                  final t = Curves.easeOut.transform(raw);
-                  final intensity = _slotIntensity[i];
-                  final reach = micDiam + (maxDiam - micDiam) * intensity;
-                  final diam = micDiam + (reach - micDiam) * t;
-                  final opacity = ((1.0 - t) * 0.52 * intensity).clamp(0.0, 0.52);
-                  final color = _ringColors[i % _ringColors.length];
-                  return Container(
-                    width: diam,
-                    height: diam,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          color.withValues(alpha: 0.0),
-                          color.withValues(alpha: opacity * 0.3),
-                          color.withValues(alpha: opacity),
-                        ],
-                        stops: const [0.0, 0.60, 1.0],
+              Align(
+                alignment: const Alignment(0, 0.76),
+                child: AnimatedBuilder(
+                  animation: _pool[i],
+                  builder: (ctx2, _) {
+                    final raw = _pool[i].value;
+                    if (raw == 0.0) return const SizedBox.shrink();
+                    final t = Curves.easeOut.transform(raw);
+                    final intensity = _slotIntensity[i];
+                    final reach = micDiam + (maxDiam - micDiam) * intensity;
+                    final diam = micDiam + (reach - micDiam) * t;
+                    final opacity = ((1.0 - t) * 0.52 * intensity).clamp(0.0, 0.52);
+                    final color = _ringColors[i % _ringColors.length];
+                    return Container(
+                      width: diam,
+                      height: diam,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            color.withValues(alpha: 0.0),
+                            color.withValues(alpha: opacity * 0.3),
+                            color.withValues(alpha: opacity),
+                          ],
+                          stops: const [0.0, 0.60, 1.0],
+                        ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
 
             // Mantra title — FIXED position & size in both idle and running.
@@ -724,22 +730,39 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
                   return (midY - h / 2) / (h / 2);
                 }(),
               ),
-              child: SizedBox(
-                width: constraints.maxWidth * 0.9,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    widget.mantraLabel,
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    style: TextStyle(
-                      fontSize: (constraints.maxWidth * 0.40).clamp(32.0, 90.0),
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.0,
-                      color: const Color(0xFFCC7A3A),
+              child: AnimatedBuilder(
+                animation: _textCtrl,
+                builder: (ctx2, _) {
+                  // Per-count pulse: quick shrink-and-back with a colour flash,
+                  // anchored in place (does not move the title).
+                  final dip = math.sin(_textCtrl.value * math.pi); // 0→1→0
+                  final scale = 1.0 - 0.13 * dip;
+                  final color = Color.lerp(
+                    const Color(0xFFCC7A3A),
+                    const Color(0xFF7E2F08),
+                    dip,
+                  )!;
+                  return Transform.scale(
+                    scale: scale,
+                    child: SizedBox(
+                      width: constraints.maxWidth * 0.9,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          widget.mantraLabel,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontSize: (constraints.maxWidth * 0.40).clamp(32.0, 90.0),
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.0 + 1.5 * dip,
+                            color: color,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
             ),
 
@@ -770,16 +793,27 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
                   height: orbDiam,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
+                    // Richer multi-stop sheen — bright top-left highlight into
+                    // a deep base for a premium, glossy orb.
                     gradient: const LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
+                        Color(0xFFFFE0BE),
                         Color(0xFFFFC08A),
                         KvlColors.primary,
                         KvlColors.primaryDeep,
+                        Color(0xFFB8521C),
                       ],
+                      stops: [0.0, 0.22, 0.55, 0.85, 1.0],
                     ),
                     boxShadow: [
+                      BoxShadow(
+                        color: KvlColors.primaryDeep.withValues(alpha: 0.30),
+                        blurRadius: 32,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 12),
+                      ),
                       BoxShadow(
                         color: KvlColors.primary.withValues(alpha: 0.42),
                         blurRadius: 26,

@@ -705,129 +705,81 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
                 },
               ),
 
-            // Idle (before Start): show the big static mantra name in the
-            // upper area so the resting screen always reads "<Mantra> + mic".
-            if (!widget.isRunning)
-              Positioned(
-                top: constraints.maxHeight * 0.04,
-                child: SizedBox(
-                  width: constraints.maxWidth * 0.9,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      widget.mantraLabel,
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      style: TextStyle(
-                        fontSize: (constraints.maxWidth * 0.42).clamp(32.0, 96.0),
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.0,
-                        color: const Color(0xFFCC7A3A),
-                      ),
+            // Mantra title — FIXED position & size in both idle and running.
+            Positioned(
+              top: constraints.maxHeight * 0.06,
+              child: SizedBox(
+                width: constraints.maxWidth * 0.9,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    widget.mantraLabel,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontSize: (constraints.maxWidth * 0.40).clamp(32.0, 90.0),
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.0,
+                      color: const Color(0xFFCC7A3A),
                     ),
                   ),
                 ),
               ),
+            ),
 
-            // Mantra text: visible from session start, shrinks on each count
-            if (widget.isRunning)
-              AnimatedBuilder(
-                animation: _textCtrl,
-                builder: (ctx2, _) {
-                  final t = Curves.easeIn.transform(_textCtrl.value);
-                  final maxFs = (constraints.maxWidth * 0.42).clamp(32.0, 96.0);
-                  final minFs = widget.compact ? 12.0 : 14.0;
-                  final fontSize = maxFs - (maxFs - minFs) * t;
-                  final opacity = t < 0.75
-                      ? 1.0
-                      : ((1.0 - t) / 0.25).clamp(0.0, 1.0);
-                  final textColor = Color.lerp(
-                    const Color(0xFFCC7A3A),
-                    const Color(0xFF4A1A02),
-                    t,
-                  )!;
-                  return SizedBox(
-                    width: constraints.maxWidth * 0.88,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        widget.mantraLabel,
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        style: TextStyle(
-                          fontSize: fontSize.clamp(minFs, maxFs),
-                          fontWeight: t > 0.65 ? FontWeight.w800 : FontWeight.w600,
-                          letterSpacing: ((1.0 - t) * 3.0).clamp(0.0, 3.0),
-                          color: textColor.withValues(alpha: opacity * 0.80),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-
-            // Curved sound waves flanking the mic while a voice session is
-            // capturing — theme-coloured, reacting to the live mic level.
+            // Reactive curved sound waves — centred on the mic, only while a
+            // voice session is capturing.
             if (widget.isRunning && widget.isVoiceMode)
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: constraints.maxHeight * 0.04,
-                height: widget.micSize * 1.3,
-                child: IgnorePointer(child: _VoiceWaves(level: widget.level)),
+              Align(
+                alignment: const Alignment(0, 0.12),
+                child: IgnorePointer(
+                  child: SizedBox(
+                    width: micDiam * 3.4,
+                    height: micDiam * 1.8,
+                    child: _VoiceWaves(level: widget.level),
+                  ),
+                ),
               ),
 
-            // Mic icon: shrinks + moves to bottom when running
-            Positioned(
-              bottom: widget.isRunning ? constraints.maxHeight * 0.04 : null,
+            // Mic orb — FIXED size & position in both states (a bit smaller).
+            Align(
+              alignment: const Alignment(0, 0.12),
               child: GestureDetector(
                 onTap: widget.onTap,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 500),
-                  curve: Curves.easeInOut,
-                  width: widget.isRunning ? widget.micSize * 1.6 : widget.micSize * 2.4,
-                  height: widget.isRunning ? widget.micSize * 1.6 : widget.micSize * 2.4,
-                  color: Colors.transparent,
-                  alignment: Alignment.center,
-                  // Filled gradient circle with a clean white mic — matches the
-                  // reference: a premium "voice orb" the waves radiate from.
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 500),
-                    curve: Curves.easeInOut,
-                    width: widget.isRunning ? widget.micSize * 1.1 : widget.micSize * 1.7,
-                    height: widget.isRunning ? widget.micSize * 1.1 : widget.micSize * 1.7,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Color(0xFFFFC08A),
-                          KvlColors.primary,
-                          KvlColors.primaryDeep,
-                        ],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: KvlColors.primary.withValues(alpha: 0.42),
-                          blurRadius: 26,
-                          spreadRadius: 1,
-                          offset: const Offset(0, 8),
-                        ),
-                        BoxShadow(
-                          color: Colors.white.withValues(alpha: 0.55),
-                          blurRadius: 2,
-                          spreadRadius: -2,
-                          offset: const Offset(0, -2),
-                        ),
+                child: Container(
+                  width: micDiam,
+                  height: micDiam,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFFFFC08A),
+                        KvlColors.primary,
+                        KvlColors.primaryDeep,
                       ],
                     ),
-                    alignment: Alignment.center,
-                    child: Icon(
-                      Icons.mic_rounded,
-                      color: Colors.white,
-                      size: (widget.isRunning ? widget.micSize * 0.62 : widget.micSize * 0.95),
-                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: KvlColors.primary.withValues(alpha: 0.42),
+                        blurRadius: 26,
+                        spreadRadius: 1,
+                        offset: const Offset(0, 8),
+                      ),
+                      BoxShadow(
+                        color: Colors.white.withValues(alpha: 0.55),
+                        blurRadius: 2,
+                        spreadRadius: -2,
+                        offset: const Offset(0, -2),
+                      ),
+                    ],
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.mic_rounded,
+                    color: Colors.white,
+                    size: micDiam * 0.5,
                   ),
                 ),
               ),

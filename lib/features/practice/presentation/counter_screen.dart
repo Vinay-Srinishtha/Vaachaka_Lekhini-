@@ -123,8 +123,6 @@ class _BodyState extends ConsumerState<_Body> {
     final statsAsync = ref.watch(globalStatsProvider(state.program.mantraId));
     final globalCount =
         (statsAsync.value?.globalChantCount ?? 0) + state.sessionCount;
-    final title =
-        mantra?.name.displayForLanguage(settings.languageCode) ?? '';
     final mantraLabel =
         mantra?.name.displayForLanguage(settings.languageCode) ??
         state.program.mantraId;
@@ -151,14 +149,9 @@ class _BodyState extends ConsumerState<_Body> {
               child: Column(
                 children: [
                   _TopBar(
-                    title: title,
                     initial: profile?.initials ?? '?',
                     onProfileTap: () => context.push(KvlRoute.profile),
-                  ),
-                  SizedBox(height: compact ? 10 : 16),
-                  _ToolRow(
                     compact: compact,
-                    onChangeMantra: () => context.go(KvlRoute.programs),
                     onWritingMode: () => context.push(
                       '${KvlRoute.handwritingWrite}/${state.program.mantraId}?programId=$programId',
                     ),
@@ -359,13 +352,19 @@ class _BodyState extends ConsumerState<_Body> {
 
 class _TopBar extends ConsumerWidget {
   const _TopBar({
-    required this.title,
     required this.initial,
     required this.onProfileTap,
+    required this.compact,
+    required this.onWritingMode,
+    required this.phoneModeEnabled,
+    required this.onPhoneMode,
   });
-  final String title;
   final String initial;
   final VoidCallback onProfileTap;
+  final bool compact;
+  final VoidCallback onWritingMode;
+  final bool phoneModeEnabled;
+  final VoidCallback onPhoneMode;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -375,17 +374,25 @@ class _TopBar extends ConsumerWidget {
     return Row(
       children: [
         Expanded(
-          child: Text(
-            title,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: KvlText.ui(
-              20,
-              FontWeight.w800,
-            ).copyWith(color: const Color(0xFF3B210F)),
+          child: _Tool(
+            icon: Icons.draw_outlined,
+            label: context.l10n.ownWritingModeLabel,
+            onTap: onWritingMode,
+            compact: compact,
           ),
         ),
+        Expanded(
+          child: _Tool(
+            icon: phoneModeEnabled
+                ? Icons.notifications_off_rounded
+                : Icons.notifications_none_rounded,
+            label: context.l10n.phoneMode,
+            onTap: onPhoneMode,
+            compact: compact,
+            active: phoneModeEnabled,
+          ),
+        ),
+        const SizedBox(width: KvlSpacing.sm),
         InkWell(
           onTap: onProfileTap,
           borderRadius: BorderRadius.circular(24),
@@ -420,58 +427,8 @@ class _TopBar extends ConsumerWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Tool row
+// Tool
 // ─────────────────────────────────────────────────────────────────────────────
-
-class _ToolRow extends StatelessWidget {
-  const _ToolRow({
-    required this.compact,
-    required this.onChangeMantra,
-    required this.onWritingMode,
-    required this.phoneModeEnabled,
-    required this.onPhoneMode,
-  });
-  final bool compact;
-  final VoidCallback onChangeMantra;
-  final VoidCallback onWritingMode;
-  final bool phoneModeEnabled;
-  final VoidCallback onPhoneMode;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _Tool(
-            icon: Icons.keyboard_command_key_rounded,
-            label: 'Change Mantra',
-            onTap: onChangeMantra,
-            compact: compact,
-          ),
-        ),
-        Expanded(
-          child: _Tool(
-            icon: Icons.draw_outlined,
-            label: context.l10n.ownWritingModeLabel,
-            onTap: onWritingMode,
-            compact: compact,
-          ),
-        ),
-        Expanded(
-          child: _Tool(
-            icon: phoneModeEnabled
-                ? Icons.notifications_off_rounded
-                : Icons.notifications_none_rounded,
-            label: context.l10n.phoneMode,
-            onTap: onPhoneMode,
-            compact: compact,
-            active: phoneModeEnabled,
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 class _Tool extends StatelessWidget {
   const _Tool({

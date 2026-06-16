@@ -97,7 +97,7 @@ export async function createAdminMediaUpload(args: {
 	validateMediaInput(args);
 
 	const bucket = requiredEnv('S3_BUCKET_NAME');
-	const publicBaseUrl = publicBaseUrl();
+	const baseUrl = publicBaseUrl();
 	const baseName = cleanSegment(args.fileName.replace(/\.[^.]+$/, ''), 'upload');
 	const ext = extensionFor(args.fileName, args.contentType);
 	const key = `${keyPrefix(args.category, args.slug)}/${Date.now()}-${baseName}.${ext}`;
@@ -111,7 +111,7 @@ export async function createAdminMediaUpload(args: {
 
 	return {
 		key,
-		url: `${publicBaseUrl}/${key}`,
+		url: `${baseUrl}/${key}`,
 		uploadUrl: await getSignedUrl(s3Client(), command, { expiresIn: 300 }),
 		headers: {
 			'content-type': args.contentType,
@@ -127,9 +127,9 @@ export function isUploadCategory(value: string): value is UploadCategory {
 }
 
 export async function deleteAdminMediaObject(url: string) {
-	const publicBaseUrl = publicBaseUrl();
-	if (!url.startsWith(publicBaseUrl + '/')) throw error(400, 'URL does not belong to this bucket.');
-	const key = url.slice(publicBaseUrl.length + 1);
+	const baseUrl = publicBaseUrl();
+	if (!url.startsWith(baseUrl + '/')) throw error(400, 'URL does not belong to this bucket.');
+	const key = url.slice(baseUrl.length + 1);
 	const bucket = requiredEnv('S3_BUCKET_NAME');
 	await s3Client().send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
 }

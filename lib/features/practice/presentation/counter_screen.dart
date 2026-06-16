@@ -1039,12 +1039,11 @@ class _ProgressCard extends StatelessWidget {
     final progress = goal == 0
         ? 0.0
         : (total / goal).clamp(0, 1).toDouble();
-    return KvlCard(
-      padding: EdgeInsets.fromLTRB(
-        KvlSpacing.md,
-        KvlSpacing.sm,
-        KvlSpacing.md,
-        KvlSpacing.sm,
+    return Padding(
+      // Transparent — blends with the screen background (no card surface).
+      padding: const EdgeInsets.symmetric(
+        horizontal: KvlSpacing.md,
+        vertical: KvlSpacing.xs,
       ),
       child: Column(
         children: [
@@ -1074,16 +1073,62 @@ class _ProgressCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: KvlSpacing.sm),
-          ClipRRect(
-            borderRadius: KvlRadius.brPill,
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 9,
-              backgroundColor: const Color(0xFFE2E2E2),
-              valueColor: const AlwaysStoppedAnimation(KvlColors.accent),
-            ),
-          ),
+          _GradientProgressBar(progress: progress),
         ],
+      ),
+    );
+  }
+}
+
+/// Rounded gradient progress bar with a soft track. The fill animates to the
+/// current [progress] (0–1) and keeps a pill cap even at small values.
+class _GradientProgressBar extends StatelessWidget {
+  const _GradientProgressBar({required this.progress});
+  final double progress;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: KvlRadius.brPill,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          const height = 11.0;
+          final fullWidth = constraints.maxWidth;
+          // Keep a visible rounded cap once there's any progress.
+          final fillWidth = progress <= 0
+              ? 0.0
+              : (progress * fullWidth).clamp(height, fullWidth);
+          return Stack(
+            children: [
+              // Track
+              Container(
+                height: height,
+                width: fullWidth,
+                color: KvlColors.primary.withValues(alpha: 0.12),
+              ),
+              // Fill
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 350),
+                curve: Curves.easeOutCubic,
+                height: height,
+                width: fillWidth,
+                decoration: BoxDecoration(
+                  borderRadius: KvlRadius.brPill,
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFFB572), KvlColors.primary, KvlColors.primaryDeep],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: KvlColors.primary.withValues(alpha: 0.35),
+                      blurRadius: 6,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -574,7 +576,7 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
       _poolSize,
       (_) => AnimationController(
         vsync: this,
-        duration: const Duration(milliseconds: 2200),
+        duration: const Duration(milliseconds: 1500),
       ),
     );
     _textCtrl = AnimationController(
@@ -619,7 +621,7 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
     _slotIntensity[slot] = intensity;
 
     _pool[slot].duration = Duration(
-      milliseconds: (2200 - intensity * 700).round(),
+      milliseconds: (1500 - intensity * 500).round(),
     );
     _pool[slot].forward(from: 0);
   }
@@ -760,6 +762,17 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
                 },
               ),
 
+            // Curved sound waves flanking the mic while a voice session is
+            // capturing — theme-coloured, radiating outward on both sides.
+            if (widget.isRunning && widget.isVoiceMode)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: constraints.maxHeight * 0.04,
+                height: widget.micSize * 1.6,
+                child: const IgnorePointer(child: _VoiceWaves()),
+              ),
+
             // Mic icon: shrinks + moves to bottom when running
             Positioned(
               bottom: widget.isRunning ? constraints.maxHeight * 0.04 : null,
@@ -787,6 +800,93 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
       },
     );
   }
+}
+
+/// Animated curved sound waves that flank the mic while capturing voice.
+/// Concentric theme-coloured arcs radiate outward on both sides, with a
+/// travelling shimmer driven by a looping controller.
+class _VoiceWaves extends StatefulWidget {
+  const _VoiceWaves();
+
+  @override
+  State<_VoiceWaves> createState() => _VoiceWavesState();
+}
+
+class _VoiceWavesState extends State<_VoiceWaves>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1100),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (_, _) => CustomPaint(
+        size: Size.infinite,
+        painter: _VoiceWavesPainter(phase: _ctrl.value),
+      ),
+    );
+  }
+}
+
+class _VoiceWavesPainter extends CustomPainter {
+  _VoiceWavesPainter({required this.phase});
+  final double phase;
+
+  // Warm theme palette — saffron → primary → deep orange.
+  static const _waveColors = [
+    Color(0xFFFFB572),
+    KvlColors.primary,
+    Color(0xFFFF8C42),
+    KvlColors.primaryDeep,
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final unit = size.height; // scale everything to the band height
+    final micR = unit * 0.34; // start just outside the mic
+    final spacing = unit * 0.16;
+    const bars = 4;
+
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    // Right side anchored at 0 rad, left side at pi.
+    for (final side in [0.0, math.pi]) {
+      for (var k = 0; k < bars; k++) {
+        final radius = micR + spacing * (k + 1);
+        // Travelling wave: peaks move outward as phase advances.
+        final wave = math.sin(2 * math.pi * phase - k * 0.9);
+        final amp = (0.45 + 0.55 * ((wave + 1) / 2)).clamp(0.0, 1.0);
+        final color = _waveColors[k % _waveColors.length];
+        paint
+          ..color = color.withValues(alpha: 0.30 + 0.55 * amp)
+          ..strokeWidth = unit * 0.05;
+        // Arc length grows a little with amplitude for a "breathing" feel.
+        final half = (0.42 + 0.22 * amp);
+        canvas.drawArc(
+          Rect.fromCircle(center: center, radius: radius),
+          side - half,
+          half * 2,
+          false,
+          paint,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_VoiceWavesPainter old) => old.phase != phase;
 }
 
 class _MicPainter extends CustomPainter {

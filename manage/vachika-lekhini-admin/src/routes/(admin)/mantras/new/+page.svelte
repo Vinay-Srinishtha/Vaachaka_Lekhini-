@@ -38,6 +38,6 @@
 	}
 </script>
 
-<Modal open title="New mantra" subtitle="Add a mantra to the catalog served to Flutter" size="2xl" onClose={close}>
+<Modal open title="New mantra" subtitle="Add a mantra to the catalog served to Flutter" size="3xl" onClose={close}>
 	<MantraForm {value} fieldErrors={form?.fieldErrors ?? {}} submitLabel="Create mantra" onSuccess={handleSuccess} />
 </Modal>

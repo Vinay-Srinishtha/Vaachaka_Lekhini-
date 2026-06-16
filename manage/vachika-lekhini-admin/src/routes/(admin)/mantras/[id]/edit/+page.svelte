@@ -53,6 +53,6 @@
 	}
 </script>
 
-<Modal open title={`Edit · ${m.nameRoman}`} subtitle={`Slug · ${m.slug}`} size="2xl" onClose={close}>
+<Modal open title={`Edit · ${m.nameRoman}`} subtitle={`Slug · ${m.slug}`} size="3xl" onClose={close}>
 	<MantraForm {value} fieldErrors={form?.fieldErrors ?? {}} submitLabel="Save changes" isEdit onSuccess={handleSuccess} />
 </Modal>

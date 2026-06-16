@@ -70,7 +70,7 @@ body {
 
 /* ─── Section label ──────────────────────────────────────── */
 @utility section-label {
-	@apply text-[10px] font-black uppercase tracking-[0.18em] text-slate-400;
+	@apply text-[14px] font-black uppercase tracking-[0.18em] text-slate-400;
 }
 
 /* ─── Modal card ─────────────────────────────────────────── */

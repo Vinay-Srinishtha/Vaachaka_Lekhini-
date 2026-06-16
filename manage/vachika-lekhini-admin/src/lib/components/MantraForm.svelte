@@ -83,10 +83,9 @@
 	let submitting = $state(false);
 </script>
 
-<!-- Form fills the full modal content height -->
 <form
 	method="POST"
-	class="flex flex-col h-full gap-3"
+	class="flex flex-col h-full gap-4"
 	use:enhance={() => {
 		submitting = true;
 		return async ({ result, update }) => {
@@ -101,97 +100,97 @@
 	}}
 >
 	{#if generalError}
-		<div class="text-sm rounded-xl bg-red-50 text-red-700 border border-red-200 px-4 py-3 shrink-0">
+		<div class="text-base rounded-xl bg-red-50 text-red-700 border border-red-200 px-5 py-4 shrink-0">
 			{generalError}
 		</div>
 	{/if}
 
-	<!-- ══ 3-COLUMN SECTION — grows to fill available height ═════════════ -->
-	<div class="flex-1 min-h-0 grid grid-cols-3 gap-3">
+	<!-- ══ 3-COLUMN — grows to fill available height ══════════════════════ -->
+	<div class="flex-1 min-h-0 grid grid-cols-3 gap-4">
 
-		<!-- ╔══ COL 1: Identity · Names · Visibility ══════════════════════╗ -->
-		<div class="flex flex-col gap-3 min-h-0">
+		<!-- ╔══ COL 1 ══════════════════════════════════════════════════════╗ -->
+		<div class="flex flex-col gap-4 min-h-0">
 
 			<!-- Identity -->
-			<div class="rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden shrink-0">
-				<div class="px-4 pt-3 pb-2 border-b border-slate-100">
+			<div class="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden shrink-0">
+				<div class="px-6 pt-4 pb-3 border-b border-slate-100">
 					<span class="section-label">Identity</span>
 				</div>
-				<div class="p-3 grid grid-cols-2 gap-2">
+				<div class="p-5 grid grid-cols-2 gap-3">
 					<div class="col-span-2">
 						<FormField label="Slug *" name="slug" error={fieldErrors.slug}
 							hint={isEdit ? 'Cannot change after release.' : 'Lowercase, digits, underscores.'}>
-							<input id="slug" name="slug" class="input py-1.5 text-sm" value={value.slug}
+							<input id="slug" name="slug" class="input py-2.5 text-base" value={value.slug}
 								readonly={isEdit} required autocomplete="off"
 								class:opacity-60={isEdit} class:cursor-not-allowed={isEdit} />
 						</FormField>
 					</div>
 					<div class="col-span-2">
 						<FormField label="Sort order" name="sortOrder" hint="Lower = first." error={fieldErrors.sortOrder}>
-							<input id="sortOrder" name="sortOrder" type="number" class="input py-1.5 text-sm" value={value.sortOrder} />
+							<input id="sortOrder" name="sortOrder" type="number" class="input py-2.5 text-base" value={value.sortOrder} />
 						</FormField>
 					</div>
 				</div>
 			</div>
 
 			<!-- Names -->
-			<div class="rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden shrink-0">
-				<div class="px-4 pt-3 pb-2 border-b border-slate-100">
+			<div class="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden shrink-0">
+				<div class="px-6 pt-4 pb-3 border-b border-slate-100">
 					<span class="section-label">Names</span>
 				</div>
-				<div class="p-3 grid grid-cols-2 gap-2">
+				<div class="p-5 grid grid-cols-2 gap-3">
 					<FormField label="Devanagari *" name="nameDevanagari" error={fieldErrors.nameDevanagari}>
-						<input id="nameDevanagari" name="nameDevanagari" class="input py-1.5 text-sm font-devanagari"
+						<input id="nameDevanagari" name="nameDevanagari" class="input py-2.5 text-base font-devanagari"
 							value={value.nameDevanagari} required />
 					</FormField>
 					<FormField label="Roman *" name="nameRoman" error={fieldErrors.nameRoman}>
-						<input id="nameRoman" name="nameRoman" class="input py-1.5 text-sm" value={value.nameRoman} required />
+						<input id="nameRoman" name="nameRoman" class="input py-2.5 text-base" value={value.nameRoman} required />
 					</FormField>
 					<FormField label="Telugu" name="nameTelugu" error={fieldErrors.nameTelugu}>
-						<input id="nameTelugu" name="nameTelugu" class="input py-1.5 text-sm" value={value.nameTelugu ?? ''} />
+						<input id="nameTelugu" name="nameTelugu" class="input py-2.5 text-base" value={value.nameTelugu ?? ''} />
 					</FormField>
 					<FormField label="Kannada" name="nameKannada" error={fieldErrors.nameKannada}>
-						<input id="nameKannada" name="nameKannada" class="input py-1.5 text-sm" value={value.nameKannada ?? ''} />
+						<input id="nameKannada" name="nameKannada" class="input py-2.5 text-base" value={value.nameKannada ?? ''} />
 					</FormField>
 				</div>
 			</div>
 
-			<!-- Visibility — grows to fill remaining col height -->
-			<div class="flex-1 rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden flex flex-col">
-				<label class="flex items-center justify-between gap-3 px-4 py-4 cursor-pointer select-none flex-1">
+			<!-- Visibility — stretches to fill -->
+			<div class="flex-1 rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden flex flex-col">
+				<label class="flex items-center justify-between gap-4 px-6 py-6 cursor-pointer select-none flex-1">
 					<div>
-						<p class="text-sm font-semibold transition-colors {isActive ? 'text-emerald-700' : 'text-slate-500'}">
+						<p class="text-base font-semibold transition-colors {isActive ? 'text-emerald-700' : 'text-slate-500'}">
 							{isActive ? 'Published' : 'Draft'}
 						</p>
-						<p class="text-xs mt-0.5 {isActive ? 'text-emerald-500' : 'text-slate-400'}">
+						<p class="text-sm mt-1 {isActive ? 'text-emerald-500' : 'text-slate-400'}">
 							{isActive ? 'Live in Flutter app' : 'Hidden from users'}
 						</p>
 					</div>
 					<input type="checkbox" name="isActive" bind:checked={isActive} class="sr-only" />
-					<div class="relative shrink-0 w-11 h-6 rounded-full transition-all duration-300 cursor-pointer
+					<div class="relative shrink-0 w-14 h-7 rounded-full transition-all duration-300 cursor-pointer
 						{isActive ? 'bg-emerald-500 shadow-emerald-200 shadow-md' : 'bg-slate-200'}">
-						<span class="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-300
-							{isActive ? 'left-[calc(100%-1.375rem)]' : 'left-0.5'}"></span>
+						<span class="absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-300
+							{isActive ? 'left-[calc(100%-1.625rem)]' : 'left-0.5'}"></span>
 					</div>
 				</label>
 			</div>
 
-		</div><!-- /col 1 -->
+		</div>
 
-		<!-- ╔══ COL 2: Image · Description · Deity ════════════════════════╗ -->
-		<div class="flex flex-col gap-3 min-h-0">
+		<!-- ╔══ COL 2 ══════════════════════════════════════════════════════╗ -->
+		<div class="flex flex-col gap-4 min-h-0">
 
 			<!-- Mantra Image -->
-			<div class="rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden shrink-0">
-				<div class="px-4 pt-3 pb-2 border-b border-slate-100 flex items-center gap-2">
-					<Image size={12} class="text-slate-400" />
+			<div class="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden shrink-0">
+				<div class="px-6 pt-4 pb-3 border-b border-slate-100 flex items-center gap-2">
+					<Image size={16} class="text-slate-400" />
 					<span class="section-label">Mantra Image</span>
-					<span class="ml-auto text-[10px] text-slate-400 normal-case tracking-normal">Shown in app detail</span>
+					<span class="ml-auto text-xs text-slate-400 normal-case tracking-normal">Shown in app detail</span>
 				</div>
-				<div class="p-3 space-y-2">
+				<div class="p-5 space-y-3">
 					{#if value.imageUrl}
-						<div class="rounded-lg overflow-hidden border border-slate-100 bg-slate-50">
-							<img src={value.imageUrl} alt="Mantra" class="w-full h-28 object-cover" />
+						<div class="rounded-xl overflow-hidden border border-slate-100 bg-slate-50">
+							<img src={value.imageUrl} alt="Mantra" class="w-full h-36 object-cover" />
 						</div>
 					{/if}
 					<MediaUploadField
@@ -205,66 +204,66 @@
 				</div>
 			</div>
 
-			<!-- Content — grows to fill remaining col height -->
-			<div class="flex-1 min-h-0 rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden flex flex-col">
-				<div class="px-4 pt-3 pb-2 border-b border-slate-100 shrink-0">
+			<!-- Content — stretches to fill -->
+			<div class="flex-1 min-h-0 rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden flex flex-col">
+				<div class="px-6 pt-4 pb-3 border-b border-slate-100 shrink-0">
 					<span class="section-label">Content</span>
 				</div>
-				<div class="flex-1 p-3 flex flex-col gap-2 min-h-0">
-					<FormField label="Description *" name="description" error={fieldErrors.description} class="flex-1 flex flex-col">
+				<div class="flex-1 p-5 flex flex-col gap-3 min-h-0">
+					<FormField label="Description *" name="description" error={fieldErrors.description}>
 						<textarea id="description" name="description"
-							class="input resize-none leading-relaxed text-sm py-1.5 flex-1 min-h-0 w-full"
-							style="height:100%">{value.description}</textarea>
+							class="input resize-none leading-relaxed text-base py-2.5 w-full"
+							style="min-height:120px;flex:1">{value.description}</textarea>
 					</FormField>
 					<FormField label="Deity" name="deity" error={fieldErrors.deity} hint="Drives hero image colour in app.">
-						<input id="deity" name="deity" class="input py-1.5 text-sm" value={value.deity ?? ''} />
+						<input id="deity" name="deity" class="input py-2.5 text-base" value={value.deity ?? ''} />
 					</FormField>
 				</div>
 			</div>
 
-		</div><!-- /col 2 -->
+		</div>
 
-		<!-- ╔══ COL 3: Tags · Practice · Audio ════════════════════════════╗ -->
-		<div class="flex flex-col gap-3 min-h-0">
+		<!-- ╔══ COL 3 ══════════════════════════════════════════════════════╗ -->
+		<div class="flex flex-col gap-4 min-h-0">
 
 			<!-- Tags -->
-			<div class="rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden shrink-0">
-				<div class="px-4 pt-3 pb-2 border-b border-slate-100">
+			<div class="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden shrink-0">
+				<div class="px-6 pt-4 pb-3 border-b border-slate-100">
 					<span class="section-label">Tags</span>
-					<span class="ml-2 text-[10px] text-slate-400 normal-case tracking-normal">Mantra-by-Need</span>
+					<span class="ml-2 text-xs text-slate-400 normal-case tracking-normal">Mantra-by-Need</span>
 				</div>
-				<div class="p-3">
+				<div class="p-5">
 					<TagMultiSelect name="tags" options={MANTRA_TAGS} bind:value={tags} />
 				</div>
 			</div>
 
 			<!-- Practice Defaults -->
-			<div class="rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden shrink-0">
-				<div class="px-4 pt-3 pb-2 border-b border-slate-100">
+			<div class="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden shrink-0">
+				<div class="px-6 pt-4 pb-3 border-b border-slate-100">
 					<span class="section-label">Practice Defaults</span>
 				</div>
-				<div class="p-3 grid grid-cols-2 gap-2">
+				<div class="p-5 grid grid-cols-2 gap-3">
 					<FormField label="Rec. count" name="recommendedCount" hint="Per-day." error={fieldErrors.recommendedCount}>
 						<input id="recommendedCount" name="recommendedCount" type="number" min="1"
-							class="input py-1.5 text-sm" value={value.recommendedCount ?? ''} />
+							class="input py-2.5 text-base" value={value.recommendedCount ?? ''} />
 					</FormField>
 					<FormField label="Rec. days" name="recommendedDays" hint="Optional." error={fieldErrors.recommendedDays}>
 						<input id="recommendedDays" name="recommendedDays" type="number" min="1"
-							class="input py-1.5 text-sm" value={value.recommendedDays ?? ''} />
+							class="input py-2.5 text-base" value={value.recommendedDays ?? ''} />
 					</FormField>
 				</div>
 			</div>
 
-			<!-- Pronunciation Audio — grows to fill remaining col height -->
-			<div class="flex-1 min-h-0 rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden flex flex-col">
-				<div class="px-4 pt-3 pb-2 border-b border-slate-100 flex items-center gap-2 shrink-0">
-					<Music size={12} class="text-slate-400" />
+			<!-- Pronunciation Audio — stretches to fill -->
+			<div class="flex-1 min-h-0 rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden flex flex-col">
+				<div class="px-6 pt-4 pb-3 border-b border-slate-100 flex items-center gap-2 shrink-0">
+					<Music size={16} class="text-slate-400" />
 					<span class="section-label">Pronunciation Audio</span>
 				</div>
-				<div class="flex-1 min-h-0 p-3 flex flex-col gap-2">
+				<div class="flex-1 min-h-0 p-5 flex flex-col gap-3">
 					<FormField label="URL" name="pronunciationUrl" error={fieldErrors.pronunciationUrl}>
 						<input id="pronunciationUrl" name="pronunciationUrl" type="url"
-							class="input py-1.5 text-sm" value={value.pronunciationUrl ?? ''} placeholder="https://…" />
+							class="input py-2.5 text-base" value={value.pronunciationUrl ?? ''} placeholder="https://…" />
 					</FormField>
 					<div class="flex-1 min-h-0">
 						<MediaUploadField
@@ -278,49 +277,49 @@
 				</div>
 			</div>
 
-		</div><!-- /col 3 -->
+		</div>
 
 	</div><!-- /3-col -->
 
 	<!-- ══ MILESTONES ════════════════════════════════════════════════════════ -->
-	<div class="shrink-0 rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden">
-		<div class="px-4 pt-3 pb-2 border-b border-slate-100 flex items-center gap-3">
+	<div class="shrink-0 rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+		<div class="px-6 pt-4 pb-3 border-b border-slate-100 flex items-center gap-4">
 			<span class="flex-1 section-label">
 				Program Milestones
-				<span class="ml-2 normal-case font-normal text-slate-400 tracking-normal text-[10px]">
+				<span class="ml-2 normal-case font-normal text-slate-400 tracking-normal text-xs">
 					Count presets + day options on Set Target screen
 				</span>
 			</span>
 			<button type="button" onclick={addMilestone}
-				class="flex items-center gap-1.5 rounded-lg border border-dashed border-slate-200 bg-slate-50
-					px-3 py-1 text-[11px] font-semibold text-slate-500 hover:bg-slate-100 transition-colors">
-				<Plus size={11} /> Add
+				class="flex items-center gap-2 rounded-xl border border-dashed border-slate-200 bg-slate-50
+					px-4 py-1.5 text-sm font-semibold text-slate-500 hover:bg-slate-100 transition-colors">
+				<Plus size={14} /> Add
 			</button>
 		</div>
-		<div class="p-3">
-			<div class="grid grid-cols-4 gap-2">
+		<div class="p-5">
+			<div class="grid grid-cols-4 gap-3">
 				{#each milestones as milestone, i (i)}
-					<div class="relative rounded-xl border border-slate-100 bg-slate-50 p-2.5 space-y-2
+					<div class="relative rounded-2xl border border-slate-100 bg-slate-50 p-4 space-y-3
 						hover:border-brand-200 hover:bg-brand-50/40 transition-colors">
 						<button type="button" onclick={() => removeMilestone(i)}
-							class="absolute top-1.5 right-1.5 rounded p-0.5 text-slate-300 hover:text-red-400 transition-colors">
-							<Trash2 size={10} />
+							class="absolute top-2 right-2 rounded-lg p-1 text-slate-300 hover:text-red-400 transition-colors">
+							<Trash2 size={13} />
 						</button>
 						<div>
-							<p class="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1">Count</p>
+							<p class="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Count</p>
 							<input type="number" min="1" value={milestone.count}
 								oninput={(e) => updateMilestoneCount(i, parseInt((e.target as HTMLInputElement).value, 10))}
-								class="input text-sm font-bold w-full py-1" placeholder="108" />
+								class="input text-base font-bold w-full py-2" placeholder="108" />
 						</div>
 						<div>
-							<p class="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1">Days (comma-sep.)</p>
+							<p class="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Days (comma-sep.)</p>
 							<input type="text" value={milestone.dayOptions.join(', ')}
 								oninput={(e) => updateDayOptions(i, (e.target as HTMLInputElement).value)}
-								class="input text-xs font-mono w-full py-1" placeholder="1, 7, 21, 40" />
+								class="input text-sm font-mono w-full py-2" placeholder="1, 7, 21, 40" />
 						</div>
-						<div class="flex gap-1 flex-wrap">
+						<div class="flex gap-1.5 flex-wrap">
 							{#each milestone.dayOptions.slice(0, 5) as d, di}
-								<span class="rounded px-1 py-0.5 text-[9px] font-bold
+								<span class="rounded-md px-2 py-0.5 text-xs font-bold
 									{di === 0 ? 'bg-orange-100 text-orange-600 ring-1 ring-orange-200' : 'bg-slate-200 text-slate-500'}">
 									{d}d
 								</span>
@@ -329,7 +328,7 @@
 					</div>
 				{/each}
 				{#if milestones.length === 0}
-					<div class="col-span-4 flex items-center justify-center py-5 text-slate-400 text-sm">
+					<div class="col-span-4 flex items-center justify-center py-8 text-slate-400 text-base">
 						No milestones — click Add
 					</div>
 				{/if}
@@ -340,14 +339,14 @@
 
 	<!-- ══ ACTIONS ═══════════════════════════════════════════════════════════ -->
 	<div class="shrink-0 flex items-center justify-between">
-		<a href="/mantras" class="btn-secondary text-sm">Cancel</a>
+		<a href="/mantras" class="btn-secondary">Cancel</a>
 		<button type="submit"
-			class="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm
+			class="flex items-center gap-2.5 px-7 py-3 rounded-xl font-semibold text-base
 				bg-brand-600 text-white shadow-md shadow-brand-200
 				hover:bg-brand-700 hover:shadow-lg hover:shadow-brand-200
 				disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150"
 			disabled={submitting}>
-			<Save size={14} />
+			<Save size={18} />
 			{submitting ? 'Saving…' : submitLabel}
 		</button>
 	</div>

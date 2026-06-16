@@ -20,7 +20,8 @@ export const PUT: RequestHandler = async (event) => {
 	if (typeof rate !== 'number' || rate < 1 || !Number.isFinite(rate)) {
 		throw error(400, 'rate must be a positive integer');
 	}
-	await setRewardRate(rate);
+	const normalized = Math.max(1, Math.round(rate));
+	await setRewardRate(normalized);
 	emitChange('reward_event'); // triggers Flutter to refresh balance
-	return json({ rate: Math.max(1, Math.round(rate)) });
+	return json({ rate: normalized });
 };

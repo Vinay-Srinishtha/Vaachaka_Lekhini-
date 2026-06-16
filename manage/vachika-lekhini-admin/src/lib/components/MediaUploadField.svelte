@@ -149,8 +149,11 @@
 			});
 			const payload = await res.json().catch(() => null);
 			if (!res.ok) throw new Error(payload?.message ?? payload?.error ?? 'Upload failed.');
-			if (!payload?.uploadUrl || !payload?.url || !targetInput) {
+			if (!payload?.uploadUrl || !payload?.url) {
 				throw new Error('Upload URL was not returned.');
+			}
+			if (!targetInput) {
+				throw new Error(`Target input #${targetId} not found in form.`);
 			}
 
 			const uploadRes = await fetch(payload.uploadUrl, {

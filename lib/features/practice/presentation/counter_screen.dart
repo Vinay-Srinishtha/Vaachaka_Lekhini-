@@ -182,6 +182,7 @@ class _BodyState extends ConsumerState<_Body> {
                   SizedBox(height: compact ? 8 : 10),
                   _ActionRow(
                     compact: compact,
+                    showFinish: state.activeSessionId != null,
                     startLabel: state.activeSessionId == null
                         ? context.l10n.startButton
                         : state.isRunning
@@ -918,12 +919,17 @@ class _ActionRow extends StatelessWidget {
     required this.startIcon,
     required this.onStart,
     required this.onFinish,
+    required this.showFinish,
   });
   final bool compact;
   final String startLabel;
   final IconData startIcon;
   final VoidCallback onStart;
   final VoidCallback? onFinish;
+
+  /// Finish only appears once a session is active — before the first START
+  /// the Start button spans the full width on its own.
+  final bool showFinish;
 
   @override
   Widget build(BuildContext context) {
@@ -938,15 +944,17 @@ class _ActionRow extends StatelessWidget {
             compact: compact,
           ),
         ),
-        const SizedBox(width: KvlSpacing.md),
-        Expanded(
-          child: _ActionButton(
-            label: context.l10n.finishButton,
-            color: KvlColors.accent,
-            onTap: onFinish,
-            compact: compact,
+        if (showFinish) ...[
+          const SizedBox(width: KvlSpacing.md),
+          Expanded(
+            child: _ActionButton(
+              label: context.l10n.finishButton,
+              color: KvlColors.accent,
+              onTap: onFinish,
+              compact: compact,
+            ),
           ),
-        ),
+        ],
       ],
     );
   }

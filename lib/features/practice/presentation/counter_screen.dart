@@ -935,7 +935,10 @@ class _ActionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
+        // Before a session: Start spans full width (flex doesn't matter, it's
+        // the only child). After start: Pause/Resume takes 1/4, Finish 3/4.
         Expanded(
+          flex: 1,
           child: _ActionButton(
             label: startLabel,
             icon: startIcon,
@@ -947,6 +950,7 @@ class _ActionRow extends StatelessWidget {
         if (showFinish) ...[
           const SizedBox(width: KvlSpacing.md),
           Expanded(
+            flex: 3,
             child: _ActionButton(
               label: context.l10n.finishButton,
               color: KvlColors.accent,

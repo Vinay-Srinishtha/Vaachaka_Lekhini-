@@ -66,6 +66,9 @@ class AudioCapture {
       numChannels: 1,
       noiseSuppress: false, // hardware NoiseSuppressor unavailable on many devices → crashes release APK
       echoCancel: false,
+      // Bluetooth SCO management left ON (default) so the mic can capture from
+      // Bluetooth and wired headsets as well as the built-in mic. The earlier
+      // "Reply already submitted" SCO crash is fixed by record_android 2.1.1.
     ));
     _out = StreamController<Uint8List>.broadcast();
 

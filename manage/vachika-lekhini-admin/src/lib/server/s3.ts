@@ -128,16 +128,19 @@ export function isUploadCategory(value: string): value is UploadCategory {
 }
 
 export async function deleteAdminMediaObject(url: string) {
-	// Extract key from URL path — works with direct S3 URLs and CDN URLs.
-	// Auth is already enforced at the route level; no need to validate origin.
+	// Extract key and bucket from the URL.
+	// S3 URL format: https://{bucket}.s3.{region}.amazonaws.com/{key}
+	// Falls back to parsing bucket from hostname when S3_BUCKET_NAME is not set.
 	let key: string;
+	let bucket: string;
 	try {
 		const parsed = new URL(url);
 		key = parsed.pathname.replace(/^\/+/, '');
 		if (!key) throw new Error('empty key');
+		bucket = env['S3_BUCKET_NAME']?.trim() || parsed.hostname.split('.')[0];
+		if (!bucket) throw new Error('no bucket');
 	} catch {
 		throw error(400, 'Invalid media URL.');
 	}
-	const bucket = requiredEnv('S3_BUCKET_NAME');
 	await s3Client().send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
 }

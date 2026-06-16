@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import FormField from './FormField.svelte';
+	import MediaUploadField from './MediaUploadField.svelte';
 	import { Save } from '@lucide/svelte';
 
 	interface StoreValue {
@@ -93,6 +94,13 @@
 		</div>
 		<FormField label="Image URL" name="imageUrl" error={fieldErrors.imageUrl}>
 			<input id="imageUrl" name="imageUrl" type="url" class="input" value={value.imageUrl ?? ''} placeholder="https://…" />
+			<MediaUploadField
+				category="store-image"
+				targetId="imageUrl"
+				accept="image/jpeg,image/png,image/webp"
+				buttonLabel="Upload Image"
+				currentUrl={value.imageUrl}
+			/>
 		</FormField>
 		<label class="flex items-center justify-between gap-4 mt-2 p-3 rounded-lg border cursor-pointer select-none
 			{value.isActive ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'}">

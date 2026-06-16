@@ -49,9 +49,11 @@ class _KvlAppState extends ConsumerState<KvlApp> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
     final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
-    // Kick off the Vosk model warm-up in the background once auth completes.
-    // We discard the value — its only job is to side-effect the unzip.
+    // Kick off the Vosk warm-up in the background once auth completes:
+    // unzip the model AND build the shared recognizer (the expensive native
+    // model load) so tapping "Start" begins counting instantly — no cold load.
     ref.watch(voskModelWarmupProvider);
+    ref.watch(voskRecognizerProvider);
 
     // Touch the remote-backed providers so they hydrate from cache + start
     // their background refresh against /api/v1/* at app launch. The mantra
@@ -82,10 +84,13 @@ class _KvlAppState extends ConsumerState<KvlApp> with WidgetsBindingObserver {
       if (prevProfile == null) return;          // cold start — trust stored settings
       if (prevProfile.id == profile.id) return; // same member — no switch
       final current = ref.read(settingsProvider).value;
+      final repo = ref.read(settingsRepositoryProvider);
       if (current != null && current.languageCode != profile.language) {
-        unawaited(
-          ref.read(settingsRepositoryProvider).setLanguage(profile.language),
-        );
+        unawaited(repo.setLanguage(profile.language));
+      }
+      if (current != null &&
+          current.mantraLanguageCode != profile.mantraLanguage) {
+        unawaited(repo.setMantraLanguage(profile.mantraLanguage));
       }
     });
 

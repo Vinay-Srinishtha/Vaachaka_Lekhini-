@@ -5,6 +5,20 @@ import { MANTRA_TAGS, THUMB_PALETTES } from '$lib/constants';
 
 const slugRegex = /^[a-z][a-z0-9_]{1,40}$/;
 
+const milestoneSchema = z.object({
+	count: z.number().int().positive(),
+	dayOptions: z.array(z.number().int().positive()).min(1).max(8)
+});
+
+export type MantraMilestone = z.infer<typeof milestoneSchema>;
+
+export const DEFAULT_MILESTONES: MantraMilestone[] = [
+	{ count: 108,   dayOptions: [1,  7,   21,  40]  },
+	{ count: 1008,  dayOptions: [7,  21,  40,  108] },
+	{ count: 5116,  dayOptions: [21, 40,  108, 180] },
+	{ count: 10116, dayOptions: [40, 108, 180, 365] }
+];
+
 const mantraFormSchema = z.object({
 	slug: z.string().regex(slugRegex, 'Slug: lowercase letters, digits, underscores; 2–41 chars.'),
 	nameDevanagari: z.string().min(1).max(200),
@@ -18,6 +32,7 @@ const mantraFormSchema = z.object({
 	recommendedCount: z.coerce.number().int().positive().nullable().optional(),
 	recommendedDays: z.coerce.number().int().positive().nullable().optional(),
 	pronunciationUrl: z.string().url().max(500).nullable().optional(),
+	milestones: z.array(milestoneSchema).min(1).max(12).nullable().optional(),
 	isActive: z.coerce.boolean().default(true),
 	sortOrder: z.coerce.number().int().default(0)
 });
@@ -40,6 +55,7 @@ export function parseMantraForm(data: FormData): MantraFormInput {
 		recommendedCount: emptyToNull(data.get('recommendedCount')),
 		recommendedDays: emptyToNull(data.get('recommendedDays')),
 		pronunciationUrl: emptyToNull(data.get('pronunciationUrl')),
+		milestones: parseMilestones(data.get('milestones')),
 		isActive: data.get('isActive') === 'on' || data.get('isActive') === 'true',
 		sortOrder: Number(data.get('sortOrder') ?? 0)
 	};
@@ -53,6 +69,17 @@ export function parseMantraForm(data: FormData): MantraFormInput {
 		throw error(400, { message: 'Validation failed', fieldErrors } as any);
 	}
 	return parsed.data;
+}
+
+function parseMilestones(v: FormDataEntryValue | null): MantraMilestone[] | null {
+	if (!v) return null;
+	try {
+		const arr = JSON.parse(String(v));
+		if (!Array.isArray(arr) || arr.length === 0) return null;
+		return arr.map((m: unknown) => milestoneSchema.parse(m));
+	} catch {
+		return null;
+	}
 }
 
 function emptyToNull(v: FormDataEntryValue | null): string | null {

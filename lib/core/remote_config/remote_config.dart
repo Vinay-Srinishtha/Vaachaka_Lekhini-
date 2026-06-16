@@ -42,6 +42,23 @@ class RemoteConfig {
     return v.toString();
   }
 
+  List<int> listIntFlag(String key, {required List<int> fallback}) {
+    final v = _values[key];
+    if (v is List) {
+      final result = v.whereType<int>().toList();
+      return result.isNotEmpty ? result : fallback;
+    }
+    if (v is String && v.isNotEmpty) {
+      final result = v
+          .split(',')
+          .map((s) => int.tryParse(s.trim()))
+          .whereType<int>()
+          .toList();
+      return result.isNotEmpty ? result : fallback;
+    }
+    return fallback;
+  }
+
   T? jsonFlag<T>(String key) {
     final v = _values[key];
     return v is T ? v : null;

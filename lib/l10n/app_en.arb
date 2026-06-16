@@ -33,11 +33,19 @@
   "enterSixDigitCodeSent": "Enter the 6-digit code sent to your number.",
   "enterSixDigitCodeSentToMobile": "Enter the 6-digit code sent to +91{mobile}",
   "@enterSixDigitCodeSentToMobile": {
-    "placeholders": { "mobile": { "type": "String" } }
+    "placeholders": {
+      "mobile": {
+        "type": "String"
+      }
+    }
   },
   "resendOtpCountdown": "Resend OTP in {seconds}s",
   "@resendOtpCountdown": {
-    "placeholders": { "seconds": { "type": "int" } }
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
   },
   "resendOtp": "Resend OTP",
   "loginConfirmButton": "Login",
@@ -46,12 +54,20 @@
   "welcomeGreeting": "Welcome",
   "welcomeGreetingUser": "Welcome, {name}!",
   "@welcomeGreetingUser": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "homeSublineEmpty": "Start your spiritual journey",
   "homeSublineActive": "{count, plural, =1{You're doing great! 1 Program Active} other{You're doing great! {count} Programs Active}}",
   "@homeSublineActive": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "saveNameButton": "Save Name",
   "savingNameButton": "Saving…",
@@ -62,7 +78,11 @@
   "startFirstGoalToday": "Start your first goal today",
   "continueGoal": "Continue your {days}-day goal",
   "@continueGoal": {
-    "placeholders": { "days": { "type": "int" } }
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
   },
   "quickStartPractice": "Quick Start Practice",
   "continuePractice": "Continue Practice",
@@ -76,7 +96,11 @@
   "mantraNotFoundTitle": "Not found",
   "startPracticeWithMantra": "Start Practice with {name} Mantra",
   "@startPracticeWithMantra": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "pronunciationGuide": "Pronunciation Guide",
   "mantraForYourNeeds": "Mantra for Your Needs",
@@ -85,12 +109,20 @@
   "startThisPractice": "Start This Practice",
   "recitationsTimes": "{count} times daily",
   "@recitationsTimes": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "recitationsSub": "Recitations",
   "forDays": "For {count} days",
   "@forDays": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "durationSub": "Duration",
   "learnMore": "Learn More",
@@ -105,16 +137,28 @@
   "milestoneCompleted": "Completed",
   "milestoneLeft": "{count} left",
   "@milestoneLeft": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "practisingFor": "Practising for ",
   "practiceDay": "{days} Day",
   "@practiceDay": {
-    "placeholders": { "days": { "type": "int" } }
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
   },
   "practiceDays": "{days} Days",
   "@practiceDays": {
-    "placeholders": { "days": { "type": "int" } }
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
   },
   "startButton": "START",
   "noActivePrograms": "No active programs",
@@ -126,7 +170,11 @@
   "practiceScreenTitle": "Practice",
   "sessionSaved": "Session saved · +{count} chants",
   "@sessionSaved": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "todaysProgress": "Today's Progress",
   "microphoneNeeded": "Microphone needed",
@@ -138,7 +186,11 @@
   "finishButton": "Finish",
   "countDisplay": "Global Mantra Count : {count}",
   "@countDisplay": {
-    "placeholders": { "count": { "type": "String" } }
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
   },
   "yoursDisplay": "Yours : ",
   "ambienceSound": "Ambience Sound",
@@ -157,36 +209,22 @@
   "pickMantraAndTargetToStart": "Pick a mantra and set a target to start your first program.",
   "completedWithCheck": "Completed ✓",
   "setYourPracticeTarget": "Set Your Practice Target",
-  "chooseDaysSpread": "Choose how many days you want to spread {count} across.",
-  "@chooseDaysSpread": {
-    "placeholders": { "count": { "type": "String" } }
-  },
-  "presetFastest": "Fastest",
-  "presetBalanced": "Balanced",
-  "presetGentle": "Gentle",
-  "presetSustainable": "Sustainable",
-  "setCustomDuration": "Set a Custom Duration",
-  "durationLabel": "Duration",
   "daysValue": "{days} days",
   "@daysValue": {
-    "placeholders": { "days": { "type": "int" } }
-  },
-  "thisMeansPace": "This means {pace}",
-  "@thisMeansPace": {
-    "placeholders": { "pace": { "type": "String" } }
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
   },
   "confirmAndBegin": "Confirm & Begin",
   "creatingButton": "Creating…",
-  "choosePracticeTarget": "Choose a target for your practice. You can select one of the popular targets or set your own custom one.",
   "writingsTargetCrore": "1,00,00,000 writings",
   "mostPopularBadge": "Most Popular",
   "writingsTargetMillion": "1,000,000 writings",
   "setCustomTarget": "Set a custom target",
   "totalWritingsLabel": "Total Writings",
   "totalWritingsHint": "e.g., 500,000",
-  "completionTimeLabel": "Completion Time (in days)",
-  "completionTimeHint": "e.g., 365",
-  "confirmTarget": "Confirm Target",
   "cancelButton": "Cancel",
   "searchRewards": "Search for rewards…",
   "allFilter": "All",
@@ -198,7 +236,11 @@
   "noRewardsMatch": "No rewards match your search",
   "rewardedItemTitle": "Redeemed {title}",
   "@rewardedItemTitle": {
-    "placeholders": { "title": { "type": "String" } }
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
   },
   "rewardPointsHistory": "Reward Points & History",
   "yourTotalPoints": "★ Your Total Points",
@@ -232,15 +274,6 @@
   "displaySection": "DISPLAY",
   "languageSetting": "Language",
   "languagePickerTitle": "Language",
-  "themeSetting": "Theme",
-  "themeLight": "Light",
-  "themeDark": "Dark",
-  "themeSystem": "System",
-  "fontSizeSetting": "Font Size",
-  "fontSizeSmall": "Small (90%)",
-  "fontSizeDefaultPct": "Default (100%)",
-  "fontSizeLarge": "Large (115%)",
-  "fontSizeExtraLarge": "Extra Large (130%)",
   "linkSocialSection": "LINK SOCIAL",
   "linkFacebook": "Link Facebook",
   "linkWhatsApp": "Link WhatsApp",
@@ -275,7 +308,11 @@
   "infoAboutBody": "Vaachaka Lekhini is your personal spiritual practice companion. Chant or write your chosen mantras, track your progress, and grow your discipline — together with your family.\n\nVersion 0.1.0",
   "recitationsOnDate": "Recitations on {date}",
   "@recitationsOnDate": {
-    "placeholders": { "date": { "type": "String" } }
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
   },
   "dailyTarget": "Daily Target",
   "actualAchieved": "Actual Achieved",
@@ -288,7 +325,11 @@
   "dedicateOfferPractice": "Offer your chanting practice to someone special",
   "dedicateOfferNamedPractice": "Offer your {mantraName} practice to someone special",
   "@dedicateOfferNamedPractice": {
-    "placeholders": { "mantraName": { "type": "String" } }
+    "placeholders": {
+      "mantraName": {
+        "type": "String"
+      }
+    }
   },
   "dedicatedTo": "Dedicated to",
   "dedicatedToHint": "e.g. My Mother, Sri Guru, Self",
@@ -302,7 +343,11 @@
   "dailyProgressTitle": "Daily Progress",
   "communityInviteBanner": "Invite up to {count} friends to your practice circle",
   "@communityInviteBanner": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "communityInviteSubline": "Create a community to support each other's spiritual journey.",
   "inviteFriendsButton": "Invite Friends",
@@ -333,11 +378,19 @@
   "addFamilyTitle": "Add Family Members",
   "addFamilyDescription": "Add up to {cap} family members under your registered mobile number. Each member has their own practice counter.",
   "@addFamilyDescription": {
-    "placeholders": { "cap": { "type": "int" } }
+    "placeholders": {
+      "cap": {
+        "type": "int"
+      }
+    }
   },
   "slotsRemaining": "Slots remaining: {remaining}",
   "@slotsRemaining": {
-    "placeholders": { "remaining": { "type": "int" } }
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      }
+    }
   },
   "existingMembersLabel": "Existing members",
   "registeredMobileLabel": "Registered Mobile",
@@ -351,7 +404,11 @@
   "writeOnScreenInstruction": "Write Inside the dots",
   "handwritingSaved": "Handwriting saved · +{count}",
   "@handwritingSaved": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "saveLabel": "Save",
   "clearTooltip": "Clear",
@@ -373,7 +430,11 @@
   "pickMore": "Pick more",
   "uploadSelected": "Upload Selected ({count})",
   "@uploadSelected": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "captureHandwritingTitle": "Capture Your Handwriting",
   "noCameraAvailable": "No camera available on this device",
@@ -392,8 +453,12 @@
   "recordingStatus": "● Recording  ·  {count} / {target}",
   "@recordingStatus": {
     "placeholders": {
-      "count": { "type": "int" },
-      "target": { "type": "int" }
+      "count": {
+        "type": "int"
+      },
+      "target": {
+        "type": "int"
+      }
     }
   },
   "tapStartToBegin": "Tap Start to begin",
@@ -412,7 +477,6 @@
   "bestStreakLabel": "Best Streak",
   "daysLabel": "days",
   "closeLabel": "Close",
-
   "authErrorInvalidOtp": "Wrong verification code. Please try again.",
   "authErrorInvalidMobile": "Please enter a valid 10-digit mobile number.",
   "authErrorAccountNotFound": "No account found for this number. Please create an account first.",
@@ -422,6 +486,7 @@
   "authErrorOtpExpired": "Verification code has expired. Please request a new one.",
   "authErrorServerError": "Server error. Please try again in a moment.",
   "authErrorTooManyAttempts": "Too many attempts. Please wait a moment before trying again.",
+  "authErrorAccountBanned": "Your account has been suspended. Please contact support.",
   "authErrorUnknown": "Something went wrong. Please try again.",
   "authErrorEnterName": "Please enter your name.",
   "authErrorEnterMobileValid": "Enter a valid 10-digit mobile number.",
@@ -435,7 +500,11 @@
   "deleteMemberTitle": "Remove member?",
   "deleteMemberContent": "This will remove {name} from your account.",
   "@deleteMemberContent": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "deleteMemberConfirm": "Remove",
   "changeMobileNumber": "Change Mobile Number",
@@ -447,7 +516,11 @@
   "logInInstead": "Log in instead",
   "resendCodeIn": "Resend code in {seconds}s",
   "@resendCodeIn": {
-    "placeholders": { "seconds": { "type": "int" } }
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
   },
   "resendCode": "Resend code",
   "editProfileTitle": "Edit Profile",
@@ -463,6 +536,19 @@
   "retrainWritingStyle": "Retrain Writing Style",
   "resendCodeCountdown": "Resend code in {seconds}s",
   "@resendCodeCountdown": {
-    "placeholders": { "seconds": { "type": "int" } }
-  }
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "mantraNeedWealthProsperity": "Wealth & Prosperity",
+  "mantraNeedPeaceCalm": "Peace & Calm",
+  "mantraNeedHealing": "Healing",
+  "mantraNeedProtection": "Protection",
+  "mantraNeedStrengthCourage": "Strength & Courage",
+  "mantraNeedSpiritualLiberation": "Spiritual Liberation",
+  "mantraNeedWisdomEnlightenment": "Wisdom & Enlightenment",
+  "mantraNeedDevotion": "Devotion",
+  "appTitle": "Vaachaka Lekhini"
 }

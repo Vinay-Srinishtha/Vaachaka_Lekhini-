@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -151,10 +150,7 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen> {
                       TextSpan(text: context.l10n.sayMantraInstruction),
                       TextSpan(
                         text: mantraText,
-                        style: KvlText.mantraByScript(
-                          script,
-                          18,
-                        ).copyWith(
+                        style: KvlText.mantraByScript(script, 18).copyWith(
                           color: KvlColors.primaryDeep,
                           fontWeight: FontWeight.w800,
                         ),
@@ -175,8 +171,8 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen> {
             ),
           ),
           const SizedBox(height: KvlSpacing.md),
-          _Waveform(active: _recording),
-          const SizedBox(height: 4),
+          _TrainingProgress(count: _count, target: _target),
+          const SizedBox(height: 8),
           Center(
             child: Text(
               _recording
@@ -209,6 +205,40 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen> {
   }
 }
 
+/// Segmented 0–[target] progress bar for voice training. Each captured sample
+/// fills one segment green; remaining segments stay red until recorded.
+class _TrainingProgress extends StatelessWidget {
+  const _TrainingProgress({required this.count, required this.target});
+  final int count;
+  final int target;
+
+  static const _green = Color(0xFF16A34A);
+  static const _red = Color(0xFFE5573E);
+
+  @override
+  Widget build(BuildContext context) {
+    final done = count.clamp(0, target);
+    return Row(
+      children: [
+        for (var i = 0; i < target; i++) ...[
+          if (i > 0) const SizedBox(width: 4),
+          Expanded(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOut,
+              height: 8,
+              decoration: BoxDecoration(
+                color: i < done ? _green : _red.withValues(alpha: 0.28),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 class _MicBubble extends StatefulWidget {
   const _MicBubble({required this.recording});
   final bool recording;
@@ -221,8 +251,25 @@ class _MicBubbleState extends State<_MicBubble>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 900),
-  )..repeat(reverse: true);
+    duration: const Duration(milliseconds: 1400),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.recording) _ctrl.repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(covariant _MicBubble oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.recording == oldWidget.recording) return;
+    if (widget.recording) {
+      _ctrl.repeat(reverse: true);
+    } else {
+      _ctrl.stop();
+    }
+  }
 
   @override
   void dispose() {
@@ -232,104 +279,49 @@ class _MicBubbleState extends State<_MicBubble>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _ctrl,
-      builder: (_, _) {
-        final t = Curves.easeInOut.transform(_ctrl.value);
-        final outer = widget.recording ? 24 + t * 12 : 0.0;
-        final middle = widget.recording ? 12 + t * 4 : 0.0;
-        return Container(
-          width: 130,
-          height: 130,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: RadialGradient(
-              colors: [const Color(0xFFFFB572), KvlColors.primary],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: KvlColors.primary.withValues(alpha: .16),
-                blurRadius: 0,
-                spreadRadius: middle,
+    return TweenAnimationBuilder<double>(
+      tween: Tween(end: widget.recording ? 1 : 0),
+      duration: const Duration(milliseconds: 360),
+      curve: Curves.easeOutCubic,
+      builder: (_, activity, child) {
+        return AnimatedBuilder(
+          animation: _ctrl,
+          builder: (_, _) {
+            final t = Curves.easeInOutSine.transform(_ctrl.value);
+            final middle = activity * (8 + t * 4);
+            final outer = activity * (18 + t * 8);
+            return Container(
+              width: 130,
+              height: 130,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [const Color(0xFFFFB572), KvlColors.primary],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: KvlColors.primary.withValues(alpha: .14 * activity),
+                    blurRadius: 2,
+                    spreadRadius: middle,
+                  ),
+                  BoxShadow(
+                    color: KvlColors.primary.withValues(alpha: .07 * activity),
+                    blurRadius: 4,
+                    spreadRadius: outer,
+                  ),
+                ],
               ),
-              BoxShadow(
-                color: KvlColors.primary.withValues(alpha: .08),
-                blurRadius: 0,
-                spreadRadius: outer,
+              alignment: Alignment.center,
+              child: const SizedBox(
+                width: 72,
+                height: 72,
+                child: CustomPaint(painter: _VoiceMicPainter()),
               ),
-            ],
-          ),
-          alignment: Alignment.center,
-          child: const SizedBox(
-            width: 72,
-            height: 72,
-            child: CustomPaint(painter: _VoiceMicPainter()),
-          ),
+            );
+          },
         );
       },
     );
-  }
-}
-
-class _Waveform extends StatefulWidget {
-  const _Waveform({required this.active});
-  final bool active;
-
-  @override
-  State<_Waveform> createState() => _WaveformState();
-}
-
-class _WaveformState extends State<_Waveform>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 550),
-  )..repeat();
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 32,
-      child: AnimatedBuilder(
-        animation: _ctrl,
-        builder: (_, _) {
-          const bars = 11;
-          return Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              for (var i = 0; i < bars; i++)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 1.5),
-                  child: Container(
-                    width: 3,
-                    height: widget.active ? _h(i, _ctrl.value) : 6,
-                    decoration: BoxDecoration(
-                      color: KvlColors.primary,
-                      borderRadius: KvlRadius.brSM,
-                    ),
-                  ),
-                ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  // Symmetric "breathing" amplitude with phase offsets per bar.
-  double _h(int i, double t) {
-    final mid = (11 - 1) / 2;
-    final dist = (i - mid).abs();
-    final phase = (t + dist * 0.08) % 1.0;
-    final amp = (math.sin(phase * math.pi * 2) + 1) / 2;
-    return 6 + amp * 22;
   }
 }
 
@@ -353,7 +345,10 @@ class _VoiceMicPainter extends CustomPainter {
     final capsuleH = size.height * .52;
     final capsuleTop = size.height * .03;
     final capsuleRect = Rect.fromLTWH(
-      cx - capsuleW / 2, capsuleTop, capsuleW, capsuleH,
+      cx - capsuleW / 2,
+      capsuleTop,
+      capsuleW,
+      capsuleH,
     );
     canvas.drawRRect(
       RRect.fromRectAndRadius(capsuleRect, Radius.circular(capsuleW / 2)),
@@ -382,7 +377,10 @@ class _VoiceMicPainter extends CustomPainter {
         width: size.width * .72,
         height: size.height * .38,
       ),
-      0, 3.14159, false, strokePaint,
+      0,
+      3.14159,
+      false,
+      strokePaint,
     );
 
     // Stem + base

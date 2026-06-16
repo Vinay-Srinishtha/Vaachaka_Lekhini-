@@ -11,6 +11,7 @@ import '../../../core/utils/indian_number_format.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../l10n/l10n.dart';
 import '../../enrolment/voice/domain/voice_enrolment.dart';
+import '../../mantras/domain/mantra.dart';
 
 class SetProgramTargetScreen extends ConsumerStatefulWidget {
   const SetProgramTargetScreen({super.key, required this.mantraId});
@@ -21,22 +22,26 @@ class SetProgramTargetScreen extends ConsumerStatefulWidget {
       _SetProgramTargetScreenState();
 }
 
+// Fallback milestones used when the mantra has none configured in the admin.
+const _defaultMilestones = [
+  MantraMilestone(count: 108,   dayOptions: [1,  7,  21,  40]),
+  MantraMilestone(count: 1008,  dayOptions: [7,  21, 40,  108]),
+  MantraMilestone(count: 5116,  dayOptions: [21, 40, 108, 180]),
+  MantraMilestone(count: 10116, dayOptions: [40, 108, 180, 365]),
+];
+const _dayOptionsFallback = [7, 21, 108, 365];
+
 class _SetProgramTargetScreenState
     extends ConsumerState<SetProgramTargetScreen> {
-  // ── Writings ────────────────────────────────────────────────────────────────
-  _WritingsPreset _writingsPreset = _WritingsPreset.crore;
-  final _customWritingsCtrl = TextEditingController(text: '500000');
+  int? _selectedCount = 108; // null means custom
+  final _customWritingsCtrl = TextEditingController(text: '108');
 
   // ── Days ────────────────────────────────────────────────────────────────────
-  static const _minDays = 1;
   static const _maxSliderDays = 2000;
-      (100, 'Fastest', KvlChipVariant.primary),
-      (180, 'Balanced', KvlChipVariant.primary),
-      (365, 'Gentle', KvlChipVariant.teal),
-      (500, 'Sustainable', KvlChipVariant.green),
-    ];
+  // 24 hrs/day × 60 chants/min = 1440 chants max per day
+  static const _chantsPerDay24h = 1440;
 
-  int _days = 180;
+  int _days = 1;
   bool _busy = false;
 
   // ── Lifecycle ────────────────────────────────────────────────────────────────
@@ -61,14 +66,15 @@ class _SetProgramTargetScreenState
 
   // ── Computed ─────────────────────────────────────────────────────────────────
   int get _writings {
-    switch (_writingsPreset) {
-      case _WritingsPreset.crore:
-        return 10000000;
-      case _WritingsPreset.million:
-        return 1000000;
-      case _WritingsPreset.custom:
-        return int.tryParse(_customWritingsCtrl.text) ?? 0;
-    }
+    if (_selectedCount != null) return _selectedCount!;
+    return int.tryParse(_customWritingsCtrl.text.replaceAll(',', '')) ?? 0;
+  }
+
+  // Minimum days so that chants/day never exceeds 24 h worth (1440 chants).
+  int get _minDays {
+    final w = _writings;
+    if (w <= 0) return 1;
+    return (w / _chantsPerDay24h).ceil().clamp(1, _maxSliderDays);
   }
 
   String _pace(int days) {
@@ -125,6 +131,20 @@ class _SetProgramTargetScreenState
   // ── Build ─────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    // Derive milestones from the mantra catalog (seeds from cache, always fast).
+    final mantra = ref.watch(mantraByIdProvider(widget.mantraId));
+    final milestones = (mantra?.milestones?.isNotEmpty == true)
+        ? mantra!.milestones!
+        : _defaultMilestones;
+
+    // Build a lookup: count → dayOptions
+    final dayOptionsMap = {for (final m in milestones) m.count: m.dayOptions};
+    final currentDayOptions =
+        dayOptionsMap[_selectedCount] ?? _dayOptionsFallback;
+
+    final minDays = _minDays;
+    // If current _days is below the new minimum (e.g. count changed), snap it up.
+    if (_days < minDays) _days = minDays;
     final sliderMax =
         _days > _maxSliderDays ? _days.toDouble() : _maxSliderDays.toDouble();
     final pace = _pace(_days);
@@ -141,36 +161,47 @@ class _SetProgramTargetScreenState
           // ── Section: Writings target ────────────────────────────────────────
           _SectionHeader(label: 'Total writings goal'),
           const SizedBox(height: KvlSpacing.sm),
-          _WritingsCard(
-            selected: _writingsPreset == _WritingsPreset.crore,
-            onTap: () => setState(() => _writingsPreset = _WritingsPreset.crore),
-            title: context.l10n.writingsTargetCrore,
-            badge: context.l10n.mostPopularBadge,
+
+          // Count preset chips
+          Wrap(
+            spacing: KvlSpacing.xs,
+            runSpacing: KvlSpacing.xs,
+            children: [
+              for (final milestone in milestones)
+                GestureDetector(
+                  onTap: () => setState(() {
+                    _selectedCount = milestone.count;
+                    _customWritingsCtrl.text = '${milestone.count}';
+                    // Auto-select first day option for this count.
+                    _days = milestone.dayOptions.firstOrNull ??
+                        _dayOptionsFallback.first;
+                  }),
+                  child: KvlChip(
+                    label: IndianNumberFormat.format(milestone.count),
+                    variant: _selectedCount == milestone.count
+                        ? KvlChipVariant.gold
+                        : KvlChipVariant.primary,
+                  ),
+                ),
+            ],
           ),
-          const SizedBox(height: KvlSpacing.xs),
-          _WritingsCard(
-            selected: _writingsPreset == _WritingsPreset.million,
-            onTap: () =>
-                setState(() => _writingsPreset = _WritingsPreset.million),
-            title: context.l10n.writingsTargetMillion,
-          ),
-          const SizedBox(height: KvlSpacing.xs),
+          const SizedBox(height: KvlSpacing.sm),
+
           // Custom writings input
           KvlCard(
-            variant: _writingsPreset == _WritingsPreset.custom
+            variant: _selectedCount == null
                 ? KvlCardVariant.soft
                 : KvlCardVariant.plain,
-            border: _writingsPreset == _WritingsPreset.custom
+            border: _selectedCount == null
                 ? Border.all(color: KvlColors.primary, width: 1.5)
                 : null,
-            onTap: () =>
-                setState(() => _writingsPreset = _WritingsPreset.custom),
+            onTap: () => setState(() => _selectedCount = null),
             child: Row(
               children: [
-                _RadioDot(selected: _writingsPreset == _WritingsPreset.custom),
+                _RadioDot(selected: _selectedCount == null),
                 const SizedBox(width: KvlSpacing.sm),
                 Expanded(
-                  child: _writingsPreset == _WritingsPreset.custom
+                  child: _selectedCount == null
                       ? KvlInput(
                           label: context.l10n.totalWritingsLabel,
                           hint: context.l10n.totalWritingsHint,
@@ -192,23 +223,13 @@ class _SetProgramTargetScreenState
           _SectionHeader(label: 'Spread over how many days?'),
           const SizedBox(height: KvlSpacing.sm),
 
-          // Day preset chips
-          Wrap(
-            spacing: KvlSpacing.xs,
-            runSpacing: KvlSpacing.xs,
-            children: [
-                GestureDetector(
-                  onTap: () => setState(() => _days = days),
-                  child: KvlChip(
-                    label: '$days days · $label',
-                    variant: _days == days
-                        ? KvlChipVariant.gold
-                        : chipVariant,
-                  ),
-                ),
-            ],
+          // Day quick-pick — segmented style, updates with count selection
+          _DaySegmented(
+            options: currentDayOptions,
+            selected: _days,
+            onSelect: (d) => setState(() => _days = d),
           ),
-          const SizedBox(height: KvlSpacing.md),
+          const SizedBox(height: KvlSpacing.sm),
 
           // Slider
           KvlCard(
@@ -232,15 +253,13 @@ class _SetProgramTargetScreenState
                   ],
                 ),
                 Slider(
-                  value: _days
-                      .clamp(_minDays, sliderMax.toInt())
-                      .toDouble(),
-                  min: _minDays.toDouble(),
+                  value: _days.clamp(minDays, sliderMax.toInt()).toDouble(),
+                  min: minDays.toDouble(),
                   max: sliderMax,
                   activeColor: KvlColors.primary,
                   inactiveColor: KvlColors.primarySoft,
                   onChanged: (v) => setState(
-                    () => _days = v.round().clamp(_minDays, sliderMax.toInt()),
+                    () => _days = v.round().clamp(minDays, sliderMax.toInt()),
                   ),
                 ),
               ],
@@ -312,9 +331,7 @@ class _SetProgramTargetScreenState
   }
 }
 
-// ── Enums & helpers ────────────────────────────────────────────────────────────
-
-enum _WritingsPreset { crore, million, custom }
+// ── Helpers ────────────────────────────────────────────────────────────────────
 
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({required this.label});
@@ -326,52 +343,99 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _WritingsCard extends StatelessWidget {
-  const _WritingsCard({
+/// Horizontal segmented control for day quick-picks.
+/// Styled as flat outlined tiles — distinct from the rounded chip presets.
+class _DaySegmented extends StatelessWidget {
+  const _DaySegmented({
+    required this.options,
     required this.selected,
-    required this.onTap,
-    required this.title,
-    this.badge,
+    required this.onSelect,
   });
 
-  final bool selected;
-  final VoidCallback onTap;
-  final String title;
-  final String? badge;
+  final List<int> options;
+  final int selected;
+  final ValueChanged<int> onSelect;
 
   @override
   Widget build(BuildContext context) {
-    return KvlCard(
-      variant: selected ? KvlCardVariant.soft : KvlCardVariant.plain,
-      border: selected ? Border.all(color: KvlColors.primary, width: 1.5) : null,
-      padding: const EdgeInsets.symmetric(
-        horizontal: KvlSpacing.md,
-        vertical: KvlSpacing.md,
-      ),
-      onTap: onTap,
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 220),
+      transitionBuilder: (child, animation) =>
+          FadeTransition(opacity: animation, child: child),
       child: Row(
+        key: ValueKey(options),
         children: [
-          _RadioDot(selected: selected),
-          const SizedBox(width: KvlSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: KvlText.ui(13, FontWeight.w600)),
-                if (badge != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    badge!,
-                    style: KvlText.caption(10.5).copyWith(
-                      color: KvlColors.primaryDeep,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
+          for (int i = 0; i < options.length; i++) ...[
+            Expanded(child: _Tile(
+              days: options[i],
+              selected: selected == options[i],
+              isFirst: i == 0,
+              isLast: i == options.length - 1,
+              onTap: () => onSelect(options[i]),
+            )),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+class _Tile extends StatelessWidget {
+  const _Tile({
+    required this.days,
+    required this.selected,
+    required this.isFirst,
+    required this.isLast,
+    required this.onTap,
+  });
+
+  final int days;
+  final bool selected;
+  final bool isFirst;
+  final bool isLast;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.horizontal(
+      left: isFirst ? const Radius.circular(12) : Radius.zero,
+      right: isLast ? const Radius.circular(12) : Radius.zero,
+    );
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOut,
+        decoration: BoxDecoration(
+          color: selected ? KvlColors.primary : Colors.white,
+          borderRadius: radius,
+          border: Border.all(
+            color: selected ? KvlColors.primary : KvlColors.border,
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        alignment: Alignment.center,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '$days',
+              style: KvlText.ui(14, FontWeight.w700).copyWith(
+                color: selected ? Colors.white : KvlColors.ink,
+              ),
+            ),
+            Text(
+              'days',
+              style: KvlText.caption(9.5).copyWith(
+                color: selected
+                    ? Colors.white.withValues(alpha: .82)
+                    : KvlColors.muted,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

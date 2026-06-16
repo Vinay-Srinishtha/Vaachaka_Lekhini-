@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'dart:math' as math;
+import 'package:audioplayers/audioplayers.dart';
 
 import '../../../app/providers.dart';
 import '../../../app/router.dart';
@@ -100,10 +101,59 @@ class _PronunciationCard extends StatefulWidget {
   State<_PronunciationCard> createState() => _PronunciationCardState();
 }
 
-class _PronunciationCardState extends State<_PronunciationCard> {
-  bool _loading = false;
+class _PronunciationCardState extends State<_PronunciationCard>
+    with TickerProviderStateMixin {
+  final _player = AudioPlayer();
+  PlayerState _playerState = PlayerState.stopped;
+  Duration _position = Duration.zero;
+  Duration _duration = Duration.zero;
 
-  Future<void> _play() async {
+  // Waveform animation controller
+  late final AnimationController _waveCtrl;
+
+  // Fixed pseudo-random bar heights so they don't jump on rebuild
+  static const int _barCount = 28;
+  late final List<double> _barSeeds;
+
+  @override
+  void initState() {
+    super.initState();
+    final rng = math.Random(42);
+    _barSeeds = List.generate(_barCount, (_) => 0.25 + rng.nextDouble() * 0.75);
+
+    _waveCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+
+    _player.onPlayerStateChanged.listen((s) {
+      if (!mounted) return;
+      setState(() => _playerState = s);
+      if (s == PlayerState.playing) {
+        _waveCtrl.repeat();
+      } else {
+        _waveCtrl.stop();
+      }
+    });
+    _player.onPositionChanged.listen((p) {
+      if (mounted) setState(() => _position = p);
+    });
+    _player.onDurationChanged.listen((d) {
+      if (mounted) setState(() => _duration = d);
+    });
+    _player.onPlayerComplete.listen((_) {
+      if (mounted) setState(() => _position = Duration.zero);
+    });
+  }
+
+  @override
+  void dispose() {
+    _waveCtrl.dispose();
+    _player.dispose();
+    super.dispose();
+  }
+
+  Future<void> _toggle() async {
     final asset = widget.mantra.pronunciationAsset;
     if (asset == null || asset.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -114,88 +164,218 @@ class _PronunciationCardState extends State<_PronunciationCard> {
       );
       return;
     }
-
-    setState(() => _loading = true);
-    final uri = Uri.tryParse(asset);
-    if (uri != null && await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (_playerState == PlayerState.playing) {
+      await _player.pause();
+    } else if (_playerState == PlayerState.paused) {
+      await _player.resume();
     } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not open pronunciation audio.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      await _player.play(UrlSource(asset));
     }
-    if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _seek(double ratio) async {
+    if (_duration == Duration.zero) return;
+    await _player.seek(Duration(milliseconds: (ratio * _duration.inMilliseconds).round()));
+  }
+
+  String _fmt(Duration d) {
+    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$m:$s';
   }
 
   @override
   Widget build(BuildContext context) {
     final name = widget.mantra.name.displayForLanguage(widget.languageCode);
     final hasAudio = widget.mantra.pronunciationAsset?.isNotEmpty ?? false;
+    final isPlaying = _playerState == PlayerState.playing;
+    final isActive = isPlaying || _playerState == PlayerState.paused;
+    final progress = (_duration.inMilliseconds > 0)
+        ? (_position.inMilliseconds / _duration.inMilliseconds).clamp(0.0, 1.0)
+        : 0.0;
 
-    return KvlCard(
-      padding: const EdgeInsets.all(KvlSpacing.md),
-      onTap: _play,
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              gradient: hasAudio
-                  ? KvlColors.primaryGradient
-                  : const LinearGradient(colors: [KvlColors.muted, KvlColors.muted]),
-              borderRadius: KvlRadius.brSM,
-            ),
-            alignment: Alignment.center,
-            child: const Icon(
-              Icons.music_note_rounded,
-              color: Colors.white,
-              size: 18,
-            ),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: KvlRadius.brMD,
+        boxShadow: [
+          BoxShadow(
+            color: isActive
+                ? KvlColors.primary.withValues(alpha: 0.15)
+                : Colors.black.withValues(alpha: 0.06),
+            blurRadius: isActive ? 16 : 8,
+            offset: const Offset(0, 2),
           ),
-          const SizedBox(width: KvlSpacing.sm),
-          Expanded(
+        ],
+        border: Border.all(
+          color: isActive
+              ? KvlColors.primary.withValues(alpha: 0.3)
+              : Colors.black.withValues(alpha: 0.06),
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: KvlRadius.brMD,
+        child: InkWell(
+          borderRadius: KvlRadius.brMD,
+          onTap: hasAudio ? _toggle : null,
+          child: Padding(
+            padding: const EdgeInsets.all(KvlSpacing.md),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  context.l10n.pronunciationGuide,
-                  style: KvlText.ui(11.5, FontWeight.w600),
+                // ── Top row: icon + title + play button ──
+                Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        gradient: hasAudio
+                            ? KvlColors.primaryGradient
+                            : const LinearGradient(
+                                colors: [KvlColors.muted, KvlColors.muted]),
+                        borderRadius: KvlRadius.brSM,
+                      ),
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.music_note_rounded,
+                          color: Colors.white, size: 18),
+                    ),
+                    const SizedBox(width: KvlSpacing.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(context.l10n.pronunciationGuide,
+                              style: KvlText.ui(11.5, FontWeight.w600)),
+                          Text(
+                            hasAudio ? '$name Mantra' : 'Audio coming soon',
+                            style: KvlText.muted(10.5),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: hasAudio ? KvlColors.primary : KvlColors.muted,
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: Icon(
+                        isPlaying
+                            ? Icons.pause_rounded
+                            : Icons.play_arrow_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  hasAudio ? '$name Mantra' : 'Audio coming soon',
-                  style: KvlText.muted(10.5),
+
+                // ── Expanded waveform + seek bar (only when active) ──
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  child: isActive
+                      ? Padding(
+                          padding: const EdgeInsets.only(top: KvlSpacing.md),
+                          child: Column(
+                            children: [
+                              // Waveform bars
+                              AnimatedBuilder(
+                                animation: _waveCtrl,
+                                builder: (context2, child2) {
+                                  return SizedBox(
+                                    height: 36,
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceEvenly,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: List.generate(_barCount, (i) {
+                                        final barProgress = i / _barCount;
+                                        final isPast = barProgress <= progress;
+
+                                        // Phase-shifted sine for each bar
+                                        final phase = _waveCtrl.value * 2 * math.pi;
+                                        final offset = (i / _barCount) * 2 * math.pi;
+                                        final wave = isPlaying
+                                            ? (math.sin(phase + offset) * 0.5 + 0.5)
+                                            : 0.0;
+                                        final height = (_barSeeds[i] * 0.5 +
+                                                wave * _barSeeds[i] * 0.5) *
+                                            36;
+
+                                        return AnimatedContainer(
+                                          duration: const Duration(milliseconds: 80),
+                                          width: 2.5,
+                                          height: height.clamp(3.0, 36.0),
+                                          decoration: BoxDecoration(
+                                            color: isPast
+                                                ? KvlColors.primary
+                                                : KvlColors.primary
+                                                    .withValues(alpha: 0.2),
+                                            borderRadius:
+                                                BorderRadius.circular(2),
+                                          ),
+                                        );
+                                      }),
+                                    ),
+                                  );
+                                },
+                              ),
+
+                              const SizedBox(height: KvlSpacing.xs),
+
+                              // Seek slider
+                              SliderTheme(
+                                data: SliderTheme.of(context).copyWith(
+                                  trackHeight: 2,
+                                  thumbShape: const RoundSliderThumbShape(
+                                      enabledThumbRadius: 5),
+                                  overlayShape: const RoundSliderOverlayShape(
+                                      overlayRadius: 12),
+                                  activeTrackColor: KvlColors.primary,
+                                  inactiveTrackColor:
+                                      KvlColors.primary.withValues(alpha: 0.15),
+                                  thumbColor: KvlColors.primary,
+                                  overlayColor:
+                                      KvlColors.primary.withValues(alpha: 0.12),
+                                ),
+                                child: Slider(
+                                  value: progress,
+                                  onChanged: hasAudio ? _seek : null,
+                                ),
+                              ),
+
+                              // Time labels
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: KvlSpacing.xs),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(_fmt(_position),
+                                        style: KvlText.muted(9.5)),
+                                    Text(_fmt(_duration),
+                                        style: KvlText.muted(9.5)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : const SizedBox.shrink(),
                 ),
               ],
             ),
           ),
-          if (_loading)
-            const SizedBox(
-              width: 30,
-              height: 30,
-              child: CircularProgressIndicator(strokeWidth: 2.5),
-            )
-          else
-            Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                color: hasAudio ? KvlColors.primary : KvlColors.muted,
-                shape: BoxShape.circle,
-              ),
-              alignment: Alignment.center,
-              child: const Icon(
-                Icons.play_arrow_rounded,
-                color: Colors.white,
-                size: 18,
-              ),
-            ),
-        ],
+        ),
       ),
     );
   }

@@ -18,8 +18,9 @@ import '../../programs/presentation/daily_progress_screen.dart';
 import '../../settings/domain/settings_repository.dart';
 import '../application/practice_controller.dart';
 
-final _phoneModeEnabledProvider = FutureProvider.autoDispose<bool>((ref) {
-  return PhoneModeService().isEnabled();
+/// Live device ringer mode (silent / vibrate / ring), synced from the OS.
+final _ringerModeProvider = StreamProvider.autoDispose<RingerMode>((ref) {
+  return RingerModeService().watch();
 });
 
 class CounterScreen extends ConsumerWidget {
@@ -110,7 +111,9 @@ class _BodyState extends ConsumerState<_Body> {
     final state = widget.state;
 
     ref.listen(practiceControllerProvider(programId), (_, next) {
-      if (next.value?.targetReached == true && !_dedicationShown && context.mounted) {
+      if (next.value?.targetReached == true &&
+          !_dedicationShown &&
+          context.mounted) {
         _dedicationShown = true;
         _showDedicationDialog(context, ref, programId);
       }
@@ -120,8 +123,8 @@ class _BodyState extends ConsumerState<_Body> {
     final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
     final profile = ref.watch(activeProfileProvider).value;
     final controller = ref.read(practiceControllerProvider(programId).notifier);
-    final phoneModeEnabled =
-        ref.watch(_phoneModeEnabledProvider).value ?? false;
+    final ringerMode =
+        ref.watch(_ringerModeProvider).value ?? RingerMode.unknown;
     final statsAsync = ref.watch(globalStatsProvider(state.program.mantraId));
     final globalCount =
         (statsAsync.value?.globalChantCount ?? 0) + state.sessionCount;
@@ -154,11 +157,18 @@ class _BodyState extends ConsumerState<_Body> {
                     initial: profile?.initials ?? '?',
                     onProfileTap: () => context.push(KvlRoute.profile),
                     compact: compact,
+                    onBack: () {
+                      if (context.canPop()) {
+                        context.pop();
+                      } else {
+                        context.go(KvlRoute.programs);
+                      }
+                    },
                     onWritingMode: () => context.push(
                       '${KvlRoute.handwritingWrite}/${state.program.mantraId}?programId=$programId',
                     ),
-                    phoneModeEnabled: phoneModeEnabled,
-                    onPhoneMode: () => _togglePhoneMode(ref),
+                    ringerMode: ringerMode,
+                    onCycleRinger: () => _cycleRingerMode(ref),
                   ),
                   SizedBox(height: compact ? 10 : 16),
                   Expanded(
@@ -202,69 +212,78 @@ class _BodyState extends ConsumerState<_Body> {
                         await controller.finish();
                         if (!context.mounted) return;
                         ref.read(sessionCompletedProvider.notifier).increment();
-                        ref.invalidate(globalStatsProvider(state.program.mantraId));
-                        final afterState = ref.read(practiceControllerProvider(programId)).value;
+                        ref.invalidate(
+                          globalStatsProvider(state.program.mantraId),
+                        );
+                        final afterState = ref
+                            .read(practiceControllerProvider(programId))
+                            .value;
                         final sessionTotal = (afterState != null)
-                            ? (afterState.program.totalProgress - beforeTotal).clamp(0, 999999)
+                            ? (afterState.program.totalProgress - beforeTotal)
+                                  .clamp(0, 999999)
                             : state.sessionCount;
-                        ScaffoldMessenger.of(context)
+                        // Capture the messenger now — the close button below
+                        // must NOT look it up via context, because by the time
+                        // it's tapped we've navigated away and this widget is
+                        // deactivated (context ancestor lookup would throw).
+                        final messenger = ScaffoldMessenger.of(context);
+                        messenger
                           ..clearSnackBars()
                           ..showSnackBar(
-                          SnackBar(
-                            duration: const Duration(milliseconds: 2500),
-                            behavior: SnackBarBehavior.floating,
-                            backgroundColor: const Color(0xFF15803D),
-                            elevation: 10,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: KvlRadius.brMD,
-                            ),
-                            content: Row(
-                              children: [
-                                Container(
-                                  width: 30,
-                                  height: 30,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: .16),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: const Icon(
-                                    Icons.check_rounded,
-                                    color: Colors.white,
-                                    size: 19,
-                                  ),
-                                ),
-                                const SizedBox(width: KvlSpacing.sm),
-                                Expanded(
-                                  child: Text(
-                                    '${IndianNumberFormat.format(sessionTotal)} chants completed this session',
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: KvlText.ui(
-                                      13,
-                                      FontWeight.w600,
-                                    ).copyWith(color: Colors.white),
-                                  ),
-                                ),
-                                GestureDetector(
-                                  behavior: HitTestBehavior.opaque,
-                                  onTap: () {
-                                    final messenger = ScaffoldMessenger.maybeOf(context);
-                                    messenger?.clearSnackBars();
-                                  },
-                                  child: const Padding(
-                                    padding: EdgeInsets.all(6),
-                                    child: Icon(
-                                      Icons.close,
+                            SnackBar(
+                              duration: const Duration(milliseconds: 2500),
+                              behavior: SnackBarBehavior.floating,
+                              backgroundColor: const Color(0xFF15803D),
+                              elevation: 10,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: KvlRadius.brMD,
+                              ),
+                              content: Row(
+                                children: [
+                                  Container(
+                                    width: 30,
+                                    height: 30,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(
+                                        alpha: .16,
+                                      ),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: const Icon(
+                                      Icons.check_rounded,
                                       color: Colors.white,
-                                      size: 20,
+                                      size: 19,
                                     ),
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: KvlSpacing.sm),
+                                  Expanded(
+                                    child: Text(
+                                      '${IndianNumberFormat.format(sessionTotal)} chants completed this session',
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: KvlText.ui(
+                                        13,
+                                        FontWeight.w600,
+                                      ).copyWith(color: Colors.white),
+                                    ),
+                                  ),
+                                  GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: messenger.clearSnackBars,
+                                    child: const Padding(
+                                      padding: EdgeInsets.all(6),
+                                      child: Icon(
+                                        Icons.close,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        );
+                          );
                       }
                       if (!context.mounted) return;
                       context.go('${KvlRoute.dailyProgress}/$programId');
@@ -302,7 +321,11 @@ class _BodyState extends ConsumerState<_Body> {
     );
   }
 
-  Future<void> _showDedicationDialog(BuildContext context, WidgetRef ref, String programId) async {
+  Future<void> _showDedicationDialog(
+    BuildContext context,
+    WidgetRef ref,
+    String programId,
+  ) async {
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -311,18 +334,27 @@ class _BodyState extends ConsumerState<_Body> {
           Navigator.of(context).pop();
 
           // Mark the session as finished and the program as completed.
-          final controller = ref.read(practiceControllerProvider(programId).notifier);
-          final mantraId = ref.read(practiceControllerProvider(programId)).value?.program.mantraId;
+          final controller = ref.read(
+            practiceControllerProvider(programId).notifier,
+          );
+          final mantraId = ref
+              .read(practiceControllerProvider(programId))
+              .value
+              ?.program
+              .mantraId;
           await controller.finish();
           if (mantraId != null) ref.invalidate(globalStatsProvider(mantraId));
-          final program = ref.read(practiceControllerProvider(programId)).value?.program;
+          final program = ref
+              .read(practiceControllerProvider(programId))
+              .value
+              ?.program;
           final mantraName = mantraId != null
               ? (ref.read(mantraByIdProvider(mantraId))?.name.devanagari ?? '')
               : '';
           if (program != null && !program.isCompleted) {
-            await ref.read(programRepositoryProvider).update(
-              program.copyWith(completedAt: DateTime.now()),
-            );
+            await ref
+                .read(programRepositoryProvider)
+                .update(program.copyWith(completedAt: DateTime.now()));
           }
 
           if (!context.mounted) return;
@@ -343,9 +375,9 @@ class _BodyState extends ConsumerState<_Body> {
     );
   }
 
-  Future<void> _togglePhoneMode(WidgetRef ref) async {
-    await PhoneModeService().toggle();
-    ref.invalidate(_phoneModeEnabledProvider);
+  Future<void> _cycleRingerMode(WidgetRef ref) async {
+    // The OS broadcast drives _ringerModeProvider, so the UI updates itself.
+    await RingerModeService().cycle();
   }
 }
 
@@ -358,174 +390,137 @@ class _TopBar extends ConsumerWidget {
     required this.initial,
     required this.onProfileTap,
     required this.compact,
+    required this.onBack,
     required this.onWritingMode,
-    required this.phoneModeEnabled,
-    required this.onPhoneMode,
+    required this.ringerMode,
+    required this.onCycleRinger,
   });
   final String initial;
   final VoidCallback onProfileTap;
   final bool compact;
+  final VoidCallback onBack;
   final VoidCallback onWritingMode;
-  final bool phoneModeEnabled;
-  final VoidCallback onPhoneMode;
+  final RingerMode ringerMode;
+  final VoidCallback onCycleRinger;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final programs = ref.watch(programsForActiveProfileProvider).value ?? const [];
+    final programs =
+        ref.watch(programsForActiveProfileProvider).value ?? const [];
     final completed = programs.where((p) => p.isGoalReached).length;
 
+    // Single diameter shared by every top-bar button so back / ringer /
+    // writing / profile all render at exactly the same size.
+    final double btn = compact ? 44 : 50;
+    final double labelH = compact ? 15 : 18;
+
+    final (ringerIcon, ringerLabel) = switch (ringerMode) {
+      RingerMode.silent => (Icons.notifications_off_rounded, 'Silent'),
+      RingerMode.vibrate => (Icons.vibration_rounded, 'Vibrate'),
+      RingerMode.normal => (Icons.notifications_active_rounded, 'Ring'),
+      RingerMode.unknown => (Icons.notifications_none_rounded, 'Ringer'),
+    };
+
+    // One identically-shaped slot per button: a [btn]-sized circle on top and
+    // a fixed-height label area below (kept even when empty) so every column
+    // is the same height — equal top/bottom padding for all four.
+    Widget slot({
+      required Widget circle,
+      required VoidCallback onTap,
+      String? label,
+    }) {
+      return InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: btn,
+              height: btn,
+              child: Center(child: circle),
+            ),
+            const SizedBox(height: 4),
+            SizedBox(
+              height: labelH,
+              child: label == null
+                  ? null
+                  : FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        style: KvlText.caption(
+                          compact ? 11.5 : 13,
+                        ).copyWith(color: KvlColors.inkSoft),
+                      ),
+                    ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    Widget iconCircle(IconData icon) =>
+        Icon(icon, size: btn * 0.62, color: const Color(0xFF252525));
+
+    // Profile avatar sized so the milestone ring's OUTER edge equals [btn],
+    // matching the other circles. Ring adds 2×(stroke+gap) = 10px around it.
+    final double avatar = btn - 10;
+
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: _Tool(
-            icon: phoneModeEnabled
-                ? Icons.notifications_off_rounded
-                : Icons.notifications_none_rounded,
-            label: context.l10n.phoneMode,
-            onTap: onPhoneMode,
-            compact: compact,
-            active: phoneModeEnabled,
+          child: slot(
+            circle: iconCircle(Icons.arrow_back_rounded),
+            onTap: onBack,
           ),
         ),
         Expanded(
-          child: _Tool(
-            icon: Icons.draw_outlined,
-            label: context.l10n.ownWritingModeLabel,
-            onTap: onWritingMode,
-            compact: compact,
+          child: slot(
+            circle: iconCircle(ringerIcon),
+            onTap: onCycleRinger,
+            label: ringerLabel,
           ),
         ),
-        const SizedBox(width: KvlSpacing.sm),
-        InkWell(
-          onTap: onProfileTap,
-          borderRadius: BorderRadius.circular(24),
-          child: MilestoneRing(
-            completed: completed,
-            total: programs.length,
-            strokeWidth: 2.5,
-            gap: 2.5,
-            child: Container(
-              width: 48,
-              height: 48,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [Color(0xFFFFB572), KvlColors.primary],
+        Expanded(
+          child: slot(
+            circle: iconCircle(Icons.draw_outlined),
+            onTap: onWritingMode,
+            label: context.l10n.ownWritingModeLabel,
+          ),
+        ),
+        Expanded(
+          child: slot(
+            onTap: onProfileTap,
+            circle: MilestoneRing(
+              completed: completed,
+              total: programs.length,
+              strokeWidth: 2.5,
+              gap: 2.5,
+              child: Container(
+                width: avatar,
+                height: avatar,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [Color(0xFFFFB572), KvlColors.primary],
+                  ),
                 ),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                initial,
-                style: KvlText.ui(
-                  18,
-                  FontWeight.w700,
-                ).copyWith(color: Colors.white),
+                alignment: Alignment.center,
+                child: Text(
+                  initial,
+                  style: KvlText.ui(
+                    compact ? 14 : 16,
+                    FontWeight.w700,
+                  ).copyWith(color: Colors.white),
+                ),
               ),
             ),
           ),
         ),
       ],
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Tool
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _Tool extends StatelessWidget {
-  const _Tool({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    required this.compact,
-    this.active = false,
-  });
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool compact;
-  final bool active;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      customBorder: const CircleBorder(),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-        child: Column(
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              width: compact ? 44 : 50,
-              height: compact ? 44 : 50,
-              decoration: BoxDecoration(
-                // Circular button — soft tinted fill always, deeper when active.
-                shape: BoxShape.circle,
-                color: active
-                    ? KvlColors.primaryGhost
-                    : KvlColors.primary.withValues(alpha: 0.07),
-                border: Border.all(
-                  color: active
-                      ? KvlColors.primarySoft
-                      : KvlColors.primary.withValues(alpha: 0.18),
-                ),
-              ),
-              alignment: Alignment.center,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Icon(
-                    icon,
-                    size: compact ? 27 : 31,
-                    color: active
-                        ? KvlColors.primaryDeep
-                        : const Color(0xFF252525),
-                  ),
-                  if (active)
-                    Positioned(
-                      right: -10,
-                      top: -8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 5,
-                          vertical: 1,
-                        ),
-                        decoration: BoxDecoration(
-                          color: KvlColors.primary,
-                          borderRadius: KvlRadius.brPill,
-                        ),
-                        child: Text(
-                          'ON',
-                          style: KvlText.caption(7).copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 4),
-            SizedBox(
-              height: compact ? 15 : 18,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  style: KvlText.caption(compact ? 11.5 : 13).copyWith(
-                    color: active ? KvlColors.primaryDeep : KvlColors.inkSoft,
-                    fontWeight: active ? FontWeight.w700 : FontWeight.w400,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -561,15 +556,17 @@ class _HeroMic extends StatefulWidget {
 }
 
 class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
-  static const _poolSize = 6;
+  static const _poolSize = 4;
 
+  // Darker, more saturated ripple palette so the rings read clearly against
+  // the cream background.
   static const _ringColors = [
-    Color(0xFFFF8C42),
-    Color(0xFFFFB572),
-    Color(0xFFE8622A),
-    Color(0xFFFFD4A3),
-    Color(0xFFFF6B35),
-    Color(0xFFFFCA8A),
+    Color(0xFFD2691E),
+    Color(0xFFC75D24),
+    Color(0xFFB8521C),
+    Color(0xFFCC6A2B),
+    Color(0xFFA8481A),
+    Color(0xFFBE5E20),
   ];
 
   late List<AnimationController> _pool;
@@ -585,20 +582,13 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
       _poolSize,
       (_) => AnimationController(
         vsync: this,
-        duration: const Duration(milliseconds: 1500),
+        duration: const Duration(milliseconds: 1800),
       ),
     );
     _textCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 650),
+      duration: const Duration(milliseconds: 520),
     );
-    _textCtrl.addStatusListener((status) {
-      if (status == AnimationStatus.completed && mounted) {
-        Future.delayed(const Duration(milliseconds: 200), () {
-          if (mounted) _textCtrl.reset();
-        });
-      }
-    });
     if (widget.isRunning) _textCtrl.reset();
   }
 
@@ -621,7 +611,7 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
     double intensity = 0.5;
     if (_lastCountTime != null) {
       final ms = now.difference(_lastCountTime!).inMilliseconds;
-      intensity = (1.0 - ((ms - 300) / 2700)).clamp(0.2, 1.0);
+      intensity = (1.0 - ((ms - 300) / 2700)).clamp(0.18, 0.82);
     }
     _lastCountTime = now;
 
@@ -630,7 +620,7 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
     _slotIntensity[slot] = intensity;
 
     _pool[slot].duration = Duration(
-      milliseconds: (1500 - intensity * 500).round(),
+      milliseconds: (1900 - intensity * 450).round(),
     );
     _pool[slot].forward(from: 0);
   }
@@ -646,7 +636,9 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
 
   @override
   void dispose() {
-    for (final c in _pool) { c.dispose(); }
+    for (final c in _pool) {
+      c.dispose();
+    }
     _textCtrl.dispose();
     super.dispose();
   }
@@ -660,13 +652,24 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
         final orbDiam = widget.micSize * 1.05;
         final maxDiam = constraints.biggest.longestSide * 3.2;
 
+        // Vertical position of the "Shankara" title — the midpoint between the
+        // stack top and the mic orb's top edge. The soft glow shares this so it
+        // reads as centred on the title.
+        final titleAlignY = () {
+          final h = constraints.maxHeight;
+          final micCenterY = h / 2 + 0.76 * (h / 2);
+          final micTopY = micCenterY - orbDiam / 2;
+          final midY = micTopY / 2;
+          return (midY - h / 2) / (h / 2);
+        }();
+
         return Stack(
           clipBehavior: Clip.none,
           alignment: Alignment.center,
           children: [
-            // Soft static glow behind the mic orb (aligned to it).
+            // Soft static glow — centred on the "Shankara" title.
             Align(
-              alignment: const Alignment(0, 0.76),
+              alignment: Alignment(0, titleAlignY),
               child: Container(
                 width: widget.micSize * 3.0,
                 height: widget.micSize * 3.0,
@@ -674,8 +677,12 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      const Color(0xFFFFC58A).withValues(alpha: widget.isRunning ? 0.26 : 0.12),
-                      const Color(0xFFFF8C42).withValues(alpha: widget.isRunning ? 0.12 : 0.05),
+                      const Color(
+                        0xFFFFC58A,
+                      ).withValues(alpha: widget.isRunning ? 0.26 : 0.12),
+                      const Color(
+                        0xFFFF8C42,
+                      ).withValues(alpha: widget.isRunning ? 0.12 : 0.05),
                       KvlColors.primary.withValues(alpha: 0.0),
                     ],
                     stops: const [0.0, 0.55, 1.0],
@@ -684,10 +691,11 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
               ),
             ),
 
-            // Outward ripples — fired on each voice count, from the mic centre.
+            // Outward ripples — fired on each voice count. Emanate from the
+            // centre of the "Shankara" title and grow outwards.
             for (var i = 0; i < _poolSize; i++)
               Align(
-                alignment: const Alignment(0, 0.76),
+                alignment: Alignment(0, titleAlignY),
                 child: AnimatedBuilder(
                   animation: _pool[i],
                   builder: (ctx2, _) {
@@ -696,8 +704,14 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
                     final t = Curves.easeOut.transform(raw);
                     final intensity = _slotIntensity[i];
                     final reach = micDiam + (maxDiam - micDiam) * intensity;
-                    final diam = micDiam + (reach - micDiam) * t;
-                    final opacity = ((1.0 - t) * 0.52 * intensity).clamp(0.0, 0.52);
+                    // Grow from the centre point (≈0) outward, so the ring
+                    // emanates from the title's centre rather than popping in
+                    // already-large (which read as the circle drifting down).
+                    final diam = reach * t;
+                    final opacity = ((1.0 - t) * 0.34 * intensity).clamp(
+                      0.0,
+                      0.34,
+                    );
                     final color = _ringColors[i % _ringColors.length];
                     return Container(
                       width: diam,
@@ -722,26 +736,14 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
             // Vertically centred in the gap between the top bar (stack top)
             // and the top edge of the mic orb (orb centre sits at y=0.76).
             Align(
-              alignment: Alignment(
-                0,
-                () {
-                  final h = constraints.maxHeight;
-                  // Mic orb centre in pixels, then its top edge.
-                  final micCenterY = h / 2 + 0.76 * (h / 2);
-                  final micTopY = micCenterY - orbDiam / 2;
-                  // Midpoint between stack top (0) and the orb top edge.
-                  final midY = micTopY / 2;
-                  // Convert pixel y back to Align's [-1, 1] vertical coordinate.
-                  return (midY - h / 2) / (h / 2);
-                }(),
-              ),
+              alignment: Alignment(0, titleAlignY),
               child: AnimatedBuilder(
                 animation: _textCtrl,
                 builder: (ctx2, _) {
                   // Per-count pulse: quick shrink-and-back with a colour flash,
                   // anchored in place (does not move the title).
                   final dip = math.sin(_textCtrl.value * math.pi); // 0→1→0
-                  final scale = 1.0 - 0.13 * dip;
+                  final scale = 1.0 - 0.06 * dip;
                   final color = Color.lerp(
                     const Color(0xFFCC7A3A),
                     const Color(0xFF7E2F08),
@@ -758,9 +760,12 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
                           textAlign: TextAlign.center,
                           maxLines: 1,
                           style: TextStyle(
-                            fontSize: (constraints.maxWidth * 0.40).clamp(32.0, 90.0),
+                            fontSize: (constraints.maxWidth * 0.40).clamp(
+                              32.0,
+                              90.0,
+                            ),
                             fontWeight: FontWeight.w800,
-                            letterSpacing: 1.0 + 1.5 * dip,
+                            letterSpacing: 0,
                             color: color,
                           ),
                         ),
@@ -900,13 +905,14 @@ class _VoiceWavesPainter extends CustomPainter {
   final double phase;
   final double level; // 0..1 smoothed mic level
 
-  // Soft, light warm palette — gentle peach/saffron tints.
+  // Deeper warm palette — saffron/amber tints, darker than before so the
+  // curved waves stand out against the cream background.
   static const _waveColors = [
-    Color(0xFFFFD8B8),
-    Color(0xFFFFC79C),
-    Color(0xFFFFD0A8),
-    Color(0xFFFFBE86),
-    Color(0xFFFFE0C6),
+    Color(0xFFE0915A),
+    Color(0xFFD17E45),
+    Color(0xFFD9874F),
+    Color(0xFFC56E38),
+    Color(0xFFDB9A66),
   ];
 
   static const _maxLayers = 5;
@@ -1017,32 +1023,43 @@ class _Counts extends StatelessWidget {
                 color: KvlColors.primaryDeep,
               ),
               const SizedBox(width: 7),
-              Text.rich(
-                TextSpan(
-                  style: KvlText.ui(compact ? 16 : 19, FontWeight.w800)
-                      .copyWith(color: KvlColors.ink),
-                  children: [
-                    TextSpan(
-                      text: 'Global  ',
-                      style: KvlText.ui(compact ? 12 : 13, FontWeight.w600)
-                          .copyWith(color: KvlColors.inkSoft),
-                    ),
-                    TextSpan(
-                      text: IndianNumberFormat.format(globalBase),
-                      style: const TextStyle(color: Color(0xFFCC6A2B)),
-                    ),
-                    const TextSpan(
-                      text: '  +  ',
-                      style: TextStyle(
-                        color: Color(0xFF9A8678),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    TextSpan(
-                      text: IndianNumberFormat.format(added),
-                      style: const TextStyle(color: Color(0xFF16A34A)),
-                    ),
-                  ],
+              Text(
+                'Global  ',
+                style: KvlText.ui(
+                  compact ? 12 : 13,
+                  FontWeight.w600,
+                ).copyWith(color: KvlColors.inkSoft),
+              ),
+              Text(
+                IndianNumberFormat.format(globalBase),
+                style: KvlText.ui(
+                  compact ? 16 : 19,
+                  FontWeight.w800,
+                ).copyWith(color: const Color(0xFFCC6A2B)),
+              ),
+              Text(
+                '  +  ',
+                style: KvlText.ui(
+                  compact ? 16 : 19,
+                  FontWeight.w600,
+                ).copyWith(color: const Color(0xFF9A8678)),
+              ),
+              // The live session count pops on each increment so the number
+              // animates in lockstep with the title pulse + ripple (same
+              // rebuild), instead of snapping instantly while they ease.
+              TweenAnimationBuilder<double>(
+                key: ValueKey(added),
+                tween: Tween(begin: added > 0 ? 1.14 : 1.0, end: 1.0),
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeOutCubic,
+                builder: (_, scale, child) =>
+                    Transform.scale(scale: scale, child: child),
+                child: Text(
+                  IndianNumberFormat.format(added),
+                  style: KvlText.ui(
+                    compact ? 16 : 19,
+                    FontWeight.w800,
+                  ).copyWith(color: const Color(0xFF16A34A)),
                 ),
               ),
             ],
@@ -1129,10 +1146,12 @@ class _ActionButton extends StatelessWidget {
     // Build a soft 3-stop gradient + matching glow from the base colour so
     // every action button reads as a premium pill, not a flat block.
     final hsl = HSLColor.fromColor(color);
-    final lighter =
-        hsl.withLightness((hsl.lightness + 0.09).clamp(0.0, 1.0)).toColor();
-    final darker =
-        hsl.withLightness((hsl.lightness - 0.13).clamp(0.0, 1.0)).toColor();
+    final lighter = hsl
+        .withLightness((hsl.lightness + 0.09).clamp(0.0, 1.0))
+        .toColor();
+    final darker = hsl
+        .withLightness((hsl.lightness - 0.13).clamp(0.0, 1.0))
+        .toColor();
     final radius = BorderRadius.circular(compact ? 16 : 20);
 
     return Opacity(
@@ -1210,9 +1229,7 @@ class _ProgressCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final total = state.program.totalProgress + state.sessionCount;
     final goal = state.program.targetWritings;
-    final progress = goal == 0
-        ? 0.0
-        : (total / goal).clamp(0, 1).toDouble();
+    final progress = goal == 0 ? 0.0 : (total / goal).clamp(0, 1).toDouble();
     return Padding(
       // Transparent — blends with the screen background (no card surface).
       padding: const EdgeInsets.symmetric(
@@ -1228,7 +1245,9 @@ class _ProgressCard extends StatelessWidget {
                   'Total Progress',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: KvlText.title(compact ? 13 : 15).copyWith(fontWeight: FontWeight.w800),
+                  style: KvlText.title(
+                    compact ? 13 : 15,
+                  ).copyWith(fontWeight: FontWeight.w800),
                 ),
               ),
               const SizedBox(width: KvlSpacing.sm),
@@ -1240,7 +1259,9 @@ class _ProgressCard extends StatelessWidget {
                   child: Text(
                     '${IndianNumberFormat.format(total)} / ${IndianNumberFormat.format(goal)}',
                     maxLines: 1,
-                    style: KvlText.caption(compact ? 11 : 12).copyWith(color: KvlColors.inkSoft),
+                    style: KvlText.caption(
+                      compact ? 11 : 12,
+                    ).copyWith(color: KvlColors.inkSoft),
                   ),
                 ),
               ),
@@ -1289,7 +1310,11 @@ class _GradientProgressBar extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: KvlRadius.brPill,
                   gradient: const LinearGradient(
-                    colors: [Color(0xFFFFB572), KvlColors.primary, KvlColors.primaryDeep],
+                    colors: [
+                      Color(0xFFFFB572),
+                      KvlColors.primary,
+                      KvlColors.primaryDeep,
+                    ],
                   ),
                   boxShadow: [
                     BoxShadow(
@@ -1341,9 +1366,18 @@ class _MicErrorCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.mic_off_rounded, color: KvlColors.primaryDeep, size: 18),
+              const Icon(
+                Icons.mic_off_rounded,
+                color: KvlColors.primaryDeep,
+                size: 18,
+              ),
               const SizedBox(width: 8),
-              Expanded(child: Text('Microphone needed', style: KvlText.ui(13, FontWeight.w600))),
+              Expanded(
+                child: Text(
+                  'Microphone needed',
+                  style: KvlText.ui(13, FontWeight.w600),
+                ),
+              ),
               IconButton(
                 onPressed: onDismiss,
                 icon: const Icon(Icons.close_rounded, size: 16),
@@ -1358,11 +1392,26 @@ class _MicErrorCard extends StatelessWidget {
           Row(
             children: [
               if (showOpenSettings)
-                Expanded(child: KvlButton(label: 'Open Settings', onPressed: onOpenSettings))
+                Expanded(
+                  child: KvlButton(
+                    label: 'Open Settings',
+                    onPressed: onOpenSettings,
+                  ),
+                )
               else if (requiresTraining)
-                Expanded(child: KvlButton(label: 'Train Voice', onPressed: onTrainVoice))
+                Expanded(
+                  child: KvlButton(
+                    label: 'Train Voice',
+                    onPressed: onTrainVoice,
+                  ),
+                )
               else
-                Expanded(child: KvlButton(label: 'Try Voice Again', onPressed: onDismiss)),
+                Expanded(
+                  child: KvlButton(
+                    label: 'Try Voice Again',
+                    onPressed: onDismiss,
+                  ),
+                ),
               if (!requiresTraining) ...[
                 const SizedBox(width: 8),
                 Expanded(
@@ -1403,21 +1452,32 @@ class _DedicationDialog extends StatelessWidget {
               height: 64,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: LinearGradient(colors: [Color(0xFFFFB572), KvlColors.primary]),
+                gradient: LinearGradient(
+                  colors: [Color(0xFFFFB572), KvlColors.primary],
+                ),
               ),
               alignment: Alignment.center,
-              child: const Icon(Icons.self_improvement_rounded, color: Colors.white, size: 32),
+              child: const Icon(
+                Icons.self_improvement_rounded,
+                color: Colors.white,
+                size: 32,
+              ),
             ),
             const SizedBox(height: KvlSpacing.md),
             Text(
               'Program Complete!',
-              style: KvlText.ui(20, FontWeight.w800).copyWith(color: KvlColors.ink),
+              style: KvlText.ui(
+                20,
+                FontWeight.w800,
+              ).copyWith(color: KvlColors.ink),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: KvlSpacing.sm),
             Text(
               'You have completed your sankalpa.\nWould you like to dedicate this practice?',
-              style: KvlText.caption(13.5).copyWith(color: KvlColors.inkSoft, height: 1.5),
+              style: KvlText.caption(
+                13.5,
+              ).copyWith(color: KvlColors.inkSoft, height: 1.5),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: KvlSpacing.lg),

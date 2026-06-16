@@ -8,8 +8,25 @@ import '../domain/settings_repository.dart';
 
 class SettingsRepositoryLocal implements SettingsRepository {
   SettingsRepositoryLocal(this._box) {
+    _migrateMantraLanguageIfNeeded();
     _emit();
     _box.watch().listen((_) => _emit());
+  }
+
+  /// One-time backfill of the mantra-language key, run before onboarding can
+  /// change the app language:
+  /// • Existing installs (an app language was already chosen) keep mantras
+  ///   looking exactly as before by following that language.
+  /// • Fresh installs (no language yet) default to Devanagari ('hi'), the
+  ///   canonical chant script.
+  /// After this runs the two settings are fully independent.
+  void _migrateMantraLanguageIfNeeded() {
+    if (_box.containsKey(KvlKeys.mantraLanguageCode)) return;
+    final existingLang = _box.get(KvlKeys.languageCode) as String?;
+    _box.put(
+      KvlKeys.mantraLanguageCode,
+      existingLang ?? KvlSettings.fallback.mantraLanguageCode,
+    );
   }
 
   final Box<dynamic> _box;
@@ -27,8 +44,17 @@ class SettingsRepositoryLocal implements SettingsRepository {
         ? TimeOfDay(hour: int.tryParse(parts[0]) ?? 6, minute: int.tryParse(parts[1]) ?? 0)
         : KvlSettings.fallback.reminderTime;
 
+    final hasLangKey = _box.containsKey(KvlKeys.languageCode);
+    final languageCode =
+        str(KvlKeys.languageCode) ?? KvlSettings.fallback.languageCode;
+
     return KvlSettings(
-      languageCode: str(KvlKeys.languageCode) ?? KvlSettings.fallback.languageCode,
+      languageCode: languageCode,
+      // Mirror the migration in [_migrateMantraLanguageIfNeeded] for the brief
+      // window before its async write lands: explicit choice → existing app
+      // language (upgrade) → Devanagari fallback (fresh install).
+      mantraLanguageCode: str(KvlKeys.mantraLanguageCode) ??
+          (hasLangKey ? languageCode : KvlSettings.fallback.mantraLanguageCode),
       reminderTime: t,
       notificationSound: str(KvlKeys.notificationSound) ?? KvlSettings.fallback.notificationSound,
       micSensitivity: MicSensitivity.fromName(str(KvlKeys.micSensitivity)),
@@ -49,6 +75,10 @@ class SettingsRepositoryLocal implements SettingsRepository {
 
   @override
   Future<void> setLanguage(String code) => _box.put(KvlKeys.languageCode, code);
+
+  @override
+  Future<void> setMantraLanguage(String code) =>
+      _box.put(KvlKeys.mantraLanguageCode, code);
 
   @override
   Future<void> setReminderTime(TimeOfDay t) =>
@@ -74,6 +104,7 @@ class SettingsRepositoryLocal implements SettingsRepository {
     final s = _read();
     return {
       'languageCode': s.languageCode,
+      'mantraLanguageCode': s.mantraLanguageCode,
       'reminderTime': '${s.reminderTime.hour}:${s.reminderTime.minute}',
       'notificationSound': s.notificationSound,
       'micSensitivity': s.micSensitivity.name,

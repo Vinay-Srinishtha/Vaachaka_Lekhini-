@@ -4,6 +4,19 @@ import 'package:flutter/widgets.dart';
 import '../../../core/widgets/mantra_thumb.dart';
 import '../../../l10n/app_localizations.dart';
 
+/// One entry in a mantra's configurable milestone list.
+/// [count] is the target chant count; [dayOptions] are the day presets
+/// shown in the segmented control (first is auto-selected).
+class MantraMilestone extends Equatable {
+  const MantraMilestone({required this.count, required this.dayOptions});
+
+  final int count;
+  final List<int> dayOptions;
+
+  @override
+  List<Object?> get props => [count, dayOptions];
+}
+
 /// A mantra's name in every script we display. Devanagari is the
 /// canonical chant form; Roman is the transliteration; Telugu / Kannada
 /// are regional renderings shown when the user's chosen language matches.
@@ -86,6 +99,7 @@ class Mantra extends Equatable {
     this.pronunciationAsset,
     this.recommendedCount,
     this.recommendedDays,
+    this.milestones,
   });
 
   final String id;
@@ -110,6 +124,10 @@ class Mantra extends Equatable {
   /// Suggested per-day recitations / total days (only set for "by need" mantras).
   final int? recommendedCount;
   final int? recommendedDays;
+
+  /// Admin-configured milestones shown on the Set Target screen.
+  /// Null means fall back to app defaults.
+  final List<MantraMilestone>? milestones;
 
   @override
   List<Object?> get props => [id, isActive, imageUrl];

@@ -308,9 +308,9 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
   Widget build(BuildContext context) {
     final mantra = ref.watch(mantraByIdProvider(widget.mantraId));
     final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
-    final guide = mantra?.name.displayForLanguage(settings.languageCode) ?? '';
+    final guide = mantra?.name.displayForLanguage(settings.mantraLanguageCode) ?? '';
     final guideScript =
-        mantra?.name.scriptForLanguage(settings.languageCode) ??
+        mantra?.name.scriptForLanguage(settings.mantraLanguageCode) ??
         settings.languageCode.mantraScriptForLanguage;
     if (widget.programId != null) {
       final programs = ref.watch(programsForActiveProfileProvider).value ?? [];

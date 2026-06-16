@@ -31,12 +31,17 @@ class VoiceEnrolmentService {
     VoskModelLoader? modelLoader,
     VoskRecognizer? recognizer,
     AudioCapture? audio,
-  })  : _modelLoader = modelLoader ?? VoskModelLoader(),
-        _recognizer = recognizer,
-        _audio = audio ?? AudioCapture();
+  }) : _modelLoader = modelLoader ?? VoskModelLoader(),
+       _recognizer = recognizer,
+       // A recognizer passed in is shared (warmed once, reused across
+       // sessions) — this service must NOT dispose it. It only owns a
+       // recognizer it builds itself in [warmUp].
+       _ownsRecognizer = recognizer == null,
+       _audio = audio ?? AudioCapture();
 
   final VoskModelLoader _modelLoader;
   VoskRecognizer? _recognizer;
+  bool _ownsRecognizer;
   final AudioCapture _audio;
 
   StreamSubscription<Uint8List>? _sub;
@@ -47,21 +52,29 @@ class VoiceEnrolmentService {
 
   int _matches = 0;
   bool _running = false;
+
   /// True while the timer is flushing — chunk callbacks skip to avoid
   /// calling into the recognizer concurrently.
   bool _finalizing = false;
+
   /// True once the window timer has been started (deferred until first
   /// real audio arrives so the first chant is never cut mid-word).
   bool _timerStarted = false;
   int _target = 11;
   Mantra? _mantra;
 
+  /// Peak amplitude that marks genuine speech onset (vs. ambient noise). Set
+  /// from the active mic sensitivity in [start]; the window timer waits for a
+  /// chunk this loud so the very first chant always gets a full window.
+  double _speechThreshold = 800;
+
   /// How often (ms) we force a finalisation regardless of silence.
   ///
-  /// 1500 ms is the sweet spot across all chanting speeds:
+  /// 1800 ms gives Vosk enough context for slower/softer chants while still
+  /// being short enough to keep the counter feeling live:
   /// • Slow / with gaps  → Vosk's own silence-detection fires first (this timer
   ///   is just a safety net — it fires on an already-empty buffer, returns "").
-  /// • Medium (~1 s/chant) → timer catches it cleanly within one chant duration.
+  /// • Medium (~1 s/chant) → timer catches it cleanly within two chant durations.
   /// • Fast continuous   → two chants can land in one window; _countOccurrences
   ///   counts both from the same result text.
   /// • Staccato / jotted → holdover gate keeps inter-chant dips from looking
@@ -69,7 +82,7 @@ class VoiceEnrolmentService {
   ///
   /// Do NOT go below 1200 ms — shorter windows risk cutting mid-syllable for
   /// slower speakers, producing partial-word results that score 0.
-  static const int _windowMs = 1500;
+  static const int _windowMs = 1800;
 
   Stream<VoiceTrainingEvent> get events => _events.stream;
 
@@ -81,6 +94,7 @@ class VoiceEnrolmentService {
     if (_recognizer != null) return;
     final path = await _modelLoader.ensureExtracted();
     _recognizer = await VoskRecognizer.create(modelPath: path);
+    _ownsRecognizer = true;
   }
 
   /// Begin a session. Emits [VoiceTrainingEvent]s on [events].
@@ -97,30 +111,31 @@ class VoiceEnrolmentService {
     _matches = 0;
     _target = target;
     _mantra = mantra;
+    _speechThreshold = sensitivity.minAmplitudeThreshold;
 
     await warmUp();
     await _recognizer!.setGrammar([mantra.name.devanagari]);
 
     final stream = await _audio.start(
       minAmplitude: sensitivity.minAmplitudeThreshold,
-      // 300 ms holdover protects word onsets and inter-syllable dips from
+      // 450 ms holdover protects word onsets and inter-syllable dips from
       // being clipped to silence by the amplitude gate. Going too low (e.g.
       // 10 ms) zeros out the soft attack of the first chant before the window
       // timer even starts, so the first chant never matches.
-      holdoverMs: 300,
+      holdoverMs: 450,
     );
 
     // ── PCM stream → Vosk ──────────────────────────────────────────────────
     // The window timer is NOT started here. It is deferred until the first
     // non-silence audio chunk arrives so the very first chant always gets a
-    // full 1500 ms window regardless of how long the user waits before
+    // full forced-finalize window regardless of how long the user waits before
     // speaking. Without this, a user who starts chanting ~1 s after tapping
     // "Start" would have their first word cut mid-syllable by the timer.
     _sub = stream.listen(
       (chunk) async {
+        final peak = AudioCapture.peakAmplitude(chunk);
         // Emit a live, normalised level for reactive UI (peak ≈ 6000 → full).
         if (!_levels.isClosed) {
-          final peak = AudioCapture.peakAmplitude(chunk);
           _levels.add((peak / 6000.0).clamp(0.0, 1.0));
         }
 
@@ -128,10 +143,13 @@ class VoiceEnrolmentService {
         // calling acceptChunk and finalize/getFinalResult concurrently.
         if (!_running || _finalizing) return;
 
-        // Start the window timer on the first real (non-silence) chunk.
-        // Silence chunks from the amplitude gate are all-zero bytes; real
-        // audio always has at least one non-zero byte.
-        if (!_timerStarted && chunk.any((b) => b != 0)) {
+        // Start the window timer only on genuine SPEECH onset — a chunk loud
+        // enough to clear the sensitivity threshold. Using "any non-zero byte"
+        // here was wrong: the amplitude gate forwards ambient noise as real
+        // audio during its holdover window, so the timer used to start on
+        // mic-open noise and could fire mid-way through the first chant,
+        // cutting it before it was ever counted.
+        if (!_timerStarted && peak >= _speechThreshold) {
           _timerStarted = true;
           _windowTimer = Timer.periodic(
             const Duration(milliseconds: _windowMs),
@@ -149,8 +167,7 @@ class VoiceEnrolmentService {
           _events.add(VoiceTrainingEvent.partial(_matches, r.text));
         }
       },
-      onError: (Object e) =>
-          _events.add(VoiceTrainingEvent.error(_matches, e)),
+      onError: (Object e) => _events.add(VoiceTrainingEvent.error(_matches, e)),
     );
   }
 
@@ -218,7 +235,9 @@ class VoiceEnrolmentService {
   Future<void> dispose() async {
     await stop();
     await _audio.dispose();
-    await _recognizer?.dispose();
+    // Only dispose a recognizer we built ourselves — a shared/injected one
+    // is owned by its provider and reused by later sessions.
+    if (_ownsRecognizer) await _recognizer?.dispose();
     await _events.close();
     await _levels.close();
   }
@@ -227,9 +246,10 @@ class VoiceEnrolmentService {
 /// Public static helper for counting mantra occurrences in ASR output.
 /// Exposed separately so it can be unit-tested without a running audio session.
 abstract final class VoicePhraseMatcher {
-  /// Returns how many non-overlapping whole-word times [phrase] appears in
-  /// [text]. Both are normalised (trimmed, lowercased) before comparison so
-  /// punctuation and capitalisation in Vosk output don't affect the count.
+  /// Returns how many non-overlapping whole-token times [phrase] appears in
+  /// [text]. Both are normalised before comparison so punctuation,
+  /// capitalisation, and small Vosk Devanagari substitutions don't affect the
+  /// count.
   ///
   /// A match is accepted only when the phrase is surrounded by word
   /// boundaries: start/end of string, whitespace, or common punctuation
@@ -237,32 +257,119 @@ abstract final class VoicePhraseMatcher {
   /// matching inside "सीताराम" even if the grammar constraint fails to
   /// exclude that token.
   static int countOccurrences(String text, String phrase) {
-    final needle   = phrase.trim().toLowerCase();
+    final needle = phrase.trim().toLowerCase();
     final haystack = text.trim().toLowerCase();
     if (needle.isEmpty || haystack.isEmpty) return 0;
-    int count = 0;
-    int start = 0;
-    while (true) {
-      final idx = haystack.indexOf(needle, start);
-      if (idx == -1) break;
-      // Check left boundary
-      final leftOk = idx == 0 || _isBoundary(haystack.codeUnitAt(idx - 1));
-      // Check right boundary
-      final endIdx = idx + needle.length;
-      final rightOk =
-          endIdx == haystack.length || _isBoundary(haystack.codeUnitAt(endIdx));
-      if (leftOk && rightOk) count++;
-      start = endIdx;
+
+    final phraseTokens = _tokens(needle);
+    final textTokens = _tokens(haystack);
+    if (phraseTokens.isEmpty || textTokens.length < phraseTokens.length) {
+      return 0;
     }
-    return count;
+
+    var fuzzyCount = 0;
+    for (var i = 0; i <= textTokens.length - phraseTokens.length;) {
+      if (_tokenWindowMatches(textTokens, phraseTokens, i)) {
+        fuzzyCount++;
+        i += phraseTokens.length;
+      } else {
+        i++;
+      }
+    }
+    return fuzzyCount;
   }
 
   /// Returns true for characters that constitute a word boundary:
-  /// ASCII whitespace or common punctuation marks.
+  /// whitespace, punctuation, or Devanagari danda marks.
   static bool _isBoundary(int codeUnit) {
-    // space, tab, newline, comma, period, !, ?, ;, :
-    const boundaries = {0x20, 0x09, 0x0A, 0x0D, 0x2C, 0x2E, 0x21, 0x3F, 0x3B, 0x3A};
+    const boundaries = {
+      0x20,
+      0x09,
+      0x0A,
+      0x0D,
+      0x2C,
+      0x2E,
+      0x21,
+      0x3F,
+      0x3B,
+      0x3A,
+      0x0964,
+      0x0965,
+    };
     return boundaries.contains(codeUnit);
+  }
+
+  static List<String> _tokens(String value) {
+    final tokens = <String>[];
+    final current = StringBuffer();
+    for (final rune in value.runes) {
+      if (_isBoundary(rune)) {
+        if (current.isNotEmpty) {
+          tokens.add(current.toString());
+          current.clear();
+        }
+      } else {
+        current.writeCharCode(rune);
+      }
+    }
+    if (current.isNotEmpty) tokens.add(current.toString());
+    return tokens;
+  }
+
+  static bool _tokenWindowMatches(
+    List<String> textTokens,
+    List<String> phraseTokens,
+    int offset,
+  ) {
+    var edits = 0;
+    for (var j = 0; j < phraseTokens.length; j++) {
+      final text = _normaliseToken(textTokens[offset + j]);
+      final phrase = _normaliseToken(phraseTokens[j]);
+      if (text == phrase) continue;
+
+      final maxEdits = phrase.runes.length >= 4 ? 1 : 0;
+      if (maxEdits == 0) return false;
+
+      final distance = _boundedEditDistance(text, phrase, maxEdits);
+      if (distance > maxEdits) return false;
+      edits += distance;
+      if (edits > 2) return false;
+    }
+    return true;
+  }
+
+  static String _normaliseToken(String token) => token
+      .replaceAll('ॐ', 'ओम')
+      .replaceAll('ँ', '')
+      .replaceAll('ं', '')
+      .replaceAll('ः', '')
+      .replaceAll('़', '')
+      .replaceAll('ण', 'न');
+
+  static int _boundedEditDistance(String a, String b, int maxDistance) {
+    final ar = a.runes.toList(growable: false);
+    final br = b.runes.toList(growable: false);
+    if ((ar.length - br.length).abs() > maxDistance) return maxDistance + 1;
+
+    var prev = List<int>.generate(br.length + 1, (i) => i);
+    for (var i = 1; i <= ar.length; i++) {
+      final curr = List<int>.filled(br.length + 1, 0);
+      curr[0] = i;
+      var rowMin = curr[0];
+      for (var j = 1; j <= br.length; j++) {
+        final cost = ar[i - 1] == br[j - 1] ? 0 : 1;
+        final insert = curr[j - 1] + 1;
+        final delete = prev[j] + 1;
+        final replace = prev[j - 1] + cost;
+        curr[j] = insert < delete
+            ? (insert < replace ? insert : replace)
+            : (delete < replace ? delete : replace);
+        if (curr[j] < rowMin) rowMin = curr[j];
+      }
+      if (rowMin > maxDistance) return maxDistance + 1;
+      prev = curr;
+    }
+    return prev.last;
   }
 }
 

@@ -1,9 +1,15 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import FormField from './FormField.svelte';
+	import MediaUploadField from './MediaUploadField.svelte';
 	import TagMultiSelect from './TagMultiSelect.svelte';
 	import { MANTRA_TAGS, THUMB_PALETTES } from '$lib/constants';
-	import { Save } from '@lucide/svelte';
+	import { Save, Plus, Trash2 } from '@lucide/svelte';
+
+	interface MantraMilestone {
+		count: number;
+		dayOptions: number[];
+	}
 
 	interface MantraValue {
 		id?: string;
@@ -19,9 +25,17 @@
 		recommendedCount: number | null;
 		recommendedDays: number | null;
 		pronunciationUrl: string | null;
+		milestones: MantraMilestone[] | null;
 		isActive: boolean;
 		sortOrder: number;
 	}
+
+	const DEFAULT_MILESTONES: MantraMilestone[] = [
+		{ count: 108,   dayOptions: [1,  7,   21,  40]  },
+		{ count: 1008,  dayOptions: [7,  21,  40,  108] },
+		{ count: 5116,  dayOptions: [21, 40,  108, 180] },
+		{ count: 10116, dayOptions: [40, 108, 180, 365] }
+	];
 
 	interface Props {
 		value: MantraValue;
@@ -47,6 +61,36 @@
 	$effect.pre(() => {
 		tags = [...value.tags];
 	});
+
+	// Milestones editor state — seed from value or use defaults.
+	let milestones = $state<MantraMilestone[]>([]);
+	$effect.pre(() => {
+		milestones = (value.milestones && value.milestones.length > 0)
+			? value.milestones.map(m => ({ count: m.count, dayOptions: [...m.dayOptions] }))
+			: DEFAULT_MILESTONES.map(m => ({ count: m.count, dayOptions: [...m.dayOptions] }));
+	});
+
+	const milestonesJson = $derived(JSON.stringify(milestones));
+
+	function addMilestone() {
+		milestones = [...milestones, { count: 0, dayOptions: [1] }];
+	}
+
+	function removeMilestone(i: number) {
+		milestones = milestones.filter((_, idx) => idx !== i);
+	}
+
+	function updateMilestoneCount(i: number, val: number) {
+		milestones = milestones.map((m, idx) => idx === i ? { ...m, count: val } : m);
+	}
+
+	function updateDayOptions(i: number, raw: string) {
+		const days = raw.split(',')
+			.map(s => parseInt(s.trim(), 10))
+			.filter(n => !isNaN(n) && n > 0);
+		milestones = milestones.map((m, idx) => idx === i ? { ...m, dayOptions: days } : m);
+	}
+
 	let submitting = $state(false);
 </script>
 
@@ -143,6 +187,13 @@
 			</FormField>
 			<FormField label="Pronunciation URL" name="pronunciationUrl" hint="Optional audio asset for the detail screen." error={fieldErrors.pronunciationUrl}>
 				<input id="pronunciationUrl" name="pronunciationUrl" type="url" class="input" value={value.pronunciationUrl ?? ''} placeholder="https://…" />
+				<MediaUploadField
+					category="mantra-audio"
+					targetId="pronunciationUrl"
+					accept="audio/mpeg,audio/mp3,audio/wav"
+					buttonLabel="Upload MP3"
+					currentUrl={value.pronunciationUrl}
+				/>
 			</FormField>
 		</div>
 		<label class="flex items-center justify-between gap-4 mt-2 p-3 rounded-lg border cursor-pointer select-none
@@ -160,6 +211,78 @@
 				<span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform {value.isActive ? 'translate-x-5' : 'translate-x-0'}"></span>
 			</div>
 		</label>
+	</section>
+
+	<!-- ── Program Milestones ─────────────────────────────────────────────────── -->
+	<section class="card p-5 space-y-4">
+		<div class="flex items-center justify-between">
+			<div>
+				<h2 class="text-sm font-semibold text-gray-900 uppercase tracking-wide">Program Milestones</h2>
+				<p class="text-xs text-gray-500 mt-0.5">Count presets and day options shown on the Set Target screen in the Flutter app.</p>
+			</div>
+			<button type="button" onclick={addMilestone}
+				class="flex items-center gap-1.5 rounded-lg border border-dashed border-indigo-300 bg-indigo-50
+					px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors">
+				<Plus size={13} /> Add Milestone
+			</button>
+		</div>
+
+		<div class="space-y-3">
+			{#each milestones as milestone, i (i)}
+				<div class="flex items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3">
+					<!-- Count -->
+					<div class="w-28 shrink-0">
+						<label class="block text-[10px] font-semibold uppercase tracking-wide text-gray-500 mb-1">Count</label>
+						<input
+							type="number"
+							min="1"
+							value={milestone.count}
+							oninput={(e) => updateMilestoneCount(i, parseInt((e.target as HTMLInputElement).value, 10))}
+							class="input w-full text-sm font-semibold"
+							placeholder="108"
+						/>
+					</div>
+
+					<!-- Day options -->
+					<div class="flex-1">
+						<label class="block text-[10px] font-semibold uppercase tracking-wide text-gray-500 mb-1">
+							Day options <span class="font-normal normal-case">(comma-separated, first is auto-selected)</span>
+						</label>
+						<input
+							type="text"
+							value={milestone.dayOptions.join(', ')}
+							oninput={(e) => updateDayOptions(i, (e.target as HTMLInputElement).value)}
+							class="input w-full text-sm font-mono"
+							placeholder="1, 7, 21, 40"
+						/>
+					</div>
+
+					<!-- Preview pills -->
+					<div class="shrink-0 pt-5 flex gap-1 flex-wrap max-w-[140px]">
+						{#each milestone.dayOptions.slice(0, 4) as d, di}
+							<span class="rounded-md px-1.5 py-0.5 text-[10px] font-semibold
+								{di === 0 ? 'bg-orange-100 text-orange-700 ring-1 ring-orange-300' : 'bg-gray-200 text-gray-600'}">
+								{d}d
+							</span>
+						{/each}
+					</div>
+
+					<!-- Remove -->
+					<button type="button" onclick={() => removeMilestone(i)}
+						class="mt-5 rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors shrink-0"
+						title="Remove milestone">
+						<Trash2 size={14} />
+					</button>
+				</div>
+			{/each}
+
+			{#if milestones.length === 0}
+				<p class="text-sm text-gray-400 text-center py-4">No milestones — add one above.</p>
+			{/if}
+		</div>
+
+		<!-- Hidden input carries the JSON to the server -->
+		<input type="hidden" name="milestones" value={milestonesJson} />
 	</section>
 
 	<div class="flex justify-end gap-2">

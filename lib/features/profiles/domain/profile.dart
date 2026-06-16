@@ -35,6 +35,7 @@ class Profile extends Equatable {
     required this.createdAt,
     this.avatarSeed,
     this.language = 'en',
+    this.mantraLanguage = 'hi',
   });
 
   final String id;
@@ -47,8 +48,12 @@ class Profile extends Equatable {
   /// (gradient + initials) when the user has no real photo.
   final String? avatarSeed;
 
-  /// Preferred UI language for this family member (BCP-47 code: en/hi/te/kn).
+  /// Preferred UI / app language for this family member (en/hi/te/kn).
   final String language;
+
+  /// Preferred language/script for displaying mantras — independent of the
+  /// UI [language]. Defaults to Devanagari ('hi').
+  final String mantraLanguage;
 
   /// Display label used on the Profile Selection screen.
   /// "Me" → just "Me", others → "Name, Relation".
@@ -68,6 +73,7 @@ class Profile extends Equatable {
     FamilyRelation? relation,
     String? avatarSeed,
     String? language,
+    String? mantraLanguage,
   }) => Profile(
         id: id,
         userId: userId,
@@ -75,6 +81,7 @@ class Profile extends Equatable {
         relation: relation ?? this.relation,
         avatarSeed: avatarSeed ?? this.avatarSeed,
         language: language ?? this.language,
+        mantraLanguage: mantraLanguage ?? this.mantraLanguage,
         createdAt: createdAt,
       );
 
@@ -85,6 +92,7 @@ class Profile extends Equatable {
         'relation': relation.name,
         'avatarSeed': avatarSeed,
         'language': language,
+        'mantraLanguage': mantraLanguage,
         'createdAt': createdAt.toIso8601String(),
       };
 
@@ -95,9 +103,11 @@ class Profile extends Equatable {
         relation: FamilyRelation.fromName(j['relation'] as String?),
         avatarSeed: j['avatarSeed'] as String?,
         language: j['language'] as String? ?? 'en',
+        mantraLanguage: j['mantraLanguage'] as String? ?? 'hi',
         createdAt: DateTime.parse(j['createdAt'] as String),
       );
 
   @override
-  List<Object?> get props => [id, userId, name, relation, avatarSeed, language, createdAt];
+  List<Object?> get props =>
+      [id, userId, name, relation, avatarSeed, language, mantraLanguage, createdAt];
 }

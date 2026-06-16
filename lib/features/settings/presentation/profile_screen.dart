@@ -331,13 +331,26 @@ class ProfileScreen extends ConsumerWidget {
             children: [
               SettingRow(
                 icon: Icons.language_rounded,
-                label: context.l10n.languageSetting,
+                label: 'App Language',
                 value: KvlLanguage.byCode(settings.languageCode).nativeLabel,
                 onTap: () => _pickLanguage(
                   context,
                   languages: languages,
                   currentCode: settings.languageCode,
                   onPicked: settingsRepo.setLanguage,
+                ),
+              ),
+              SettingRow(
+                icon: Icons.translate_rounded,
+                label: 'Mantra Script',
+                value:
+                    KvlLanguage.byCode(settings.mantraLanguageCode).nativeLabel,
+                onTap: () => _pickLanguage(
+                  context,
+                  languages: languages,
+                  currentCode: settings.mantraLanguageCode,
+                  onPicked: settingsRepo.setMantraLanguage,
+                  title: 'Choose Mantra Script',
                 ),
               ),
             ],
@@ -484,6 +497,7 @@ class ProfileScreen extends ConsumerWidget {
     required List<KvlLanguage> languages,
     required String currentCode,
     required Future<void> Function(String code) onPicked,
+    String? title,
   }) async {
     final picked = await showModalBottomSheet<String>(
       context: context,
@@ -500,7 +514,7 @@ class ProfileScreen extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.all(KvlSpacing.md),
                 child: Text(
-                  context.l10n.languagePickerTitle,
+                  title ?? context.l10n.languagePickerTitle,
                   style: KvlText.title(15),
                 ),
               ),
@@ -1476,7 +1490,7 @@ class _RetrainPickerSheet extends ConsumerWidget {
           ...programs.map((p) {
             final mantra = ref.watch(mantraByIdProvider(p.mantraId));
             final name =
-                mantra?.name.displayForLanguage(settings.languageCode) ??
+                mantra?.name.displayForLanguage(settings.mantraLanguageCode) ??
                 p.mantraId;
             return _MantraPickerTile(
               name: name,

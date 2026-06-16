@@ -63,12 +63,12 @@ export async function recomputeProgramStreaks(programId: string): Promise<void> 
 	const daySet = new Set<string>();
 	for (const s of sessions) {
 		const d = s.startedAt;
-		daySet.add(`${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`);
+		daySet.add(`${d.getUTCFullYear()}-${d.getUTCMonth() + 1}-${d.getUTCDate()}`);
 	}
 	const days = Array.from(daySet)
 		.map((key) => {
 			const [y, m, d] = key.split('-').map(Number);
-			return new Date(Date.UTC(y, m, d));
+			return new Date(Date.UTC(y, m - 1, d));
 		})
 		.sort((a, b) => b.getTime() - a.getTime()); // newest first
 
@@ -140,6 +140,7 @@ export const memberUpsertSchema = z.object({
 	relation: z.enum(FAMILY_RELATIONS).default('other'),
 	avatar_key: z.string().max(40).nullable().optional(),
 	language: z.string().max(8).default('en'),
+	mantra_language: z.string().max(8).default('hi'),
 	birth_year: z.number().int().nullable().optional(),
 	preferences: z.record(z.string(), z.unknown()).optional(),
 	is_primary: z.boolean().optional()

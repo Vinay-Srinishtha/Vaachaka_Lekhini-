@@ -61,7 +61,7 @@ class ProfileSelectScreen extends ConsumerWidget {
                         await ref
                             .read(profileRepositoryProvider)
                             .setActive(p.id);
-                        if (context.mounted) context.go(KvlRoute.practice);
+                        if (context.mounted) context.go(KvlRoute.home);
                       },
                       onTapAddMember: () =>
                           _showAddDialog(context, ref, session?.userId),
@@ -129,7 +129,7 @@ class ProfileSelectScreen extends ConsumerWidget {
       relation: result.relation,
     );
     await repo.setActive(created.id);
-    if (context.mounted) context.go(KvlRoute.practice);
+    if (context.mounted) context.go(KvlRoute.home);
   }
 }
 

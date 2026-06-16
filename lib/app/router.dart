@@ -379,7 +379,6 @@ class _ShellPageState extends ConsumerState<_ShellPage> {
           onTap: (i) =>
               shell.goBranch(i, initialLocation: i == shell.currentIndex),
           hiddenIndices: hidden,
-          storePoints: points,
         ),
       ),
     );

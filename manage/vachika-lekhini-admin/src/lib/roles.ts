@@ -35,6 +35,7 @@ const ROLE_SECTIONS: Record<AdminRole, readonly string[] | '*'> = {
 		'sessions',
 		'enrolments',
 		'rewards',
+		'reward-rules',
 		'invites'
 	],
 	assets_admin: ['config'],

@@ -32,7 +32,7 @@ export const load: PageServerLoad = async (event) => {
 			take: q.take,
 			include: {
 				member: { select: { id: true, displayName: true } },
-				program: { include: { mantra: { select: { nameRoman: true } } } }
+				program: { select: { id: true, mantra: { select: { nameRoman: true } } } }
 			}
 		}),
 		prisma.session.count({ where }),

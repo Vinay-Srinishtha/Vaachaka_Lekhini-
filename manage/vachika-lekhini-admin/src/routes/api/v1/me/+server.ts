@@ -28,6 +28,7 @@ export const GET: RequestHandler = async (event) => {
 					relation: true,
 					avatarKey: true,
 					language: true,
+					mantraLanguage: true,
 					birthYear: true,
 					preferences: true,
 					isPrimary: true,

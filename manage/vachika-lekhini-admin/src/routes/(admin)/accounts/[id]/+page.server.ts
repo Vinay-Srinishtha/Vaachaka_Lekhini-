@@ -9,13 +9,15 @@ export const load: PageServerLoad = async (event) => {
 	const account = await accountDetail(event.params.id);
 	if (!account) throw error(404, 'Account not found');
 
+	const memberIds = account.members.map((m) => m.id);
 	const recentSessions = await prisma.session.findMany({
-		where: { member: { accountId: account.id } },
+		where: { memberId: { in: memberIds } },
 		orderBy: { startedAt: 'desc' },
 		take: 10,
-		include: {
+		select: {
+			id: true, startedAt: true, durationSec: true, countAdded: true, modality: true,
 			member: { select: { displayName: true } },
-			program: { include: { mantra: { select: { nameRoman: true } } } }
+			program: { select: { mantra: { select: { nameRoman: true } } } }
 		}
 	});
 

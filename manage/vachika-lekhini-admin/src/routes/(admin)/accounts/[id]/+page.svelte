@@ -63,7 +63,7 @@
 							{/if}
 						</div>
 						<div class="text-xs text-gray-500 mt-0.5">
-							{relationLabel[m.relation] ?? m.relation} · {m.language}
+							{relationLabel[m.relation] ?? m.relation} · App: {m.language} · Mantra: {m.mantraLanguage}
 						</div>
 						<div class="mt-3 grid grid-cols-3 gap-2 text-center">
 							<div>

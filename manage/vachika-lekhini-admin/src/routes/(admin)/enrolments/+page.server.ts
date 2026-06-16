@@ -11,7 +11,10 @@ export const load: PageServerLoad = async (event) => {
 	const tab = event.url.searchParams.get('tab') === 'handwriting' ? 'handwriting' : 'voice';
 
 	const memberWhere = q.q
-		? { member: { displayName: { contains: q.q, mode: 'insensitive' as const } } }
+		? { OR: [
+			{ member: { displayName: { contains: q.q, mode: 'insensitive' as const } } },
+			{ mantra: { nameRoman: { contains: q.q, mode: 'insensitive' as const } } }
+		] }
 		: {};
 
 	if (tab === 'voice') {
@@ -31,7 +34,10 @@ export const load: PageServerLoad = async (event) => {
 		return { tab, voiceRows: rows, hwRows: [], total, query: { q: q.q, page: q.page, pageSize: q.pageSize, sort: q.sort } };
 	} else {
 		const hwWhere = q.q
-			? { member: { displayName: { contains: q.q, mode: 'insensitive' as const } } }
+			? { OR: [
+				{ member: { displayName: { contains: q.q, mode: 'insensitive' as const } } },
+				{ mantra: { nameRoman: { contains: q.q, mode: 'insensitive' as const } } }
+			] }
 			: {};
 		const [rows, total] = await Promise.all([
 			prisma.handwritingSample.findMany({

@@ -34,18 +34,17 @@ export const POST: RequestHandler = async (event) => {
 
 	let account;
 	let isNewAccount = false;
+	let referralCode: string | undefined;
 
 	if (body.username) {
-		// Check if account already exists before creating so we know whether
-		// to apply the referral credit.
 		const existing = await prisma.account.findUnique({
 			where: { mobile: body.mobile },
 			select: { id: true }
 		});
 		isNewAccount = !existing;
+		referralCode = body.referral_code;
 		account = await ensureAccount(body.mobile, body.username, body.country_code ?? '+91');
 	} else {
-		// Login — refuse if account doesn't exist.
 		account = await prisma.account.findUnique({
 			where: { mobile: body.mobile },
 			select: { id: true, mobile: true, countryCode: true, isBanned: true }
@@ -55,42 +54,20 @@ export const POST: RequestHandler = async (event) => {
 
 	if (account.isBanned) throw error(403, 'Account is banned');
 
-	// Credit the referrer if this is a brand-new account and a referral code was supplied.
-	// The code is the first 6 hex chars of the referrer's account UUID (dashes stripped,
-	// uppercased) — matching the Flutter InviteService.codeFor() logic.
-	if (isNewAccount && body.referral_code) {
-		const code = body.referral_code.toUpperCase().replace(/-/g, '');
-		// Find the referrer's primary member via a raw query (UUID hex prefix match).
-		const rows = await prisma.$queryRaw<{ member_id: string }[]>`
-			SELECT m.id AS member_id
-			FROM "Member" m
-			JOIN "Account" a ON a.id = m."accountId"
-			WHERE REPLACE(a.id::text, '-', '') ILIKE ${code + '%'}
-			  AND m."isPrimary" = true
-			  AND a.id != ${account.id}
-			LIMIT 1
-		`;
-		if (rows.length > 0) {
-			const referrerMemberId = rows[0].member_id;
-			await prisma.rewardEvent.create({
-				data: {
-					id: crypto.randomUUID(),
-					memberId: referrerMemberId,
-					kind: 'earn',
-					amount: 100,
-					source: 'referral',
-					occurredAt: new Date()
-				}
-			});
-		}
-	}
-
 	const primary = await prisma.member.findFirst({
 		where: { accountId: account.id, isPrimary: true },
 		select: { id: true, displayName: true }
 	});
 
 	const tokens = await issueTokensFor(account.id, account.mobile);
+
+	// Fire reward rules asynchronously (non-blocking — does not delay the auth response).
+	if (isNewAccount && primary) {
+		import('$lib/server/reward-rules').then(({ applyJoinRewards }) =>
+			applyJoinRewards(primary.id, referralCode, account.id)
+		).catch(() => {});
+	}
+
 	return snakeJson({
 		...tokens,
 		account: {

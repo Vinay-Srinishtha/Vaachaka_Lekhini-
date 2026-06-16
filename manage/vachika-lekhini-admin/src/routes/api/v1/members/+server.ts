@@ -63,6 +63,7 @@ export const POST: RequestHandler = async (event) => {
 					relation: m.relation,
 					avatarKey: m.avatar_key ?? null,
 					language: m.language,
+					mantraLanguage: m.mantra_language,
 					birthYear: m.birth_year ?? null,
 					preferences: (m.preferences ?? {}) as any,
 					isPrimary: m.is_primary ?? false
@@ -72,6 +73,7 @@ export const POST: RequestHandler = async (event) => {
 					relation: m.relation,
 					avatarKey: m.avatar_key ?? null,
 					language: m.language,
+					mantraLanguage: m.mantra_language,
 					birthYear: m.birth_year ?? null,
 					preferences: (m.preferences ?? {}) as any,
 					...(m.is_primary !== undefined ? { isPrimary: m.is_primary } : {})
@@ -82,6 +84,7 @@ export const POST: RequestHandler = async (event) => {
 					relation: true,
 					avatarKey: true,
 					language: true,
+					mantraLanguage: true,
 					birthYear: true,
 					preferences: true,
 					isPrimary: true,

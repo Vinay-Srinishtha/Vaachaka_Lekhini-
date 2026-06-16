@@ -32,6 +32,7 @@ enum MicSensitivity {
 class KvlSettings {
   const KvlSettings({
     required this.languageCode,
+    required this.mantraLanguageCode,
     required this.reminderTime,
     required this.notificationSound,
     required this.micSensitivity,
@@ -40,7 +41,12 @@ class KvlSettings {
     required this.linkInstagram,
   });
 
+  /// UI / app language (drives Flutter localization).
   final String languageCode;
+
+  /// Script/language mantras are displayed in — independent of the app
+  /// language. Defaults to Devanagari ('hi', the canonical chant script).
+  final String mantraLanguageCode;
   final TimeOfDay reminderTime;
   final String notificationSound;
   final MicSensitivity micSensitivity;
@@ -50,6 +56,7 @@ class KvlSettings {
 
   static const fallback = KvlSettings(
     languageCode: 'en',
+    mantraLanguageCode: 'hi',
     reminderTime: TimeOfDay(hour: 6, minute: 0),
     notificationSound: 'bell',
     micSensitivity: MicSensitivity.high,
@@ -60,6 +67,7 @@ class KvlSettings {
 
   KvlSettings copyWith({
     String? languageCode,
+    String? mantraLanguageCode,
     TimeOfDay? reminderTime,
     String? notificationSound,
     MicSensitivity? micSensitivity,
@@ -69,6 +77,7 @@ class KvlSettings {
   }) =>
       KvlSettings(
         languageCode: languageCode ?? this.languageCode,
+        mantraLanguageCode: mantraLanguageCode ?? this.mantraLanguageCode,
         reminderTime: reminderTime ?? this.reminderTime,
         notificationSound: notificationSound ?? this.notificationSound,
         micSensitivity: micSensitivity ?? this.micSensitivity,
@@ -83,6 +92,7 @@ abstract class SettingsRepository {
   Stream<KvlSettings> watch();
 
   Future<void> setLanguage(String code);
+  Future<void> setMantraLanguage(String code);
   Future<void> setReminderTime(TimeOfDay t);
   Future<void> setNotificationSound(String sound);
   Future<void> setMicSensitivity(MicSensitivity s);

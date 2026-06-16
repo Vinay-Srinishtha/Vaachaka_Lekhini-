@@ -38,6 +38,7 @@ dependencies:
   # --- Voice (kept from prototype) ---
   vosk_flutter_2: ^1.0.5
   record: ^7.1.0
+  audioplayers: ^6.1.0
 
   # --- Handwriting ---
   signature: ^6.3.0

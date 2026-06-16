@@ -357,7 +357,7 @@ class AppLocalizationsKn extends AppLocalizations {
   String get phoneMode => 'ಫೋನ್ ಮೋಡ್';
 
   @override
-  String get ownWritingModeLabel => 'ಸ್ವಂತ ಬರವಣಿಗೆ ಮೋಡ್';
+  String get ownWritingModeLabel => 'ಬರವಣಿಗೆ ಮೋಡ್';
 
   @override
   String get everyJourneyBegins =>

@@ -16,7 +16,7 @@ export const load: PageServerLoad = async (event) => {
 	if (status === 'consumed') where.consumedAt = { not: null };
 	if (status === 'expired') where.consumedAt = null, (where as Record<string, unknown>).expiresAt = { lt: now };
 	if (status === 'active') where.consumedAt = null, (where as Record<string, unknown>).expiresAt = { gte: now };
-	if (q.q) where.mobile = { contains: q.q };
+	if (q.q) where.mobile = { contains: q.q, mode: 'insensitive' };
 
 	const [rows, total] = await Promise.all([
 		prisma.otpChallenge.findMany({

@@ -153,6 +153,7 @@ class ProfileRepositoryLocal implements ProfileRepository {
         'relation': _serverRelation(p.relation),
         'is_primary': p.relation == FamilyRelation.me,
         'language': p.language,
+        'mantra_language': p.mantraLanguage,
       };
 
   // Map Flutter FamilyRelation to the server's FAMILY_RELATIONS enum.

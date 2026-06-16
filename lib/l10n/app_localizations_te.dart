@@ -357,7 +357,7 @@ class AppLocalizationsTe extends AppLocalizations {
   String get phoneMode => 'ఫోన్ మోడ్';
 
   @override
-  String get ownWritingModeLabel => 'స్వంత రాత మోడ్';
+  String get ownWritingModeLabel => 'రాత మోడ్';
 
   @override
   String get everyJourneyBegins => 'ప్రతి యాత్ర ఒక్క అడుగుతో మొదలవుతుంది.';

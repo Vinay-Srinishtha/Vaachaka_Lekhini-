@@ -357,7 +357,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get phoneMode => 'फोन मोड';
 
   @override
-  String get ownWritingModeLabel => 'स्वयं लेखन मोड';
+  String get ownWritingModeLabel => 'लेखन मोड';
 
   @override
   String get everyJourneyBegins => 'हर यात्रा एक कदम से शुरू होती है।';

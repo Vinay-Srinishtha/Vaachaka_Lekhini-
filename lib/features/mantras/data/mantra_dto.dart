@@ -1,6 +1,23 @@
 import '../../../core/widgets/mantra_thumb.dart';
 import '../domain/mantra.dart';
 
+List<MantraMilestone>? _parseMilestones(Object? raw) {
+  if (raw is! List || raw.isEmpty) return null;
+  try {
+    return raw.map((e) {
+      final m = e as Map<String, Object?>;
+      return MantraMilestone(
+        count: (m['count'] as num).toInt(),
+        dayOptions: ((m['day_options'] as List?) ?? const [])
+            .map((d) => (d as num).toInt())
+            .toList(growable: false),
+      );
+    }).toList(growable: false);
+  } catch (_) {
+    return null;
+  }
+}
+
 /// DTO for the `/api/v1/mantras` payload. The admin app serialises every key
 /// in snake_case (mirrored in `manage/.../snake-case.ts`) so we map here.
 ///
@@ -21,6 +38,7 @@ class MantraDto {
     this.recommendedDays,
     this.pronunciationUrl,
     this.imageUrl,
+    this.milestones,
   });
 
   final String slug;
@@ -37,6 +55,7 @@ class MantraDto {
   final int? recommendedDays;
   final String? pronunciationUrl;
   final String? imageUrl;
+  final List<MantraMilestone>? milestones;
 
   factory MantraDto.fromJson(Map<String, Object?> json) => MantraDto(
         slug: json['slug'] as String,
@@ -56,6 +75,7 @@ class MantraDto {
         recommendedDays: (json['recommended_days'] as num?)?.toInt(),
         pronunciationUrl: json['pronunciation_url'] as String?,
         imageUrl: json['image_url'] as String?,
+        milestones: _parseMilestones(json['milestones']),
       );
 
   Map<String, Object?> toJson() => {
@@ -96,6 +116,7 @@ class MantraDto {
         recommendedDays: recommendedDays,
         pronunciationAsset: pronunciationUrl,
         imageUrl: imageUrl,
+        milestones: milestones,
       );
 }
 

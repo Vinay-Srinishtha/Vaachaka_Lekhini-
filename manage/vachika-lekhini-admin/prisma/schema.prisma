@@ -37,6 +37,9 @@ model Mantra {
   recommendedCount Int?
   recommendedDays  Int?
   pronunciationUrl String?
+  /// Program count presets + day options shown on the Set Target screen.
+  /// JSON: [{ count: number, dayOptions: number[] }]
+  milestones       Json?    @db.JsonB
   isActive         Boolean  @default(true)
   sortOrder        Int      @default(0)
   createdAt        DateTime @default(now())
@@ -47,6 +50,8 @@ model Mantra {
   handwritingSamples HandwritingSample[]
 
   @@index([isActive, sortOrder])
+  @@index([nameRoman])
+  @@index([nameDevanagari])
 }
 
 enum ThumbPalette {
@@ -148,6 +153,7 @@ model Member {
   relation     FamilyRelation @default(other)
   avatarKey    String?
   language     String    @default("en")
+  mantraLanguage String  @default("hi")
   birthYear    Int?
   preferences  Json      @default("{}") @db.JsonB
   isPrimary    Boolean   @default(false)
@@ -170,6 +176,7 @@ model Member {
   @@index([accountId, isPrimary])
   @@index([rewardPointsBalance])
   @@index([lastActiveAt])
+  @@index([displayName])
 }
 
 enum FamilyRelation {
@@ -409,6 +416,20 @@ model Faq {
   updatedAt DateTime @updatedAt
 
   @@index([isActive, sortOrder])
+}
+
+/// Configurable reward rules. Each rule has a unique key, a point value,
+/// an optional threshold (e.g. chants per point), and can be toggled on/off.
+model RewardRule {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  name        String
+  description String
+  points      Int
+  threshold   Int?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 /// Generic key→value app settings. Keys: support_email, privacy_policy, app_logo_url.

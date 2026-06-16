@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/api/api_client.dart';
 import '../core/asr/vosk_model_loader.dart';
+import '../core/asr/vosk_recognizer.dart';
 import '../core/notifications/notification_scheduler.dart';
 import '../core/auth/auth_service.dart';
 import '../core/auth/auth_storage.dart';
@@ -227,6 +228,7 @@ final accountHydrationProvider = Provider<void>((ref) {
               : _familyRelationFromServer(member['relation'] as String?),
           avatarSeed: member['avatar_key'] as String?,
           language: member['language'] as String? ?? 'en',
+          mantraLanguage: member['mantra_language'] as String? ?? 'hi',
           createdAt:
               DateTime.tryParse(member['created_at'] as String? ?? '') ??
               DateTime.now(),
@@ -387,15 +389,20 @@ final profileLanguageSyncProvider = Provider<void>((ref) {
   ref.listen(settingsProvider, (_, next) {
     final settings = next.value;
     final profile = ref.read(activeProfileProvider).value;
-    if (settings == null ||
-        profile == null ||
-        profile.language == settings.languageCode) {
-      return;
-    }
+    if (settings == null || profile == null) return;
+
+    final languageChanged = profile.language != settings.languageCode;
+    final mantraChanged =
+        profile.mantraLanguage != settings.mantraLanguageCode;
+    if (!languageChanged && !mantraChanged) return;
+
     Future(
-      () => ref
-          .read(profileRepositoryProvider)
-          .update(profile.copyWith(language: settings.languageCode)),
+      () => ref.read(profileRepositoryProvider).update(
+            profile.copyWith(
+              language: settings.languageCode,
+              mantraLanguage: settings.mantraLanguageCode,
+            ),
+          ),
     );
   });
 });
@@ -418,6 +425,30 @@ final voskModelWarmupProvider = FutureProvider<String?>((ref) async {
   } catch (e) {
     if (kDebugMode) {
       debugPrint('Vosk warm-up failed (will retry on first use): $e');
+    }
+    return null;
+  }
+});
+
+/// Shared, long-lived [VoskRecognizer] built ONCE (the expensive native
+/// `createModel` load) and reused across every voice session. Warmed at
+/// launch from `KvlApp.build` so that tapping "Start" never pays the cold
+/// model-load cost — counting begins the instant the mic opens.
+///
+/// Kept alive for the app's lifetime; disposed only on app shutdown.
+final voskRecognizerProvider = FutureProvider<VoskRecognizer?>((ref) async {
+  final session = ref.watch(sessionProvider).value;
+  if (session == null) return null;
+  ref.keepAlive();
+  try {
+    final path = await VoskModelLoader().ensureExtracted();
+    final recognizer = await VoskRecognizer.create(modelPath: path);
+    ref.onDispose(recognizer.dispose);
+    if (kDebugMode) debugPrint('Vosk recognizer ready (model loaded).');
+    return recognizer;
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint('Vosk recognizer warm-up failed (will build on use): $e');
     }
     return null;
   }
@@ -483,30 +514,53 @@ final activeProfileProvider = StreamProvider<Profile?>((ref) async* {
   yield* ref.watch(profileRepositoryProvider).watchActive();
 });
 
-/// Live store catalogue from /api/v1/store.
-/// Kept alive so switching back to the Store tab is instant — no re-fetch.
-final storeItemsProvider = FutureProvider<List<StoreItem>>((ref) async {
-  final api = ref.watch(apiClientProvider);
-  final res = await api.dio.get<dynamic>('/api/v1/store');
-  final data = res.data;
-  final list = (data is Map ? data['items'] : null) as List<dynamic>? ?? [];
-  return list
-      .map((e) => StoreItem.fromJson(Map<String, dynamic>.from(e as Map)))
-      .toList();
+// Hive cache keys for the cache-first remote providers below. Stored in the
+// shared cacheBox() as decoded JSON (same approach as the mantra catalogue).
+const _kStoreCache = 'remote.store.payload';
+const _kLeaderboardCachePrefix = 'remote.leaderboard.';
+const _kStatsCachePrefix = 'remote.stats.';
+
+/// Live store catalogue from /api/v1/store — cache-first.
+///
+/// Emits the last cached catalogue instantly (no spinner on return visits or
+/// when offline), then refreshes from the network. On a network error with a
+/// cache present, the cached list is kept; only a cold first load with no
+/// cache surfaces an error (so the Store screen can show Retry).
+final storeItemsProvider = StreamProvider<List<StoreItem>>((ref) async* {
+  final box = cacheBox();
+
+  List<StoreItem> parse(dynamic raw) =>
+      ((raw is Map ? raw['items'] : raw) as List<dynamic>? ?? const [])
+          .map((e) => StoreItem.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
+
+  final cached = box.get(_kStoreCache);
+  if (cached != null) yield parse(cached);
+
+  try {
+    final api = ref.watch(apiClientProvider);
+    final res = await api.dio.get<dynamic>('/api/v1/store');
+    final data = res.data;
+    await box.put(_kStoreCache, data);
+    yield parse(data);
+  } catch (_) {
+    if (cached == null) rethrow; // cold + offline → Store screen shows Retry
+  }
 });
 
 /// Global community statistics from /api/v1/stats?mantra_id= (public, no auth).
-/// Auto-refreshes every 2 seconds so the global mantra count stays live; call
-/// ref.invalidate(globalStatsProvider(id)) to force an immediate refresh
-/// (e.g. after a practice session finishes).
+/// Refreshes every 30 seconds so the global count stays reasonably live without
+/// hammering the API (the old 2-second loop caused a request storm when the
+/// backend was unreachable). Call ref.invalidate(globalStatsProvider(id)) to
+/// force an immediate refresh (e.g. after a practice session finishes).
 final globalStatsProvider = FutureProvider.autoDispose
     .family<({int globalChantCount, int memberCount}), String>((ref, mantraId) async {
   // Keep the provider alive across re-builds while its widget is on screen,
   // but still allow disposal when the screen is gone.
   final link = ref.keepAlive();
 
-  // Schedule automatic re-fetch 2 seconds after each successful build.
-  final timer = Timer(const Duration(seconds: 2), () {
+  // Schedule a periodic re-fetch while the screen is mounted.
+  final timer = Timer(const Duration(seconds: 30), () {
     ref.invalidateSelf();
   });
   ref.onDispose(() {
@@ -514,18 +568,36 @@ final globalStatsProvider = FutureProvider.autoDispose
     link.close();
   });
 
+  final box = cacheBox();
+  final cacheKey = '$_kStatsCachePrefix$mantraId';
+
+  ({int globalChantCount, int memberCount}) cachedOrZero() {
+    final raw = box.get(cacheKey);
+    if (raw is Map) {
+      return (
+        globalChantCount: (raw['c'] as num?)?.toInt() ?? 0,
+        memberCount: (raw['m'] as num?)?.toInt() ?? 0,
+      );
+    }
+    return (globalChantCount: 0, memberCount: 0);
+  }
+
   try {
     final api = ref.watch(apiClientProvider);
     final res = await api.dio.get<Map<String, dynamic>>(
       '/api/v1/stats?mantra_id=${Uri.encodeComponent(mantraId)}',
     );
     final data = res.data ?? {};
-    return (
+    final result = (
       globalChantCount: (data['global_chant_count'] as num?)?.toInt() ?? 0,
       memberCount: (data['member_count'] as num?)?.toInt() ?? 0,
     );
+    await box.put(cacheKey, {'c': result.globalChantCount, 'm': result.memberCount});
+    return result;
   } catch (_) {
-    return (globalChantCount: 0, memberCount: 0);
+    // Offline / server down: keep the last known totals instead of dropping
+    // the global count to zero (which made the on-screen number flicker).
+    return cachedOrZero();
   }
 });
 
@@ -581,35 +653,49 @@ final appSettingsProvider =
   }
 });
 
-/// Real leaderboard from /api/v1/leaderboard (Bearer required).
-/// Returns [] when unauthenticated or on any network error — never throws.
-/// keepAlive: data is cached across tab switches so switching back is instant.
+/// Real leaderboard from /api/v1/leaderboard (Bearer required) — cache-first.
+/// Emits the last cached board for this sort instantly (no spinner on return
+/// visits or when offline), then refreshes. Never throws: an error with no
+/// cache yields an empty list so the Community screen shows its empty state.
 final leaderboardProvider =
-    FutureProvider.family<List<Friend>, LeaderboardSort>((ref, sort) async {
+    StreamProvider.family<List<Friend>, LeaderboardSort>((ref, sort) async* {
+      final box = cacheBox();
+      final sortParam =
+          sort == LeaderboardSort.streak ? 'streak' : 'total_chants';
+      final cacheKey = '$_kLeaderboardCachePrefix$sortParam';
+
+      List<Friend> parse(dynamic raw) =>
+          ((raw as List<dynamic>?) ?? const []).map((e) {
+            final m = Map<String, dynamic>.from(e as Map);
+            return Friend(
+              id: m['id'] as String,
+              name: m['name'] as String,
+              streakDays: (m['streak_days'] as num?)?.toInt() ?? 0,
+              totalChants: (m['total_chants'] as num?)?.toInt() ?? 0,
+              isSelf: m['is_self'] == true,
+              streakActive: m['streak_active'] == true,
+            );
+          }).toList();
+
+      final cached = box.get(cacheKey);
+      if (cached != null) yield parse(cached);
+
+      final session = ref.watch(sessionProvider).value;
+      if (session == null) {
+        if (cached == null) yield const <Friend>[];
+        return;
+      }
+
       try {
-        final session = ref.watch(sessionProvider).value;
-        if (session == null) return [];
         final api = ref.watch(apiClientProvider);
-        final sortParam = sort == LeaderboardSort.streak
-            ? 'streak'
-            : 'total_chants';
         final res = await api.dio.get<Map<String, dynamic>>(
           '/api/v1/leaderboard?sort=$sortParam',
         );
-        final entries = (res.data?['entries'] as List<dynamic>?) ?? [];
-        return entries.map((e) {
-          final m = Map<String, dynamic>.from(e as Map);
-          return Friend(
-            id: m['id'] as String,
-            name: m['name'] as String,
-            streakDays: (m['streak_days'] as num?)?.toInt() ?? 0,
-            totalChants: (m['total_chants'] as num?)?.toInt() ?? 0,
-            isSelf: m['is_self'] == true,
-            streakActive: m['streak_active'] == true,
-          );
-        }).toList();
+        final entries = (res.data?['entries'] as List<dynamic>?) ?? const [];
+        await box.put(cacheKey, entries);
+        yield parse(entries);
       } catch (_) {
-        return [];
+        if (cached == null) yield const <Friend>[];
       }
     });
 

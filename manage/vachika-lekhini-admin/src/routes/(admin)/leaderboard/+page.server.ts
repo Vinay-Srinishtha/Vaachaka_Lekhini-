@@ -22,8 +22,6 @@ export const load: PageServerLoad = async ({ url }) => {
 	type StreakRow    = { rank: number; member_id: string; name: string; mobile: string; total_progress: number; longest_streak: number; current_streak: number; session_count: number };
 	type SessionRow  = { rank: number; member_id: string; name: string; mobile: string; total_progress: number; longest_streak: number; current_streak: number; session_count: number };
 
-	const nameFilter = search ? `AND m."displayName" ILIKE '%' || ${JSON.stringify(search)} || '%'` : '';
-
 	const BASE_CTE = `
 		WITH member_stats AS (
 		  SELECT
@@ -49,7 +47,7 @@ export const load: PageServerLoad = async ({ url }) => {
 			  ROW_NUMBER() OVER (ORDER BY longest_streak DESC, total_progress DESC)::int AS rank,
 			  member_id, name, mobile, total_progress, longest_streak, current_streak, session_count
 			FROM member_stats
-			${search ? `WHERE name ILIKE '%' || $1 || '%'` : ''}
+			${search ? `WHERE (name ILIKE '%' || $1 || '%' OR mobile ILIKE '%' || $1 || '%')` : ''}
 			ORDER BY rank
 			LIMIT 200
 		`, ...(search ? [search] : []));
@@ -60,7 +58,7 @@ export const load: PageServerLoad = async ({ url }) => {
 			  ROW_NUMBER() OVER (ORDER BY session_count DESC, total_progress DESC)::int AS rank,
 			  member_id, name, mobile, total_progress, longest_streak, current_streak, session_count
 			FROM member_stats
-			${search ? `WHERE name ILIKE '%' || $1 || '%'` : ''}
+			${search ? `WHERE (name ILIKE '%' || $1 || '%' OR mobile ILIKE '%' || $1 || '%')` : ''}
 			ORDER BY rank
 			LIMIT 200
 		`, ...(search ? [search] : []));
@@ -71,7 +69,7 @@ export const load: PageServerLoad = async ({ url }) => {
 			  ROW_NUMBER() OVER (ORDER BY total_progress DESC, longest_streak DESC)::int AS rank,
 			  member_id, name, mobile, total_progress, longest_streak, current_streak, session_count
 			FROM member_stats
-			${search ? `WHERE name ILIKE '%' || $1 || '%'` : ''}
+			${search ? `WHERE (name ILIKE '%' || $1 || '%' OR mobile ILIKE '%' || $1 || '%')` : ''}
 			ORDER BY rank
 			LIMIT 200
 		`, ...(search ? [search] : []));

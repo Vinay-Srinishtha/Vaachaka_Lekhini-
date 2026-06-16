@@ -183,7 +183,9 @@ class PracticeController extends AsyncNotifier<PracticeState> {
         await _voiceSub?.cancel();
         _voiceSub = null;
         await _voice?.dispose();
-        _voice = VoiceEnrolmentService();
+        _voice = VoiceEnrolmentService(
+          recognizer: ref.read(voskRecognizerProvider).value,
+        );
         _voiceSub = _voice!.events.listen((e) {
           if (e.count > 0) _bump(s.sessionCount + e.count);
         }, onError: (Object err) => _failVoice("Voice recogniser stopped: $err"));
@@ -226,7 +228,9 @@ class PracticeController extends AsyncNotifier<PracticeState> {
     if (s.modality == SessionModality.voice && mantra != null) {
       final sensitivity = ref.read(settingsProvider).value?.micSensitivity
           ?? MicSensitivity.medium;
-      _voice = VoiceEnrolmentService();
+      _voice = VoiceEnrolmentService(
+        recognizer: ref.read(voskRecognizerProvider).value,
+      );
       _voiceSub = _voice!.events.listen((e) {
         if (e.count > 0) _bump(e.count);
       }, onError: (Object err) => _failVoice("Voice recogniser stopped: $err"));

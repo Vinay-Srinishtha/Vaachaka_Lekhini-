@@ -15,7 +15,8 @@ export async function listAccounts(args: ListAccountsArgs) {
 	const where = args.q
 		? {
 				OR: [
-					{ mobile: { contains: args.q } },
+					{ mobile: { contains: args.q, mode: 'insensitive' as const } },
+					{ countryCode: { contains: args.q, mode: 'insensitive' as const } },
 					{ referralCode: { contains: args.q, mode: 'insensitive' as const } },
 					{ members: { some: { displayName: { contains: args.q, mode: 'insensitive' as const } } } }
 				]

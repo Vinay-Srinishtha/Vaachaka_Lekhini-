@@ -52,6 +52,7 @@ export const NAV_ITEMS: NavItem[] = [
 
 	// ── Rewards ───────────────────────────────────────────────────────────────
 	{ href: '/rewards', label: 'Rewards Ledger', icon: Coins, section: 'rewards', group: 'Rewards' },
+	{ href: '/reward-rules', label: 'Reward Rules', icon: Gift, section: 'reward-rules', group: 'Rewards' },
 	{ href: '/invites', label: 'Invites', icon: UserPlus, section: 'invites', group: 'Rewards' },
 
 	// ── Support ───────────────────────────────────────────────────────────────

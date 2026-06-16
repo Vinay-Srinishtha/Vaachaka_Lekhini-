@@ -11,6 +11,8 @@ class RemoteConfig {
   final Map<String, Object?> _values;
   final DateTime? fetchedAt;
 
+  Object? raw(String key) => _values[key];
+
   bool boolFlag(String key, {required bool fallback}) {
     final v = _values[key];
     if (v is bool) return v;
@@ -40,19 +42,9 @@ class RemoteConfig {
     return v.toString();
   }
 
-  List<int> listIntFlag(String key, {required List<int> fallback}) {
+  T? jsonFlag<T>(String key) {
     final v = _values[key];
-    if (v is List && v.isNotEmpty) {
-      final result = v.whereType<num>().map((e) => e.toInt()).toList();
-      if (result.isNotEmpty) return result;
-    }
-    return fallback;
-  }
-
-  List<Map<String, Object?>> jsonListFlag(String key) {
-    final v = _values[key];
-    if (v is List) return v.whereType<Map<String, Object?>>().toList();
-    return const [];
+    return v is T ? v : null;
   }
 
   Map<String, Object?> get all => Map.unmodifiable(_values);

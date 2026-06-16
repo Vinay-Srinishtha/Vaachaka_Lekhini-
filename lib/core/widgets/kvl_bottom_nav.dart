@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../l10n/l10n.dart';
 import '../theme/colors.dart';
 import '../theme/shadows.dart';
 import '../theme/spacing.dart';
@@ -11,13 +10,12 @@ class KvlNavItem {
   final IconData icon;
 }
 
-/// Icons are stable; labels are resolved from l10n at build time.
-const _navIcons = <IconData>[
-  Icons.home_outlined,
-  Icons.dashboard_outlined,
-  Icons.edit_note_rounded,
-  Icons.groups_outlined,
-  Icons.shopping_bag_outlined,
+const kvlNavItems = <KvlNavItem>[
+  KvlNavItem(label: 'Home', icon: Icons.home_outlined),
+  KvlNavItem(label: 'My Programs', icon: Icons.dashboard_outlined),
+  KvlNavItem(label: 'Practice', icon: Icons.edit_note_rounded),
+  KvlNavItem(label: 'Community', icon: Icons.groups_outlined),
+  KvlNavItem(label: 'Store', icon: Icons.shopping_bag_outlined),
 ];
 
 const _practiceIndex = 2;
@@ -28,7 +26,6 @@ class KvlBottomNav extends StatelessWidget {
     required this.currentIndex,
     required this.onTap,
     this.hiddenIndices = const {},
-    this.storePoints,
   });
 
   final int currentIndex;
@@ -39,19 +36,8 @@ class KvlBottomNav extends StatelessWidget {
   /// visible tab disappears (driven by remote config feature flags).
   final Set<int> hiddenIndices;
 
-  /// When provided, shown as a live ★ badge on the Store tab (index 4).
-  final int? storePoints;
-
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final navItems = <KvlNavItem>[
-      KvlNavItem(label: l10n.navHome, icon: _navIcons[0]),
-      KvlNavItem(label: l10n.navPrograms, icon: _navIcons[1]),
-      KvlNavItem(label: l10n.navPractice, icon: _navIcons[2]),
-      KvlNavItem(label: l10n.navCommunity, icon: _navIcons[3]),
-      KvlNavItem(label: l10n.navStore, icon: _navIcons[4]),
-    ];
     final practiceHidden = hiddenIndices.contains(_practiceIndex);
 
     return Material(
@@ -61,7 +47,7 @@ class KvlBottomNav extends StatelessWidget {
         top: false,
         minimum: const EdgeInsets.only(bottom: 2),
         child: SizedBox(
-          height: practiceHidden ? 60 : 72,
+          height: practiceHidden ? 58 : 68,
           child: Stack(
             clipBehavior: Clip.none,
             alignment: Alignment.bottomCenter,
@@ -79,22 +65,21 @@ class KvlBottomNav extends StatelessWidget {
                   child: Padding(
                     padding: EdgeInsets.fromLTRB(
                       KvlSpacing.xs,
-                      practiceHidden ? 2 : 5,
+                      practiceHidden ? 2 : KvlSpacing.sm,
                       KvlSpacing.xs,
-                      1,
+                      2,
                     ),
                     child: Row(
                       children: [
-                        for (int i = 0; i < navItems.length; i++)
+                        for (int i = 0; i < kvlNavItems.length; i++)
                           if (!hiddenIndices.contains(i))
                             Expanded(
                               child: i == _practiceIndex
                                   ? const SizedBox.shrink()
                                   : _Tab(
-                                      item: navItems[i],
+                                      item: kvlNavItems[i],
                                       active: i == currentIndex,
                                       onTap: () => onTap(i),
-                                      badge: i == 4 ? storePoints : null,
                                     ),
                             ),
                       ],
@@ -106,7 +91,7 @@ class KvlBottomNav extends StatelessWidget {
                 Positioned(
                   top: 0,
                   child: _PracticeTab(
-                    item: navItems[_practiceIndex],
+                    item: kvlNavItems[_practiceIndex],
                     active: currentIndex == _practiceIndex,
                     onTap: () => onTap(_practiceIndex),
                   ),
@@ -226,18 +211,10 @@ class _PracticeTabState extends State<_PracticeTab> {
 }
 
 class _Tab extends StatelessWidget {
-  const _Tab({
-    required this.item,
-    required this.active,
-    required this.onTap,
-    this.badge,
-  });
+  const _Tab({required this.item, required this.active, required this.onTap});
   final KvlNavItem item;
   final bool active;
   final VoidCallback onTap;
-
-  /// When non-null, shows a live ★ N badge below the tab icon.
-  final int? badge;
 
   @override
   Widget build(BuildContext context) {
@@ -250,33 +227,7 @@ class _Tab extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(item.icon, size: 22, color: color),
-                if (badge != null && badge! > 0)
-                  Positioned(
-                    top: -4,
-                    right: -8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE6A817),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        _formatBadge(badge!),
-                        style: const TextStyle(
-                          fontSize: 7.5,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                          height: 1.1,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+            Icon(item.icon, size: 18, color: color),
             const SizedBox(height: 1),
             FittedBox(
               fit: BoxFit.scaleDown,
@@ -290,39 +241,9 @@ class _Tab extends StatelessWidget {
                 ),
               ),
             ),
-            if (badge != null && badge! > 0) ...[
-              const SizedBox(height: 1),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.star_rounded, size: 8, color: Color(0xFFE6A817)),
-                    const SizedBox(width: 1),
-                    Text(
-                      _formatBadge(badge!),
-                      maxLines: 1,
-                      style: const TextStyle(
-                        fontSize: 8.5,
-                        color: Color(0xFFE6A817),
-                        fontWeight: FontWeight.w700,
-                        height: 1,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
           ],
         ),
       ),
     );
-  }
-
-  static String _formatBadge(int n) {
-    if (n >= 10000000) return '${(n / 10000000).toStringAsFixed(1)}Cr';
-    if (n >= 100000) return '${(n / 100000).toStringAsFixed(1)}L';
-    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
-    return '$n';
   }
 }

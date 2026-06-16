@@ -61,7 +61,7 @@ class KvlBottomNav extends StatelessWidget {
         top: false,
         minimum: const EdgeInsets.only(bottom: 2),
         child: SizedBox(
-          height: practiceHidden ? 58 : 68,
+          height: practiceHidden ? 60 : 72,
           child: Stack(
             clipBehavior: Clip.none,
             alignment: Alignment.bottomCenter,
@@ -253,7 +253,7 @@ class _Tab extends StatelessWidget {
             Stack(
               clipBehavior: Clip.none,
               children: [
-                Icon(item.icon, size: 18, color: color),
+                Icon(item.icon, size: 22, color: color),
                 if (badge != null && badge! > 0)
                   Positioned(
                     top: -4,

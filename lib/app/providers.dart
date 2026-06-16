@@ -496,16 +496,17 @@ final storeItemsProvider = FutureProvider<List<StoreItem>>((ref) async {
 });
 
 /// Global community statistics from /api/v1/stats?mantra_id= (public, no auth).
-/// Auto-refreshes every 10 seconds; call ref.invalidate(globalStatsProvider(id))
-/// to force an immediate refresh (e.g. after a practice session finishes).
+/// Auto-refreshes every 2 seconds so the global mantra count stays live; call
+/// ref.invalidate(globalStatsProvider(id)) to force an immediate refresh
+/// (e.g. after a practice session finishes).
 final globalStatsProvider = FutureProvider.autoDispose
     .family<({int globalChantCount, int memberCount}), String>((ref, mantraId) async {
   // Keep the provider alive across re-builds while its widget is on screen,
   // but still allow disposal when the screen is gone.
   final link = ref.keepAlive();
 
-  // Schedule automatic re-fetch 10 seconds after each successful build.
-  final timer = Timer(const Duration(seconds: 10), () {
+  // Schedule automatic re-fetch 2 seconds after each successful build.
+  final timer = Timer(const Duration(seconds: 2), () {
     ref.invalidateSelf();
   });
   ref.onDispose(() {

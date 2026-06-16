@@ -20,7 +20,7 @@
 		lg: 'max-w-2xl',
 		xl: 'max-w-4xl',
 		'2xl': 'max-w-6xl',
-		'3xl': 'max-w-[92vw]'
+		'3xl': 'max-w-[86vw]'
 	};
 
 	$effect(() => {

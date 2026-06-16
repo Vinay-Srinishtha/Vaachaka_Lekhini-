@@ -83,8 +83,10 @@
 	let submitting = $state(false);
 </script>
 
+<!-- Form fills the full modal content height -->
 <form
 	method="POST"
+	class="flex flex-col h-full gap-3"
 	use:enhance={() => {
 		submitting = true;
 		return async ({ result, update }) => {
@@ -99,19 +101,19 @@
 	}}
 >
 	{#if generalError}
-		<div class="mb-3 text-sm rounded-xl bg-red-50 text-red-700 border border-red-200 px-4 py-3">
+		<div class="text-sm rounded-xl bg-red-50 text-red-700 border border-red-200 px-4 py-3 shrink-0">
 			{generalError}
 		</div>
 	{/if}
 
-	<!-- ══ 3-COLUMN MAIN GRID ═════════════════════════════════════════════ -->
-	<div class="grid grid-cols-[1fr_1fr_1fr] gap-3">
+	<!-- ══ 3-COLUMN SECTION — grows to fill available height ═════════════ -->
+	<div class="flex-1 min-h-0 grid grid-cols-3 gap-3">
 
-		<!-- ╔══ COL 1: Identity + Names + Visibility ══════════════════════╗ -->
-		<div class="flex flex-col gap-3">
+		<!-- ╔══ COL 1: Identity · Names · Visibility ══════════════════════╗ -->
+		<div class="flex flex-col gap-3 min-h-0">
 
 			<!-- Identity -->
-			<div class="rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+			<div class="rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden shrink-0">
 				<div class="px-4 pt-3 pb-2 border-b border-slate-100">
 					<span class="section-label">Identity</span>
 				</div>
@@ -133,7 +135,7 @@
 			</div>
 
 			<!-- Names -->
-			<div class="rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+			<div class="rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden shrink-0">
 				<div class="px-4 pt-3 pb-2 border-b border-slate-100">
 					<span class="section-label">Names</span>
 				</div>
@@ -154,9 +156,9 @@
 				</div>
 			</div>
 
-			<!-- Visibility -->
-			<div class="rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden">
-				<label class="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer select-none">
+			<!-- Visibility — grows to fill remaining col height -->
+			<div class="flex-1 rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden flex flex-col">
+				<label class="flex items-center justify-between gap-3 px-4 py-4 cursor-pointer select-none flex-1">
 					<div>
 						<p class="text-sm font-semibold transition-colors {isActive ? 'text-emerald-700' : 'text-slate-500'}">
 							{isActive ? 'Published' : 'Draft'}
@@ -174,23 +176,22 @@
 				</label>
 			</div>
 
-		</div><!-- end col 1 -->
+		</div><!-- /col 1 -->
 
-		<!-- ╔══ COL 2: Image + Description + Deity ════════════════════════╗ -->
-		<div class="flex flex-col gap-3">
+		<!-- ╔══ COL 2: Image · Description · Deity ════════════════════════╗ -->
+		<div class="flex flex-col gap-3 min-h-0">
 
 			<!-- Mantra Image -->
-			<div class="rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+			<div class="rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden shrink-0">
 				<div class="px-4 pt-3 pb-2 border-b border-slate-100 flex items-center gap-2">
 					<Image size={12} class="text-slate-400" />
 					<span class="section-label">Mantra Image</span>
-					<span class="ml-auto text-[10px] text-slate-400 font-normal normal-case tracking-normal">Shown in app detail screen</span>
+					<span class="ml-auto text-[10px] text-slate-400 normal-case tracking-normal">Shown in app detail</span>
 				</div>
 				<div class="p-3 space-y-2">
 					{#if value.imageUrl}
-						<div class="relative rounded-lg overflow-hidden border border-slate-100 bg-slate-50">
-							<img src={value.imageUrl} alt="Mantra" class="w-full h-32 object-cover" />
-							<div class="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
+						<div class="rounded-lg overflow-hidden border border-slate-100 bg-slate-50">
+							<img src={value.imageUrl} alt="Mantra" class="w-full h-28 object-cover" />
 						</div>
 					{/if}
 					<MediaUploadField
@@ -204,33 +205,33 @@
 				</div>
 			</div>
 
-			<!-- Description + Deity -->
-			<div class="rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden flex-1">
-				<div class="px-4 pt-3 pb-2 border-b border-slate-100">
+			<!-- Content — grows to fill remaining col height -->
+			<div class="flex-1 min-h-0 rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden flex flex-col">
+				<div class="px-4 pt-3 pb-2 border-b border-slate-100 shrink-0">
 					<span class="section-label">Content</span>
 				</div>
-				<div class="p-3 space-y-2">
-					<FormField label="Description *" name="description" error={fieldErrors.description}>
-						<textarea id="description" name="description" rows="4"
-							class="input resize-none leading-relaxed text-sm py-1.5">{value.description}</textarea>
+				<div class="flex-1 p-3 flex flex-col gap-2 min-h-0">
+					<FormField label="Description *" name="description" error={fieldErrors.description} class="flex-1 flex flex-col">
+						<textarea id="description" name="description"
+							class="input resize-none leading-relaxed text-sm py-1.5 flex-1 min-h-0 w-full"
+							style="height:100%">{value.description}</textarea>
 					</FormField>
-					<FormField label="Deity" name="deity" error={fieldErrors.deity}
-						hint="Drives hero image colour in app.">
+					<FormField label="Deity" name="deity" error={fieldErrors.deity} hint="Drives hero image colour in app.">
 						<input id="deity" name="deity" class="input py-1.5 text-sm" value={value.deity ?? ''} />
 					</FormField>
 				</div>
 			</div>
 
-		</div><!-- end col 2 -->
+		</div><!-- /col 2 -->
 
-		<!-- ╔══ COL 3: Tags + Practice + Audio ════════════════════════════╗ -->
-		<div class="flex flex-col gap-3">
+		<!-- ╔══ COL 3: Tags · Practice · Audio ════════════════════════════╗ -->
+		<div class="flex flex-col gap-3 min-h-0">
 
 			<!-- Tags -->
-			<div class="rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+			<div class="rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden shrink-0">
 				<div class="px-4 pt-3 pb-2 border-b border-slate-100">
 					<span class="section-label">Tags</span>
-					<span class="ml-2 text-[10px] text-slate-400 font-normal normal-case tracking-normal">Mantra-by-Need recommender</span>
+					<span class="ml-2 text-[10px] text-slate-400 normal-case tracking-normal">Mantra-by-Need</span>
 				</div>
 				<div class="p-3">
 					<TagMultiSelect name="tags" options={MANTRA_TAGS} bind:value={tags} />
@@ -238,36 +239,34 @@
 			</div>
 
 			<!-- Practice Defaults -->
-			<div class="rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+			<div class="rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden shrink-0">
 				<div class="px-4 pt-3 pb-2 border-b border-slate-100">
 					<span class="section-label">Practice Defaults</span>
 				</div>
 				<div class="p-3 grid grid-cols-2 gap-2">
-					<FormField label="Rec. count" name="recommendedCount"
-						hint="Per-day." error={fieldErrors.recommendedCount}>
+					<FormField label="Rec. count" name="recommendedCount" hint="Per-day." error={fieldErrors.recommendedCount}>
 						<input id="recommendedCount" name="recommendedCount" type="number" min="1"
 							class="input py-1.5 text-sm" value={value.recommendedCount ?? ''} />
 					</FormField>
-					<FormField label="Rec. days" name="recommendedDays"
-						hint="Optional." error={fieldErrors.recommendedDays}>
+					<FormField label="Rec. days" name="recommendedDays" hint="Optional." error={fieldErrors.recommendedDays}>
 						<input id="recommendedDays" name="recommendedDays" type="number" min="1"
 							class="input py-1.5 text-sm" value={value.recommendedDays ?? ''} />
 					</FormField>
 				</div>
 			</div>
 
-			<!-- Pronunciation Audio -->
-			<div class="rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden flex-1">
-				<div class="px-4 pt-3 pb-2 border-b border-slate-100 flex items-center gap-2">
+			<!-- Pronunciation Audio — grows to fill remaining col height -->
+			<div class="flex-1 min-h-0 rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden flex flex-col">
+				<div class="px-4 pt-3 pb-2 border-b border-slate-100 flex items-center gap-2 shrink-0">
 					<Music size={12} class="text-slate-400" />
 					<span class="section-label">Pronunciation Audio</span>
 				</div>
-				<div class="p-3 space-y-2 h-[calc(100%-44px)]">
-					<FormField label="Audio URL" name="pronunciationUrl" error={fieldErrors.pronunciationUrl}>
+				<div class="flex-1 min-h-0 p-3 flex flex-col gap-2">
+					<FormField label="URL" name="pronunciationUrl" error={fieldErrors.pronunciationUrl}>
 						<input id="pronunciationUrl" name="pronunciationUrl" type="url"
 							class="input py-1.5 text-sm" value={value.pronunciationUrl ?? ''} placeholder="https://…" />
 					</FormField>
-					<div class="flex-1">
+					<div class="flex-1 min-h-0">
 						<MediaUploadField
 							category="mantra-audio"
 							targetId="pronunciationUrl"
@@ -279,81 +278,78 @@
 				</div>
 			</div>
 
-		</div><!-- end col 3 -->
+		</div><!-- /col 3 -->
 
-		<!-- ══ FULL-WIDTH: Milestones ════════════════════════════════════════ -->
-		<div class="col-span-3 rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden">
-			<div class="px-4 pt-3 pb-2 border-b border-slate-100 flex items-center gap-3">
-				<span class="flex-1 section-label">
-					Program Milestones
-					<span class="ml-2 normal-case font-normal text-slate-400 tracking-normal text-[10px]">
-						Count presets + day options shown on Set Target screen
-					</span>
+	</div><!-- /3-col -->
+
+	<!-- ══ MILESTONES ════════════════════════════════════════════════════════ -->
+	<div class="shrink-0 rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+		<div class="px-4 pt-3 pb-2 border-b border-slate-100 flex items-center gap-3">
+			<span class="flex-1 section-label">
+				Program Milestones
+				<span class="ml-2 normal-case font-normal text-slate-400 tracking-normal text-[10px]">
+					Count presets + day options on Set Target screen
 				</span>
-				<button type="button" onclick={addMilestone}
-					class="flex items-center gap-1.5 rounded-lg border border-dashed border-slate-200 bg-slate-50
-						px-3 py-1 text-[11px] font-semibold text-slate-500 hover:bg-slate-100 transition-colors">
-					<Plus size={11} /> Add
-				</button>
-			</div>
-			<div class="p-3">
-				<div class="grid grid-cols-4 sm:grid-cols-8 gap-2">
-					{#each milestones as milestone, i (i)}
-						<div class="relative col-span-2 rounded-xl border border-slate-100 bg-slate-50 p-2.5 space-y-2
-							hover:border-brand-200 hover:bg-brand-50/40 transition-colors">
-							<button type="button" onclick={() => removeMilestone(i)}
-								class="absolute top-1.5 right-1.5 rounded p-0.5 text-slate-300 hover:text-red-400 transition-colors">
-								<Trash2 size={10} />
-							</button>
-							<div>
-								<p class="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1">Count</p>
-								<input type="number" min="1" value={milestone.count}
-									oninput={(e) => updateMilestoneCount(i, parseInt((e.target as HTMLInputElement).value, 10))}
-									class="input text-sm font-bold w-full py-1" placeholder="108" />
-							</div>
-							<div>
-								<p class="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1">Days (comma-sep.)</p>
-								<input type="text" value={milestone.dayOptions.join(', ')}
-									oninput={(e) => updateDayOptions(i, (e.target as HTMLInputElement).value)}
-									class="input text-xs font-mono w-full py-1" placeholder="1, 7, 21, 40" />
-							</div>
-							<div class="flex gap-1 flex-wrap">
-								{#each milestone.dayOptions.slice(0, 5) as d, di}
-									<span class="rounded px-1 py-0.5 text-[9px] font-bold
-										{di === 0
-											? 'bg-orange-100 text-orange-600 ring-1 ring-orange-200'
-											: 'bg-slate-200 text-slate-500'}">
-										{d}d
-									</span>
-								{/each}
-							</div>
-						</div>
-					{/each}
-					{#if milestones.length === 0}
-						<div class="col-span-8 flex flex-col items-center justify-center py-6 text-slate-400">
-							<p class="text-sm">No milestones yet</p>
-						</div>
-					{/if}
-				</div>
-				<input type="hidden" name="milestones" value={milestonesJson} />
-			</div>
-		</div>
-
-		<!-- ══ FULL-WIDTH: Actions ════════════════════════════════════════════ -->
-		<div class="col-span-3 flex items-center justify-between pt-1">
-			<a href="/mantras" class="btn-secondary text-sm">
-				Cancel
-			</a>
-			<button type="submit"
-				class="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm
-					bg-brand-600 text-white shadow-md shadow-brand-200
-					hover:bg-brand-700 hover:shadow-lg hover:shadow-brand-200
-					disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150"
-				disabled={submitting}>
-				<Save size={14} />
-				{submitting ? 'Saving…' : submitLabel}
+			</span>
+			<button type="button" onclick={addMilestone}
+				class="flex items-center gap-1.5 rounded-lg border border-dashed border-slate-200 bg-slate-50
+					px-3 py-1 text-[11px] font-semibold text-slate-500 hover:bg-slate-100 transition-colors">
+				<Plus size={11} /> Add
 			</button>
 		</div>
-
+		<div class="p-3">
+			<div class="grid grid-cols-4 gap-2">
+				{#each milestones as milestone, i (i)}
+					<div class="relative rounded-xl border border-slate-100 bg-slate-50 p-2.5 space-y-2
+						hover:border-brand-200 hover:bg-brand-50/40 transition-colors">
+						<button type="button" onclick={() => removeMilestone(i)}
+							class="absolute top-1.5 right-1.5 rounded p-0.5 text-slate-300 hover:text-red-400 transition-colors">
+							<Trash2 size={10} />
+						</button>
+						<div>
+							<p class="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1">Count</p>
+							<input type="number" min="1" value={milestone.count}
+								oninput={(e) => updateMilestoneCount(i, parseInt((e.target as HTMLInputElement).value, 10))}
+								class="input text-sm font-bold w-full py-1" placeholder="108" />
+						</div>
+						<div>
+							<p class="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1">Days (comma-sep.)</p>
+							<input type="text" value={milestone.dayOptions.join(', ')}
+								oninput={(e) => updateDayOptions(i, (e.target as HTMLInputElement).value)}
+								class="input text-xs font-mono w-full py-1" placeholder="1, 7, 21, 40" />
+						</div>
+						<div class="flex gap-1 flex-wrap">
+							{#each milestone.dayOptions.slice(0, 5) as d, di}
+								<span class="rounded px-1 py-0.5 text-[9px] font-bold
+									{di === 0 ? 'bg-orange-100 text-orange-600 ring-1 ring-orange-200' : 'bg-slate-200 text-slate-500'}">
+									{d}d
+								</span>
+							{/each}
+						</div>
+					</div>
+				{/each}
+				{#if milestones.length === 0}
+					<div class="col-span-4 flex items-center justify-center py-5 text-slate-400 text-sm">
+						No milestones — click Add
+					</div>
+				{/if}
+			</div>
+			<input type="hidden" name="milestones" value={milestonesJson} />
+		</div>
 	</div>
+
+	<!-- ══ ACTIONS ═══════════════════════════════════════════════════════════ -->
+	<div class="shrink-0 flex items-center justify-between">
+		<a href="/mantras" class="btn-secondary text-sm">Cancel</a>
+		<button type="submit"
+			class="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm
+				bg-brand-600 text-white shadow-md shadow-brand-200
+				hover:bg-brand-700 hover:shadow-lg hover:shadow-brand-200
+				disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150"
+			disabled={submitting}>
+			<Save size={14} />
+			{submitting ? 'Saving…' : submitLabel}
+		</button>
+	</div>
+
 </form>

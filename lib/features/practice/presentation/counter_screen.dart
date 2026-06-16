@@ -744,8 +744,9 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
               ),
 
             // Mic orb — FIXED size & position in both states (a bit smaller).
+            // Same alignment as the waves so they flank the mic (not below it).
             Align(
-              alignment: const Alignment(0, 0.12),
+              alignment: const Alignment(0, 0.76),
               child: GestureDetector(
                 onTap: widget.onTap,
                 child: Container(

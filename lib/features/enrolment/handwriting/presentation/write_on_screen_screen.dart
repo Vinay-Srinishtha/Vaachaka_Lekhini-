@@ -50,6 +50,10 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
   Color _penColor = KvlColors.ink;
   int _writingCount = 0;
 
+  /// Language the user chose for this writing session.
+  /// null = not yet chosen (picker not completed).
+  String? _writingLangCode;
+
   SignatureController _newController(Color color, {List<Point>? points}) {
     return SignatureController(
       points: points,
@@ -74,6 +78,37 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
   void initState() {
     super.initState();
     _setScreenOrientation();
+    // Auto-open language picker on sample-collection screen (no programId).
+    if (widget.programId == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _showLanguagePicker();
+      });
+    }
+  }
+
+  Future<void> _showLanguagePicker() async {
+    final mantra = ref.read(mantraByIdProvider(widget.mantraId));
+    final langs = mantra != null
+        ? KvlLanguage.availableFor([mantra])
+        : KvlLanguage.all;
+    final settings = ref.read(settingsProvider).value ?? KvlSettings.fallback;
+    final current = _writingLangCode ?? settings.mantraLanguageCode;
+    final result = await showModalBottomSheet<String>(
+      context: context,
+      isDismissible: _writingLangCode != null, // force choice on first open
+      enableDrag: _writingLangCode != null,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _LanguagePickerSheet(
+        languages: langs,
+        selectedCode: current,
+      ),
+    );
+    if (result != null && mounted) {
+      setState(() => _writingLangCode = result);
+      await ref.read(settingsRepositoryProvider).setMantraLanguage(result);
+    }
   }
 
   @override
@@ -307,10 +342,11 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
   Widget build(BuildContext context) {
     final mantra = ref.watch(mantraByIdProvider(widget.mantraId));
     final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
-    final guide = mantra?.name.displayForLanguage(settings.mantraLanguageCode) ?? '';
+    final effectiveLangCode = _writingLangCode ?? settings.mantraLanguageCode;
+    final guide = mantra?.name.displayForLanguage(effectiveLangCode) ?? '';
     final guideScript =
-        mantra?.name.scriptForLanguage(settings.mantraLanguageCode) ??
-        settings.languageCode.mantraScriptForLanguage;
+        mantra?.name.scriptForLanguage(effectiveLangCode) ??
+        effectiveLangCode.mantraScriptForLanguage;
     if (widget.programId != null) {
       final programs = ref.watch(programsForActiveProfileProvider).value ?? [];
       final progress = programs
@@ -337,11 +373,14 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
         onColorSelected: _setPenColor,
       );
     }
+    final selectedLang = KvlLanguage.byCode(effectiveLangCode);
     return _SampleLandscapeWriteScaffold(
       controller: _controller,
       guide: guide,
       guideScript: guideScript,
       saving: _saving,
+      selectedLangLabel: selectedLang.label,
+      onPickLanguage: _showLanguagePicker,
       onBack: () => context.canPop() ? context.pop() : context.go('/'),
       onSave: _saving ? null : _save,
       onClear: _controller.clear,
@@ -359,6 +398,8 @@ class _SampleLandscapeWriteScaffold extends StatefulWidget {
     required this.guide,
     required this.guideScript,
     required this.saving,
+    required this.selectedLangLabel,
+    required this.onPickLanguage,
     required this.onBack,
     required this.onSave,
     required this.onClear,
@@ -372,6 +413,8 @@ class _SampleLandscapeWriteScaffold extends StatefulWidget {
   final String guide;
   final MantraScript guideScript;
   final bool saving;
+  final String selectedLangLabel;
+  final VoidCallback onPickLanguage;
   final VoidCallback onBack;
   final VoidCallback? onSave;
   final VoidCallback onClear;
@@ -446,13 +489,60 @@ class _SampleLandscapeWriteScaffoldState
                   onColorSelected: widget.onColorSelected,
                 ),
               ),
+              // Language chip — bottom left, next to guide toggle
               Positioned(
                 left: compact ? 14 : 20,
                 bottom: compact ? 12 : 18,
-                child: _GuideToggleButton(
-                  visible: _guideVisible,
-                  compact: compact,
-                  onToggle: () => setState(() => _guideVisible = !_guideVisible),
+                child: Row(
+                  children: [
+                    _GuideToggleButton(
+                      visible: _guideVisible,
+                      compact: compact,
+                      onToggle: () => setState(() => _guideVisible = !_guideVisible),
+                    ),
+                    SizedBox(width: compact ? 8 : 10),
+                    GestureDetector(
+                      onTap: widget.onPickLanguage,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: compact ? 10 : 13,
+                          vertical: compact ? 6 : 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: KvlColors.primaryGhost,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: KvlColors.primary.withValues(alpha: .35),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: .07),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.language_rounded,
+                                size: compact ? 13 : 15,
+                                color: KvlColors.primaryDeep),
+                            SizedBox(width: compact ? 4 : 5),
+                            Text(
+                              widget.selectedLangLabel,
+                              style: KvlText.ui(compact ? 11 : 12.5, FontWeight.w600)
+                                  .copyWith(color: KvlColors.primaryDeep),
+                            ),
+                            SizedBox(width: compact ? 3 : 4),
+                            Icon(Icons.expand_more_rounded,
+                                size: compact ? 13 : 15,
+                                color: KvlColors.primaryDeep),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               Positioned(
@@ -1416,6 +1506,109 @@ class _ProtoPlainIcon extends StatelessWidget {
           icon,
           size: 27,
           color: enabled ? Colors.black : Colors.black26,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Language picker bottom sheet ───────────────────────────────────────────────
+
+class _LanguagePickerSheet extends StatelessWidget {
+  const _LanguagePickerSheet({
+    required this.languages,
+    required this.selectedCode,
+  });
+
+  final List<KvlLanguage> languages;
+  final String selectedCode;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.language_rounded,
+                    size: 22, color: KvlColors.primaryDeep),
+                const SizedBox(width: 10),
+                Text('Writing language',
+                    style: KvlText.ui(16, FontWeight.w700)),
+                const Spacer(),
+                Text('Which script should the guide show?',
+                    style: KvlText.caption(11)
+                        .copyWith(color: KvlColors.inkSoft)),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Pick the language you want to trace. The mantra guide will appear in that script.',
+              style: KvlText.caption(12).copyWith(
+                color: KvlColors.inkSoft,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ...languages.map((lang) {
+              final selected = lang.code == selectedCode;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () => Navigator.of(context).pop(lang.code),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? KvlColors.primaryGhost
+                          : KvlColors.surface,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: selected
+                            ? KvlColors.primary
+                            : KvlColors.border,
+                        width: selected ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(lang.label,
+                                  style: KvlText.ui(14, FontWeight.w600)
+                                      .copyWith(
+                                    color: selected
+                                        ? KvlColors.primaryDeep
+                                        : KvlColors.ink,
+                                  )),
+                              Text(lang.nativeLabel,
+                                  style: KvlText.caption(12).copyWith(
+                                    color: selected
+                                        ? KvlColors.primary
+                                        : KvlColors.inkSoft,
+                                  )),
+                            ],
+                          ),
+                        ),
+                        if (selected)
+                          Icon(Icons.check_circle_rounded,
+                              color: KvlColors.primary, size: 20),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ],
         ),
       ),
     );

@@ -9,7 +9,6 @@ import '../../../app/router.dart';
 import '../../../core/i18n/language_options.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/widgets.dart';
-import '../../enrolment/handwriting/domain/handwriting_asset.dart';
 import '../../settings/domain/settings_repository.dart';
 import '../../../l10n/l10n.dart';
 import '../domain/mantra.dart';
@@ -35,30 +34,18 @@ class _MantraDetailsScreenState extends ConsumerState<MantraDetailsScreen> {
       final profile = ref.read(activeProfileProvider).value;
       if (profile == null || !mounted) return;
 
-      // 1. Check voice enrolment
+      // Check voice enrolment — handwriting is set up separately via practice tab.
       final voiceEnrolment = await ref
           .read(voiceEnrolmentRepositoryProvider)
           .get(profile.id, widget.mantraId);
       final hasVoice = voiceEnrolment != null && voiceEnrolment.isComplete;
 
-      // 2. Check handwriting sample
-      final hwSamples = await ref
-          .read(handwritingRepositoryProvider)
-          .listForProfile(profile.id);
-      final hasHandwriting = hwSamples.any((s) =>
-          s.mode == HandwritingMode.writeOnScreen &&
-          (s.mantraId == null || s.mantraId == widget.mantraId));
-
       if (!mounted) return;
 
-      if (hasVoice && hasHandwriting) {
-        // Both already registered — skip enrolment, go straight to targets.
+      if (hasVoice) {
+        // Voice already registered — skip enrolment, go straight to targets.
         context.push('${KvlRoute.setTargetWritings}/${widget.mantraId}');
-      } else if (hasVoice) {
-        // Voice done, handwriting missing — skip voice, collect handwriting.
-        context.push('${KvlRoute.handwritingSubmit}/${widget.mantraId}');
       } else {
-        // Start full enrolment from voice.
         context.push('${KvlRoute.voiceTraining}/${widget.mantraId}');
       }
     } finally {

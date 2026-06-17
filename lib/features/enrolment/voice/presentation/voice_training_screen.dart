@@ -94,10 +94,11 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen> {
         );
     if (!mounted) return;
     if (widget.isRetrain) {
-      // Retraining from settings — go back to the profile screen, no handwriting step.
       context.pop();
     } else {
-      context.push('${KvlRoute.handwritingSubmit}/${widget.mantraId}');
+      // Go straight to set-target — handwriting is enrolled separately
+      // via "own writing mode" in the practice tab.
+      context.push('${KvlRoute.setTargetWritings}/${widget.mantraId}');
     }
   }
 

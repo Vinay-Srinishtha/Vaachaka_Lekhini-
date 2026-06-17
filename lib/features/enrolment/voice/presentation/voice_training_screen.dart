@@ -368,7 +368,7 @@ class _MantraImageCard extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Orb mic with ripple pool (same look as counter_screen)
+// Premium orb mic — concentric halo rings + sonar ripple strokes
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _OrbMic extends StatefulWidget {
@@ -389,84 +389,119 @@ class _OrbMic extends StatefulWidget {
   State<_OrbMic> createState() => _OrbMicState();
 }
 
-class _OrbMicState extends State<_OrbMic> {
+class _OrbMicState extends State<_OrbMic> with SingleTickerProviderStateMixin {
   static const _poolSize = 4;
-  static const _ringColors = [
-    Color(0xFFD2691E), Color(0xFFC75D24), Color(0xFFB8521C),
-    Color(0xFFCC6A2B), Color(0xFFA8481A), Color(0xFFBE5E20),
-  ];
+
+  // Slow breathing halo for idle + active state
+  late final AnimationController _breath = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2800),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _breath.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    const orbDiam = 100.0;
-    const micDiam = orbDiam * 1.4;
+    const orbDiam = 110.0;
 
     return LayoutBuilder(
       builder: (ctx, constraints) {
-        final maxDiam = constraints.biggest.longestSide * 3.2;
+        final available = constraints.biggest.shortestSide;
         return Stack(
           alignment: Alignment.center,
           children: [
-            // Ambient glow
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 400),
-              width: orbDiam * 3.0,
-              height: orbDiam * 3.0,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    const Color(0xFFFFC58A).withValues(alpha: widget.recording ? 0.26 : 0.10),
-                    const Color(0xFFFF8C42).withValues(alpha: widget.recording ? 0.12 : 0.04),
-                    KvlColors.primary.withValues(alpha: 0.0),
-                  ],
-                  stops: const [0.0, 0.55, 1.0],
-                ),
-              ),
-            ),
-
-            // Ripple rings
+            // ── Sonar ripple rings (expand on each detected chant) ──
             for (var i = 0; i < _poolSize; i++)
               AnimatedBuilder(
                 animation: widget.pool[i],
                 builder: (ctx, child) {
                   final raw = widget.pool[i].value;
                   if (raw == 0.0) return const SizedBox.shrink();
-                  final t = Curves.easeOut.transform(raw);
+                  final t = Curves.easeOutCubic.transform(raw);
                   final intensity = widget.slotIntensity[i];
-                  final reach = micDiam + (maxDiam - micDiam) * intensity;
-                  final diam = reach * t;
-                  final opacity = ((1.0 - t) * 0.34 * intensity).clamp(0.0, 0.34);
-                  final color = _ringColors[i % _ringColors.length];
-                  return Container(
-                    width: diam,
-                    height: diam,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          color.withValues(alpha: 0.0),
-                          color.withValues(alpha: opacity * 0.3),
-                          color.withValues(alpha: opacity),
-                        ],
-                        stops: const [0.0, 0.60, 1.0],
-                      ),
+                  final maxR = (available * 0.5) * (0.55 + intensity * 0.45);
+                  final r = (orbDiam / 2) + (maxR - orbDiam / 2) * t;
+                  final opacity = ((1.0 - t) * (0.55 + intensity * 0.35))
+                      .clamp(0.0, 0.9);
+                  final strokeW = (3.5 - t * 2.5).clamp(0.8, 3.5);
+                  return CustomPaint(
+                    size: Size(r * 2, r * 2),
+                    painter: _RingPainter(
+                      radius: r,
+                      color: KvlColors.primary.withValues(alpha: opacity),
+                      strokeWidth: strokeW,
                     ),
                   );
                 },
               ),
 
-            // Reactive curved sound waves while recording
+            // ── Breathing halo layers (always visible) ──
+            AnimatedBuilder(
+              animation: _breath,
+              builder: (ctx, child) {
+                final b = Curves.easeInOut.transform(_breath.value);
+                final isRec = widget.recording;
+                return Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Outer halo
+                    _Halo(
+                      diam: orbDiam * (2.55 + b * (isRec ? 0.22 : 0.08)),
+                      opacity: isRec ? (0.13 + b * 0.10) : (0.06 + b * 0.04),
+                      strokeWidth: 1.2,
+                    ),
+                    // Mid halo
+                    _Halo(
+                      diam: orbDiam * (1.90 + b * (isRec ? 0.16 : 0.06)),
+                      opacity: isRec ? (0.20 + b * 0.14) : (0.09 + b * 0.05),
+                      strokeWidth: 1.5,
+                    ),
+                    // Inner halo
+                    _Halo(
+                      diam: orbDiam * (1.42 + b * (isRec ? 0.10 : 0.04)),
+                      opacity: isRec ? (0.30 + b * 0.18) : (0.13 + b * 0.07),
+                      strokeWidth: 2.0,
+                    ),
+                  ],
+                );
+              },
+            ),
+
+            // ── Ambient warm glow ──
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 500),
+              curve: Curves.easeOut,
+              width: orbDiam * 2.0,
+              height: orbDiam * 2.0,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFFFFA552)
+                        .withValues(alpha: widget.recording ? 0.28 : 0.12),
+                    const Color(0xFFE8782A)
+                        .withValues(alpha: widget.recording ? 0.10 : 0.03),
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 0.5, 1.0],
+                ),
+              ),
+            ),
+
+            // ── Reactive level bars (only while recording) ──
             if (widget.recording)
               IgnorePointer(
-                child: SizedBox(
-                  width: orbDiam * 2.7,
-                  height: orbDiam * 1.7,
-                  child: _VoiceWaves(level: widget.level),
+                child: SizedBox.fromSize(
+                  size: Size(orbDiam * 2.6, orbDiam * 2.6),
+                  child: _LevelRing(level: widget.level, orbDiam: orbDiam),
                 ),
               ),
 
-            // Orb button
+            // ── Premium orb button ──
             GestureDetector(
               onTap: widget.onTap,
               child: Container(
@@ -474,44 +509,43 @@ class _OrbMicState extends State<_OrbMic> {
                 height: orbDiam,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+                  gradient: const RadialGradient(
+                    center: Alignment(-0.3, -0.4),
+                    radius: 1.0,
                     colors: [
-                      Color(0xFFFFE0BE),
-                      Color(0xFFFFC08A),
-                      KvlColors.primary,
-                      KvlColors.primaryDeep,
-                      Color(0xFFB8521C),
+                      Color(0xFFFFD49A),
+                      Color(0xFFFF9A4A),
+                      Color(0xFFD9622A),
+                      Color(0xFFAA3E10),
                     ],
-                    stops: [0.0, 0.22, 0.55, 0.85, 1.0],
+                    stops: [0.0, 0.38, 0.72, 1.0],
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: KvlColors.primaryDeep.withValues(alpha: 0.30),
-                      blurRadius: 32,
-                      spreadRadius: 2,
-                      offset: const Offset(0, 12),
+                      color: const Color(0xFFB8521C).withValues(alpha: 0.55),
+                      blurRadius: 40,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 16),
                     ),
                     BoxShadow(
-                      color: KvlColors.primary.withValues(alpha: 0.42),
-                      blurRadius: 26,
-                      spreadRadius: 1,
-                      offset: const Offset(0, 8),
-                    ),
-                    BoxShadow(
-                      color: Colors.white.withValues(alpha: 0.55),
-                      blurRadius: 2,
+                      color: KvlColors.primary.withValues(alpha: 0.35),
+                      blurRadius: 20,
                       spreadRadius: -2,
-                      offset: const Offset(0, -2),
+                      offset: const Offset(0, 6),
+                    ),
+                    BoxShadow(
+                      color: Colors.white.withValues(alpha: 0.60),
+                      blurRadius: 1,
+                      spreadRadius: 0,
+                      offset: const Offset(-3, -4),
                     ),
                   ],
                 ),
                 alignment: Alignment.center,
                 child: Icon(
                   widget.recording ? Icons.stop_rounded : Icons.mic_rounded,
-                  color: Colors.white,
-                  size: orbDiam * 0.5,
+                  color: Colors.white.withValues(alpha: 0.95),
+                  size: orbDiam * 0.44,
                 ),
               ),
             ),
@@ -522,22 +556,73 @@ class _OrbMicState extends State<_OrbMic> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Reactive sound waves (copied from counter_screen.dart)
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _VoiceWaves extends StatefulWidget {
-  const _VoiceWaves({required this.level});
-  final ValueListenable<double> level;
+// Single outlined circle halo
+class _Halo extends StatelessWidget {
+  const _Halo({
+    required this.diam,
+    required this.opacity,
+    required this.strokeWidth,
+  });
+  final double diam;
+  final double opacity;
+  final double strokeWidth;
 
   @override
-  State<_VoiceWaves> createState() => _VoiceWavesState();
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size(diam, diam),
+      painter: _RingPainter(
+        radius: diam / 2,
+        color: KvlColors.primary.withValues(alpha: opacity),
+        strokeWidth: strokeWidth,
+      ),
+    );
+  }
 }
 
-class _VoiceWavesState extends State<_VoiceWaves> with SingleTickerProviderStateMixin {
+// Lightweight CustomPainter for a single circle stroke
+class _RingPainter extends CustomPainter {
+  const _RingPainter({
+    required this.radius,
+    required this.color,
+    required this.strokeWidth,
+  });
+  final double radius;
+  final Color color;
+  final double strokeWidth;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawCircle(
+      Offset(size.width / 2, size.height / 2),
+      radius,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth
+        ..isAntiAlias = true,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_RingPainter old) =>
+      old.radius != radius || old.color != color || old.strokeWidth != strokeWidth;
+}
+
+// Reactive level ring — short radial bars pulsing around the orb while recording
+class _LevelRing extends StatefulWidget {
+  const _LevelRing({required this.level, required this.orbDiam});
+  final ValueListenable<double> level;
+  final double orbDiam;
+
+  @override
+  State<_LevelRing> createState() => _LevelRingState();
+}
+
+class _LevelRingState extends State<_LevelRing> with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 1600),
+    duration: const Duration(milliseconds: 1200),
   )..repeat();
 
   @override
@@ -553,59 +638,64 @@ class _VoiceWavesState extends State<_VoiceWaves> with SingleTickerProviderState
       builder: (ctx, child) => ValueListenableBuilder<double>(
         valueListenable: widget.level,
         builder: (ctx2, lvl, child2) => CustomPaint(
-          painter: _WavesPainter(phase: _ctrl.value, level: lvl),
+          painter: _LevelRingPainter(
+            phase: _ctrl.value,
+            level: lvl.clamp(0.0, 1.0),
+            orbRadius: widget.orbDiam / 2,
+          ),
         ),
       ),
     );
   }
 }
 
-class _WavesPainter extends CustomPainter {
-  const _WavesPainter({required this.phase, required this.level});
+class _LevelRingPainter extends CustomPainter {
+  const _LevelRingPainter({
+    required this.phase,
+    required this.level,
+    required this.orbRadius,
+  });
   final double phase;
   final double level;
+  final double orbRadius;
+
+  static const _barCount = 32;
 
   @override
   void paint(Canvas canvas, Size size) {
     final cx = size.width / 2;
     final cy = size.height / 2;
-    final smoothed = level.clamp(0.0, 1.0);
-    const arcCount = 3;
-    final baseGap = size.width * 0.13;
-    final baseRadius = size.width * 0.27;
+    const gap = 6.0;
+    final innerR = orbRadius + gap;
+    final barMaxLen = orbRadius * 0.36 + level * orbRadius * 0.22;
 
-    for (final side in [-1, 1]) {
-      canvas.save();
-      // Flip horizontally around the centre to draw both left and right waves.
-      canvas.translate(cx, cy);
-      canvas.scale(side.toDouble(), 1.0);
-      canvas.translate(-cx, -cy);
+    for (var i = 0; i < _barCount; i++) {
+      final angle = (i / _barCount) * 2 * math.pi;
+      // Each bar gets a slightly different phase offset for a flowing look
+      final waveOffset = (i / _barCount) * 2 * math.pi;
+      final wave = (math.sin(phase * 2 * math.pi + waveOffset) * 0.5 + 0.5);
+      final barLen = (barMaxLen * (0.25 + wave * 0.75)).clamp(2.0, barMaxLen);
+      final opacity = (0.15 + level * 0.50 + wave * 0.20).clamp(0.0, 0.85);
 
-      for (var i = 0; i < arcCount; i++) {
-        final t = ((phase + i * 0.33) % 1.0);
-        final opacity = (math.sin(t * math.pi) * (0.25 + smoothed * 0.45)).clamp(0.0, 0.9);
-        final spread = smoothed * size.width * 0.04 * (i + 1);
-        final radius = baseRadius + i * baseGap + spread;
-        final paint = Paint()
+      final x1 = cx + math.cos(angle) * innerR;
+      final y1 = cy + math.sin(angle) * innerR;
+      final x2 = cx + math.cos(angle) * (innerR + barLen);
+      final y2 = cy + math.sin(angle) * (innerR + barLen);
+
+      canvas.drawLine(
+        Offset(x1, y1),
+        Offset(x2, y2),
+        Paint()
           ..color = KvlColors.primary.withValues(alpha: opacity)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = (2.0 + smoothed * 1.5).clamp(1.5, 3.5)
-          ..strokeCap = StrokeCap.round;
-
-        canvas.drawArc(
-          Rect.fromCircle(center: Offset(cx, cy), radius: radius),
-          -math.pi / 4,
-          math.pi / 2,
-          false,
-          paint,
-        );
-      }
-      canvas.restore();
+          ..strokeWidth = 2.0
+          ..strokeCap = StrokeCap.round
+          ..isAntiAlias = true,
+      );
     }
   }
 
   @override
-  bool shouldRepaint(_WavesPainter old) =>
+  bool shouldRepaint(_LevelRingPainter old) =>
       old.phase != phase || old.level != level;
 }
 

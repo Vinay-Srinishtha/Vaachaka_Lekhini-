@@ -348,7 +348,7 @@ class _ProgramCarouselState extends State<_ProgramCarousel> {
   @override
   Widget build(BuildContext context) {
     final count = widget.programs.length;
-    final cardH = widget.compact ? 72.0 : 84.0;
+    final cardH = widget.compact ? 84.0 : 100.0;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -407,103 +407,124 @@ class _ProgramCard extends ConsumerWidget {
     final imgUrl = mantra?.previewImageUrl ?? mantra?.imageUrl;
     final name =
         mantra?.name.displayForLanguage(settings.languageCode) ?? '';
-    final imgSize = compact ? 52.0 : 64.0;
-    final todayPct = (program.targetDays > 0)
+    final imgSize = compact ? 56.0 : 68.0;
+    final ringPct = (program.targetDays > 0)
         ? (program.daysElapsed / program.targetDays).clamp(0.0, 1.0)
         : 0.0;
 
-    return KvlCard(
-      variant: KvlCardVariant.warm,
-      border: Border.all(color: KvlColors.primarySoft),
-      padding: EdgeInsets.symmetric(
-        horizontal: KvlSpacing.md,
-        vertical: compact ? KvlSpacing.sm : 14,
-      ),
+    return GestureDetector(
       onTap: () => context.push('${KvlRoute.practice}/${program.id}'),
-      child: Row(
-        children: [
-          // Mantra image with circular progress ring
-          SizedBox(
-            width: imgSize,
-            height: imgSize,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Progress ring
-                SizedBox.expand(
-                  child: CircularProgressIndicator(
-                    value: todayPct,
-                    strokeWidth: 3,
-                    backgroundColor:
-                        KvlColors.primary.withValues(alpha: 0.12),
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                        KvlColors.primary),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFFFF8F0), Color(0xFFFFEDD8)],
+          ),
+          borderRadius: KvlRadius.brLG,
+          border: Border.all(color: KvlColors.primarySoft, width: 1.2),
+          boxShadow: [
+            BoxShadow(
+              color: KvlColors.primary.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        padding: EdgeInsets.symmetric(
+          horizontal: KvlSpacing.md,
+          vertical: compact ? KvlSpacing.sm : 12,
+        ),
+        child: Row(
+          children: [
+            // Mantra image with circular progress ring
+            SizedBox(
+              width: imgSize,
+              height: imgSize,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox.expand(
+                    child: CircularProgressIndicator(
+                      value: ringPct,
+                      strokeWidth: 3.5,
+                      backgroundColor:
+                          KvlColors.primary.withValues(alpha: 0.12),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                          KvlColors.primary),
+                    ),
                   ),
-                ),
-                // Image inside ring
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(imgSize / 2 - 5),
-                  child: imgUrl != null
-                      ? Image.network(
-                          imgUrl,
-                          width: imgSize - 10,
-                          height: imgSize - 10,
-                          fit: BoxFit.cover,
-                          errorBuilder: (ctx, err, stack) =>
-                              _fallbackThumb(imgSize - 10),
-                        )
-                      : _fallbackThumb(imgSize - 10),
-                ),
-              ],
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(imgSize / 2 - 6),
+                    child: imgUrl != null
+                        ? Image.network(
+                            imgUrl,
+                            width: imgSize - 12,
+                            height: imgSize - 12,
+                            fit: BoxFit.cover,
+                            errorBuilder: (ctx, err, stack) =>
+                                _fallbackThumb(imgSize - 12),
+                          )
+                        : _fallbackThumb(imgSize - 12),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: KvlSpacing.md),
-          // Text info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: KvlText.ui(
-                    compact ? 15 : 17,
-                    FontWeight.w700,
-                  ).copyWith(color: KvlColors.inkSoft),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  program.targetDays > 0
-                      ? 'Day ${program.daysElapsed} of ${program.targetDays}'
-                      : 'Tap to practice',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: KvlText.caption(12.5)
-                      .copyWith(color: KvlColors.muted),
-                ),
-              ],
+            const SizedBox(width: KvlSpacing.md),
+            // Text info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: KvlText.ui(
+                      compact ? 15.5 : 17,
+                      FontWeight.w800,
+                    ).copyWith(color: KvlColors.ink),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    'Continue your Sadhana',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: KvlText.caption(compact ? 12 : 13)
+                        .copyWith(color: KvlColors.primaryDeep),
+                  ),
+                  if (program.targetDays > 0) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Day ${program.daysElapsed + 1} of ${program.targetDays}',
+                      maxLines: 1,
+                      style: KvlText.caption(compact ? 10.5 : 11.5)
+                          .copyWith(color: KvlColors.muted),
+                    ),
+                  ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: KvlSpacing.sm),
-          // Arrow
-          Container(
-            width: compact ? 38 : 44,
-            height: compact ? 38 : 44,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: KvlColors.primaryGradient,
-              boxShadow: KvlShadows.primaryGlow,
+            const SizedBox(width: KvlSpacing.sm),
+            // Arrow
+            Container(
+              width: compact ? 36 : 42,
+              height: compact ? 36 : 42,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: KvlColors.primaryGradient,
+                boxShadow: KvlShadows.primaryGlow,
+              ),
+              alignment: Alignment.center,
+              child: const Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: Colors.white,
+                size: 15,
+              ),
             ),
-            alignment: Alignment.center,
-            child: const Icon(
-              Icons.arrow_forward_ios_rounded,
-              color: Colors.white,
-              size: 16,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

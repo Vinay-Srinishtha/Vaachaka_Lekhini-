@@ -182,7 +182,52 @@
 				</div>
 			</div>
 
-			<!-- Visibility — compact at bottom of col 1 -->
+		</div>
+
+		<!-- ╔══ COL 2 ══════════════════════════════════════════════════════╗ -->
+		<div class="flex flex-col gap-3 min-h-0">
+
+			<!-- Preview Image — flex-1 fills half the column -->
+			<div class="flex-1 min-h-0 rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden flex flex-col">
+				<div class="px-5 pt-4 pb-3 border-b border-slate-100 flex items-center gap-2 shrink-0">
+					<Image size={14} class="text-amber-400" />
+					<span class="section-label">Preview Image</span>
+					<span class="ml-auto text-xs text-slate-400 normal-case tracking-normal">Selection list &amp; reminders</span>
+				</div>
+				<div class="flex-1 min-h-0 p-4 overflow-y-auto">
+					<MediaUploadField
+						category="mantra-preview"
+						targetId="previewImageUrl"
+						accept="image/*"
+						buttonLabel={previewImageUrl ? 'Replace preview' : 'Upload preview'}
+						currentUrl={previewImageUrl}
+						onUrlChange={(url) => { previewImageUrl = url; }}
+					/>
+					<input type="hidden" id="previewImageUrl" name="previewImageUrl" value={previewImageUrl ?? ''} />
+				</div>
+			</div>
+
+			<!-- Main Image — flex-1 fills other half -->
+			<div class="flex-1 min-h-0 rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden flex flex-col">
+				<div class="px-5 pt-4 pb-3 border-b border-slate-100 flex items-center gap-2 shrink-0">
+					<Image size={14} class="text-slate-400" />
+					<span class="section-label">Main Image</span>
+					<span class="ml-auto text-xs text-slate-400 normal-case tracking-normal">Detail / chanting view</span>
+				</div>
+				<div class="flex-1 min-h-0 p-4 overflow-y-auto">
+					<MediaUploadField
+						category="mantra-image"
+						targetId="imageUrl"
+						accept="image/*"
+						buttonLabel={imageUrl ? 'Replace image' : 'Upload image'}
+						currentUrl={imageUrl}
+						onUrlChange={(url) => { imageUrl = url; }}
+					/>
+					<input type="hidden" id="imageUrl" name="imageUrl" value={imageUrl ?? ''} />
+				</div>
+			</div>
+
+			<!-- Published — compact at bottom of col 2 -->
 			<div class="shrink-0 rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
 				<label class="flex items-center gap-3 px-5 py-4 cursor-pointer select-none">
 					<input type="checkbox" name="isActive" bind:checked={isActive} class="sr-only" />
@@ -200,51 +245,6 @@
 						</p>
 					</div>
 				</label>
-			</div>
-
-		</div>
-
-		<!-- ╔══ COL 2 ══════════════════════════════════════════════════════╗ -->
-		<div class="flex flex-col gap-3 min-h-0">
-
-			<!-- Preview Image -->
-			<div class="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden shrink-0">
-				<div class="px-5 pt-4 pb-3 border-b border-slate-100 flex items-center gap-2">
-					<Image size={14} class="text-amber-400" />
-					<span class="section-label">Preview Image</span>
-					<span class="ml-auto text-xs text-slate-400 normal-case tracking-normal">Selection list &amp; reminders</span>
-				</div>
-				<div class="p-4 space-y-3">
-					<MediaUploadField
-						category="mantra-preview"
-						targetId="previewImageUrl"
-						accept="image/*"
-						buttonLabel={previewImageUrl ? 'Replace preview' : 'Upload preview'}
-						currentUrl={previewImageUrl}
-						onUrlChange={(url) => { previewImageUrl = url; }}
-					/>
-					<input type="hidden" id="previewImageUrl" name="previewImageUrl" value={previewImageUrl ?? ''} />
-				</div>
-			</div>
-
-			<!-- Main Image -->
-			<div class="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden shrink-0">
-				<div class="px-5 pt-4 pb-3 border-b border-slate-100 flex items-center gap-2">
-					<Image size={14} class="text-slate-400" />
-					<span class="section-label">Main Image</span>
-					<span class="ml-auto text-xs text-slate-400 normal-case tracking-normal">Detail / chanting view</span>
-				</div>
-				<div class="p-4 space-y-3">
-					<MediaUploadField
-						category="mantra-image"
-						targetId="imageUrl"
-						accept="image/*"
-						buttonLabel={imageUrl ? 'Replace image' : 'Upload image'}
-						currentUrl={imageUrl}
-						onUrlChange={(url) => { imageUrl = url; }}
-					/>
-					<input type="hidden" id="imageUrl" name="imageUrl" value={imageUrl ?? ''} />
-				</div>
 			</div>
 
 		</div>

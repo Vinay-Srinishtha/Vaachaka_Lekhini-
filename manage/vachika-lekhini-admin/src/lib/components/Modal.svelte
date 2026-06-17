@@ -75,7 +75,7 @@
 			</div>
 
 			<!-- Content -->
-			<div class="px-6 py-5 overflow-y-auto flex-1 flex flex-col min-h-0 bg-slate-50/50">
+			<div class="px-6 py-5 overflow-hidden flex-1 flex flex-col min-h-0 bg-slate-50/50">
 				{@render children()}
 			</div>
 

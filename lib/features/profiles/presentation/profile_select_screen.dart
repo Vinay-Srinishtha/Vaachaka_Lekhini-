@@ -19,11 +19,12 @@ class ProfileSelectScreen extends ConsumerWidget {
 
     return Scaffold(
       body: DecoratedBox(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [KvlColors.primary, KvlColors.primaryDeep],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF1A1035), Color(0xFF2D1B6B), Color(0xFF1A2C50)],
+            stops: [0.0, 0.55, 1.0],
           ),
         ),
         child: SafeArea(
@@ -73,7 +74,7 @@ class ProfileSelectScreen extends ConsumerWidget {
                   _link(
                     context,
                     context.l10n.manageProfiles,
-                    () => context.go(KvlRoute.profile),
+                    () => context.go(KvlRoute.addFamily),
                   ),
                 _link(
                   context,
@@ -246,11 +247,13 @@ class _ProfileTile extends StatelessWidget {
 
   LinearGradient _avatarGradient(Profile profile) {
     final seed = (profile.avatarSeed ?? profile.id).hashCode.abs();
-    final palettes = [
-      const [Color(0xFF6EA4BF), Color(0xFFF4C98E)],
-      const [Color(0xFFFFC05A), Color(0xFFE68C27)],
-      const [Color(0xFF94D2BD), Color(0xFF0A9396)],
-      const [Color(0xFFE9C46A), Color(0xFFE76F51)],
+    const palettes = [
+      [Color(0xFF6C63FF), Color(0xFF3B28CC)], // violet
+      [Color(0xFF0EA5E9), Color(0xFF0369A1)], // sky blue
+      [Color(0xFF10B981), Color(0xFF065F46)], // emerald
+      [Color(0xFFEC4899), Color(0xFF9D174D)], // rose
+      [Color(0xFFF59E0B), Color(0xFFB45309)], // amber (not orange)
+      [Color(0xFF8B5CF6), Color(0xFF5B21B6)], // purple
     ];
     final colors = palettes[seed % palettes.length];
     return LinearGradient(

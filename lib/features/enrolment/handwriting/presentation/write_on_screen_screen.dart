@@ -386,7 +386,7 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
           ),
         );
       if (!mounted) return;
-      context.pop();
+      context.go(KvlRoute.home);
       return;
     }
     if (widget.isRetrain) {
@@ -1148,7 +1148,7 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
               ),
               // Top-left: Phone Mode + Own writing mode (2 items only)
               Positioned(
-                left: compact ? 10 : 16,
+                left: compact ? 18 : 28,
                 top: topInset,
                 child: _LandscapeTopBar(
                   compact: compact,
@@ -1195,7 +1195,9 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
               // Right rail: canvas tools
               Positioned(
                 right: compact ? 10 : 16,
-                top: h * .28,
+                top: h * .22,
+                bottom: bottomStripH + (compact ? 6 : 10),
+                child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -1234,8 +1236,9 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
                     ),
                   ],
                 ),
+                ),
               ),
-              // Bottom strip: Total Progress >>> [bar] >>> X/Y
+              // Bottom strip: Progress [bar] X/Y
               Positioned(
                 left: 0,
                 right: 0,
@@ -1830,25 +1833,16 @@ class _ProgressStrip extends StatelessWidget {
     final countText =
         '${IndianNumberFormat.format(currentCount)}/${IndianNumberFormat.format(targetCount)}';
     return Container(
-      color: KvlColors.surface,
+      color: Colors.transparent,
       padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 14),
       child: Row(
         children: [
           Text(
-            'Total Progress',
+            'Progress',
             style: KvlText.ui(compact ? 9 : 10, FontWeight.w700)
                 .copyWith(color: KvlColors.inkSoft),
           ),
-          const SizedBox(width: 6),
-          const Text(
-            '>>>',
-            style: TextStyle(
-              fontSize: 9,
-              color: Color(0xFFB0A090),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 8),
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
@@ -1896,16 +1890,7 @@ class _ProgressStrip extends StatelessWidget {
               },
             ),
           ),
-          const SizedBox(width: 6),
-          const Text(
-            '>>>',
-            style: TextStyle(
-              fontSize: 9,
-              color: Color(0xFFB0A090),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 8),
           Text(
             countText,
             style: KvlText.ui(compact ? 9 : 10, FontWeight.w700)

@@ -1059,6 +1059,30 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your account has been suspended. Please contact support.';
 
   @override
+  String get authErrorAccountSuspended =>
+      'Your account has been deactivated by an administrator. Please contact support.';
+
+  @override
+  String get authErrorOtpMaxAttempts =>
+      'Too many wrong codes. This code is now locked — please request a new one.';
+
+  @override
+  String get authErrorOtpAlreadyUsed =>
+      'This code has already been used. Please request a new verification code.';
+
+  @override
+  String get authErrorCooldownActive =>
+      'Please wait before requesting another code.';
+
+  @override
+  String get authErrorDailyLimitReached =>
+      'Daily OTP limit reached. Please try again tomorrow.';
+
+  @override
+  String get authErrorDeliveryFailure =>
+      'We could not deliver the SMS to this number. Please try again or contact support.';
+
+  @override
   String get authErrorUnknown => 'Something went wrong. Please try again.';
 
   @override

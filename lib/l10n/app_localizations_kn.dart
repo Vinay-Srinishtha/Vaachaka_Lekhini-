@@ -1061,6 +1061,30 @@ class AppLocalizationsKn extends AppLocalizations {
       'Your account has been suspended. Please contact support.';
 
   @override
+  String get authErrorAccountSuspended =>
+      'ನಿಮ್ಮ ಖಾತೆಯನ್ನು ನಿರ್ವಾಹಕರು ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಿದ್ದಾರೆ. ದಯವಿಟ್ಟು ಬೆಂಬಲವನ್ನು ಸಂಪರ್ಕಿಸಿ.';
+
+  @override
+  String get authErrorOtpMaxAttempts =>
+      'ಹಲವಾರು ತಪ್ಪಾದ ಕೋಡ್‌ಗಳು. ಈ ಕೋಡ್ ಈಗ ಲಾಕ್ ಆಗಿದೆ — ದಯವಿಟ್ಟು ಹೊಸ ಕೋಡ್ ಕೇಳಿ.';
+
+  @override
+  String get authErrorOtpAlreadyUsed =>
+      'ಈ ಕೋಡ್ ಈಗಾಗಲೇ ಬಳಸಲಾಗಿದೆ. ದಯವಿಟ್ಟು ಹೊಸ ಕೋಡ್ ಕೇಳಿ.';
+
+  @override
+  String get authErrorCooldownActive =>
+      'ಇನ್ನೊಂದು ಕೋಡ್ ಕೇಳುವ ಮೊದಲು ದಯವಿಟ್ಟು ಕಾಯಿರಿ.';
+
+  @override
+  String get authErrorDailyLimitReached =>
+      'ದೈನಂದಿನ OTP ಮಿತಿ ತಲುಪಿದೆ. ದಯವಿಟ್ಟು ನಾಳೆ ಪ್ರಯತ್ನಿಸಿ.';
+
+  @override
+  String get authErrorDeliveryFailure =>
+      'ಈ ನಂಬರ್‌ಗೆ SMS ತಲುಪಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.';
+
+  @override
   String get authErrorUnknown => 'ಏನೋ ತಪ್ಪಾಗಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.';
 
   @override

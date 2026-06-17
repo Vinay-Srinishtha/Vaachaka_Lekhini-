@@ -2040,6 +2040,24 @@ abstract class AppLocalizations {
   /// **'Your account has been suspended. Please contact support.'**
   String get authErrorAccountBanned;
 
+  /// No description provided for @authErrorAccountSuspended.
+  String get authErrorAccountSuspended;
+
+  /// No description provided for @authErrorOtpMaxAttempts.
+  String get authErrorOtpMaxAttempts;
+
+  /// No description provided for @authErrorOtpAlreadyUsed.
+  String get authErrorOtpAlreadyUsed;
+
+  /// No description provided for @authErrorCooldownActive.
+  String get authErrorCooldownActive;
+
+  /// No description provided for @authErrorDailyLimitReached.
+  String get authErrorDailyLimitReached;
+
+  /// No description provided for @authErrorDeliveryFailure.
+  String get authErrorDeliveryFailure;
+
   /// No description provided for @authErrorUnknown.
   ///
   /// In en, this message translates to:

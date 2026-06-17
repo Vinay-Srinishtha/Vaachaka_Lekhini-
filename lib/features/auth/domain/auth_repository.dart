@@ -96,6 +96,36 @@ class AuthFailure extends Failure {
         code: 'account_banned',
       );
 
+  factory AuthFailure.accountSuspended() => const AuthFailure(
+        'Your account has been deactivated by an administrator. Please contact support.',
+        code: 'account_suspended',
+      );
+
+  factory AuthFailure.otpMaxAttempts() => const AuthFailure(
+        'Too many wrong codes. This code is now locked — please request a new one.',
+        code: 'otp_max_attempts',
+      );
+
+  factory AuthFailure.otpAlreadyUsed() => const AuthFailure(
+        'This code has already been used. Please request a new verification code.',
+        code: 'otp_already_used',
+      );
+
+  factory AuthFailure.cooldownActive() => const AuthFailure(
+        'Please wait before requesting another code.',
+        code: 'cooldown_active',
+      );
+
+  factory AuthFailure.dailyLimitReached() => const AuthFailure(
+        'Daily OTP limit reached. Please try again tomorrow.',
+        code: 'daily_limit_reached',
+      );
+
+  factory AuthFailure.deliveryFailure() => const AuthFailure(
+        'We could not deliver the SMS to this number. Please try again.',
+        code: 'delivery_failure',
+      );
+
   factory AuthFailure.unknown(Object? cause) =>
       AuthFailure('Something went wrong. Please try again.', code: 'unknown', cause: cause);
 }

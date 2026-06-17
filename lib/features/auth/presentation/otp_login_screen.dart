@@ -52,6 +52,8 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
   String get _e164 => '+91$_digits';
   bool get _mobileOk => _digits.length == 10;
   bool get _noAccount => _errorCode == 'account_not_found';
+  bool get _accountBanned => _errorCode == 'account_banned' || _errorCode == 'account_suspended';
+  bool get _otpLocked => _errorCode == 'otp_max_attempts';
 
   void _startCountdown() {
     _resendSeconds = 30;
@@ -71,7 +73,13 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
         await ref.read(authRepositoryProvider).checkMobileRegistered(_e164);
     if (!mounted) return;
     if (check case Err(:final failure)) {
-      setState(() { _busy = false; _error = localizeAuthError(context, code: failure.code, fallback: failure.message); _errorCode = failure.code; });
+      setState(() {
+        _busy = false;
+        _error = isAccountLevelError(failure.code)
+            ? null
+            : localizeAuthError(context, code: failure.code, fallback: failure.message);
+        _errorCode = failure.code;
+      });
       return;
     }
     if (check case Ok(:final value) when !value) {
@@ -136,7 +144,13 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
         if (!mounted) return;
         context.go(KvlRoute.profileSelect);
       case Err(:final failure):
-        setState(() { _busy = false; _error = localizeAuthError(context, code: failure.code, fallback: failure.message); _errorCode = failure.code; });
+        setState(() {
+          _busy = false;
+          _error = isAccountLevelError(failure.code)
+              ? null
+              : localizeAuthError(context, code: failure.code, fallback: failure.message);
+          _errorCode = failure.code;
+        });
     }
   }
 
@@ -171,11 +185,13 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
 
           const SizedBox(height: KvlSpacing.lg),
 
-          // ── Step 1: not-found card OR send-OTP ──
+          // ── Step 1: not-found / banned card OR send-OTP ──
           if (!_otpSent) ...[
             if (_noAccount) ...[
               _NoAccountCard(
                   onCreateAccount: () => context.push(KvlRoute.createAccount)),
+            ] else if (_accountBanned) ...[
+              AuthBannedCard(suspended: _errorCode == 'account_suspended'),
             ] else ...[
               if (_error != null) ...[
                 AuthErrorBar(_error!, onDismiss: () => setState(() { _error = null; _errorCode = null; })),
@@ -196,19 +212,25 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
 
           // ── Step 2: OTP entry ──
           if (_otpSent) ...[
-            _OtpSection(
-              busy: _busy,
-              resendSeconds: _resendSeconds,
-              otp: _otp,
-              error: _error,
-              onChanged: (v) => setState(() => _otp = v),
-              onCompleted: (_) => _verify(),
-              onResend: _resend,
-              onVerify: _verify,
-              onDismissError: () => setState(() { _error = null; _errorCode = null; }),
-              verifyLabel:
-                  _busy ? context.l10n.verifyingButton : context.l10n.loginConfirmButton,
-            ),
+            if (_otpLocked) ...[
+              AuthOtpLockedCard(onRequestNew: _resend),
+            ] else if (_accountBanned) ...[
+              AuthBannedCard(suspended: _errorCode == 'account_suspended'),
+            ] else ...[
+              _OtpSection(
+                busy: _busy,
+                resendSeconds: _resendSeconds,
+                otp: _otp,
+                error: _error,
+                onChanged: (v) => setState(() => _otp = v),
+                onCompleted: (_) => _verify(),
+                onResend: _resend,
+                onVerify: _verify,
+                onDismissError: () => setState(() { _error = null; _errorCode = null; }),
+                verifyLabel:
+                    _busy ? context.l10n.verifyingButton : context.l10n.loginConfirmButton,
+              ),
+            ],
           ],
         ],
       ),

@@ -191,6 +191,15 @@ class AuthRepositoryRemote implements AuthRepository {
       if (serverCode == 'invalid_mobile' || serverMsg.contains('invalid')) {
         return AuthFailure.invalidMobile();
       }
+      if (serverCode == 'cooldown_active' || serverMsg.contains('cooldown') || serverMsg.contains('wait')) {
+        return AuthFailure.cooldownActive();
+      }
+      if (serverCode == 'daily_limit_reached' || serverMsg.contains('daily limit')) {
+        return AuthFailure.dailyLimitReached();
+      }
+      if (serverCode == 'delivery_failure' || serverMsg.contains('delivery') || serverMsg.contains('undeliverable')) {
+        return AuthFailure.deliveryFailure();
+      }
       if (status == 429 || serverCode.contains('rate') || serverMsg.contains('too many')) {
         return AuthFailure.tooManyAttempts();
       }
@@ -200,6 +209,14 @@ class AuthRepositoryRemote implements AuthRepository {
     if (status == 401 || status == 400) {
       if (serverCode == 'otp_expired' || serverMsg.contains('expired')) {
         return AuthFailure.otpExpired();
+      }
+      if (serverCode == 'otp_max_attempts' || serverCode == 'otp_locked' ||
+          serverMsg.contains('max attempt') || serverMsg.contains('locked')) {
+        return AuthFailure.otpMaxAttempts();
+      }
+      if (serverCode == 'otp_already_used' || serverCode == 'otp_reuse' ||
+          serverMsg.contains('already used') || serverMsg.contains('replay')) {
+        return AuthFailure.otpAlreadyUsed();
       }
       if (serverCode.contains('no_account') ||
           serverMsg.contains('no account') ||
@@ -220,10 +237,24 @@ class AuthRepositoryRemote implements AuthRepository {
       if (status == 401) return AuthFailure.invalidOtp();
     }
 
-    if (status == 403) return AuthFailure.accountBanned();
+    if (status == 403) {
+      if (serverCode == 'account_suspended' || serverMsg.contains('suspend') || serverMsg.contains('deactivat')) {
+        return AuthFailure.accountSuspended();
+      }
+      return AuthFailure.accountBanned();
+    }
     if (status == 404) return AuthFailure.accountNotFound();
     if (status == 409) return AuthFailure.accountAlreadyExists();
-    if (status == 429) return AuthFailure.tooManyAttempts();
+    if (status == 423) return AuthFailure.otpMaxAttempts(); // 423 Locked
+    if (status == 429) {
+      if (serverCode == 'daily_limit_reached' || serverMsg.contains('daily')) {
+        return AuthFailure.dailyLimitReached();
+      }
+      if (serverCode == 'cooldown_active' || serverMsg.contains('cooldown')) {
+        return AuthFailure.cooldownActive();
+      }
+      return AuthFailure.tooManyAttempts();
+    }
     if (status >= 500) return AuthFailure.serverError();
 
     return AuthFailure.unknown(e);

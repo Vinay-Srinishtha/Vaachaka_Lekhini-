@@ -61,6 +61,8 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
   bool get _nameValid => _username.text.trim().isNotEmpty;
   bool get _formValid => _nameValid && _mobileValid;
   bool get _accountExists => _errorCode == 'account_exists';
+  bool get _accountBanned => _errorCode == 'account_banned' || _errorCode == 'account_suspended';
+  bool get _otpLocked => _errorCode == 'otp_max_attempts';
 
   void _startResendCountdown() {
     _resendSeconds = 30;
@@ -89,7 +91,13 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
     final check = await ref.read(authRepositoryProvider).checkMobileRegistered(_e164Mobile);
     if (!mounted) return;
     if (check case Err(:final failure)) {
-      setState(() { _busy = false; _error = localizeAuthError(context, code: failure.code, fallback: failure.message); _errorCode = failure.code; });
+      setState(() {
+        _busy = false;
+        _error = isAccountLevelError(failure.code)
+            ? null
+            : localizeAuthError(context, code: failure.code, fallback: failure.message);
+        _errorCode = failure.code;
+      });
       return;
     }
     if (check case Ok(:final value) when value) {
@@ -159,7 +167,9 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
       case Err(:final failure):
         setState(() {
           _busy = false;
-          _error = localizeAuthError(context, code: failure.code, fallback: failure.message);
+          _error = isAccountLevelError(failure.code)
+              ? null
+              : localizeAuthError(context, code: failure.code, fallback: failure.message);
           _errorCode = failure.code;
         });
     }
@@ -220,6 +230,15 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                     ),
                   ),
                 ]),
+
+                // Inline account-level errors shown right under phone input
+                if (_accountExists && !_otpSent) ...[
+                  const SizedBox(height: KvlSpacing.sm),
+                  _AccountExistsCard(onLogin: () => context.go(KvlRoute.otpLogin)),
+                ] else if (_accountBanned) ...[
+                  const SizedBox(height: KvlSpacing.sm),
+                  AuthBannedCard(suspended: _errorCode == 'account_suspended'),
+                ],
                 const SizedBox(height: KvlSpacing.md),
 
                 // Referral
@@ -232,7 +251,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                 const SizedBox(height: KvlSpacing.lg),
 
                 // ── Step 1: Send OTP ──
-                if (!_otpSent) ...[
+                if (!_otpSent && !_accountExists && !_accountBanned) ...[
                   if (_error != null) ...[
                     AuthErrorBar(_error!, onDismiss: () => setState(() { _error = null; _errorCode = null; })),
                     const SizedBox(height: KvlSpacing.sm),
@@ -245,10 +264,8 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
 
                 // ── Step 2: OTP entry ──
                 if (_otpSent) ...[
-                  // account_exists card replaces the OTP UI
-                  if (_accountExists) ...[
-                    _AccountExistsCard(
-                        onLogin: () => context.go(KvlRoute.otpLogin)),
+                  if (_otpLocked) ...[
+                    AuthOtpLockedCard(onRequestNew: _resendOtp),
                   ] else ...[
                     Text(
                       context.l10n.enterSixDigitCodeSent,

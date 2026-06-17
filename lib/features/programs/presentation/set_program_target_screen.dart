@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/providers.dart';
 import '../../../app/router.dart';
-import '../../../core/navigation/back_navigation.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/utils/indian_number_format.dart';
 import '../../../core/widgets/widgets.dart';
@@ -53,7 +52,12 @@ class _SetProgramTargetScreenState
   }
 
   void _rebuild() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    setState(() {
+      // Snap _days up if below the new minimum (e.g. custom count increased).
+      final min = _minDays;
+      if (_days < min) _days = min;
+    });
   }
 
   @override
@@ -143,8 +147,6 @@ class _SetProgramTargetScreenState
         dayOptionsMap[_selectedCount] ?? _dayOptionsFallback;
 
     final minDays = _minDays;
-    // If current _days is below the new minimum (e.g. count changed), snap it up.
-    if (_days < minDays) _days = minDays;
     final sliderMax =
         _days > _maxSliderDays ? _days.toDouble() : _maxSliderDays.toDouble();
     final pace = _pace(_days);
@@ -314,8 +316,8 @@ class _SetProgramTargetScreenState
           const SizedBox(height: KvlSpacing.sm),
           Center(
             child: TextButton(
-              onPressed: () => context
-                  .popOrGo('${KvlRoute.handwritingSubmit}/${widget.mantraId}'),
+              onPressed: () =>
+                  context.canPop() ? context.pop() : context.go(KvlRoute.programs),
               child: Text(
                 context.l10n.cancelButton,
                 style: KvlText.caption(12).copyWith(

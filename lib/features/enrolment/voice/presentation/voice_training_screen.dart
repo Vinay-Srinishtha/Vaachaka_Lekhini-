@@ -49,7 +49,7 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen> {
       _count = e.count;
     });
     // The service emits a "done" event at completion; close the loop.
-    if (_count >= _target && _recording) {
+    if (mounted && _count >= _target && _recording) {
       _finishAndProceed();
     }
   }

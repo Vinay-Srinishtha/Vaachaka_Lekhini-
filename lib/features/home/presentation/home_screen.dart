@@ -78,9 +78,9 @@ class HomeScreen extends ConsumerWidget {
                 ),
                 SizedBox(height: headerGap),
                 _RewardPointsTile(points: points, compact: compact),
-                if (recent != null) ...[
+                if (activePrograms.isNotEmpty) ...[
                   SizedBox(height: gap),
-                  _DailyReminder(program: recent, compact: compact),
+                  _ProgramCarousel(programs: activePrograms, compact: compact),
                 ],
                 SizedBox(height: gap),
                 Expanded(
@@ -316,8 +316,87 @@ class _RewardPointsTile extends StatelessWidget {
   }
 }
 
-class _DailyReminder extends ConsumerWidget {
-  const _DailyReminder({required this.program, required this.compact});
+// ── Horizontally swipeable program carousel ──────────────────────────────────
+class _ProgramCarousel extends StatefulWidget {
+  const _ProgramCarousel({required this.programs, required this.compact});
+  final List<Program> programs;
+  final bool compact;
+
+  @override
+  State<_ProgramCarousel> createState() => _ProgramCarouselState();
+}
+
+class _ProgramCarouselState extends State<_ProgramCarousel> {
+  late final PageController _ctrl;
+  int _page = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Large offset so backward swipe also loops (virtual infinite scroll).
+    final initial = widget.programs.length * 500;
+    _ctrl = PageController(initialPage: initial);
+    _page = initial % widget.programs.length;
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final count = widget.programs.length;
+    final cardH = widget.compact ? 72.0 : 84.0;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          height: cardH,
+          child: PageView.builder(
+            controller: _ctrl,
+            onPageChanged: (i) =>
+                setState(() => _page = i % count),
+            itemBuilder: (ctx, i) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 1),
+              child: _ProgramCard(
+                program: widget.programs[i % count],
+                compact: widget.compact,
+              ),
+            ),
+          ),
+        ),
+        if (count > 1) ...[
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(count, (i) {
+              final active = i == _page;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeOut,
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: active ? 18 : 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: active
+                      ? KvlColors.primary
+                      : KvlColors.primary.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              );
+            }),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _ProgramCard extends ConsumerWidget {
+  const _ProgramCard({required this.program, required this.compact});
   final Program program;
   final bool compact;
 
@@ -325,59 +404,93 @@ class _DailyReminder extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final mantra = ref.watch(mantraByIdProvider(program.mantraId));
     final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
+    final imgUrl = mantra?.previewImageUrl ?? mantra?.imageUrl;
+    final name =
+        mantra?.name.displayForLanguage(settings.languageCode) ?? '';
+    final imgSize = compact ? 52.0 : 64.0;
+    final todayPct = (program.targetDays > 0)
+        ? (program.daysElapsed / program.targetDays).clamp(0.0, 1.0)
+        : 0.0;
+
     return KvlCard(
       variant: KvlCardVariant.warm,
       border: Border.all(color: KvlColors.primarySoft),
-      padding: EdgeInsets.all(compact ? KvlSpacing.sm : KvlSpacing.md),
-      onTap: () => context.go(KvlRoute.practice),
+      padding: EdgeInsets.symmetric(
+        horizontal: KvlSpacing.md,
+        vertical: compact ? KvlSpacing.sm : 14,
+      ),
+      onTap: () => context.push('${KvlRoute.practice}/${program.id}'),
       child: Row(
         children: [
-          ClipRRect(
-            borderRadius: KvlRadius.brMD,
-            child: Image.asset(
-              'assets/mantras/rama_quote_banner.png',
-              width: compact ? 50 : 64,
-              height: compact ? 50 : 64,
-              fit: BoxFit.cover,
+          // Mantra image with circular progress ring
+          SizedBox(
+            width: imgSize,
+            height: imgSize,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Progress ring
+                SizedBox.expand(
+                  child: CircularProgressIndicator(
+                    value: todayPct,
+                    strokeWidth: 3,
+                    backgroundColor:
+                        KvlColors.primary.withValues(alpha: 0.12),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                        KvlColors.primary),
+                  ),
+                ),
+                // Image inside ring
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(imgSize / 2 - 5),
+                  child: imgUrl != null
+                      ? Image.network(
+                          imgUrl,
+                          width: imgSize - 10,
+                          height: imgSize - 10,
+                          fit: BoxFit.cover,
+                          errorBuilder: (ctx, err, stack) =>
+                              _fallbackThumb(imgSize - 10),
+                        )
+                      : _fallbackThumb(imgSize - 10),
+                ),
+              ],
             ),
           ),
           const SizedBox(width: KvlSpacing.md),
+          // Text info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  context.l10n.dailyPractice,
-                  style: KvlText.caption(11.5).copyWith(
-                    color: KvlColors.primaryDeep,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: KvlSpacing.xs),
-                Text(
-                  mantra?.name.displayForLanguage(settings.languageCode) ?? '',
+                  name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: KvlText.ui(
-                    compact ? 14.5 : 17,
+                    compact ? 15 : 17,
                     FontWeight.w700,
                   ).copyWith(color: KvlColors.inkSoft),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
                 Text(
-                  context.l10n.continueGoal(program.targetDays),
+                  program.targetDays > 0
+                      ? 'Day ${program.daysElapsed} of ${program.targetDays}'
+                      : 'Tap to practice',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: KvlText.caption(13).copyWith(color: KvlColors.muted),
+                  style: KvlText.caption(12.5)
+                      .copyWith(color: KvlColors.muted),
                 ),
               ],
             ),
           ),
           const SizedBox(width: KvlSpacing.sm),
+          // Arrow
           Container(
-            width: compact ? 44 : 52,
-            height: compact ? 44 : 52,
+            width: compact ? 38 : 44,
+            height: compact ? 38 : 44,
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
               gradient: KvlColors.primaryGradient,
@@ -387,13 +500,25 @@ class _DailyReminder extends ConsumerWidget {
             child: const Icon(
               Icons.arrow_forward_ios_rounded,
               color: Colors.white,
-              size: 20,
+              size: 16,
             ),
           ),
         ],
       ),
     );
   }
+
+  Widget _fallbackThumb(double size) => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: KvlColors.primarySoft,
+          borderRadius: BorderRadius.circular(size / 2),
+        ),
+        alignment: Alignment.center,
+        child: Icon(Icons.self_improvement_rounded,
+            color: KvlColors.primary, size: size * 0.5),
+      );
 }
 
 class _HeroQuote extends ConsumerWidget {

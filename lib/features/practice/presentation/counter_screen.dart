@@ -286,7 +286,7 @@ class _BodyState extends ConsumerState<_Body> {
                           );
                       }
                       if (!context.mounted) return;
-                      context.go('${KvlRoute.dailyProgress}/$programId');
+                      context.go(KvlRoute.home);
                     },
                   ),
                   if (state.errorMessage != null) ...[

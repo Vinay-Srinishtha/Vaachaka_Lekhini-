@@ -1483,12 +1483,12 @@ class _RewardRulesCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const rules = [
-      (icon: Icons.person_rounded,      label: 'Complete your profile',      pts: 50,   note: 'One-time bonus'),
-      (icon: Icons.edit_rounded,         label: 'Each handwriting session',   pts: 5,    note: 'Per session'),
-      (icon: Icons.mic_rounded,          label: 'Each voice chanting session', pts: 5,   note: 'Per session'),
-      (icon: Icons.local_fire_department_rounded, label: 'Daily practice streak', pts: 10, note: 'Per streak day'),
-      (icon: Icons.group_add_rounded,    label: 'Invite a friend',            pts: 25,   note: 'Per referral'),
-      (icon: Icons.emoji_events_rounded, label: 'Reach a milestone',          pts: 100,  note: 'Per milestone'),
+      (icon: Icons.celebration_rounded,          label: 'Joining bonus',               pts: 100, note: 'One-time, on sign-up'),
+      (icon: Icons.person_rounded,               label: 'Complete your profile',        pts: 50,  note: 'One-time bonus'),
+      (icon: Icons.auto_awesome_rounded,         label: 'Every 11 chants or writings',  pts: 1,   note: 'Per 11 count batch'),
+      (icon: Icons.local_fire_department_rounded, label: '7-day continuous streak',     pts: 50,  note: 'Per week milestone'),
+      (icon: Icons.group_add_rounded,            label: 'Invite a friend',              pts: 50,  note: 'When they join'),
+      (icon: Icons.card_giftcard_rounded,        label: 'Join via referral link',       pts: 50,  note: 'Extra on sign-up'),
     ];
     return KvlCard(
       padding: const EdgeInsets.all(KvlSpacing.md),
@@ -1516,7 +1516,8 @@ class _RewardRulesCard extends StatelessWidget {
               label: r.label,
               pts: r.pts,
               note: r.note,
-              earned: r.icon == Icons.person_rounded && profileComplete,
+              earned: r.icon == Icons.celebration_rounded ||
+                      (r.icon == Icons.person_rounded && profileComplete),
             ),
             if (r != rules.last)
               const Divider(height: 1, thickness: 0.5),

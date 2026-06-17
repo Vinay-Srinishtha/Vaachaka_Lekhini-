@@ -6,6 +6,13 @@ import { emitChange } from './live';
 
 const DEFAULT_RULES = [
 	{
+		key: 'profile_completion',
+		name: 'Profile Completion',
+		description: 'Awarded once when a member fully completes their profile (gender, birth year, mother tongue).',
+		points: 50,
+		threshold: null
+	},
+	{
 		key: 'join_bonus',
 		name: 'Joining Bonus',
 		description: 'Awarded once when a new account is created.',

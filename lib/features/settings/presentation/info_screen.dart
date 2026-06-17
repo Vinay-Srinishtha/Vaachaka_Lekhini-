@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/theme/theme.dart';
@@ -99,39 +101,28 @@ class _AboutScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settingsAsync = ref.watch(appSettingsProvider);
-    final aboutBody = settingsAsync.value?.aboutApp;
 
     return KvlScaffold(
       title: context.l10n.infoAboutTitle,
-      scrollable: true,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: KvlSpacing.lg),
-          _heroIcon(
-            icon: Icons.self_improvement_rounded,
-            bg: KvlColors.primaryGhost,
-            color: KvlColors.primaryDeep,
-          ),
-          const SizedBox(height: KvlSpacing.md),
-          Center(child: Text(context.l10n.infoAboutTitle, style: KvlText.title(18))),
-          const SizedBox(height: KvlSpacing.lg),
-          Container(
-            padding: const EdgeInsets.all(KvlSpacing.md),
-            decoration: BoxDecoration(
-              color: KvlColors.surface,
-              borderRadius: KvlRadius.brLG,
-              border: Border.all(color: KvlColors.border),
-            ),
-            child: Text(
-              (aboutBody != null && aboutBody.isNotEmpty)
-                  ? aboutBody
-                  : context.l10n.infoAboutBody,
-              style: KvlText.body(13).copyWith(height: 1.7, color: KvlColors.inkSoft),
-            ),
-          ),
-          const SizedBox(height: KvlSpacing.lg),
-        ],
+      scrollable: false,
+      body: settingsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, __) => _MarkdownBody(
+          markdown: context.l10n.infoAboutBody,
+          headerIcon: Icons.self_improvement_rounded,
+          headerIconBg: KvlColors.primaryGhost,
+          headerIconColor: KvlColors.primaryDeep,
+          title: context.l10n.infoAboutTitle,
+        ),
+        data: (s) => _MarkdownBody(
+          markdown: (s.aboutApp?.isNotEmpty == true)
+              ? s.aboutApp!
+              : context.l10n.infoAboutBody,
+          headerIcon: Icons.self_improvement_rounded,
+          headerIconBg: KvlColors.primaryGhost,
+          headerIconColor: KvlColors.primaryDeep,
+          title: context.l10n.infoAboutTitle,
+        ),
       ),
     );
   }
@@ -147,54 +138,154 @@ class _PrivacyScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settingsAsync = ref.watch(appSettingsProvider);
-    final privacyBody = settingsAsync.value?.privacyPolicy;
 
     return KvlScaffold(
       title: context.l10n.infoPrivacyTitle,
-      scrollable: true,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: KvlSpacing.lg),
-          _heroIcon(
-            icon: Icons.lock_rounded,
-            bg: KvlColors.accentSoft,
-            color: KvlColors.accent,
-          ),
-          const SizedBox(height: KvlSpacing.md),
-          Center(
-            child: Text(
-              context.l10n.infoPrivacyTitle,
-              style: KvlText.title(18),
-            ),
-          ),
-          const SizedBox(height: KvlSpacing.sm),
-          Center(
-            child: _infoChip(
-              Icons.verified_user_rounded,
-              'Your data stays private',
-              KvlColors.accentSoft,
-              KvlColors.accent,
-            ),
-          ),
-          const SizedBox(height: KvlSpacing.lg),
-          Container(
-            padding: const EdgeInsets.all(KvlSpacing.md),
-            decoration: BoxDecoration(
-              color: KvlColors.surface,
-              borderRadius: KvlRadius.brLG,
-              border: Border.all(color: KvlColors.border),
-            ),
-            child: Text(
-              (privacyBody != null && privacyBody.isNotEmpty)
-                  ? privacyBody
-                  : context.l10n.infoPrivacyBody,
-              style: KvlText.body(13).copyWith(height: 1.7, color: KvlColors.inkSoft),
-            ),
-          ),
-          const SizedBox(height: KvlSpacing.lg),
-        ],
+      scrollable: false,
+      body: settingsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, __) => _MarkdownBody(
+          markdown: context.l10n.infoPrivacyBody,
+          headerIcon: Icons.lock_rounded,
+          headerIconBg: KvlColors.accentSoft,
+          headerIconColor: KvlColors.accent,
+          title: context.l10n.infoPrivacyTitle,
+          chip: 'Your data stays private',
+        ),
+        data: (s) => _MarkdownBody(
+          markdown: (s.privacyPolicy.isNotEmpty)
+              ? s.privacyPolicy
+              : context.l10n.infoPrivacyBody,
+          headerIcon: Icons.lock_rounded,
+          headerIconBg: KvlColors.accentSoft,
+          headerIconColor: KvlColors.accent,
+          title: context.l10n.infoPrivacyTitle,
+          chip: 'Your data stays private',
+        ),
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Premium Markdown body — used by About App + Privacy Policy
+// ---------------------------------------------------------------------------
+
+class _MarkdownBody extends StatelessWidget {
+  const _MarkdownBody({
+    required this.markdown,
+    required this.headerIcon,
+    required this.headerIconBg,
+    required this.headerIconColor,
+    required this.title,
+    this.chip,
+  });
+
+  final String markdown;
+  final IconData headerIcon;
+  final Color headerIconBg;
+  final Color headerIconColor;
+  final String title;
+  final String? chip;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final mdStyle = MarkdownStyleSheet(
+      // Body text
+      p: KvlText.body(14).copyWith(height: 1.75, color: KvlColors.inkSoft),
+      // Headings
+      h1: KvlText.title(22).copyWith(color: KvlColors.ink, height: 1.3),
+      h2: KvlText.title(18).copyWith(color: KvlColors.ink, height: 1.3),
+      h3: KvlText.ui(15, FontWeight.w700).copyWith(color: KvlColors.inkSoft, height: 1.4),
+      // Lists
+      listBullet: KvlText.body(14).copyWith(color: KvlColors.primary),
+      // Blockquote
+      blockquote: KvlText.body(14).copyWith(
+        color: KvlColors.inkSoft,
+        fontStyle: FontStyle.italic,
+        height: 1.7,
+      ),
+      blockquoteDecoration: BoxDecoration(
+        border: Border(left: BorderSide(color: KvlColors.primary, width: 3.5)),
+        color: KvlColors.primaryGhost,
+        borderRadius: const BorderRadius.only(
+          topRight: Radius.circular(8),
+          bottomRight: Radius.circular(8),
+        ),
+      ),
+      blockquotePadding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
+      // Code
+      code: KvlText.caption(12.5).copyWith(
+        fontFamily: 'monospace',
+        color: KvlColors.primaryDeep,
+        backgroundColor: KvlColors.primaryGhost,
+      ),
+      codeblockDecoration: BoxDecoration(
+        color: KvlColors.primaryGhost,
+        borderRadius: KvlRadius.brMD,
+        border: Border.all(color: KvlColors.primarySoft),
+      ),
+      // Horizontal rule
+      horizontalRuleDecoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: KvlColors.rule, width: 1),
+        ),
+      ),
+      // Spacing
+      pPadding: const EdgeInsets.only(bottom: 12),
+      h1Padding: const EdgeInsets.only(top: 20, bottom: 8),
+      h2Padding: const EdgeInsets.only(top: 16, bottom: 6),
+      h3Padding: const EdgeInsets.only(top: 12, bottom: 4),
+      listIndent: 20,
+      blockSpacing: 12,
+      tableHead: KvlText.caption(12).copyWith(fontWeight: FontWeight.w700, color: KvlColors.ink),
+      tableBody: KvlText.body(13).copyWith(color: KvlColors.inkSoft),
+      tableHeadAlign: TextAlign.left,
+      tableBorder: TableBorder.all(color: KvlColors.rule, width: 1),
+      tableColumnWidth: const FlexColumnWidth(),
+      tableCellsPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Sticky header
+        Padding(
+          padding: const EdgeInsets.fromLTRB(0, KvlSpacing.md, 0, KvlSpacing.sm),
+          child: Column(
+            children: [
+              _heroIcon(icon: headerIcon, bg: headerIconBg, color: headerIconColor),
+              const SizedBox(height: KvlSpacing.sm),
+              Text(title, style: KvlText.title(18), textAlign: TextAlign.center),
+              if (chip != null) ...[
+                const SizedBox(height: KvlSpacing.xs),
+                _infoChip(Icons.verified_rounded, chip!, headerIconBg, headerIconColor),
+              ],
+            ],
+          ),
+        ),
+        // Scrollable markdown content
+        Expanded(
+          child: Markdown(
+            data: markdown,
+            styleSheet: mdStyle,
+            padding: const EdgeInsets.fromLTRB(
+              KvlSpacing.md,
+              KvlSpacing.sm,
+              KvlSpacing.md,
+              KvlSpacing.xl,
+            ),
+            onTapLink: (text, href, title) async {
+              if (href != null) {
+                final uri = Uri.tryParse(href);
+                if (uri != null) await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            },
+            shrinkWrap: false,
+          ),
+        ),
+      ],
     );
   }
 }

@@ -85,9 +85,11 @@
 	// and the hidden inputs re-render with the correct value for form submission.
 	let previewImageUrl = $state<string | null>(value.previewImageUrl ?? null);
 	let imageUrl = $state<string | null>(value.imageUrl ?? null);
+	let pronunciationUrl = $state<string | null>(value.pronunciationUrl ?? null);
 	$effect.pre(() => {
 		previewImageUrl = value.previewImageUrl ?? null;
 		imageUrl = value.imageUrl ?? null;
+		pronunciationUrl = value.pronunciationUrl ?? null;
 	});
 
 	let submitting = $state(false);
@@ -286,20 +288,16 @@
 					<Music size={14} class="text-slate-400" />
 					<span class="section-label">Pronunciation Audio</span>
 				</div>
-				<div class="flex-1 min-h-0 p-4 flex flex-col gap-3">
-					<FormField label="URL" name="pronunciationUrl" error={fieldErrors.pronunciationUrl}>
-						<input id="pronunciationUrl" name="pronunciationUrl" type="url"
-							class="input py-2 text-base" value={value.pronunciationUrl ?? ''} placeholder="https://…" />
-					</FormField>
-					<div class="flex-1 min-h-0">
-						<MediaUploadField
-							category="mantra-audio"
-							targetId="pronunciationUrl"
-							accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav"
-							buttonLabel="Upload MP3 / WAV"
-							currentUrl={value.pronunciationUrl}
-						/>
-					</div>
+				<div class="flex-1 min-h-0 p-4 flex flex-col gap-3 overflow-y-auto">
+					<MediaUploadField
+						category="mantra-audio"
+						targetId="pronunciationUrl"
+						accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav"
+						buttonLabel="Upload MP3 / WAV"
+						currentUrl={pronunciationUrl}
+						onUrlChange={(url) => { pronunciationUrl = url; }}
+					/>
+					<input type="hidden" id="pronunciationUrl" name="pronunciationUrl" value={pronunciationUrl ?? ''} />
 				</div>
 			</div>
 

@@ -3,7 +3,6 @@ import { prisma } from '$lib/server/prisma';
 import { snakeJson } from '$lib/server/snake-case';
 
 const DEFAULTS: Record<string, string> = {
-	support_email: 'support@vaachikalekhini.com',
 	privacy_policy: '',
 	about_app: '',
 	app_logo_url: '',
@@ -21,7 +20,6 @@ export const GET: RequestHandler = async () => {
 
 	return snakeJson(
 		{
-			support_email: map['support_email'],
 			privacy_policy: map['privacy_policy'],
 			about_app: map['about_app'] || null,
 			app_logo_url: map['app_logo_url'] || null,

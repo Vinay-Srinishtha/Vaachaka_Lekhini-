@@ -104,36 +104,8 @@
 
 		</div>
 
-		<!-- RIGHT column: Support Email + About App -->
+		<!-- RIGHT column: About App + Invite Host -->
 		<div class="flex flex-col gap-6 min-h-0">
-
-			<!-- Support Email -->
-			<div class="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-				<div class="flex items-start gap-3">
-					<span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
-						<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"/></svg>
-					</span>
-					<div>
-						<h2 class="text-sm font-semibold text-slate-800">Support Email</h2>
-						<p class="mt-0.5 text-xs text-slate-500">Used by the Flutter "Report Issue" screen as the mailto: recipient.</p>
-					</div>
-				</div>
-				<div>
-					<label class="mb-1 block text-xs font-medium text-slate-600" for="support_email">Email address</label>
-					<input
-						id="support_email"
-						name="support_email"
-						type="email"
-						value={s.support_email ?? ''}
-						placeholder="support@vaachikalekhini.com"
-						class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-					/>
-				</div>
-				<div class="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-100 px-3 py-2">
-					<svg class="h-4 w-4 shrink-0 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clip-rule="evenodd"/></svg>
-					<p class="text-xs text-amber-700">Report Issue emails from the app go to this address.</p>
-				</div>
-			</div>
 
 			<!-- Invite Host -->
 			<div class="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">

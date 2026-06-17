@@ -110,8 +110,8 @@ class ProfileScreen extends ConsumerWidget {
           if (session != null)
             Center(child: Text(session.mobile, style: KvlText.muted(11))),
 
-          if (profile != null && !profile.isProfileComplete) ...[
-            const SizedBox(height: KvlSpacing.sm),
+          const SizedBox(height: KvlSpacing.sm),
+          if (profile != null && !profile.isProfileComplete)
             GestureDetector(
               onTap: () => context.push(KvlRoute.profileEdit),
               child: KvlCard(
@@ -140,8 +140,61 @@ class ProfileScreen extends ConsumerWidget {
                   ],
                 ),
               ),
+            )
+          else if (profile != null && profile.isProfileComplete)
+            KvlCard(
+              padding: const EdgeInsets.symmetric(
+                horizontal: KvlSpacing.md,
+                vertical: KvlSpacing.sm,
+              ),
+              gradient: const LinearGradient(
+                colors: [Color(0xFFE8F5E9), Color(0xFFC8E6C9)],
+              ),
+              border: Border.all(color: const Color(0xFF81C784)),
+              child: Row(
+                children: [
+                  const Icon(Icons.verified_rounded, color: Color(0xFF2E7D32), size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Profile complete · +50 pts earned',
+                          style: KvlText.caption(11.5).copyWith(
+                            color: const Color(0xFF1B5E20),
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          'Reward points are added to your balance',
+                          style: KvlText.caption(10.5).copyWith(
+                            color: const Color(0xFF388E3C),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => context.push(KvlRoute.profileEdit),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2E7D32),
+                        borderRadius: KvlRadius.brPill,
+                      ),
+                      child: Text(
+                        'Edit Profile',
+                        style: KvlText.caption(11).copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ],
 
           const SizedBox(height: KvlSpacing.md),
           Row(
@@ -226,6 +279,9 @@ class ProfileScreen extends ConsumerWidget {
               ],
             ),
           ),
+
+          const SizedBox(height: KvlSpacing.sm),
+          _RewardRulesCard(profileComplete: profile?.isProfileComplete ?? false),
 
           SettingsSection(
             title: context.l10n.familyCommunitySection,
@@ -1415,6 +1471,117 @@ class _MinuteChip extends StatelessWidget {
             fontWeight: FontWeight.w700,
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _RewardRulesCard extends StatelessWidget {
+  const _RewardRulesCard({required this.profileComplete});
+  final bool profileComplete;
+
+  @override
+  Widget build(BuildContext context) {
+    const rules = [
+      (icon: Icons.person_rounded,      label: 'Complete your profile',      pts: 50,   note: 'One-time bonus'),
+      (icon: Icons.edit_rounded,         label: 'Each handwriting session',   pts: 5,    note: 'Per session'),
+      (icon: Icons.mic_rounded,          label: 'Each voice chanting session', pts: 5,   note: 'Per session'),
+      (icon: Icons.local_fire_department_rounded, label: 'Daily practice streak', pts: 10, note: 'Per streak day'),
+      (icon: Icons.group_add_rounded,    label: 'Invite a friend',            pts: 25,   note: 'Per referral'),
+      (icon: Icons.emoji_events_rounded, label: 'Reach a milestone',          pts: 100,  note: 'Per milestone'),
+    ];
+    return KvlCard(
+      padding: const EdgeInsets.all(KvlSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.card_giftcard_rounded, color: KvlColors.primary, size: 16),
+              const SizedBox(width: 6),
+              Text(
+                'How to earn points',
+                style: KvlText.caption(12).copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: KvlColors.inkSoft,
+                  letterSpacing: 0.4,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: KvlSpacing.sm),
+          for (final r in rules) ...[
+            _RuleRow(
+              icon: r.icon,
+              label: r.label,
+              pts: r.pts,
+              note: r.note,
+              earned: r.icon == Icons.person_rounded && profileComplete,
+            ),
+            if (r != rules.last)
+              const Divider(height: 1, thickness: 0.5),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _RuleRow extends StatelessWidget {
+  const _RuleRow({
+    required this.icon,
+    required this.label,
+    required this.pts,
+    required this.note,
+    required this.earned,
+  });
+  final IconData icon;
+  final String label;
+  final int pts;
+  final String note;
+  final bool earned;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Row(
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: earned ? const Color(0xFFE8F5E9) : KvlColors.primaryGhost,
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, size: 15, color: earned ? const Color(0xFF2E7D32) : KvlColors.primary),
+          ),
+          const SizedBox(width: KvlSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: KvlText.caption(12).copyWith(fontWeight: FontWeight.w600, color: KvlColors.ink)),
+                Text(note, style: KvlText.caption(10.5).copyWith(color: KvlColors.muted)),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: earned ? const Color(0xFFE8F5E9) : KvlColors.primaryGhost,
+              borderRadius: KvlRadius.brPill,
+            ),
+            child: Text(
+              earned ? '✓ earned' : '+$pts pts',
+              style: KvlText.caption(11).copyWith(
+                fontWeight: FontWeight.w700,
+                color: earned ? const Color(0xFF2E7D32) : KvlColors.primaryDeep,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

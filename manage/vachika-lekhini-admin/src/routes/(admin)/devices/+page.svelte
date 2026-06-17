@@ -48,7 +48,7 @@
 <div class="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
 	<StatCard label="Total devices"    value={data.total}         hint="Ever registered"                         icon={Smartphone}  />
 	<StatCard label="Revoked tokens"   value={data.revokedCount}  hint="Active revocations (not yet expired)"    icon={ShieldAlert} tone="red" />
-	<StatCard label="Filtered results" value={data.total}         hint="Use platform filter to narrow"           icon={Smartphone}  tone="gray" />
+	<StatCard label="Filtered results" value={data.devices.length} hint="Use platform filter to narrow"           icon={Smartphone}  tone="gray" />
 </div>
 
 <!-- Platform filter tabs -->

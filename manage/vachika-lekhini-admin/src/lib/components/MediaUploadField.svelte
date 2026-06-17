@@ -179,51 +179,110 @@
 
 <div class="mt-2 space-y-3">
 
-	<!-- Existing file preview -->
+	<!-- ── Existing file preview ─────────────────────────────────────── -->
 	{#if existingUrl && !selectedFile}
-		<div class="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
-			{#if isAudio}
-				<div class="flex flex-col gap-2 flex-1 min-w-0">
-					<div class="flex items-center gap-2 text-sm text-gray-700">
-						<Music size={16} class="shrink-0 text-indigo-500" />
-						<span class="truncate font-medium">{existingUrl.split('/').pop()}</span>
+		{#if isAudio}
+			<!-- Audio: filename + native player + actions -->
+			<div class="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
+				<div class="flex items-center gap-2 text-sm text-slate-700">
+					<Music size={15} class="shrink-0 text-indigo-500" />
+					<span class="truncate font-medium flex-1 min-w-0">{existingUrl.split('/').pop()}</span>
+				</div>
+				<!-- svelte-ignore a11y_media_has_caption -->
+				<audio controls src={existingUrl} class="w-full h-9 rounded"></audio>
+				<div class="flex gap-2 pt-1">
+					<button
+						type="button"
+						class="btn-secondary flex-1"
+						onclick={() => fileInput?.click()}
+					>
+						<Upload size={14} /> Replace audio
+					</button>
+					<button
+						type="button"
+						class="btn-secondary px-3 text-red-600 border-red-200 hover:bg-red-50"
+						onclick={removeExisting}
+						disabled={removing}
+						title="Remove"
+					>
+						<Trash2 size={14} />
+						{removing ? '…' : 'Remove'}
+					</button>
+				</div>
+			</div>
+		{:else}
+			<!-- Image: full-width preview + replace / remove -->
+			<div class="rounded-xl border border-slate-200 bg-slate-50 overflow-hidden">
+				<div class="relative group">
+					<img
+						src={existingUrl}
+						alt="Current"
+						class="w-full object-cover"
+						style="max-height: 220px;"
+					/>
+					<!-- hover overlay with quick actions -->
+					<div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100">
+						<button
+							type="button"
+							class="flex items-center gap-1.5 rounded-lg bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow hover:bg-white transition"
+							onclick={() => fileInput?.click()}
+						>
+							<Upload size={13} /> Replace
+						</button>
+						<button
+							type="button"
+							class="flex items-center gap-1.5 rounded-lg bg-red-600/90 px-3 py-1.5 text-xs font-semibold text-white shadow hover:bg-red-600 transition"
+							onclick={removeExisting}
+							disabled={removing}
+						>
+							<Trash2 size={13} />
+							{removing ? 'Removing…' : 'Remove'}
+						</button>
 					</div>
-					<!-- svelte-ignore a11y_media_has_caption -->
-					<audio controls src={existingUrl} class="w-full h-8 [&::-webkit-media-controls-panel]:bg-gray-100"></audio>
 				</div>
-			{:else}
-				<img
-					src={existingUrl}
-					alt="Current"
-					class="h-20 w-20 rounded object-cover border border-gray-200 shrink-0"
-				/>
-				<div class="flex-1 min-w-0">
-					<p class="text-xs text-gray-500 truncate">{existingUrl.split('/').pop()}</p>
+				<!-- filename + explicit action buttons below the image -->
+				<div class="px-3 py-2 border-t border-slate-100 flex items-center gap-2">
+					<p class="text-xs text-slate-400 truncate flex-1 min-w-0">{existingUrl.split('/').pop()}</p>
+					<button
+						type="button"
+						class="btn-secondary py-1 px-2.5 text-xs"
+						onclick={() => fileInput?.click()}
+					>
+						<Upload size={12} /> Replace
+					</button>
+					<button
+						type="button"
+						class="btn-secondary py-1 px-2.5 text-xs text-red-600 border-red-200 hover:bg-red-50"
+						onclick={removeExisting}
+						disabled={removing}
+					>
+						<Trash2 size={12} />
+						{removing ? '…' : 'Remove'}
+					</button>
 				</div>
-			{/if}
-			<button
-				type="button"
-				class="btn-secondary shrink-0 text-red-600 border-red-200 hover:bg-red-50"
-				onclick={removeExisting}
-				disabled={removing}
-				title="Remove file"
-			>
-				<Trash2 size={14} />
-				{removing ? 'Removing…' : 'Remove'}
-			</button>
-		</div>
+			</div>
+		{/if}
+
+		<!-- Hidden input for replace flow (shared for audio and image) -->
+		<input
+			bind:this={fileInput}
+			type="file"
+			accept={accept}
+			class="sr-only"
+			onchange={onFileChange}
+		/>
 	{/if}
 
-	<!-- Drop zone (hidden when existing file shown and no new file chosen) -->
+	<!-- ── Drop zone — shown when no existing file, or staging a new one ── -->
 	{#if !existingUrl || selectedFile}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
-			class="relative flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-6 text-center transition-colors cursor-pointer
+			class="relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-8 text-center transition-colors cursor-pointer
 				{dragOver
 					? 'border-indigo-400 bg-indigo-50'
 					: selectedFile
 						? 'border-green-400 bg-green-50'
-						: 'border-gray-300 bg-gray-50 hover:border-gray-400 hover:bg-gray-100'}"
+						: 'border-slate-300 bg-slate-50 hover:border-slate-400 hover:bg-slate-100'}"
 			ondragover={onDragOver}
 			ondragleave={onDragLeave}
 			ondrop={onDrop}
@@ -234,15 +293,15 @@
 			aria-label="Upload file"
 		>
 			{#if selectedFile}
-				<CheckCircle size={24} class="text-green-500" />
-				<p class="text-sm font-medium text-green-700 truncate max-w-full">{selectedFile.name}</p>
-				<p class="text-xs text-green-500">{(selectedFile.size / 1024).toFixed(0)} KB</p>
+				<CheckCircle size={26} class="text-green-500" />
+				<p class="text-sm font-semibold text-green-700 truncate max-w-full">{selectedFile.name}</p>
+				<p class="text-xs text-green-500">{(selectedFile.size / 1024).toFixed(0)} KB — ready to upload</p>
 			{:else}
-				<Upload size={24} class="text-gray-400" />
-				<p class="text-sm text-gray-600">
-					<span class="font-medium text-indigo-600">Click to browse</span> or drag & drop
+				<Upload size={26} class="text-slate-400" />
+				<p class="text-sm text-slate-600">
+					<span class="font-semibold text-indigo-600">Click to browse</span> or drag & drop
 				</p>
-				<p class="text-xs text-gray-400">{accept}</p>
+				<p class="text-xs text-slate-400">{accept}</p>
 			{/if}
 
 			<input
@@ -255,26 +314,7 @@
 		</div>
 	{/if}
 
-	<!-- Replace button shown alongside existing preview -->
-	{#if existingUrl && !selectedFile}
-		<button
-			type="button"
-			class="btn-secondary w-full"
-			onclick={() => fileInput?.click()}
-		>
-			<Upload size={16} />
-			Replace {isAudio ? 'audio' : 'image'}
-		</button>
-		<input
-			bind:this={fileInput}
-			type="file"
-			accept={accept}
-			class="sr-only"
-			onchange={onFileChange}
-		/>
-	{/if}
-
-	<!-- Actions row when a new file is staged -->
+	<!-- ── Upload / cancel when a new file is staged ─────────────────── -->
 	{#if selectedFile}
 		<div class="flex gap-2">
 			<button
@@ -283,11 +323,11 @@
 				onclick={upload}
 				disabled={uploading}
 			>
-				<Upload size={16} />
+				<Upload size={15} />
 				{uploading ? 'Uploading…' : buttonLabel}
 			</button>
 			<button type="button" class="btn-secondary px-3" onclick={clearNewFile} title="Cancel">
-				<X size={16} />
+				<X size={15} />
 			</button>
 		</div>
 	{/if}

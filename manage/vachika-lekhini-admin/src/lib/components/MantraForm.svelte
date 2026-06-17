@@ -189,11 +189,6 @@
 					<span class="ml-auto text-xs text-slate-400 normal-case tracking-normal">Selection list &amp; reminders</span>
 				</div>
 				<div class="p-4 space-y-3">
-					{#if value.previewImageUrl}
-						<div class="rounded-xl overflow-hidden border border-slate-100 bg-slate-50">
-							<img src={value.previewImageUrl} alt="Preview" class="w-full h-28 object-cover" />
-						</div>
-					{/if}
 					<MediaUploadField
 						category="mantra-preview"
 						targetId="previewImageUrl"
@@ -213,11 +208,6 @@
 					<span class="ml-auto text-xs text-slate-400 normal-case tracking-normal">Detail / chanting view</span>
 				</div>
 				<div class="p-4 space-y-3">
-					{#if value.imageUrl}
-						<div class="rounded-xl overflow-hidden border border-slate-100 bg-slate-50">
-							<img src={value.imageUrl} alt="Main" class="w-full h-28 object-cover" />
-						</div>
-					{/if}
 					<MediaUploadField
 						category="mantra-image"
 						targetId="imageUrl"

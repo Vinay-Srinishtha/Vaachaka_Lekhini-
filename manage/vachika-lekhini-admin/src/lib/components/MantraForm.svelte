@@ -165,9 +165,26 @@
 				</div>
 			</div>
 
-			<!-- Visibility — stretches to fill -->
-			<div class="flex-1 rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden flex flex-col">
-				<label class="flex items-center gap-3 px-5 py-4 cursor-pointer select-none flex-1">
+			<!-- Content — stretches to fill remaining space in col 1 -->
+			<div class="flex-1 min-h-0 rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden flex flex-col">
+				<div class="px-5 pt-4 pb-3 border-b border-slate-100 shrink-0">
+					<span class="section-label">Content</span>
+				</div>
+				<div class="flex-1 p-4 flex flex-col gap-3 min-h-0">
+					<FormField label="Description *" name="description" error={fieldErrors.description}>
+						<textarea id="description" name="description"
+							class="input resize-none leading-relaxed text-base py-2.5 w-full"
+							style="min-height:120px;flex:1">{value.description}</textarea>
+					</FormField>
+					<FormField label="Deity" name="deity" error={fieldErrors.deity} hint="Drives hero image colour in app.">
+						<input id="deity" name="deity" class="input py-2 text-base" value={value.deity ?? ''} />
+					</FormField>
+				</div>
+			</div>
+
+			<!-- Visibility — compact at bottom of col 1 -->
+			<div class="shrink-0 rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+				<label class="flex items-center gap-3 px-5 py-4 cursor-pointer select-none">
 					<input type="checkbox" name="isActive" bind:checked={isActive} class="sr-only" />
 					<div class="relative shrink-0 w-12 h-[26px] rounded-full transition-all duration-300 cursor-pointer
 						{isActive ? 'bg-emerald-500 shadow-emerald-200 shadow-md' : 'bg-slate-200'}">
@@ -227,23 +244,6 @@
 						onUrlChange={(url) => { imageUrl = url; }}
 					/>
 					<input type="hidden" id="imageUrl" name="imageUrl" value={imageUrl ?? ''} />
-				</div>
-			</div>
-
-			<!-- Content — stretches to fill -->
-			<div class="flex-1 min-h-0 rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden flex flex-col">
-				<div class="px-5 pt-4 pb-3 border-b border-slate-100 shrink-0">
-					<span class="section-label">Content</span>
-				</div>
-				<div class="flex-1 p-4 flex flex-col gap-3 min-h-0">
-					<FormField label="Description *" name="description" error={fieldErrors.description}>
-						<textarea id="description" name="description"
-							class="input resize-none leading-relaxed text-base py-2.5 w-full"
-							style="min-height:120px;flex:1">{value.description}</textarea>
-					</FormField>
-					<FormField label="Deity" name="deity" error={fieldErrors.deity} hint="Drives hero image colour in app.">
-						<input id="deity" name="deity" class="input py-2 text-base" value={value.deity ?? ''} />
-					</FormField>
 				</div>
 			</div>
 

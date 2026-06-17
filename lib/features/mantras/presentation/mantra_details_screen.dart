@@ -74,7 +74,7 @@ class _MantraDetailsScreenState extends ConsumerState<MantraDetailsScreen> {
           const SizedBox(height: KvlSpacing.sm),
           MantraText(name, script: script, size: 32),
           const SizedBox(height: KvlSpacing.md),
-          _DeityHero(),
+          _DeityHero(mantra: mantra),
           const SizedBox(height: KvlSpacing.md),
           Text(
             mantra.description,
@@ -100,14 +100,30 @@ class _MantraDetailsScreenState extends ConsumerState<MantraDetailsScreen> {
 
 
 class _DeityHero extends StatelessWidget {
+  const _DeityHero({required this.mantra});
+  final Mantra mantra;
+
   @override
   Widget build(BuildContext context) {
+    final imageUrl = mantra.imageUrl;
     return AspectRatio(
       aspectRatio: 4 / 3,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: KvlRadius.brLG,
-          gradient: const LinearGradient(
+      child: ClipRRect(
+        borderRadius: KvlRadius.brLG,
+        child: imageUrl != null && imageUrl.isNotEmpty
+            ? Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (ctx, err, stack) => _fallback(),
+              )
+            : _fallback(),
+      ),
+    );
+  }
+
+  Widget _fallback() => DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [Color(0xFF4A2B1A), Color(0xFF7A4422)],
@@ -116,14 +132,11 @@ class _DeityHero extends StatelessWidget {
         child: Center(
           child: Text(
             'ॐ',
-            style: KvlText.mantraDevanagari(
-              110,
-            ).copyWith(color: Colors.white.withValues(alpha: .4)),
+            style: KvlText.mantraDevanagari(110)
+                .copyWith(color: Colors.white.withValues(alpha: .4)),
           ),
         ),
-      ),
-    );
-  }
+      );
 }
 
 class _PronunciationCard extends StatefulWidget {
@@ -141,6 +154,10 @@ class _PronunciationCardState extends State<_PronunciationCard>
   PlayerState _playerState = PlayerState.stopped;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
+  // While the user is dragging the seek thumb, freeze position updates so the
+  // stream doesn't fight the gesture and the thumb stays under the finger.
+  bool _dragging = false;
+  double _dragValue = 0.0;
 
   // Waveform animation controller
   late final AnimationController _waveCtrl;
@@ -170,7 +187,7 @@ class _PronunciationCardState extends State<_PronunciationCard>
       }
     });
     _player.onPositionChanged.listen((p) {
-      if (mounted) setState(() => _position = p);
+      if (mounted && !_dragging) setState(() => _position = p);
     });
     _player.onDurationChanged.listen((d) {
       if (mounted) setState(() => _duration = d);
@@ -368,11 +385,11 @@ class _PronunciationCardState extends State<_PronunciationCard>
                               // Seek slider
                               SliderTheme(
                                 data: SliderTheme.of(context).copyWith(
-                                  trackHeight: 2,
+                                  trackHeight: 3,
                                   thumbShape: const RoundSliderThumbShape(
-                                      enabledThumbRadius: 5),
+                                      enabledThumbRadius: 7),
                                   overlayShape: const RoundSliderOverlayShape(
-                                      overlayRadius: 12),
+                                      overlayRadius: 16),
                                   activeTrackColor: KvlColors.primary,
                                   inactiveTrackColor:
                                       KvlColors.primary.withValues(alpha: 0.15),
@@ -381,8 +398,22 @@ class _PronunciationCardState extends State<_PronunciationCard>
                                       KvlColors.primary.withValues(alpha: 0.12),
                                 ),
                                 child: Slider(
-                                  value: progress,
-                                  onChanged: hasAudio ? _seek : null,
+                                  value: _dragging ? _dragValue : progress,
+                                  onChangeStart: hasAudio
+                                      ? (v) => setState(() {
+                                            _dragging = true;
+                                            _dragValue = v;
+                                          })
+                                      : null,
+                                  onChanged: hasAudio
+                                      ? (v) => setState(() => _dragValue = v)
+                                      : null,
+                                  onChangeEnd: hasAudio
+                                      ? (v) {
+                                          _seek(v);
+                                          setState(() => _dragging = false);
+                                        }
+                                      : null,
                                 ),
                               ),
 

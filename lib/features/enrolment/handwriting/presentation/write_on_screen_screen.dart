@@ -1130,12 +1130,10 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
       body: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxHeight < 390;
-          final w = constraints.maxWidth;
+
           final h = constraints.maxHeight;
           final topInset = compact ? 13.0 : 18.0;
-          // Bottom button row height so progress bar sits just above it.
-          final bottomBtnH = compact ? 60.0 : 72.0;
-          final bottomPad = compact ? 8.0 : 14.0;
+          final bottomStripH = compact ? 28.0 : 32.0;
           return Stack(
             children: [
               Positioned.fill(
@@ -1176,50 +1174,59 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
                 ),
               ),
               // Bottom-left: progress bar above ADD button
+              // Top-right: merged SUBMIT / DONE button
               Positioned(
-                left: compact ? 10 : 16,
-                right: compact ? 200 : 240,
-                bottom: bottomPad + bottomBtnH + (compact ? 6 : 8),
-                child: _WritingProgressBar(
-                  currentCount: widget.currentCount + widget.writingCount,
-                  targetCount: widget.targetCount,
-                  compact: compact,
-                ),
-              ),
-              Positioned(
-                left: (w - (compact ? 250 : 280)) / 2,
-                bottom: compact ? 8 : 14,
-                child: _LandscapeActionButtons(
+                right: compact ? 10 : 16,
+                top: topInset,
+                child: _MergedActionButton(
                   saving: widget.saving,
-                  compact: compact,
                   canvasHasContent: _canvasHasContent,
-                  onAdd: widget.onAdd,
-                  onFinish: widget.onFinish,
+                  onTap: _canvasHasContent
+                      ? () async {
+                          widget.onAdd();
+                          await Future.delayed(
+                              const Duration(milliseconds: 120));
+                          if (mounted) widget.onFinish?.call();
+                        }
+                      : widget.onFinish,
+                  compact: compact,
                 ),
               ),
+              // Right rail: canvas tools
               Positioned(
-                right: compact ? 12 : 18,
-                bottom: compact ? 11 : 18,
-                child: Row(
+                right: compact ? 10 : 16,
+                top: h * .28,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
+                    _ProtoPlainIcon(
+                      icon: Icons.zoom_in_rounded,
+                      onTap: _guideScale < _scaleMax ? _zoomIn : null,
+                    ),
+                    SizedBox(height: compact ? 6 : 10),
+                    _ProtoPlainIcon(
+                      icon: Icons.zoom_out_rounded,
+                      onTap: _guideScale > _scaleMin ? _zoomOut : null,
+                    ),
+                    SizedBox(height: compact ? 6 : 10),
                     _ProtoRoundTool(
                       icon: Icons.backspace_rounded,
                       selected: false,
                       onTap: widget.onClear,
                     ),
-                    SizedBox(width: compact ? 6 : 10),
+                    SizedBox(height: compact ? 6 : 10),
                     _ProtoRoundTool(
                       icon: Icons.undo_rounded,
                       selected: false,
                       onTap: widget.onUndo,
                     ),
-                    SizedBox(width: compact ? 6 : 10),
+                    SizedBox(height: compact ? 6 : 10),
                     _ProtoRoundTool(
                       icon: Icons.redo_rounded,
                       selected: false,
                       onTap: widget.onRedo,
                     ),
-                    SizedBox(width: compact ? 6 : 10),
+                    SizedBox(height: compact ? 6 : 10),
                     _ColorPaletteButton(
                       selectedColor: widget.penColor,
                       compact: compact,
@@ -1228,20 +1235,16 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
                   ],
                 ),
               ),
+              // Bottom strip: Total Progress >>> [bar] >>> X/Y
               Positioned(
-                right: compact ? 20 : 30,
-                top: h * .38,
-                child: _ProtoPlainIcon(
-                  icon: Icons.zoom_in_rounded,
-                  onTap: _guideScale < _scaleMax ? _zoomIn : null,
-                ),
-              ),
-              Positioned(
-                right: compact ? 20 : 30,
-                top: h * .57,
-                child: _ProtoPlainIcon(
-                  icon: Icons.zoom_out_rounded,
-                  onTap: _guideScale > _scaleMin ? _zoomOut : null,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: bottomStripH,
+                child: _ProgressStrip(
+                  currentCount: widget.currentCount + widget.writingCount,
+                  targetCount: widget.targetCount,
+                  compact: compact,
                 ),
               ),
             ],
@@ -1415,43 +1418,6 @@ class _LandscapeTopBar extends StatelessWidget {
   }
 }
 
-class _LandscapeActionButtons extends StatelessWidget {
-  const _LandscapeActionButtons({
-    required this.saving,
-    required this.compact,
-    required this.canvasHasContent,
-    required this.onAdd,
-    required this.onFinish,
-  });
-
-  final bool saving;
-  final bool compact;
-  final bool canvasHasContent;
-  final VoidCallback onAdd;
-  final VoidCallback? onFinish;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        _RailButton(
-          label: canvasHasContent ? 'SUBMIT' : 'ADD',
-          color: canvasHasContent ? KvlColors.primaryDeep : KvlColors.primary,
-          compact: compact,
-          onTap: canvasHasContent ? onAdd : null,
-        ),
-        SizedBox(width: compact ? 14 : 20),
-        _RailButton(
-          label: saving ? context.l10n.savingButton : context.l10n.finishButton,
-          color: KvlColors.accent,
-          compact: compact,
-          onTap: onFinish,
-        ),
-      ],
-    );
-  }
-}
-
 class _WritingCounts extends StatelessWidget {
   const _WritingCounts({
     required this.globalCount,
@@ -1532,52 +1498,6 @@ class _WritingCounts extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _RailButton extends StatelessWidget {
-  const _RailButton({
-    required this.label,
-    required this.color,
-    required this.compact,
-    required this.onTap,
-  });
-
-  final String label;
-  final Color color;
-  final bool compact;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: compact ? 112 : 132,
-        height: compact ? 44 : 52,
-        decoration: BoxDecoration(
-          color: onTap == null ? color.withValues(alpha: .48) : color,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: color.withValues(alpha: .22),
-              blurRadius: 14,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          maxLines: 1,
-          style: KvlText.ui(
-            compact ? 15 : 17,
-            FontWeight.w600,
-          ).copyWith(color: Colors.white),
         ),
       ),
     );
@@ -1804,8 +1724,75 @@ class _GuideToggleButton extends StatelessWidget {
   }
 }
 
-class _WritingProgressBar extends StatelessWidget {
-  const _WritingProgressBar({
+class _MergedActionButton extends StatelessWidget {
+  const _MergedActionButton({
+    required this.saving,
+    required this.canvasHasContent,
+    required this.onTap,
+    required this.compact,
+  });
+
+  final bool saving;
+  final bool canvasHasContent;
+  final VoidCallback? onTap;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = canvasHasContent ? 'ADD' : 'DONE';
+    final icon = canvasHasContent ? Icons.add_rounded : Icons.check_rounded;
+    final bgColor =
+        canvasHasContent ? KvlColors.primary : const Color(0xFF16A34A);
+    return GestureDetector(
+      onTap: saving ? null : onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 14 : 18,
+          vertical: compact ? 8 : 11,
+        ),
+        decoration: BoxDecoration(
+          color: saving ? KvlColors.muted : bgColor,
+          borderRadius: KvlRadius.brPill,
+          boxShadow: saving
+              ? null
+              : [
+                  BoxShadow(
+                    color: bgColor.withValues(alpha: 0.4),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+        ),
+        child: saving
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, color: Colors.white, size: compact ? 16 : 18),
+                  SizedBox(width: compact ? 4 : 6),
+                  Text(
+                    label,
+                    style: KvlText.ui(compact ? 12 : 14, FontWeight.w800)
+                        .copyWith(color: Colors.white),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+class _ProgressStrip extends StatelessWidget {
+  const _ProgressStrip({
     required this.currentCount,
     required this.targetCount,
     required this.compact,
@@ -1819,74 +1806,92 @@ class _WritingProgressBar extends StatelessWidget {
   Widget build(BuildContext context) {
     if (targetCount <= 0) return const SizedBox.shrink();
     final progress = (currentCount / targetCount).clamp(0.0, 1.0);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Total Progress',
-                maxLines: 1,
-                style: KvlText.title(compact ? 11 : 13)
-                    .copyWith(fontWeight: FontWeight.w800),
-              ),
+    final countText =
+        '${IndianNumberFormat.format(currentCount)}/${IndianNumberFormat.format(targetCount)}';
+    return Container(
+      color: KvlColors.surface,
+      padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 14),
+      child: Row(
+        children: [
+          Text(
+            'Total Progress',
+            style: KvlText.ui(compact ? 9 : 10, FontWeight.w700)
+                .copyWith(color: KvlColors.inkSoft),
+          ),
+          const SizedBox(width: 6),
+          const Text(
+            '>>>',
+            style: TextStyle(
+              fontSize: 9,
+              color: Color(0xFFB0A090),
+              fontWeight: FontWeight.w600,
             ),
-            const SizedBox(width: KvlSpacing.sm),
-            Text(
-              '${IndianNumberFormat.format(currentCount)} / ${IndianNumberFormat.format(targetCount)}',
-              style: KvlText.caption(compact ? 10 : 11)
-                  .copyWith(color: KvlColors.inkSoft),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        ClipRRect(
-          borderRadius: KvlRadius.brPill,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              const height = 9.0;
-              final fullWidth = constraints.maxWidth;
-              final fillWidth = progress <= 0
-                  ? 0.0
-                  : (progress * fullWidth).clamp(height, fullWidth);
-              return Stack(
-                children: [
-                  Container(
-                    height: height,
-                    width: fullWidth,
-                    color: KvlColors.primary.withValues(alpha: 0.12),
-                  ),
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 350),
-                    curve: Curves.easeOutCubic,
-                    height: height,
-                    width: fillWidth,
-                    decoration: BoxDecoration(
-                      borderRadius: KvlRadius.brPill,
-                      gradient: const LinearGradient(
-                        colors: [
-                          Color(0xFFFFB572),
-                          KvlColors.primary,
-                          KvlColors.primaryDeep,
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final fullWidth = constraints.maxWidth;
+                const height = 6.0;
+                final fillWidth = progress <= 0
+                    ? 0.0
+                    : (progress * fullWidth).clamp(height, fullWidth);
+                return Stack(
+                  alignment: Alignment.centerLeft,
+                  children: [
+                    Container(
+                      height: height,
+                      width: fullWidth,
+                      decoration: BoxDecoration(
+                        color: KvlColors.primary.withValues(alpha: 0.12),
+                        borderRadius: KvlRadius.brPill,
+                      ),
+                    ),
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 350),
+                      curve: Curves.easeOutCubic,
+                      height: height,
+                      width: fillWidth,
+                      decoration: BoxDecoration(
+                        borderRadius: KvlRadius.brPill,
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFFFFB572),
+                            KvlColors.primary,
+                            KvlColors.primaryDeep,
+                          ],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: KvlColors.primary.withValues(alpha: 0.35),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
                         ],
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: KvlColors.primary.withValues(alpha: 0.35),
-                          blurRadius: 6,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
                     ),
-                  ),
-                ],
-              );
-            },
+                  ],
+                );
+              },
+            ),
           ),
-        ),
-      ],
+          const SizedBox(width: 6),
+          const Text(
+            '>>>',
+            style: TextStyle(
+              fontSize: 9,
+              color: Color(0xFFB0A090),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            countText,
+            style: KvlText.ui(compact ? 9 : 10, FontWeight.w700)
+                .copyWith(color: KvlColors.ink),
+          ),
+        ],
+      ),
     );
   }
 }

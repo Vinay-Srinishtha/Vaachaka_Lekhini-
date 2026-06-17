@@ -297,8 +297,8 @@ class _BodyState extends ConsumerState<_Body> {
                         'Complete voice training',
                       ),
                       showOpenSettings: state.micPermanentlyDenied,
-                      onTrainVoice: () => context.go(
-                        '${KvlRoute.voiceTraining}/${state.program.mantraId}',
+                      onTrainVoice: () => context.push(
+                        '${KvlRoute.voiceTraining}/${state.program.mantraId}?retrain=1',
                       ),
                       onOpenSettings: controller.openSystemSettings,
                       onSwitchManual: () {

@@ -30,20 +30,28 @@ const _defaultMilestones = [
 ];
 const _dayOptionsFallback = [7, 21, 108, 365];
 
+// Labels derived by position in the day-options list.
+const _paceLabels = ['Fastest', 'Balanced', 'Gentle', 'Sustainable'];
+
+// Pastel chip colours for day options (up to 4).
+const _chipColors = [
+  Color(0xFFE89880), // coral
+  Color(0xFFD4C46E), // amber
+  Color(0xFF6BBFB0), // teal
+  Color(0xFF7AAE8A), // sage
+];
+
 class _SetProgramTargetScreenState
     extends ConsumerState<SetProgramTargetScreen> {
   int? _selectedCount = 108; // null means custom
   final _customWritingsCtrl = TextEditingController(text: '108');
 
-  // ── Days ────────────────────────────────────────────────────────────────────
   static const _maxSliderDays = 2000;
-  // 24 hrs/day × 60 chants/min = 1440 chants max per day
   static const _chantsPerDay24h = 1440;
 
   int _days = 1;
   bool _busy = false;
 
-  // ── Lifecycle ────────────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
@@ -54,7 +62,6 @@ class _SetProgramTargetScreenState
   void _rebuild() {
     if (!mounted) return;
     setState(() {
-      // Snap _days up if below the new minimum (e.g. custom count increased).
       final min = _minDays;
       if (_days < min) _days = min;
     });
@@ -68,13 +75,11 @@ class _SetProgramTargetScreenState
     super.dispose();
   }
 
-  // ── Computed ─────────────────────────────────────────────────────────────────
   int get _writings {
     if (_selectedCount != null) return _selectedCount!;
     return int.tryParse(_customWritingsCtrl.text.replaceAll(',', '')) ?? 0;
   }
 
-  // Minimum days so that chants/day never exceeds 24 h worth (1440 chants).
   int get _minDays {
     final w = _writings;
     if (w <= 0) return 1;
@@ -92,8 +97,6 @@ class _SetProgramTargetScreenState
     return '~${IndianNumberFormat.format(perDay)} chants/day · $timeStr';
   }
 
-
-  // ── Actions ───────────────────────────────────────────────────────────────────
   Future<void> _confirm() async {
     if (_writings <= 0 || _days <= 0 || _busy) return;
     final profile = ref.read(activeProfileProvider).value;
@@ -132,16 +135,13 @@ class _SetProgramTargetScreenState
     context.go(KvlRoute.programs);
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    // Derive milestones from the mantra catalog (seeds from cache, always fast).
     final mantra = ref.watch(mantraByIdProvider(widget.mantraId));
     final milestones = (mantra?.milestones?.isNotEmpty == true)
         ? mantra!.milestones!
         : _defaultMilestones;
 
-    // Build a lookup: count → dayOptions
     final dayOptionsMap = {for (final m in milestones) m.count: m.dayOptions};
     final currentDayOptions =
         dayOptionsMap[_selectedCount] ?? _dayOptionsFallback;
@@ -164,59 +164,30 @@ class _SetProgramTargetScreenState
           _SectionHeader(label: 'Total writings goal'),
           const SizedBox(height: KvlSpacing.sm),
 
-          // Count preset chips
-          Wrap(
-            spacing: KvlSpacing.xs,
-            runSpacing: KvlSpacing.xs,
-            children: [
-              for (final milestone in milestones)
-                GestureDetector(
-                  onTap: () => setState(() {
-                    _selectedCount = milestone.count;
-                    _customWritingsCtrl.text = '${milestone.count}';
-                    // Auto-select first day option for this count.
-                    _days = milestone.dayOptions.firstOrNull ??
-                        _dayOptionsFallback.first;
-                  }),
-                  child: KvlChip(
-                    label: IndianNumberFormat.format(milestone.count),
-                    variant: _selectedCount == milestone.count
-                        ? KvlChipVariant.gold
-                        : KvlChipVariant.primary,
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: KvlSpacing.sm),
-
-          // Custom writings input
-          KvlCard(
-            variant: _selectedCount == null
-                ? KvlCardVariant.soft
-                : KvlCardVariant.plain,
-            border: _selectedCount == null
-                ? Border.all(color: KvlColors.primary, width: 1.5)
-                : null,
-            onTap: () => setState(() => _selectedCount = null),
-            child: Row(
-              children: [
-                _RadioDot(selected: _selectedCount == null),
-                const SizedBox(width: KvlSpacing.sm),
-                Expanded(
-                  child: _selectedCount == null
-                      ? KvlInput(
-                          label: context.l10n.totalWritingsLabel,
-                          hint: context.l10n.totalWritingsHint,
-                          controller: _customWritingsCtrl,
-                          keyboardType: TextInputType.number,
-                        )
-                      : Text(
-                          context.l10n.setCustomTarget,
-                          style: KvlText.ui(13, FontWeight.w600),
-                        ),
-                ),
-              ],
+          // Full-width radio cards for each milestone count
+          for (int i = 0; i < milestones.length; i++) ...[
+            _CountCard(
+              count: milestones[i].count,
+              badge: i == 0 ? 'Most Popular' : null,
+              selected: _selectedCount == milestones[i].count,
+              onTap: () => setState(() {
+                _selectedCount = milestones[i].count;
+                _customWritingsCtrl.text = '${milestones[i].count}';
+                _days = milestones[i].dayOptions.firstOrNull ??
+                    _dayOptionsFallback.first;
+              }),
             ),
+            const SizedBox(height: KvlSpacing.xs),
+          ],
+
+          // Custom writings card
+          _CustomCountCard(
+            selected: _selectedCount == null,
+            controller: _customWritingsCtrl,
+            onTap: () => setState(() => _selectedCount = null),
+            totalWritingsLabel: context.l10n.totalWritingsLabel,
+            totalWritingsHint: context.l10n.totalWritingsHint,
+            setCustomTarget: context.l10n.setCustomTarget,
           ),
 
           const SizedBox(height: KvlSpacing.lg),
@@ -225,8 +196,8 @@ class _SetProgramTargetScreenState
           _SectionHeader(label: 'Spread over how many days?'),
           const SizedBox(height: KvlSpacing.sm),
 
-          // Day quick-pick — segmented style, updates with count selection
-          _DaySegmented(
+          // Colored pill chips with pace labels
+          _DayChips(
             options: currentDayOptions,
             selected: _days,
             onSelect: (d) => setState(() => _days = d),
@@ -241,16 +212,12 @@ class _SetProgramTargetScreenState
                 Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        'Duration',
-                        style: KvlText.caption(11.5),
-                      ),
+                      child: Text('Duration', style: KvlText.caption(11.5)),
                     ),
                     Text(
                       context.l10n.daysValue(_days),
-                      style: KvlText.ui(14, FontWeight.w700).copyWith(
-                        color: KvlColors.primaryDeep,
-                      ),
+                      style: KvlText.ui(14, FontWeight.w700)
+                          .copyWith(color: KvlColors.primaryDeep),
                     ),
                   ],
                 ),
@@ -283,11 +250,8 @@ class _SetProgramTargetScreenState
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.timer_outlined,
-                    size: 14,
-                    color: KvlColors.primaryDeep,
-                  ),
+                  const Icon(Icons.timer_outlined,
+                      size: 14, color: KvlColors.primaryDeep),
                   const SizedBox(width: 6),
                   Flexible(
                     child: Text(
@@ -333,7 +297,222 @@ class _SetProgramTargetScreenState
   }
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
+// ── Count cards ────────────────────────────────────────────────────────────────
+
+class _CountCard extends StatelessWidget {
+  const _CountCard({
+    required this.count,
+    required this.selected,
+    required this.onTap,
+    this.badge,
+  });
+
+  final int count;
+  final bool selected;
+  final VoidCallback onTap;
+  final String? badge;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(
+          horizontal: KvlSpacing.md,
+          vertical: KvlSpacing.sm + 2,
+        ),
+        decoration: BoxDecoration(
+          color: selected ? KvlColors.primaryGhost : Colors.white,
+          borderRadius: KvlRadius.brMD,
+          border: Border.all(
+            color: selected ? KvlColors.primary : KvlColors.border,
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            _RadioDot(selected: selected),
+            const SizedBox(width: KvlSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${IndianNumberFormat.format(count)} writings',
+                    style: KvlText.ui(14, FontWeight.w600).copyWith(
+                      color: selected ? KvlColors.primaryDeep : KvlColors.ink,
+                    ),
+                  ),
+                  if (badge != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      badge!,
+                      style: KvlText.caption(11).copyWith(
+                        color: KvlColors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CustomCountCard extends StatelessWidget {
+  const _CustomCountCard({
+    required this.selected,
+    required this.controller,
+    required this.onTap,
+    required this.totalWritingsLabel,
+    required this.totalWritingsHint,
+    required this.setCustomTarget,
+  });
+
+  final bool selected;
+  final TextEditingController controller;
+  final VoidCallback onTap;
+  final String totalWritingsLabel;
+  final String totalWritingsHint;
+  final String setCustomTarget;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(
+          horizontal: KvlSpacing.md,
+          vertical: KvlSpacing.sm + 2,
+        ),
+        decoration: BoxDecoration(
+          color: selected ? KvlColors.primaryGhost : Colors.white,
+          borderRadius: KvlRadius.brMD,
+          border: Border.all(
+            color: selected ? KvlColors.primary : KvlColors.border,
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            _RadioDot(selected: selected),
+            const SizedBox(width: KvlSpacing.sm),
+            Expanded(
+              child: selected
+                  ? KvlInput(
+                      label: totalWritingsLabel,
+                      hint: totalWritingsHint,
+                      controller: controller,
+                      keyboardType: TextInputType.number,
+                    )
+                  : Text(
+                      setCustomTarget,
+                      style: KvlText.ui(14, FontWeight.w600),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Day chips ──────────────────────────────────────────────────────────────────
+
+class _DayChips extends StatelessWidget {
+  const _DayChips({
+    required this.options,
+    required this.selected,
+    required this.onSelect,
+  });
+
+  final List<int> options;
+  final int selected;
+  final ValueChanged<int> onSelect;
+
+  static String _label(int index, int total) {
+    if (total <= 1) return '';
+    if (total == 2) return index == 0 ? 'Shorter' : 'Longer';
+    if (total == 3) {
+      return ['Faster', 'Balanced', 'Sustainable'][index.clamp(0, 2)];
+    }
+    return _paceLabels[index.clamp(0, _paceLabels.length - 1)];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      child: Wrap(
+        key: ValueKey(options),
+        spacing: KvlSpacing.xs,
+        runSpacing: KvlSpacing.xs,
+        children: [
+          for (int i = 0; i < options.length; i++)
+            _DayChip(
+              days: options[i],
+              label: _label(i, options.length),
+              color: _chipColors[i.clamp(0, _chipColors.length - 1)],
+              selected: selected == options[i],
+              onTap: () => onSelect(options[i]),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DayChip extends StatelessWidget {
+  const _DayChip({
+    required this.days,
+    required this.label,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final int days;
+  final String label;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = selected ? color : color.withValues(alpha: 0.18);
+    final fg = selected ? Colors.white : color.withValues(alpha: 0.9);
+    final border = selected ? color : color.withValues(alpha: 0.35);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: border, width: 1.2),
+        ),
+        child: Text(
+          label.isNotEmpty ? '$days days · $label' : '$days days',
+          style: KvlText.ui(12.5, FontWeight.w600).copyWith(color: fg),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Shared helpers ─────────────────────────────────────────────────────────────
 
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({required this.label});
@@ -345,113 +524,16 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-/// Horizontal segmented control for day quick-picks.
-/// Styled as flat outlined tiles — distinct from the rounded chip presets.
-class _DaySegmented extends StatelessWidget {
-  const _DaySegmented({
-    required this.options,
-    required this.selected,
-    required this.onSelect,
-  });
-
-  final List<int> options;
-  final int selected;
-  final ValueChanged<int> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 220),
-      transitionBuilder: (child, animation) =>
-          FadeTransition(opacity: animation, child: child),
-      child: Row(
-        key: ValueKey(options),
-        children: [
-          for (int i = 0; i < options.length; i++) ...[
-            Expanded(child: _Tile(
-              days: options[i],
-              selected: selected == options[i],
-              isFirst: i == 0,
-              isLast: i == options.length - 1,
-              onTap: () => onSelect(options[i]),
-            )),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _Tile extends StatelessWidget {
-  const _Tile({
-    required this.days,
-    required this.selected,
-    required this.isFirst,
-    required this.isLast,
-    required this.onTap,
-  });
-
-  final int days;
-  final bool selected;
-  final bool isFirst;
-  final bool isLast;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final radius = BorderRadius.horizontal(
-      left: isFirst ? const Radius.circular(12) : Radius.zero,
-      right: isLast ? const Radius.circular(12) : Radius.zero,
-    );
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        curve: Curves.easeOut,
-        decoration: BoxDecoration(
-          color: selected ? KvlColors.primary : Colors.white,
-          borderRadius: radius,
-          border: Border.all(
-            color: selected ? KvlColors.primary : KvlColors.border,
-            width: selected ? 1.5 : 1,
-          ),
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        alignment: Alignment.center,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '$days',
-              style: KvlText.ui(14, FontWeight.w700).copyWith(
-                color: selected ? Colors.white : KvlColors.ink,
-              ),
-            ),
-            Text(
-              'days',
-              style: KvlText.caption(9.5).copyWith(
-                color: selected
-                    ? Colors.white.withValues(alpha: .82)
-                    : KvlColors.muted,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _RadioDot extends StatelessWidget {
   const _RadioDot({required this.selected});
   final bool selected;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 18,
-      height: 18,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 160),
+      width: 20,
+      height: 20,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: selected ? KvlColors.primary : Colors.transparent,
@@ -462,7 +544,7 @@ class _RadioDot extends StatelessWidget {
       ),
       alignment: Alignment.center,
       child: selected
-          ? const Icon(Icons.check_rounded, size: 11, color: Colors.white)
+          ? const Icon(Icons.check_rounded, size: 12, color: Colors.white)
           : null,
     );
   }

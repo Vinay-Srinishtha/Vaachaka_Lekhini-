@@ -14,6 +14,7 @@ import '../../../../app/providers.dart';
 import '../../../../app/router.dart';
 import '../../../../core/handwriting/handwriting_comparator.dart';
 import '../../../../core/i18n/language_options.dart';
+import '../../../../core/phone/phone_mode_service.dart';
 import '../../../../core/remote_config/remote_config.dart';
 import '../../../../core/remote_config/remote_config_keys.dart';
 import '../../../../core/theme/theme.dart';
@@ -930,7 +931,11 @@ class _SampleFloatingTool extends StatelessWidget {
   }
 }
 
-class _ProtoWriteScaffold extends StatefulWidget {
+final _ringerModeProvider = StreamProvider.autoDispose<RingerMode>((ref) {
+  return RingerModeService().watch();
+});
+
+class _ProtoWriteScaffold extends ConsumerStatefulWidget {
   const _ProtoWriteScaffold({
     required this.controller,
     required this.guide,
@@ -964,10 +969,10 @@ class _ProtoWriteScaffold extends StatefulWidget {
   final ValueChanged<Color> onColorSelected;
 
   @override
-  State<_ProtoWriteScaffold> createState() => _ProtoWriteScaffoldState();
+  ConsumerState<_ProtoWriteScaffold> createState() => _ProtoWriteScaffoldState();
 }
 
-class _ProtoWriteScaffoldState extends State<_ProtoWriteScaffold> {
+class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
   double _guideScale = 1.0;
   bool _canvasHasContent = false;
   bool _guideVisible = true;
@@ -1020,6 +1025,8 @@ class _ProtoWriteScaffoldState extends State<_ProtoWriteScaffold> {
   Widget build(BuildContext context) {
     final yours = widget.currentCount;
     final globalCount = widget.globalCount;
+    final ringerMode =
+        ref.watch(_ringerModeProvider).value ?? RingerMode.unknown;
     return Scaffold(
       backgroundColor: KvlColors.bg,
       body: LayoutBuilder(
@@ -1047,15 +1054,20 @@ class _ProtoWriteScaffoldState extends State<_ProtoWriteScaffold> {
                 child: _LandscapeTopBar(
                   globalCount: globalCount,
                   compact: compact,
+                  ringerMode: ringerMode,
+                  onCycleRinger: () => RingerModeService().cycle(),
+                  guideVisible: _guideVisible,
+                  onGuideToggle: () =>
+                      setState(() => _guideVisible = !_guideVisible),
                 ),
-
               ),
               Positioned(
                 right: compact ? 12 : 18,
                 top: topInset,
                 child: Padding(
                   padding: EdgeInsets.only(top: compact ? 4 : 6),
-                  child: _YoursPill(
+                  child: _WritingCounts(
+                    globalCount: globalCount,
                     yours: yours,
                     increment: widget.writingCount,
                     compact: compact,
@@ -1106,7 +1118,7 @@ class _ProtoWriteScaffoldState extends State<_ProtoWriteScaffold> {
               ),
               Positioned(
                 right: compact ? 20 : 30,
-                top: h * .32,
+                top: h * .38,
                 child: _ProtoPlainIcon(
                   icon: Icons.zoom_in_rounded,
                   onTap: _guideScale < _scaleMax ? _zoomIn : null,
@@ -1114,16 +1126,7 @@ class _ProtoWriteScaffoldState extends State<_ProtoWriteScaffold> {
               ),
               Positioned(
                 right: compact ? 20 : 30,
-                top: h * .47,
-                child: _GuideToggleButton(
-                  visible: _guideVisible,
-                  compact: compact,
-                  onToggle: () => setState(() => _guideVisible = !_guideVisible),
-                ),
-              ),
-              Positioned(
-                right: compact ? 20 : 30,
-                top: h * .62,
+                top: h * .57,
                 child: _ProtoPlainIcon(
                   icon: Icons.zoom_out_rounded,
                   onTap: _guideScale > _scaleMin ? _zoomOut : null,
@@ -1238,61 +1241,58 @@ class _LandscapeTopBar extends StatelessWidget {
   const _LandscapeTopBar({
     required this.globalCount,
     required this.compact,
+    required this.ringerMode,
+    required this.onCycleRinger,
+    required this.guideVisible,
+    required this.onGuideToggle,
   });
 
   final int globalCount;
   final bool compact;
+  final RingerMode ringerMode;
+  final VoidCallback onCycleRinger;
+  final bool guideVisible;
+  final VoidCallback onGuideToggle;
 
   @override
   Widget build(BuildContext context) {
+    final (ringerIcon, ringerLabel) = switch (ringerMode) {
+      RingerMode.silent => (Icons.notifications_off_rounded, 'Silent'),
+      RingerMode.vibrate => (Icons.vibration_rounded, 'Vibrate'),
+      RingerMode.normal => (Icons.notifications_active_rounded, 'Ring'),
+      RingerMode.unknown => (Icons.notifications_none_rounded, 'Ringer'),
+    };
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Flexible(
           fit: FlexFit.loose,
-          child: _LandscapeModeItem(
-            icon: Icons.notifications_off_outlined,
-            label: context.l10n.phoneMode,
-            iconColor: KvlColors.ink,
-            compact: compact,
-          ),
-        ),
-        const SizedBox(width: 6),
-        Flexible(
-          fit: FlexFit.loose,
-          child: _LandscapeModeItem(
-            icon: Icons.music_note_rounded,
-            label: context.l10n.ambienceSound,
-            iconColor: KvlColors.ink,
-            compact: compact,
-          ),
-        ),
-        const SizedBox(width: 6),
-        Flexible(
-          fit: FlexFit.loose,
-          child: _LandscapeModeItem(
-            icon: Icons.gesture_rounded,
-            label: context.l10n.ownWritingModeLabel,
-            iconColor: KvlColors.primary,
-            compact: compact,
-          ),
-        ),
-        if (!compact) ...[
-          const SizedBox(width: 16),
-          Flexible(
-            flex: 2,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 18),
-              child: Text(
-                context.l10n.countDisplay(IndianNumberFormat.format(globalCount)),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: KvlText.ui(14, FontWeight.w500)
-                    .copyWith(color: KvlColors.ink),
-              ),
+          child: GestureDetector(
+            onTap: onCycleRinger,
+            child: _LandscapeModeItem(
+              icon: ringerIcon,
+              label: ringerLabel,
+              iconColor: KvlColors.ink,
+              compact: compact,
             ),
           ),
-        ],
+        ),
+        const SizedBox(width: 6),
+        Flexible(
+          fit: FlexFit.loose,
+          child: GestureDetector(
+            onTap: onGuideToggle,
+            child: _LandscapeModeItem(
+              icon: guideVisible
+                  ? Icons.visibility_rounded
+                  : Icons.visibility_off_rounded,
+              label: context.l10n.ownWritingModeLabel,
+              iconColor: guideVisible ? KvlColors.primary : KvlColors.muted,
+              compact: compact,
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -1371,48 +1371,86 @@ class _LandscapeActionButtons extends StatelessWidget {
   }
 }
 
-class _YoursPill extends StatelessWidget {
-  const _YoursPill({
+class _WritingCounts extends StatelessWidget {
+  const _WritingCounts({
+    required this.globalCount,
     required this.yours,
     required this.increment,
     required this.compact,
   });
 
+  final int globalCount;
   final int yours;
   final int increment;
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    final globalBase = (globalCount - yours).clamp(0, globalCount);
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: compact ? 10 : 14,
-        vertical: compact ? 7 : 10,
+        vertical: compact ? 7 : 9,
       ),
       decoration: BoxDecoration(
-        color: KvlColors.bg,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: KvlColors.danger, width: 1.4),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Colors.white, Color(0xFFFFF1E2)],
+        ),
+        border: Border.all(
+          color: KvlColors.primary.withValues(alpha: 0.35),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: KvlColors.primary.withValues(alpha: 0.12),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: FittedBox(
         fit: BoxFit.scaleDown,
-        child: Text.rich(
-          TextSpan(
-            text: context.l10n.yoursDisplay,
-            children: [
-              TextSpan(
-                text: IndianNumberFormat.format(yours),
-                style: const TextStyle(color: KvlColors.danger),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.public_rounded,
+              size: compact ? 13 : 15,
+              color: KvlColors.primaryDeep,
+            ),
+            const SizedBox(width: 5),
+            Text(
+              'Global  ',
+              style: KvlText.ui(compact ? 11 : 12, FontWeight.w600)
+                  .copyWith(color: KvlColors.inkSoft),
+            ),
+            Text(
+              IndianNumberFormat.format(globalBase),
+              style: KvlText.ui(compact ? 14 : 16, FontWeight.w800)
+                  .copyWith(color: const Color(0xFFCC6A2B)),
+            ),
+            Text(
+              '  +  ',
+              style: KvlText.ui(compact ? 14 : 16, FontWeight.w600)
+                  .copyWith(color: const Color(0xFF9A8678)),
+            ),
+            TweenAnimationBuilder<double>(
+              key: ValueKey(increment),
+              tween: Tween(begin: increment > 0 ? 1.14 : 1.0, end: 1.0),
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutCubic,
+              builder: (_, scale, child) =>
+                  Transform.scale(scale: scale, child: child),
+              child: Text(
+                IndianNumberFormat.format(increment),
+                style: KvlText.ui(compact ? 14 : 16, FontWeight.w800)
+                    .copyWith(color: const Color(0xFF16A34A)),
               ),
-              const TextSpan(text: ' + '),
-              TextSpan(
-                text: IndianNumberFormat.format(increment),
-                style: const TextStyle(color: KvlColors.success),
-              ),
-            ],
-          ),
-          maxLines: 1,
-          style: KvlText.ui(compact ? 15 : 17, FontWeight.w700),
+            ),
+          ],
         ),
       ),
     );

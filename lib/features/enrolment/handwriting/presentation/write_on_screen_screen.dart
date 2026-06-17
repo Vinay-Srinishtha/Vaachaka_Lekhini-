@@ -1208,13 +1208,14 @@ class _DottedGuideText extends StatelessWidget {
       MantraScript.kannada => 'Tiro Kannada, Noto Sans Kannada, serif',
     };
     // flutter_svg renders <text> via Flutter's native text engine which
-    // ignores stroke-dasharray. Workaround: use a dot <pattern> masked to
+    // ignores stroke-dasharray. Workaround: use a dash <pattern> masked to
     // the text stroke shape — both <mask> and <pattern> on <rect> DO work.
+    // Diagonal pill shapes at ~40° create dashes that visually follow curves.
     final svg = '''
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="340" viewBox="0 0 1400 340">
   <defs>
-    <pattern id="dots" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse">
-      <circle cx="5" cy="5" r="4" fill="#25211D" fill-opacity="$opacity"/>
+    <pattern id="dashes" x="0" y="0" width="18" height="18" patternUnits="userSpaceOnUse" patternTransform="rotate(40)">
+      <rect x="1" y="5" width="14" height="5" rx="2.5" fill="#25211D" fill-opacity="$opacity"/>
     </pattern>
     <mask id="textMask">
       <text x="700" y="260" text-anchor="middle"
@@ -1223,10 +1224,10 @@ class _DottedGuideText extends StatelessWidget {
         font-weight="500"
         fill="none"
         stroke="white"
-        stroke-width="5">$escapedText</text>
+        stroke-width="14">$escapedText</text>
     </mask>
   </defs>
-  <rect x="0" y="0" width="1400" height="340" fill="url(#dots)" mask="url(#textMask)"/>
+  <rect x="0" y="0" width="1400" height="340" fill="url(#dashes)" mask="url(#textMask)"/>
 </svg>
 ''';
     return SvgPicture.string(svg, fit: BoxFit.contain);

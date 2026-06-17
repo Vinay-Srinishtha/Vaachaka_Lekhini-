@@ -144,7 +144,7 @@
 	{/snippet}
 </DataTable>
 
-<Modal open={newOpen} title="New admin" size="md" onClose={closeNew}>
+<Modal open={newOpen} title="New admin" subtitle="Grant dashboard access to a team member" size="lg" onClose={closeNew}>
 	<form
 		method="POST"
 		action="?/create"
@@ -161,25 +161,33 @@
 				submitting = false;
 			};
 		}}
-		class="space-y-4"
+		class="space-y-5"
 	>
-		<FormField label="Username" name="username" required error={fe.username}>
-			<input id="username" name="username" class="input" required autocomplete="off" />
-		</FormField>
-		<FormField label="Email" name="email" error={fe.email}>
-			<input id="email" name="email" type="email" class="input" autocomplete="off" />
-		</FormField>
-		<FormField label="Password" name="password" required hint="Minimum 8 characters." error={fe.password}>
-			<input id="password" name="password" type="password" class="input" required autocomplete="new-password" />
-		</FormField>
-		<FormField label="Role" name="role" required error={fe.role}>
-			<select id="role" name="role" class="input">
-				{#each ADMIN_ROLES as r}
-					<option value={r}>{ROLE_LABELS[r]}</option>
-				{/each}
-			</select>
-		</FormField>
-		<div class="flex justify-end gap-2 pt-2">
+		<section class="card p-5 space-y-4">
+			<p class="section-label">Account</p>
+			<div class="grid grid-cols-2 gap-4">
+				<FormField label="Username" name="username" required error={fe.username}>
+					<input id="username" name="username" class="input" required autocomplete="off" placeholder="e.g. jane_doe" />
+				</FormField>
+				<FormField label="Email" name="email" error={fe.email}>
+					<input id="email" name="email" type="email" class="input" autocomplete="off" placeholder="jane@example.com" />
+				</FormField>
+			</div>
+			<FormField label="Password" name="password" required hint="Minimum 8 characters." error={fe.password}>
+				<input id="password" name="password" type="password" class="input" required autocomplete="new-password" />
+			</FormField>
+		</section>
+		<section class="card p-5 space-y-3">
+			<p class="section-label">Permissions</p>
+			<FormField label="Role" name="role" required error={fe.role}>
+				<select id="role" name="role" class="input">
+					{#each ADMIN_ROLES as r}
+						<option value={r}>{ROLE_LABELS[r]}</option>
+					{/each}
+				</select>
+			</FormField>
+		</section>
+		<div class="flex justify-end gap-2 pt-1">
 			<button type="button" class="btn-secondary" onclick={closeNew}>Cancel</button>
 			<button type="submit" class="btn-primary" disabled={submitting}>
 				{submitting ? 'Creating…' : 'Create admin'}

@@ -2,14 +2,15 @@
 	import { Upload, X, CheckCircle, Trash2, Music } from '@lucide/svelte';
 
 	interface Props {
-		category: 'mantra-audio' | 'store-image' | 'mantra-image';
+		category: 'mantra-audio' | 'store-image' | 'mantra-image' | 'mantra-preview';
 		targetId: string;
 		accept: string;
 		buttonLabel: string;
 		currentUrl?: string | null;
+		onUrlChange?: (url: string | null) => void;
 	}
 
-	let { category, targetId, accept, buttonLabel, currentUrl = null }: Props = $props();
+	let { category, targetId, accept, buttonLabel, currentUrl = null, onUrlChange }: Props = $props();
 
 	const isAudio = category === 'mantra-audio';
 
@@ -102,6 +103,7 @@
 				targetInput.dispatchEvent(new Event('input', { bubbles: true }));
 			}
 			existingUrl = null;
+			onUrlChange?.(null);
 			message = 'File removed. Save the form to apply.';
 		} catch (err) {
 			errorMessage = err instanceof Error ? err.message : 'Remove failed.';
@@ -166,6 +168,7 @@
 			targetInput.value = payload.url;
 			targetInput.dispatchEvent(new Event('input', { bubbles: true }));
 			existingUrl = payload.url;
+			onUrlChange?.(payload.url);
 			selectedFile = null;
 			if (fileInput) fileInput.value = '';
 			message = 'Uploaded. Save this form to publish it.';

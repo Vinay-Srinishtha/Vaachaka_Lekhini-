@@ -81,6 +81,15 @@
 	let isActive = $state(value.isActive);
 	$effect.pre(() => { isActive = value.isActive; });
 
+	// Local state for image URLs so MediaUploadField callbacks can update them
+	// and the hidden inputs re-render with the correct value for form submission.
+	let previewImageUrl = $state<string | null>(value.previewImageUrl ?? null);
+	let imageUrl = $state<string | null>(value.imageUrl ?? null);
+	$effect.pre(() => {
+		previewImageUrl = value.previewImageUrl ?? null;
+		imageUrl = value.imageUrl ?? null;
+	});
+
 	let submitting = $state(false);
 </script>
 
@@ -193,10 +202,11 @@
 						category="mantra-preview"
 						targetId="previewImageUrl"
 						accept="image/*"
-						buttonLabel={value.previewImageUrl ? 'Replace preview' : 'Upload preview'}
-						currentUrl={value.previewImageUrl}
+						buttonLabel={previewImageUrl ? 'Replace preview' : 'Upload preview'}
+						currentUrl={previewImageUrl}
+						onUrlChange={(url) => { previewImageUrl = url; }}
 					/>
-					<input type="hidden" id="previewImageUrl" name="previewImageUrl" value={value.previewImageUrl ?? ''} />
+					<input type="hidden" id="previewImageUrl" name="previewImageUrl" value={previewImageUrl ?? ''} />
 				</div>
 			</div>
 
@@ -212,10 +222,11 @@
 						category="mantra-image"
 						targetId="imageUrl"
 						accept="image/*"
-						buttonLabel={value.imageUrl ? 'Replace image' : 'Upload image'}
-						currentUrl={value.imageUrl}
+						buttonLabel={imageUrl ? 'Replace image' : 'Upload image'}
+						currentUrl={imageUrl}
+						onUrlChange={(url) => { imageUrl = url; }}
 					/>
-					<input type="hidden" id="imageUrl" name="imageUrl" value={value.imageUrl ?? ''} />
+					<input type="hidden" id="imageUrl" name="imageUrl" value={imageUrl ?? ''} />
 				</div>
 			</div>
 

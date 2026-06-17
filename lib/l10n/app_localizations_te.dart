@@ -1058,31 +1058,31 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get authErrorAccountBanned =>
-      'Your account has been suspended. Please contact support.';
+      'మీ ఖాతా నిలిపివేయబడింది. దయచేసి మద్దతును సంప్రదించండి.';
 
   @override
   String get authErrorAccountSuspended =>
-      'మీ ఖాతాను నిర్వాహకులు నిష్క్రియం చేశారు. దయచేసి మద్దతును సంప్రదించండి.';
+      'మీ ఖాతా తాత్కాలికంగా నిలిపివేయబడింది. దయచేసి మద్దతును సంప్రదించండి.';
 
   @override
   String get authErrorOtpMaxAttempts =>
-      'చాలా తప్పు కోడ్‌లు. ఈ కోడ్ ఇప్పుడు లాక్ అయింది — దయచేసి కొత్త కోడ్ అభ్యర్థించండి.';
+      'చాలా తప్పు ప్రయత్నాలు జరిగాయి. కొత్త కోడ్ అభ్యర్థించండి.';
 
   @override
   String get authErrorOtpAlreadyUsed =>
-      'ఈ కోడ్ ఇప్పటికే ఉపయోగించబడింది. దయచేసి కొత్త కోడ్ అభ్యర్థించండి.';
+      'ఈ కోడ్ ఇప్పటికే ఉపయోగించబడింది. కొత్తది అభ్యర్థించండి.';
 
   @override
   String get authErrorCooldownActive =>
-      'మరొక కోడ్ అభ్యర్థించే ముందు దయచేసి వేచి ఉండండి.';
+      'మరొక కోడ్ అభ్యర్థించే ముందు కొంత నిరీక్షించండి.';
 
   @override
   String get authErrorDailyLimitReached =>
-      'రోజువారీ OTP పరిమితి చేరుకుంది. దయచేసి రేపు మళ్ళీ ప్రయత్నించండి.';
+      'రోజువారీ OTP పరిమితి చేరుకుంది. రేపు మళ్ళీ ప్రయత్నించండి.';
 
   @override
   String get authErrorDeliveryFailure =>
-      'ఈ నంబర్‌కు SMS పంపడం సాధ్యం కాలేదు. దయచేసి మళ్ళీ ప్రయత్నించండి.';
+      'OTP పంపడం సాధ్యపడలేదు. మీ నంబర్ తనిఖీ చేసి మళ్ళీ ప్రయత్నించండి.';
 
   @override
   String get authErrorUnknown =>

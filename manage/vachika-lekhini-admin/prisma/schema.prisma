@@ -36,6 +36,10 @@ model Mantra {
   recommendedCount Int?
   recommendedDays  Int?
   pronunciationUrl String?
+  /// Shown in mantra selection list and daily practice reminders.
+  previewImageUrl  String?
+  /// Shown in the mantra detail / chanting view.
+  imageUrl         String?
   /// Program count presets + day options shown on the Set Target screen.
   /// JSON: [{ count: number, dayOptions: number[] }]
   milestones       Json?    @db.JsonB
@@ -144,12 +148,18 @@ model Member {
   language     String    @default("en")
   mantraLanguage String  @default("hi")
   birthYear    Int?
+  gender       String?   // 'male' | 'female' | 'other' | 'prefer_not_to_say'
+  motherTongue String?   // BCP-47 language code, e.g. 'hi', 'te', 'kn', 'ta'
   preferences  Json      @default("{}") @db.JsonB
   isPrimary    Boolean   @default(false)
 
   /// Denormalised cache. Source of truth = sum of RewardEvent.amount
   /// for this member. Recomputed server-side on each ledger write.
   rewardPointsBalance Int @default(0)
+
+  /// Set once when all required profile fields are filled. Guards the
+  /// 50-point profile-completion bonus so it is awarded only once.
+  profileCompletedAt DateTime?
 
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt

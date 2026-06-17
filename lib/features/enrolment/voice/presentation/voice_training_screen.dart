@@ -56,7 +56,13 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen> {
 
   Future<void> _start() async {
     final mantra = ref.read(mantraByIdProvider(widget.mantraId));
-    if (mantra == null) return;
+    if (mantra == null) {
+      setState(() {
+        _error =
+            'Mantra data is still loading — please wait a moment and try again.';
+      });
+      return;
+    }
     setState(() {
       _recording = true;
       _error = null;
@@ -124,7 +130,8 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen> {
         mantra?.name.scriptForLanguage(settings.languageCode) ??
         settings.languageCode.mantraScriptForLanguage;
     final mantraText =
-        mantra?.name.displayForLanguage(settings.languageCode) ?? '…';
+        mantra?.name.displayForLanguage(settings.mantraLanguageCode) ??
+        widget.mantraId;
 
     return KvlScaffold(
       title: '',

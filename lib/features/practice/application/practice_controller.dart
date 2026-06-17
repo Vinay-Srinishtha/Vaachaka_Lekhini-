@@ -9,7 +9,6 @@ import '../../../core/storage/app_database.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../enrolment/voice/data/voice_enrolment_service.dart';
-import '../../enrolment/voice/domain/voice_enrolment.dart';
 import '../../mantras/domain/mantra.dart';
 import '../../programs/domain/program.dart';
 import '../../programs/domain/program_repository.dart';
@@ -203,8 +202,6 @@ class PracticeController extends AsyncNotifier<PracticeState> {
     // Voice mode requires mic permission. Check up front and surface a
     // friendly state instead of crashing inside the audio stream.
     if (s.modality == SessionModality.voice) {
-      final trained = await _hasCompletedVoiceTraining(s.program.mantraId);
-      if (!trained) return;
       final ok = await _ensureMicReady();
       if (!ok) return;
     }
@@ -272,35 +269,7 @@ class PracticeController extends AsyncNotifier<PracticeState> {
     return false;
   }
 
-  Future<bool> _hasCompletedVoiceTraining(String mantraId) async {
-    final profile = ref.read(activeProfileProvider).value;
-    final s = state.value;
-    if (profile == null) {
-      if (s != null) {
-        state = AsyncData(
-          s.copyWith(
-            errorMessage: 'Select a profile before starting voice practice.',
-          ),
-        );
-      }
-      return false;
-    }
-    final enrolment = await ref
-        .read(voiceEnrolmentRepositoryProvider)
-        .get(profile.id, mantraId);
-    final complete = enrolment != null && enrolment.isComplete;
-    if (!complete && s != null) {
-      state = AsyncData(
-        s.copyWith(
-          errorMessage:
-              'Complete voice training (${VoiceEnrolment.requiredSamples}/${VoiceEnrolment.requiredSamples}) before using voice practice.',
-        ),
-      );
-    }
-    return complete;
-  }
-
-  /// Triggered from the UI's "Open Settings" CTA when mic was permanently denied.
+/// Triggered from the UI's "Open Settings" CTA when mic was permanently denied.
   Future<void> openSystemSettings() async {
     await openAppSettings();
   }

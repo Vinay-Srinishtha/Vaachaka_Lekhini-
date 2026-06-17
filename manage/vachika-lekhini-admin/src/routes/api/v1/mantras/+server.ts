@@ -24,6 +24,7 @@ export const GET: RequestHandler = async () => {
 			recommendedDays: true,
 			pronunciationUrl: true,
 			imageUrl: true,
+			previewImageUrl: true,
 			milestones: true,
 			sortOrder: true,
 			updatedAt: true

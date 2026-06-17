@@ -142,6 +142,8 @@ export const memberUpsertSchema = z.object({
 	language: z.string().max(8).default('en'),
 	mantra_language: z.string().max(8).default('hi'),
 	birth_year: z.number().int().nullable().optional(),
+	gender: z.string().nullable().optional(),
+	mother_tongue: z.string().nullable().optional(),
 	preferences: z.record(z.string(), z.unknown()).optional(),
 	is_primary: z.boolean().optional()
 });

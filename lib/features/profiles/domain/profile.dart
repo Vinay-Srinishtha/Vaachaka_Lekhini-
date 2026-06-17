@@ -26,6 +26,35 @@ enum FamilyRelation {
       FamilyRelation.values.firstWhere((r) => r.name == name, orElse: () => FamilyRelation.other);
 }
 
+enum Gender {
+  male,
+  female,
+  other,
+  preferNotToSay;
+
+  String get label => switch (this) {
+        Gender.male => 'Male',
+        Gender.female => 'Female',
+        Gender.other => 'Other',
+        Gender.preferNotToSay => 'Prefer not to say',
+      };
+
+  String get serverValue => switch (this) {
+        Gender.male => 'male',
+        Gender.female => 'female',
+        Gender.other => 'other',
+        Gender.preferNotToSay => 'prefer_not_to_say',
+      };
+
+  static Gender? fromServer(String? value) => switch (value) {
+        'male' => Gender.male,
+        'female' => Gender.female,
+        'other' => Gender.other,
+        'prefer_not_to_say' => Gender.preferNotToSay,
+        _ => null,
+      };
+}
+
 class Profile extends Equatable {
   const Profile({
     required this.id,
@@ -36,6 +65,10 @@ class Profile extends Equatable {
     this.avatarSeed,
     this.language = 'en',
     this.mantraLanguage = 'hi',
+    this.gender,
+    this.birthYear,
+    this.motherTongue,
+    this.profileCompletedAt,
   });
 
   final String id;
@@ -54,6 +87,22 @@ class Profile extends Equatable {
   /// Preferred language/script for displaying mantras — independent of the
   /// UI [language]. Defaults to Devanagari ('hi').
   final String mantraLanguage;
+
+  final Gender? gender;
+
+  /// Year of birth, e.g. 1990.
+  final int? birthYear;
+
+  /// BCP-47 code for the user's mother tongue, e.g. 'hi', 'te', 'kn', 'ta'.
+  final String? motherTongue;
+
+  /// Non-null once the 50-point profile-completion bonus has been awarded.
+  final DateTime? profileCompletedAt;
+
+  /// True when all required fields are filled (determines whether the reward
+  /// has been / can be earned).
+  bool get isProfileComplete =>
+      gender != null && birthYear != null && motherTongue != null && name.isNotEmpty;
 
   /// Display label used on the Profile Selection screen.
   /// "Me" → just "Me", others → "Name, Relation".
@@ -74,6 +123,10 @@ class Profile extends Equatable {
     String? avatarSeed,
     String? language,
     String? mantraLanguage,
+    Gender? gender,
+    int? birthYear,
+    String? motherTongue,
+    DateTime? profileCompletedAt,
   }) => Profile(
         id: id,
         userId: userId,
@@ -82,6 +135,10 @@ class Profile extends Equatable {
         avatarSeed: avatarSeed ?? this.avatarSeed,
         language: language ?? this.language,
         mantraLanguage: mantraLanguage ?? this.mantraLanguage,
+        gender: gender ?? this.gender,
+        birthYear: birthYear ?? this.birthYear,
+        motherTongue: motherTongue ?? this.motherTongue,
+        profileCompletedAt: profileCompletedAt ?? this.profileCompletedAt,
         createdAt: createdAt,
       );
 
@@ -93,6 +150,10 @@ class Profile extends Equatable {
         'avatarSeed': avatarSeed,
         'language': language,
         'mantraLanguage': mantraLanguage,
+        'gender': gender?.serverValue,
+        'birthYear': birthYear,
+        'motherTongue': motherTongue,
+        'profileCompletedAt': profileCompletedAt?.toIso8601String(),
         'createdAt': createdAt.toIso8601String(),
       };
 
@@ -104,10 +165,28 @@ class Profile extends Equatable {
         avatarSeed: j['avatarSeed'] as String?,
         language: j['language'] as String? ?? 'en',
         mantraLanguage: j['mantraLanguage'] as String? ?? 'hi',
+        gender: Gender.fromServer(j['gender'] as String?),
+        birthYear: j['birthYear'] as int?,
+        motherTongue: j['motherTongue'] as String?,
+        profileCompletedAt: j['profileCompletedAt'] != null
+            ? DateTime.tryParse(j['profileCompletedAt'] as String)
+            : null,
         createdAt: DateTime.parse(j['createdAt'] as String),
       );
 
   @override
-  List<Object?> get props =>
-      [id, userId, name, relation, avatarSeed, language, mantraLanguage, createdAt];
+  List<Object?> get props => [
+        id,
+        userId,
+        name,
+        relation,
+        avatarSeed,
+        language,
+        mantraLanguage,
+        gender,
+        birthYear,
+        motherTongue,
+        profileCompletedAt,
+        createdAt,
+      ];
 }

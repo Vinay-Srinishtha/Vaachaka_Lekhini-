@@ -94,6 +94,7 @@ class Mantra extends Equatable {
     this.isActive = true,
     this.deity,
     this.imageUrl,
+    this.previewImageUrl,
     this.pronunciationAsset,
     this.recommendedCount,
     this.recommendedDays,
@@ -114,6 +115,9 @@ class Mantra extends Equatable {
 
   /// Remote image URL for this mantra (served from the admin CDN).
   final String? imageUrl;
+
+  /// Smaller preview image shown in selection list and reminders.
+  final String? previewImageUrl;
 
   /// Pronunciation audio URL (remote) or asset path (legacy).
   final String? pronunciationAsset;

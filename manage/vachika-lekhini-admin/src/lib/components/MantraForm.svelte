@@ -24,6 +24,7 @@
 		recommendedCount: number | null;
 		recommendedDays: number | null;
 		pronunciationUrl: string | null;
+		previewImageUrl: string | null;
 		imageUrl: string | null;
 		milestones: MantraMilestone[] | null;
 		isActive: boolean;
@@ -180,17 +181,41 @@
 		<!-- ╔══ COL 2 ══════════════════════════════════════════════════════╗ -->
 		<div class="flex flex-col gap-3 min-h-0">
 
-			<!-- Mantra Image -->
+			<!-- Preview Image -->
+			<div class="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden shrink-0">
+				<div class="px-5 pt-4 pb-3 border-b border-slate-100 flex items-center gap-2">
+					<Image size={14} class="text-amber-400" />
+					<span class="section-label">Preview Image</span>
+					<span class="ml-auto text-xs text-slate-400 normal-case tracking-normal">Selection list &amp; reminders</span>
+				</div>
+				<div class="p-4 space-y-3">
+					{#if value.previewImageUrl}
+						<div class="rounded-xl overflow-hidden border border-slate-100 bg-slate-50">
+							<img src={value.previewImageUrl} alt="Preview" class="w-full h-28 object-cover" />
+						</div>
+					{/if}
+					<MediaUploadField
+						category="mantra-preview"
+						targetId="previewImageUrl"
+						accept="image/*"
+						buttonLabel={value.previewImageUrl ? 'Replace preview' : 'Upload preview'}
+						currentUrl={value.previewImageUrl}
+					/>
+					<input type="hidden" id="previewImageUrl" name="previewImageUrl" value={value.previewImageUrl ?? ''} />
+				</div>
+			</div>
+
+			<!-- Main Image -->
 			<div class="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden shrink-0">
 				<div class="px-5 pt-4 pb-3 border-b border-slate-100 flex items-center gap-2">
 					<Image size={14} class="text-slate-400" />
-					<span class="section-label">Mantra Image</span>
-					<span class="ml-auto text-xs text-slate-400 normal-case tracking-normal">Shown in app detail</span>
+					<span class="section-label">Main Image</span>
+					<span class="ml-auto text-xs text-slate-400 normal-case tracking-normal">Detail / chanting view</span>
 				</div>
 				<div class="p-4 space-y-3">
 					{#if value.imageUrl}
 						<div class="rounded-xl overflow-hidden border border-slate-100 bg-slate-50">
-							<img src={value.imageUrl} alt="Mantra" class="w-full h-36 object-cover" />
+							<img src={value.imageUrl} alt="Main" class="w-full h-28 object-cover" />
 						</div>
 					{/if}
 					<MediaUploadField

@@ -115,7 +115,7 @@ class _Recommendation extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
     final script = mantra.name.scriptForLanguage(settings.languageCode);
-    final name = mantra.name.displayForLanguage(settings.languageCode);
+    final name = mantra.name.displayForLanguage(settings.mantraLanguageCode);
     return KvlCard(
       variant: KvlCardVariant.warm,
       child: Column(

@@ -89,7 +89,7 @@ class _DailyProgressScreenState extends ConsumerState<DailyProgressScreen> {
             : ref
                       .watch(mantraByIdProvider(program.mantraId))
                       ?.name
-                      .displayForLanguage(settings.languageCode) ??
+                      .displayForLanguage(settings.mantraLanguageCode) ??
                   '';
         final title = mantraName.isEmpty
             ? context.l10n.dailyProgressTitle

@@ -281,7 +281,7 @@ class _ProgramCard extends ConsumerWidget {
         mantra?.name.scriptForLanguage(settings.languageCode) ??
         settings.languageCode.mantraScriptForLanguage;
     final name =
-        mantra?.name.displayForLanguage(settings.languageCode) ??
+        mantra?.name.displayForLanguage(settings.mantraLanguageCode) ??
         program.mantraId;
     final pct = (program.progressFraction * 100).round();
     final complete = program.isCompleted;

@@ -65,6 +65,8 @@ export const POST: RequestHandler = async (event) => {
 					language: m.language,
 					mantraLanguage: m.mantra_language,
 					birthYear: m.birth_year ?? null,
+					gender: m.gender ?? null,
+					motherTongue: m.mother_tongue ?? null,
 					preferences: (m.preferences ?? {}) as any,
 					isPrimary: m.is_primary ?? false
 				},
@@ -75,6 +77,8 @@ export const POST: RequestHandler = async (event) => {
 					language: m.language,
 					mantraLanguage: m.mantra_language,
 					birthYear: m.birth_year ?? null,
+					gender: m.gender ?? null,
+					motherTongue: m.mother_tongue ?? null,
 					preferences: (m.preferences ?? {}) as any,
 					...(m.is_primary !== undefined ? { isPrimary: m.is_primary } : {})
 				},
@@ -86,9 +90,12 @@ export const POST: RequestHandler = async (event) => {
 					language: true,
 					mantraLanguage: true,
 					birthYear: true,
+					gender: true,
+					motherTongue: true,
 					preferences: true,
 					isPrimary: true,
 					rewardPointsBalance: true,
+					profileCompletedAt: true,
 					createdAt: true,
 					updatedAt: true
 				}

@@ -31,6 +31,12 @@
 					? String(v.pronunciationUrl)
 					: null
 				: m.pronunciationUrl,
+		previewImageUrl:
+			v.previewImageUrl !== undefined
+				? v.previewImageUrl
+					? String(v.previewImageUrl)
+					: null
+				: (m as any).previewImageUrl ?? null,
 		imageUrl:
 			v.imageUrl !== undefined
 				? v.imageUrl

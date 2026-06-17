@@ -1057,31 +1057,30 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get authErrorAccountBanned =>
-      'Your account has been suspended. Please contact support.';
+      'आपका खाता निलंबित कर दिया गया है। कृपया सहायता से संपर्क करें।';
 
   @override
   String get authErrorAccountSuspended =>
-      'आपका खाता एक व्यवस्थापक द्वारा निष्क्रिय कर दिया गया है। कृपया सहायता से संपर्क करें।';
+      'आपका खाता अस्थायी रूप से निलंबित कर दिया गया है। कृपया सहायता से संपर्क करें।';
 
   @override
-  String get authErrorOtpMaxAttempts =>
-      'बहुत अधिक गलत कोड। यह कोड अब लॉक हो गया है — कृपया नया कोड मांगें।';
+  String get authErrorOtpMaxAttempts => 'बहुत अधिक गलत प्रयास। नया कोड माँगें।';
 
   @override
   String get authErrorOtpAlreadyUsed =>
-      'यह कोड पहले ही उपयोग हो चुका है। कृपया नया सत्यापन कोड मांगें।';
+      'यह कोड पहले ही उपयोग किया जा चुका है। नया माँगें।';
 
   @override
   String get authErrorCooldownActive =>
-      'कृपया एक और कोड मांगने से पहले प्रतीक्षा करें।';
+      'कृपया दूसरा कोड माँगने से पहले थोड़ी देर प्रतीक्षा करें।';
 
   @override
   String get authErrorDailyLimitReached =>
-      'दैनिक OTP सीमा पूरी हो गई। कृपया कल पुनः प्रयास करें।';
+      'आज की OTP सीमा समाप्त हो गई। कल पुनः प्रयास करें।';
 
   @override
   String get authErrorDeliveryFailure =>
-      'हम इस नंबर पर SMS नहीं भेज सके। कृपया पुनः प्रयास करें।';
+      'OTP नहीं भेजा जा सका। अपना नंबर जाँचें और पुनः प्रयास करें।';
 
   @override
   String get authErrorUnknown => 'कुछ गलत हो गया। कृपया पुनः प्रयास करें।';

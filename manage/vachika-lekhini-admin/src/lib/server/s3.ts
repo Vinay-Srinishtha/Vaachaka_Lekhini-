@@ -3,7 +3,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { error } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 
-type UploadCategory = 'mantra-audio' | 'store-image' | 'mantra-image';
+type UploadCategory = 'mantra-audio' | 'store-image' | 'mantra-image' | 'mantra-preview';
 
 // All common image formats — browser File API always reports a valid image/* MIME type.
 const IMAGE_PREFIX = 'image/';
@@ -67,7 +67,7 @@ function validateMediaInput(args: {
 	contentType: string;
 	size: number;
 }) {
-	const isImage = args.category === 'store-image' || args.category === 'mantra-image';
+	const isImage = args.category === 'store-image' || args.category === 'mantra-image' || args.category === 'mantra-preview';
 	const maxBytes = isImage ? MAX_IMAGE_BYTES : MAX_AUDIO_BYTES;
 
 	const typeOk = isImage
@@ -86,7 +86,8 @@ function validateMediaInput(args: {
 function keyPrefix(category: UploadCategory, slug: string) {
 	const safeSlug = cleanSegment(slug, 'item');
 	if (category === 'mantra-audio') return `mantras/audio/${safeSlug}`;
-	if (category === 'mantra-image') return `mantras/images/${safeSlug}`;
+	if (category === 'mantra-image') return `mantras/images/main/${safeSlug}`;
+	if (category === 'mantra-preview') return `mantras/images/preview/${safeSlug}`;
 	return `store/images/${safeSlug}`;
 }
 
@@ -127,7 +128,7 @@ export async function createAdminMediaUpload(args: {
 }
 
 export function isUploadCategory(value: string): value is UploadCategory {
-	return value === 'mantra-audio' || value === 'store-image' || value === 'mantra-image';
+	return value === 'mantra-audio' || value === 'store-image' || value === 'mantra-image' || value === 'mantra-preview';
 }
 
 export async function deleteAdminMediaObject(url: string) {

@@ -55,7 +55,7 @@ class ProfileScreen extends ConsumerWidget {
     return KvlScaffold(
       title: context.l10n.profileTitle,
       trailing: TextButton(
-        onPressed: () => _EditProfileSheet.show(context),
+        onPressed: () => context.push(KvlRoute.profileEdit),
         child: Text(
           context.l10n.editButton,
           style: KvlText.ui(
@@ -109,6 +109,39 @@ class ProfileScreen extends ConsumerWidget {
           ),
           if (session != null)
             Center(child: Text(session.mobile, style: KvlText.muted(11))),
+
+          if (profile != null && !profile.isProfileComplete) ...[
+            const SizedBox(height: KvlSpacing.sm),
+            GestureDetector(
+              onTap: () => context.push(KvlRoute.profileEdit),
+              child: KvlCard(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KvlSpacing.md,
+                  vertical: KvlSpacing.sm,
+                ),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFBE9A8), Color(0xFFF5D970)],
+                ),
+                border: Border.all(color: const Color(0xFFE8C04A)),
+                child: Row(
+                  children: [
+                    const Icon(Icons.star_rounded, color: KvlColors.gold, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Complete your profile → earn 50 reward points!',
+                        style: KvlText.caption(11.5).copyWith(
+                          color: const Color(0xFF5a4400),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right_rounded, size: 18, color: Color(0xFF8a6900)),
+                  ],
+                ),
+              ),
+            ),
+          ],
 
           const SizedBox(height: KvlSpacing.md),
           Row(
@@ -206,6 +239,16 @@ class ProfileScreen extends ConsumerWidget {
                       .clearActive();
                   if (context.mounted) context.go(KvlRoute.profileSelect);
                 },
+              ),
+              SettingRow(
+                icon: Icons.smartphone_rounded,
+                label: context.l10n.changeMobileNumber,
+                onTap: () => showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => _ChangeMobileSheet(parentRef: ref),
+                ),
               ),
               // Only the primary member (Me) can manage family members.
               if (profile?.relation == FamilyRelation.me)
@@ -1546,211 +1589,6 @@ class _MantraPickerTile extends StatelessWidget {
                 Icons.chevron_right_rounded,
                 color: KvlColors.muted,
                 size: 22,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Edit Profile Sheet
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _EditProfileSheet {
-  static void show(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const _EditProfileSheetBody(),
-    );
-  }
-}
-
-class _EditProfileSheetBody extends ConsumerStatefulWidget {
-  const _EditProfileSheetBody();
-
-  @override
-  ConsumerState<_EditProfileSheetBody> createState() =>
-      _EditProfileSheetBodyState();
-}
-
-class _EditProfileSheetBodyState extends ConsumerState<_EditProfileSheetBody> {
-  late final TextEditingController _nameCtrl;
-  bool _nameBusy = false;
-  String? _nameError;
-
-  @override
-  void initState() {
-    super.initState();
-    final session = ref.read(sessionProvider).value;
-    _nameCtrl = TextEditingController(text: session?.username ?? '');
-  }
-
-  @override
-  void dispose() {
-    _nameCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _saveName() async {
-    final name = _nameCtrl.text.trim();
-    if (name.isEmpty) {
-      setState(() => _nameError = context.l10n.nameEmptyError);
-      return;
-    }
-    setState(() { _nameBusy = true; _nameError = null; });
-    final res = await ref.read(authRepositoryProvider).updateName(name);
-    if (!mounted) return;
-    switch (res) {
-      case Ok():
-        // Also update the "me" profile if present.
-        final profile = ref.read(activeProfileProvider).value;
-        if (profile != null) {
-          await ref.read(profileRepositoryProvider).update(
-            profile.copyWith(name: name),
-          );
-        }
-        setState(() => _nameBusy = false);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(context.l10n.nameUpdatedSuccess),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-          );
-        }
-      case Err(:final failure):
-        setState(() { _nameBusy = false; _nameError = failure.message; });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final session = ref.watch(sessionProvider).value;
-
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: Container(
-        decoration: BoxDecoration(
-          color: KvlColors.bg,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        padding: const EdgeInsets.fromLTRB(
-          KvlSpacing.lg,
-          KvlSpacing.sm,
-          KvlSpacing.lg,
-          KvlSpacing.lg,
-        ),
-        child: SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Drag handle
-              Center(
-                child: Container(
-                  width: 42,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: KvlColors.border,
-                    borderRadius: BorderRadius.circular(99),
-                  ),
-                ),
-              ),
-              const SizedBox(height: KvlSpacing.md),
-
-              // Header
-              Row(
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: KvlColors.primaryGhost,
-                      borderRadius: KvlRadius.brMD,
-                    ),
-                    alignment: Alignment.center,
-                    child: const Icon(
-                      Icons.person_outline_rounded,
-                      color: KvlColors.primaryDeep,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: KvlSpacing.sm),
-                  Expanded(
-                    child: Text(context.l10n.editProfileTitle, style: KvlText.title(16)),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close_rounded),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: KvlSpacing.md),
-
-              // Name field
-              KvlInput(
-                label: context.l10n.displayNameLabel,
-                hint: context.l10n.displayNameHint,
-                controller: _nameCtrl,
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) => _saveName(),
-              ),
-              if (_nameError != null) ...[
-                const SizedBox(height: KvlSpacing.xs),
-                Text(
-                  _nameError!,
-                  style: KvlText.caption(11).copyWith(color: KvlColors.danger),
-                ),
-              ],
-              const SizedBox(height: KvlSpacing.sm),
-              KvlButton(
-                label: _nameBusy ? context.l10n.savingNameButton : context.l10n.saveNameButton,
-                onPressed: _nameBusy ? null : _saveName,
-              ),
-
-              const SizedBox(height: KvlSpacing.lg),
-              const Divider(),
-              const SizedBox(height: KvlSpacing.sm),
-
-              // Mobile number section
-              Row(
-                children: [
-                  const Icon(
-                    Icons.smartphone_rounded,
-                    size: 18,
-                    color: KvlColors.primaryDeep,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(context.l10n.mobileNumberLabel2, style: KvlText.ui(13, FontWeight.w600)),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                session?.mobile ?? '—',
-                style: KvlText.muted(12),
-              ),
-              const SizedBox(height: KvlSpacing.sm),
-              KvlButton(
-                variant: KvlButtonVariant.ghost,
-                label: context.l10n.changeMobileNumber,
-                icon: Icons.edit_rounded,
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                    builder: (_) => _ChangeMobileSheet(parentRef: ref),
-                  );
-                },
               ),
             ],
           ),

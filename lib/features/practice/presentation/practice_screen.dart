@@ -115,7 +115,7 @@ class _PracticeDashboardView extends ConsumerState<_PracticeDashboard> {
     final program = widget.state.program;
     final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
     final title =
-        widget.state.mantra?.name.displayForLanguage(settings.languageCode) ??
+        widget.state.mantra?.name.displayForLanguage(settings.mantraLanguageCode) ??
         program.mantraId;
     final total = program.totalProgress;
     final target = program.targetWritings;

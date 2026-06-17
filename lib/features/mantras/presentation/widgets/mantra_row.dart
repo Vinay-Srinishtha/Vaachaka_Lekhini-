@@ -26,7 +26,7 @@ class MantraRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
     final script = mantra.name.scriptForLanguage(settings.languageCode);
-    final name = mantra.name.displayForLanguage(settings.languageCode);
+    final name = mantra.name.displayForLanguage(settings.mantraLanguageCode);
     return Padding(
       padding: const EdgeInsets.only(bottom: KvlSpacing.sm),
       child: KvlCard(

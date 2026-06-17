@@ -129,7 +129,7 @@ class _BodyState extends ConsumerState<_Body> {
     final globalCount =
         (statsAsync.value?.globalChantCount ?? 0) + state.sessionCount;
     final mantraLabel =
-        mantra?.name.displayForLanguage(settings.languageCode) ??
+        mantra?.name.displayForLanguage(settings.mantraLanguageCode) ??
         state.program.mantraId;
 
     return Scaffold(
@@ -1412,16 +1412,14 @@ class _MicErrorCard extends StatelessWidget {
                     onPressed: onDismiss,
                   ),
                 ),
-              if (!requiresTraining) ...[
-                const SizedBox(width: 8),
-                Expanded(
-                  child: KvlButton(
-                    variant: KvlButtonVariant.secondary,
-                    label: 'Use Manual',
-                    onPressed: onSwitchManual,
-                  ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: KvlButton(
+                  variant: KvlButtonVariant.secondary,
+                  label: 'Use Manual',
+                  onPressed: onSwitchManual,
                 ),
-              ],
+              ),
             ],
           ),
         ],

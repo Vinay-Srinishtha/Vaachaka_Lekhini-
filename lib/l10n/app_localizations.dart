@@ -2041,21 +2041,39 @@ abstract class AppLocalizations {
   String get authErrorAccountBanned;
 
   /// No description provided for @authErrorAccountSuspended.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account has been temporarily suspended. Please contact support.'**
   String get authErrorAccountSuspended;
 
   /// No description provided for @authErrorOtpMaxAttempts.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many incorrect attempts. Request a new code to continue.'**
   String get authErrorOtpMaxAttempts;
 
   /// No description provided for @authErrorOtpAlreadyUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'This code has already been used. Request a new one.'**
   String get authErrorOtpAlreadyUsed;
 
   /// No description provided for @authErrorCooldownActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Please wait a moment before requesting another code.'**
   String get authErrorCooldownActive;
 
   /// No description provided for @authErrorDailyLimitReached.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily OTP limit reached. Try again tomorrow.'**
   String get authErrorDailyLimitReached;
 
   /// No description provided for @authErrorDeliveryFailure.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not deliver the OTP. Check your number and try again.'**
   String get authErrorDeliveryFailure;
 
   /// No description provided for @authErrorUnknown.

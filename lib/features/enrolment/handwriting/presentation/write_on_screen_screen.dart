@@ -353,7 +353,7 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
   }
 }
 
-class _SampleLandscapeWriteScaffold extends StatelessWidget {
+class _SampleLandscapeWriteScaffold extends StatefulWidget {
   const _SampleLandscapeWriteScaffold({
     required this.controller,
     required this.guide,
@@ -381,6 +381,15 @@ class _SampleLandscapeWriteScaffold extends StatelessWidget {
   final ValueChanged<Color> onColorSelected;
 
   @override
+  State<_SampleLandscapeWriteScaffold> createState() =>
+      _SampleLandscapeWriteScaffoldState();
+}
+
+class _SampleLandscapeWriteScaffoldState
+    extends State<_SampleLandscapeWriteScaffold> {
+  bool _guideVisible = true;
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: KvlColors.bg,
@@ -392,17 +401,18 @@ class _SampleLandscapeWriteScaffold extends StatelessWidget {
             children: [
               Positioned.fill(
                 child: _SampleLandscapeCanvas(
-                  controller: controller,
-                  guide: guide,
-                  guideScript: guideScript,
+                  controller: widget.controller,
+                  guide: widget.guide,
+                  guideScript: widget.guideScript,
                   compact: compact,
+                  guideVisible: _guideVisible,
                 ),
               ),
               Positioned(
                 left: 14,
                 top: topInset,
                 child: IconButton(
-                  onPressed: onBack,
+                  onPressed: widget.onBack,
                   icon: const Icon(Icons.arrow_back_rounded),
                   iconSize: compact ? 28 : 32,
                   color: KvlColors.ink,
@@ -428,12 +438,21 @@ class _SampleLandscapeWriteScaffold extends StatelessWidget {
                 right: compact ? 12 : 18,
                 top: topInset + 2,
                 child: _SampleTopTools(
-                  saving: saving,
+                  saving: widget.saving,
                   compact: compact,
-                  onSave: onSave,
-                  onPen: onClear,
-                  penColor: penColor,
-                  onColorSelected: onColorSelected,
+                  onSave: widget.onSave,
+                  onPen: widget.onClear,
+                  penColor: widget.penColor,
+                  onColorSelected: widget.onColorSelected,
+                ),
+              ),
+              Positioned(
+                left: compact ? 14 : 20,
+                bottom: compact ? 12 : 18,
+                child: _GuideToggleButton(
+                  visible: _guideVisible,
+                  compact: compact,
+                  onToggle: () => setState(() => _guideVisible = !_guideVisible),
                 ),
               ),
               Positioned(
@@ -444,19 +463,19 @@ class _SampleLandscapeWriteScaffold extends StatelessWidget {
                     _SampleFloatingTool(
                       icon: Icons.cleaning_services_rounded,
                       tooltip: context.l10n.clearTooltip,
-                      onTap: onClear,
+                      onTap: widget.onClear,
                     ),
                     SizedBox(width: compact ? 8 : 10),
                     _SampleFloatingTool(
                       icon: Icons.undo_rounded,
                       tooltip: context.l10n.undoTooltip,
-                      onTap: onUndo,
+                      onTap: widget.onUndo,
                     ),
                     SizedBox(width: compact ? 8 : 10),
                     _SampleFloatingTool(
                       icon: Icons.redo_rounded,
                       tooltip: context.l10n.redoTooltip,
-                      onTap: onRedo,
+                      onTap: widget.onRedo,
                     ),
                   ],
                 ),
@@ -475,12 +494,14 @@ class _SampleLandscapeCanvas extends StatelessWidget {
     required this.guide,
     required this.guideScript,
     required this.compact,
+    this.guideVisible = true,
   });
 
   final SignatureController controller;
   final String guide;
   final MantraScript guideScript;
   final bool compact;
+  final bool guideVisible;
 
   @override
   Widget build(BuildContext context) {
@@ -488,14 +509,13 @@ class _SampleLandscapeCanvas extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        Positioned.fill(
-          left: compact ? 8 : 12,
-          right: compact ? 8 : 12,
-          top: compact ? 44 : 54,
-          bottom: compact ? 8 : 12,
-          child: Center(
-            child: Transform.scale(
-              scale: 1.0,
+        if (guideVisible)
+          Positioned.fill(
+            left: compact ? 8 : 12,
+            right: compact ? 8 : 12,
+            top: compact ? 44 : 54,
+            bottom: compact ? 8 : 12,
+            child: Center(
               child: FittedBox(
                 fit: BoxFit.contain,
                 child: SizedBox(
@@ -511,7 +531,6 @@ class _SampleLandscapeCanvas extends StatelessWidget {
               ),
             ),
           ),
-        ),
         Signature(controller: controller, backgroundColor: Colors.transparent),
       ],
     );
@@ -860,6 +879,7 @@ class _ProtoWriteScaffold extends StatefulWidget {
 class _ProtoWriteScaffoldState extends State<_ProtoWriteScaffold> {
   double _guideScale = 1.0;
   bool _canvasHasContent = false;
+  bool _guideVisible = true;
 
   static const double _scaleMin = 0.5;
   static const double _scaleMax = 2.0;
@@ -926,6 +946,7 @@ class _ProtoWriteScaffoldState extends State<_ProtoWriteScaffold> {
                   guideScript: widget.guideScript,
                   compact: compact,
                   guideScale: _guideScale,
+                  guideVisible: _guideVisible,
                 ),
               ),
               Positioned(
@@ -994,7 +1015,7 @@ class _ProtoWriteScaffoldState extends State<_ProtoWriteScaffold> {
               ),
               Positioned(
                 right: compact ? 20 : 30,
-                top: h * .39,
+                top: h * .32,
                 child: _ProtoPlainIcon(
                   icon: Icons.zoom_in_rounded,
                   onTap: _guideScale < _scaleMax ? _zoomIn : null,
@@ -1002,7 +1023,16 @@ class _ProtoWriteScaffoldState extends State<_ProtoWriteScaffold> {
               ),
               Positioned(
                 right: compact ? 20 : 30,
-                top: h * .59,
+                top: h * .47,
+                child: _GuideToggleButton(
+                  visible: _guideVisible,
+                  compact: compact,
+                  onToggle: () => setState(() => _guideVisible = !_guideVisible),
+                ),
+              ),
+              Positioned(
+                right: compact ? 20 : 30,
+                top: h * .62,
                 child: _ProtoPlainIcon(
                   icon: Icons.zoom_out_rounded,
                   onTap: _guideScale > _scaleMin ? _zoomOut : null,
@@ -1023,6 +1053,7 @@ class _ProtoWritingCanvas extends StatelessWidget {
     required this.guideScript,
     required this.compact,
     this.guideScale = 1.0,
+    this.guideVisible = true,
   });
 
   final SignatureController controller;
@@ -1030,6 +1061,7 @@ class _ProtoWritingCanvas extends StatelessWidget {
   final MantraScript guideScript;
   final bool compact;
   final double guideScale;
+  final bool guideVisible;
 
   @override
   Widget build(BuildContext context) {
@@ -1038,9 +1070,8 @@ class _ProtoWritingCanvas extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        Positioned.fill(
-          child: Padding(
-            padding: EdgeInsets.zero,
+        if (guideVisible)
+          Positioned.fill(
             child: FittedBox(
               fit: BoxFit.contain,
               child: SizedBox(
@@ -1055,7 +1086,6 @@ class _ProtoWritingCanvas extends StatelessWidget {
               ),
             ),
           ),
-        ),
         Signature(controller: controller, backgroundColor: Colors.transparent),
       ],
     );
@@ -1096,13 +1126,10 @@ class _DottedGuideText extends StatelessWidget {
     fill="none"
     stroke="#25211D"
     stroke-opacity="$opacity"
-    stroke-width="2.4"
+    stroke-width="4"
     stroke-linecap="round"
     stroke-linejoin="round"
-    fill="white"
-    fill-opacity="1"
-    paint-order="fill stroke"
-    stroke-dasharray="3 7">$escapedText</text>
+    stroke-dasharray="6 12">$escapedText</text>
 </svg>
 ''';
     return SvgPicture.string(svg, fit: BoxFit.contain);
@@ -1389,6 +1416,55 @@ class _ProtoPlainIcon extends StatelessWidget {
           icon,
           size: 27,
           color: enabled ? Colors.black : Colors.black26,
+        ),
+      ),
+    );
+  }
+}
+
+class _GuideToggleButton extends StatelessWidget {
+  const _GuideToggleButton({
+    required this.visible,
+    required this.onToggle,
+    this.compact = false,
+  });
+
+  final bool visible;
+  final VoidCallback onToggle;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: visible ? 'Hide guide' : 'Show guide',
+      child: GestureDetector(
+        onTap: onToggle,
+        child: Container(
+          width: compact ? 36 : 42,
+          height: compact ? 36 : 42,
+          decoration: BoxDecoration(
+            color: visible
+                ? KvlColors.primaryGhost
+                : KvlColors.surface.withValues(alpha: .9),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: visible
+                  ? KvlColors.primary.withValues(alpha: .4)
+                  : KvlColors.border,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: .08),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Icon(
+            visible ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+            size: compact ? 17 : 20,
+            color: visible ? KvlColors.primaryDeep : KvlColors.inkSoft,
+          ),
         ),
       ),
     );

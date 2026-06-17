@@ -196,7 +196,7 @@
 					<MediaUploadField
 						category="mantra-image"
 						targetId="imageUrl"
-						accept="image/jpeg,image/png,image/webp"
+						accept="image/*"
 						buttonLabel={value.imageUrl ? 'Replace image' : 'Upload image'}
 						currentUrl={value.imageUrl}
 					/>
@@ -269,7 +269,7 @@
 						<MediaUploadField
 							category="mantra-audio"
 							targetId="pronunciationUrl"
-							accept="audio/mpeg,audio/mp3,audio/wav"
+							accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav"
 							buttonLabel="Upload MP3 / WAV"
 							currentUrl={value.pronunciationUrl}
 						/>

@@ -5,7 +5,8 @@ import { env } from '$env/dynamic/private';
 
 type UploadCategory = 'mantra-audio' | 'store-image' | 'mantra-image';
 
-const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+// All common image formats — browser File API always reports a valid image/* MIME type.
+const IMAGE_PREFIX = 'image/';
 const AUDIO_TYPES = new Set(['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav']);
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -67,11 +68,13 @@ function validateMediaInput(args: {
 	size: number;
 }) {
 	const isImage = args.category === 'store-image' || args.category === 'mantra-image';
-	const allowed = isImage ? IMAGE_TYPES : AUDIO_TYPES;
 	const maxBytes = isImage ? MAX_IMAGE_BYTES : MAX_AUDIO_BYTES;
 
-	if (!allowed.has(args.contentType)) {
-		throw error(400, isImage ? 'Upload a JPG, PNG, or WEBP image.' : 'Upload an MP3 or WAV audio file.');
+	const typeOk = isImage
+		? args.contentType.startsWith(IMAGE_PREFIX)
+		: AUDIO_TYPES.has(args.contentType);
+	if (!typeOk) {
+		throw error(400, isImage ? 'Upload any image file (JPG, PNG, WEBP, GIF, AVIF, etc.).' : 'Upload an MP3 or WAV audio file.');
 	}
 	if (!args.fileName.trim()) throw error(400, 'File name is required.');
 	if (!Number.isFinite(args.size) || args.size <= 0) throw error(400, 'Upload file is empty.');

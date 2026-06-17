@@ -97,7 +97,7 @@
 			<MediaUploadField
 				category="store-image"
 				targetId="imageUrl"
-				accept="image/jpeg,image/png,image/webp"
+				accept="image/*"
 				buttonLabel="Upload Image"
 				currentUrl={value.imageUrl}
 			/>

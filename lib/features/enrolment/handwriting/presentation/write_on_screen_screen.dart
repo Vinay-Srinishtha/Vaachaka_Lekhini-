@@ -24,6 +24,8 @@ import '../../../programs/domain/session.dart';
 import '../../../settings/domain/settings_repository.dart';
 import '../domain/handwriting_asset.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../../core/widgets/widgets.dart';
+import '../../../programs/presentation/daily_progress_screen.dart';
 
 class WriteOnScreenScreen extends ConsumerStatefulWidget {
   const WriteOnScreenScreen({
@@ -325,8 +327,65 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
       // Refresh the practice controller so the counter shows updated DB counts.
       await ref.read(practiceControllerProvider(programId).notifier).reloadProgram();
       if (!mounted) return;
-      // Pop back to the practice counter screen (it pushed us here).
-      // The session summary snackbar is shown there on Finish.
+      ref.invalidate(globalStatsProvider(widget.mantraId));
+      ref.read(sessionCompletedProvider.notifier).increment();
+      // Check if target was reached — show dedication dialog before leaving.
+      final practiceState = ref
+          .read(practiceControllerProvider(programId))
+          .value;
+      final targetReached = practiceState?.targetReached ?? false;
+      if (targetReached && mounted) {
+        await _showDedicationDialog(programId);
+        return;
+      }
+      if (!mounted) return;
+      // Show session summary snackbar.
+      final messenger = ScaffoldMessenger.of(context);
+      messenger
+        ..clearSnackBars()
+        ..showSnackBar(
+          SnackBar(
+            duration: const Duration(milliseconds: 2500),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: const Color(0xFF15803D),
+            elevation: 10,
+            shape: RoundedRectangleBorder(borderRadius: KvlRadius.brMD),
+            content: Row(
+              children: [
+                Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: .16),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(Icons.check_rounded,
+                      color: Colors.white, size: 19),
+                ),
+                const SizedBox(width: KvlSpacing.sm),
+                Expanded(
+                  child: Text(
+                    '${IndianNumberFormat.format(total)} writings completed this session',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: KvlText.ui(13, FontWeight.w600)
+                        .copyWith(color: Colors.white),
+                  ),
+                ),
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: messenger.clearSnackBars,
+                  child: const Padding(
+                    padding: EdgeInsets.all(6),
+                    child: Icon(Icons.close, color: Colors.white, size: 20),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      if (!mounted) return;
       context.pop();
       return;
     }
@@ -338,6 +397,40 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
     } else {
       context.push('${KvlRoute.setTargetWritings}/${widget.mantraId}');
     }
+  }
+
+  Future<void> _showDedicationDialog(String programId) async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _DedicationDialog(
+        onDedicate: () async {
+          Navigator.of(context).pop();
+          final mantraId = widget.mantraId;
+          ref.invalidate(globalStatsProvider(mantraId));
+          final program = ref
+              .read(programsForActiveProfileProvider)
+              .value
+              ?.where((p) => p.id == programId)
+              .firstOrNull;
+          if (program != null && !program.isCompleted) {
+            await ref
+                .read(programRepositoryProvider)
+                .update(program.copyWith(completedAt: DateTime.now()));
+          }
+          if (!mounted) return;
+          final mantraName =
+              ref.read(mantraByIdProvider(mantraId))?.name.devanagari ?? '';
+          await DedicateSheet.show(
+            context,
+            programId: programId,
+            mantraName: mantraName,
+          );
+          if (!mounted) return;
+          context.go(KvlRoute.programs);
+        },
+      ),
+    );
   }
 
   @override
@@ -373,6 +466,10 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
         onRedo: _controller.redo,
         penColor: _penColor,
         onColorSelected: _setPenColor,
+        onBack: () => context.canPop() ? context.pop() : context.go(KvlRoute.programs),
+        targetCount: programs
+            .where((p) => p.id == widget.programId)
+            .fold<int>(0, (_, p) => p.targetWritings),
       );
     }
     final selectedLang = KvlLanguage.byCode(effectiveLangCode);
@@ -951,6 +1048,8 @@ class _ProtoWriteScaffold extends ConsumerStatefulWidget {
     required this.onRedo,
     required this.penColor,
     required this.onColorSelected,
+    required this.onBack,
+    this.targetCount = 0,
   });
 
   final SignatureController controller;
@@ -967,6 +1066,8 @@ class _ProtoWriteScaffold extends ConsumerStatefulWidget {
   final VoidCallback onRedo;
   final Color penColor;
   final ValueChanged<Color> onColorSelected;
+  final VoidCallback onBack;
+  final int targetCount;
 
   @override
   ConsumerState<_ProtoWriteScaffold> createState() => _ProtoWriteScaffoldState();
@@ -1027,6 +1128,9 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
     final globalCount = widget.globalCount;
     final ringerMode =
         ref.watch(_ringerModeProvider).value ?? RingerMode.unknown;
+    final programs = ref.watch(programsForActiveProfileProvider).value ?? const [];
+    final completedPrograms = programs.where((p) => p.isGoalReached).length;
+    final profile = ref.watch(activeProfileProvider).value;
     return Scaffold(
       backgroundColor: KvlColors.bg,
       body: LayoutBuilder(
@@ -1059,6 +1163,11 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
                   guideVisible: _guideVisible,
                   onGuideToggle: () =>
                       setState(() => _guideVisible = !_guideVisible),
+                  onBack: widget.onBack,
+                  initial: profile?.initials ?? '?',
+                  onProfileTap: () {},
+                  completedPrograms: completedPrograms,
+                  totalPrograms: programs.length,
                 ),
               ),
               Positioned(
@@ -1072,6 +1181,16 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
                     increment: widget.writingCount,
                     compact: compact,
                   ),
+                ),
+              ),
+              Positioned(
+                left: compact ? 72 : w * .10,
+                right: compact ? 160 : 200,
+                top: topInset + (compact ? 56 : 70),
+                child: _WritingProgressBar(
+                  currentCount: widget.currentCount + widget.writingCount,
+                  targetCount: widget.targetCount,
+                  compact: compact,
                 ),
               ),
               Positioned(
@@ -1245,6 +1364,11 @@ class _LandscapeTopBar extends StatelessWidget {
     required this.onCycleRinger,
     required this.guideVisible,
     required this.onGuideToggle,
+    required this.onBack,
+    required this.initial,
+    required this.onProfileTap,
+    required this.completedPrograms,
+    required this.totalPrograms,
   });
 
   final int globalCount;
@@ -1253,9 +1377,50 @@ class _LandscapeTopBar extends StatelessWidget {
   final VoidCallback onCycleRinger;
   final bool guideVisible;
   final VoidCallback onGuideToggle;
+  final VoidCallback onBack;
+  final String initial;
+  final VoidCallback onProfileTap;
+  final int completedPrograms;
+  final int totalPrograms;
 
   @override
   Widget build(BuildContext context) {
+    final double btn = compact ? 44 : 50;
+    final double labelH = compact ? 15 : 18;
+
+    Widget slot({
+      required Widget circle,
+      required VoidCallback onTap,
+      String? label,
+    }) {
+      return InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(width: btn, height: btn, child: Center(child: circle)),
+            const SizedBox(height: 4),
+            SizedBox(
+              height: labelH,
+              child: label == null
+                  ? null
+                  : FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(label,
+                          maxLines: 1,
+                          style: KvlText.caption(compact ? 11.5 : 13)
+                              .copyWith(color: KvlColors.inkSoft)),
+                    ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    Widget iconCircle(IconData icon, {Color? color}) =>
+        Icon(icon, size: btn * 0.62, color: color ?? const Color(0xFF252525));
+
     final (ringerIcon, ringerLabel) = switch (ringerMode) {
       RingerMode.silent => (Icons.notifications_off_rounded, 'Silent'),
       RingerMode.vibrate => (Icons.vibration_rounded, 'Vibrate'),
@@ -1263,70 +1428,59 @@ class _LandscapeTopBar extends StatelessWidget {
       RingerMode.unknown => (Icons.notifications_none_rounded, 'Ringer'),
     };
 
+    final double avatar = btn - 10;
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Flexible(
-          fit: FlexFit.loose,
-          child: GestureDetector(
+        Expanded(
+          child: slot(
+            circle: iconCircle(Icons.arrow_back_rounded),
+            onTap: onBack,
+          ),
+        ),
+        Expanded(
+          child: slot(
+            circle: iconCircle(ringerIcon),
             onTap: onCycleRinger,
-            child: _LandscapeModeItem(
-              icon: ringerIcon,
-              label: ringerLabel,
-              iconColor: KvlColors.ink,
-              compact: compact,
-            ),
+            label: ringerLabel,
           ),
         ),
-        const SizedBox(width: 6),
-        Flexible(
-          fit: FlexFit.loose,
-          child: GestureDetector(
+        Expanded(
+          child: slot(
+            circle: iconCircle(
+              guideVisible ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+              color: guideVisible ? KvlColors.primary : KvlColors.muted,
+            ),
             onTap: onGuideToggle,
-            child: _LandscapeModeItem(
-              icon: guideVisible
-                  ? Icons.visibility_rounded
-                  : Icons.visibility_off_rounded,
-              label: context.l10n.ownWritingModeLabel,
-              iconColor: guideVisible ? KvlColors.primary : KvlColors.muted,
-              compact: compact,
-            ),
+            label: context.l10n.ownWritingModeLabel,
           ),
         ),
-      ],
-    );
-  }
-}
-
-class _LandscapeModeItem extends StatelessWidget {
-  const _LandscapeModeItem({
-    required this.icon,
-    required this.label,
-    required this.iconColor,
-    required this.compact,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color iconColor;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: compact ? 24 : 30, color: iconColor),
-        const SizedBox(height: 2),
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            label,
-            maxLines: 1,
-            textAlign: TextAlign.center,
-            style: KvlText.caption(
-              compact ? 8.8 : 10.5,
-            ).copyWith(color: KvlColors.inkSoft),
+        Expanded(
+          child: slot(
+            onTap: onProfileTap,
+            circle: MilestoneRing(
+              completed: completedPrograms,
+              total: totalPrograms,
+              strokeWidth: 2.5,
+              gap: 2.5,
+              child: Container(
+                width: avatar,
+                height: avatar,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [Color(0xFFFFB572), KvlColors.primary],
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  initial,
+                  style: KvlText.ui(avatar * 0.4, FontWeight.w700)
+                      .copyWith(color: Colors.white),
+                ),
+              ),
+            ),
           ),
         ),
       ],
@@ -1717,6 +1871,144 @@ class _GuideToggleButton extends StatelessWidget {
             size: compact ? 17 : 20,
             color: visible ? KvlColors.primaryDeep : KvlColors.inkSoft,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _WritingProgressBar extends StatelessWidget {
+  const _WritingProgressBar({
+    required this.currentCount,
+    required this.targetCount,
+    required this.compact,
+  });
+
+  final int currentCount;
+  final int targetCount;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    if (targetCount <= 0) return const SizedBox.shrink();
+    final progress = (currentCount / targetCount).clamp(0.0, 1.0);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Total Progress',
+                maxLines: 1,
+                style: KvlText.title(compact ? 11 : 13)
+                    .copyWith(fontWeight: FontWeight.w800),
+              ),
+            ),
+            const SizedBox(width: KvlSpacing.sm),
+            Text(
+              '${IndianNumberFormat.format(currentCount)} / ${IndianNumberFormat.format(targetCount)}',
+              style: KvlText.caption(compact ? 10 : 11)
+                  .copyWith(color: KvlColors.inkSoft),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        ClipRRect(
+          borderRadius: KvlRadius.brPill,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              const height = 9.0;
+              final fullWidth = constraints.maxWidth;
+              final fillWidth = progress <= 0
+                  ? 0.0
+                  : (progress * fullWidth).clamp(height, fullWidth);
+              return Stack(
+                children: [
+                  Container(
+                    height: height,
+                    width: fullWidth,
+                    color: KvlColors.primary.withValues(alpha: 0.12),
+                  ),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 350),
+                    curve: Curves.easeOutCubic,
+                    height: height,
+                    width: fillWidth,
+                    decoration: BoxDecoration(
+                      borderRadius: KvlRadius.brPill,
+                      gradient: const LinearGradient(
+                        colors: [
+                          Color(0xFFFFB572),
+                          KvlColors.primary,
+                          KvlColors.primaryDeep,
+                        ],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: KvlColors.primary.withValues(alpha: 0.35),
+                          blurRadius: 6,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DedicationDialog extends StatelessWidget {
+  const _DedicationDialog({required this.onDedicate});
+  final VoidCallback onDedicate;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: KvlRadius.brLG),
+      child: Padding(
+        padding: const EdgeInsets.all(KvlSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [Color(0xFFFFB572), KvlColors.primary],
+                ),
+              ),
+              alignment: Alignment.center,
+              child: const Icon(
+                Icons.self_improvement_rounded,
+                color: Colors.white,
+                size: 32,
+              ),
+            ),
+            const SizedBox(height: KvlSpacing.md),
+            Text(
+              'Program Complete!',
+              style: KvlText.ui(20, FontWeight.w800).copyWith(color: KvlColors.ink),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: KvlSpacing.sm),
+            Text(
+              'You have completed your sankalpa.\nWould you like to dedicate this practice?',
+              style: KvlText.caption(13.5)
+                  .copyWith(color: KvlColors.inkSoft, height: 1.5),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: KvlSpacing.lg),
+            KvlButton(label: 'Dedicate & Complete', onPressed: onDedicate),
+          ],
         ),
       ),
     );

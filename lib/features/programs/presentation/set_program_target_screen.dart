@@ -58,7 +58,7 @@ class _SetProgramTargetScreenState
 
   @override
   void dispose() {
-    SystemChrome.setPreferredOrientations([]);
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     _customWritingsCtrl.removeListener(_rebuild);
     _customWritingsCtrl.dispose();
     super.dispose();

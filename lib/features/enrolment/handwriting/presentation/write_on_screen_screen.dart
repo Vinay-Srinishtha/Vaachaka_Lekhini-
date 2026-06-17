@@ -95,8 +95,9 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
     final current = _writingLangCode ?? settings.mantraLanguageCode;
     final result = await showModalBottomSheet<String>(
       context: context,
-      isDismissible: _writingLangCode != null, // force choice on first open
+      isDismissible: _writingLangCode != null,
       enableDrag: _writingLangCode != null,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -1531,89 +1532,102 @@ class _LanguagePickerSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+    final maxHeight = MediaQuery.of(context).size.height * 0.85;
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      child: SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(Icons.language_rounded,
-                    size: 22, color: KvlColors.primaryDeep),
-                const SizedBox(width: 10),
-                Text('Writing language',
-                    style: KvlText.ui(16, FontWeight.w700)),
-                const Spacer(),
-                Text('Which script should the guide show?',
-                    style: KvlText.caption(11)
-                        .copyWith(color: KvlColors.inkSoft)),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Pick the language you want to trace. The mantra guide will appear in that script.',
-              style: KvlText.caption(12).copyWith(
-                color: KvlColors.inkSoft,
-                height: 1.4,
+            // Header — fixed, never scrolls off screen
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.language_rounded,
+                          size: 20, color: KvlColors.primaryDeep),
+                      const SizedBox(width: 8),
+                      Text('Writing language',
+                          style: KvlText.ui(15, FontWeight.w700)),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Pick the script for the tracing guide.',
+                    style: KvlText.caption(11.5)
+                        .copyWith(color: KvlColors.inkSoft),
+                  ),
+                  const SizedBox(height: 12),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            ...languages.map((lang) {
-              final selected = lang.code == selectedCode;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(14),
-                  onTap: () => Navigator.of(context).pop(lang.code),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? KvlColors.primaryGhost
-                          : KvlColors.surface,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: selected
-                            ? KvlColors.primary
-                            : KvlColors.border,
-                        width: selected ? 1.5 : 1,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+            // Language options — scrollable when height is tight (landscape)
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: languages.map((lang) {
+                    final selected = lang.code == selectedCode;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () => Navigator.of(context).pop(lang.code),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: selected
+                                ? KvlColors.primaryGhost
+                                : KvlColors.surface,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: selected
+                                  ? KvlColors.primary
+                                  : KvlColors.border,
+                              width: selected ? 1.5 : 1,
+                            ),
+                          ),
+                          child: Row(
                             children: [
-                              Text(lang.label,
-                                  style: KvlText.ui(14, FontWeight.w600)
-                                      .copyWith(
-                                    color: selected
-                                        ? KvlColors.primaryDeep
-                                        : KvlColors.ink,
-                                  )),
-                              Text(lang.nativeLabel,
-                                  style: KvlText.caption(12).copyWith(
-                                    color: selected
-                                        ? KvlColors.primary
-                                        : KvlColors.inkSoft,
-                                  )),
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    Text(lang.label,
+                                        style: KvlText.ui(13, FontWeight.w600)
+                                            .copyWith(
+                                          color: selected
+                                              ? KvlColors.primaryDeep
+                                              : KvlColors.ink,
+                                        )),
+                                    const SizedBox(width: 8),
+                                    Text('·  ${lang.nativeLabel}',
+                                        style: KvlText.caption(12).copyWith(
+                                          color: selected
+                                              ? KvlColors.primary
+                                              : KvlColors.inkSoft,
+                                        )),
+                                  ],
+                                ),
+                              ),
+                              if (selected)
+                                Icon(Icons.check_circle_rounded,
+                                    color: KvlColors.primary, size: 18),
                             ],
                           ),
                         ),
-                        if (selected)
-                          Icon(Icons.check_circle_rounded,
-                              color: KvlColors.primary, size: 20),
-                      ],
-                    ),
-                  ),
+                      ),
+                    );
+                  }).toList(),
                 ),
-              );
-            }),
+              ),
+            ),
           ],
         ),
       ),

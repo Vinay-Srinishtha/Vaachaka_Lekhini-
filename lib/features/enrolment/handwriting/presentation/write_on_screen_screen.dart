@@ -466,7 +466,6 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
         onRedo: _controller.redo,
         penColor: _penColor,
         onColorSelected: _setPenColor,
-        onBack: () => context.canPop() ? context.pop() : context.go(KvlRoute.programs),
         targetCount: programs
             .where((p) => p.id == widget.programId)
             .fold<int>(0, (_, p) => p.targetWritings),
@@ -1048,7 +1047,6 @@ class _ProtoWriteScaffold extends ConsumerStatefulWidget {
     required this.onRedo,
     required this.penColor,
     required this.onColorSelected,
-    required this.onBack,
     this.targetCount = 0,
   });
 
@@ -1066,7 +1064,6 @@ class _ProtoWriteScaffold extends ConsumerStatefulWidget {
   final VoidCallback onRedo;
   final Color penColor;
   final ValueChanged<Color> onColorSelected;
-  final VoidCallback onBack;
   final int targetCount;
 
   @override
@@ -1128,9 +1125,6 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
     final globalCount = widget.globalCount;
     final ringerMode =
         ref.watch(_ringerModeProvider).value ?? RingerMode.unknown;
-    final programs = ref.watch(programsForActiveProfileProvider).value ?? const [];
-    final completedPrograms = programs.where((p) => p.isGoalReached).length;
-    final profile = ref.watch(activeProfileProvider).value;
     return Scaffold(
       backgroundColor: KvlColors.bg,
       body: LayoutBuilder(
@@ -1139,6 +1133,9 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
           final w = constraints.maxWidth;
           final h = constraints.maxHeight;
           final topInset = compact ? 13.0 : 18.0;
+          // Bottom button row height so progress bar sits just above it.
+          final bottomBtnH = compact ? 60.0 : 72.0;
+          final bottomPad = compact ? 8.0 : 14.0;
           return Stack(
             children: [
               Positioned.fill(
@@ -1151,25 +1148,20 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
                   guideVisible: _guideVisible,
                 ),
               ),
+              // Top-left: Phone Mode + Own writing mode (2 items only)
               Positioned(
-                left: compact ? 72 : w * .10,
-                right: compact ? 160 : 200,
+                left: compact ? 10 : 16,
                 top: topInset,
                 child: _LandscapeTopBar(
-                  globalCount: globalCount,
                   compact: compact,
                   ringerMode: ringerMode,
                   onCycleRinger: () => RingerModeService().cycle(),
                   guideVisible: _guideVisible,
                   onGuideToggle: () =>
                       setState(() => _guideVisible = !_guideVisible),
-                  onBack: widget.onBack,
-                  initial: profile?.initials ?? '?',
-                  onProfileTap: () {},
-                  completedPrograms: completedPrograms,
-                  totalPrograms: programs.length,
                 ),
               ),
+              // Top-right: Global + Yours counter
               Positioned(
                 right: compact ? 12 : 18,
                 top: topInset,
@@ -1183,10 +1175,11 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
                   ),
                 ),
               ),
+              // Bottom-left: progress bar above ADD button
               Positioned(
-                left: compact ? 72 : w * .10,
-                right: compact ? 160 : 200,
-                top: topInset + (compact ? 56 : 70),
+                left: compact ? 10 : 16,
+                right: compact ? 200 : 240,
+                bottom: bottomPad + bottomBtnH + (compact ? 6 : 8),
                 child: _WritingProgressBar(
                   currentCount: widget.currentCount + widget.writingCount,
                   targetCount: widget.targetCount,
@@ -1336,8 +1329,8 @@ class _DottedGuideText extends StatelessWidget {
     final svg = '''
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="340" viewBox="0 0 1400 340">
   <defs>
-    <pattern id="dashes" x="0" y="0" width="18" height="18" patternUnits="userSpaceOnUse" patternTransform="rotate(40)">
-      <rect x="1" y="5" width="14" height="5" rx="2.5" fill="#25211D" fill-opacity="$opacity"/>
+    <pattern id="dashes" x="0" y="0" width="22" height="14" patternUnits="userSpaceOnUse">
+      <rect x="2" y="4" width="16" height="6" rx="3" fill="#25211D" fill-opacity="${(opacity * 1.4).clamp(0.0, 1.0).toStringAsFixed(2)}"/>
     </pattern>
     <mask id="textMask">
       <text x="700" y="260" text-anchor="middle"
@@ -1346,7 +1339,7 @@ class _DottedGuideText extends StatelessWidget {
         font-weight="500"
         fill="none"
         stroke="white"
-        stroke-width="14">$escapedText</text>
+        stroke-width="18">$escapedText</text>
     </mask>
   </defs>
   <rect x="0" y="0" width="1400" height="340" fill="url(#dashes)" mask="url(#textMask)"/>
@@ -1358,130 +1351,64 @@ class _DottedGuideText extends StatelessWidget {
 
 class _LandscapeTopBar extends StatelessWidget {
   const _LandscapeTopBar({
-    required this.globalCount,
     required this.compact,
     required this.ringerMode,
     required this.onCycleRinger,
     required this.guideVisible,
     required this.onGuideToggle,
-    required this.onBack,
-    required this.initial,
-    required this.onProfileTap,
-    required this.completedPrograms,
-    required this.totalPrograms,
   });
 
-  final int globalCount;
   final bool compact;
   final RingerMode ringerMode;
   final VoidCallback onCycleRinger;
   final bool guideVisible;
   final VoidCallback onGuideToggle;
-  final VoidCallback onBack;
-  final String initial;
-  final VoidCallback onProfileTap;
-  final int completedPrograms;
-  final int totalPrograms;
 
   @override
   Widget build(BuildContext context) {
-    final double btn = compact ? 44 : 50;
-    final double labelH = compact ? 15 : 18;
+    final double iconSize = compact ? 28 : 32;
+    final double labelSize = compact ? 10.5 : 11.5;
 
-    Widget slot({
-      required Widget circle,
+    Widget item({
+      required IconData icon,
+      required String label,
       required VoidCallback onTap,
-      String? label,
+      Color? iconColor,
     }) {
-      return InkWell(
+      return GestureDetector(
         onTap: onTap,
-        customBorder: const CircleBorder(),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(width: btn, height: btn, child: Center(child: circle)),
-            const SizedBox(height: 4),
-            SizedBox(
-              height: labelH,
-              child: label == null
-                  ? null
-                  : FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(label,
-                          maxLines: 1,
-                          style: KvlText.caption(compact ? 11.5 : 13)
-                              .copyWith(color: KvlColors.inkSoft)),
-                    ),
+            Icon(icon, size: iconSize, color: iconColor ?? KvlColors.ink),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: KvlText.caption(labelSize).copyWith(color: KvlColors.inkSoft),
             ),
           ],
         ),
       );
     }
 
-    Widget iconCircle(IconData icon, {Color? color}) =>
-        Icon(icon, size: btn * 0.62, color: color ?? const Color(0xFF252525));
-
     final (ringerIcon, ringerLabel) = switch (ringerMode) {
-      RingerMode.silent => (Icons.notifications_off_rounded, 'Silent'),
-      RingerMode.vibrate => (Icons.vibration_rounded, 'Vibrate'),
-      RingerMode.normal => (Icons.notifications_active_rounded, 'Ring'),
-      RingerMode.unknown => (Icons.notifications_none_rounded, 'Ringer'),
+      RingerMode.silent  => (Icons.notifications_off_rounded,    'Silent'),
+      RingerMode.vibrate => (Icons.vibration_rounded,             'Vibrate'),
+      RingerMode.normal  => (Icons.notifications_active_rounded,  'Ring'),
+      RingerMode.unknown => (Icons.notifications_none_rounded,    'Ringer'),
     };
 
-    final double avatar = btn - 10;
-
     return Row(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: slot(
-            circle: iconCircle(Icons.arrow_back_rounded),
-            onTap: onBack,
-          ),
-        ),
-        Expanded(
-          child: slot(
-            circle: iconCircle(ringerIcon),
-            onTap: onCycleRinger,
-            label: ringerLabel,
-          ),
-        ),
-        Expanded(
-          child: slot(
-            circle: iconCircle(
-              guideVisible ? Icons.visibility_rounded : Icons.visibility_off_rounded,
-              color: guideVisible ? KvlColors.primary : KvlColors.muted,
-            ),
-            onTap: onGuideToggle,
-            label: context.l10n.ownWritingModeLabel,
-          ),
-        ),
-        Expanded(
-          child: slot(
-            onTap: onProfileTap,
-            circle: MilestoneRing(
-              completed: completedPrograms,
-              total: totalPrograms,
-              strokeWidth: 2.5,
-              gap: 2.5,
-              child: Container(
-                width: avatar,
-                height: avatar,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [Color(0xFFFFB572), KvlColors.primary],
-                  ),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  initial,
-                  style: KvlText.ui(avatar * 0.4, FontWeight.w700)
-                      .copyWith(color: Colors.white),
-                ),
-              ),
-            ),
-          ),
+        item(icon: ringerIcon, label: ringerLabel, onTap: onCycleRinger),
+        const SizedBox(width: 20),
+        item(
+          icon: guideVisible ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+          label: context.l10n.ownWritingModeLabel,
+          onTap: onGuideToggle,
+          iconColor: guideVisible ? KvlColors.primary : KvlColors.muted,
         ),
       ],
     );
@@ -1572,23 +1499,23 @@ class _WritingCounts extends StatelessWidget {
           children: [
             Icon(
               Icons.public_rounded,
-              size: compact ? 13 : 15,
+              size: compact ? 16 : 19,
               color: KvlColors.primaryDeep,
             ),
-            const SizedBox(width: 5),
+            const SizedBox(width: 6),
             Text(
               'Global  ',
-              style: KvlText.ui(compact ? 11 : 12, FontWeight.w600)
+              style: KvlText.ui(compact ? 13 : 14, FontWeight.w600)
                   .copyWith(color: KvlColors.inkSoft),
             ),
             Text(
               IndianNumberFormat.format(globalBase),
-              style: KvlText.ui(compact ? 14 : 16, FontWeight.w800)
+              style: KvlText.ui(compact ? 17 : 20, FontWeight.w800)
                   .copyWith(color: const Color(0xFFCC6A2B)),
             ),
             Text(
               '  +  ',
-              style: KvlText.ui(compact ? 14 : 16, FontWeight.w600)
+              style: KvlText.ui(compact ? 17 : 20, FontWeight.w600)
                   .copyWith(color: const Color(0xFF9A8678)),
             ),
             TweenAnimationBuilder<double>(
@@ -1600,7 +1527,7 @@ class _WritingCounts extends StatelessWidget {
                   Transform.scale(scale: scale, child: child),
               child: Text(
                 IndianNumberFormat.format(increment),
-                style: KvlText.ui(compact ? 14 : 16, FontWeight.w800)
+                style: KvlText.ui(compact ? 17 : 20, FontWeight.w800)
                     .copyWith(color: const Color(0xFF16A34A)),
               ),
             ),

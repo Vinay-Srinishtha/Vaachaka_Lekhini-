@@ -1325,25 +1325,48 @@ class _DottedGuideText extends StatelessWidget {
       MantraScript.telugu => 'Tiro Telugu, Noto Sans Telugu, serif',
       MantraScript.kannada => 'Tiro Kannada, Noto Sans Kannada, serif',
     };
-    // flutter_svg ignores stroke-dasharray on <text> and does not support
-    // <mask>. Workaround: apply a dash pattern as the fill of the text itself.
-    // The pattern tiles fill each glyph, giving a clearly visible dashed look.
-    final dashOpacity = (opacity * 1.5).clamp(0.0, 1.0).toStringAsFixed(2);
+    // flutter_svg ignores stroke-dasharray on <text> but supports <pattern>
+    // fills and plain strokes. Strategy:
+    //   Layer 1 — very light solid fill: shows the full glyph shape so the
+    //             reader can see where each stroke belongs.
+    //   Layer 2 — round-dot pattern fill: gives the "dotted guide" feel.
+    //   Layer 3 — medium outline stroke: traces the exact glyph boundary,
+    //             making every curve and connector clearly legible.
+    final dotOpacity  = (opacity * 1.00).clamp(0.0, 1.0).toStringAsFixed(2);
+    final fillOpacity = (opacity * 0.14).clamp(0.0, 1.0).toStringAsFixed(2);
+    final rimOpacity  = (opacity * 0.70).clamp(0.0, 1.0).toStringAsFixed(2);
     final svg = '''
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="340" viewBox="0 0 1400 340">
   <defs>
-    <pattern id="dashes" x="0" y="0" width="18" height="12" patternUnits="userSpaceOnUse">
-      <rect x="1" y="3" width="13" height="6" rx="3" fill="#CC6A2B" fill-opacity="$dashOpacity"/>
+    <pattern id="dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+      <circle cx="10" cy="10" r="5.5" fill="#CC6A2B" fill-opacity="$dotOpacity"/>
     </pattern>
   </defs>
+  <!-- layer 1: ghost fill so character shape is always visible -->
   <text x="700" y="260" text-anchor="middle"
     font-family="$fontFamily"
     font-size="$fontSize"
-    font-weight="500"
-    fill="url(#dashes)"
+    font-weight="600"
+    fill="#CC6A2B"
+    fill-opacity="$fillOpacity"
+    stroke="none">$escapedText</text>
+  <!-- layer 2: round-dot pattern fill -->
+  <text x="700" y="260" text-anchor="middle"
+    font-family="$fontFamily"
+    font-size="$fontSize"
+    font-weight="600"
+    fill="url(#dots)"
+    stroke="none">$escapedText</text>
+  <!-- layer 3: crisp outline so every stroke edge is clear -->
+  <text x="700" y="260" text-anchor="middle"
+    font-family="$fontFamily"
+    font-size="$fontSize"
+    font-weight="600"
+    fill="none"
     stroke="#CC6A2B"
-    stroke-opacity="${(opacity * 0.18).clamp(0.0, 1.0).toStringAsFixed(2)}"
-    stroke-width="1">$escapedText</text>
+    stroke-opacity="$rimOpacity"
+    stroke-width="4"
+    stroke-linejoin="round">$escapedText</text>
 </svg>
 ''';
     return SvgPicture.string(svg, fit: BoxFit.contain);

@@ -1161,12 +1161,12 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
                       setState(() => _guideVisible = !_guideVisible),
                 ),
               ),
-              // Top-right: Global + Yours counter
+              // Top-center: Global + Yours counter
               Positioned(
-                right: compact ? 12 : 18,
+                left: 0,
+                right: 0,
                 top: topInset,
-                child: Padding(
-                  padding: EdgeInsets.only(top: compact ? 4 : 6),
+                child: Center(
                   child: _WritingCounts(
                     globalCount: globalCount,
                     yours: yours,

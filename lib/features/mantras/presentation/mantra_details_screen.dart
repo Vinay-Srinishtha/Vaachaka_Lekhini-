@@ -9,17 +9,66 @@ import '../../../app/router.dart';
 import '../../../core/i18n/language_options.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../enrolment/handwriting/domain/handwriting_asset.dart';
 import '../../settings/domain/settings_repository.dart';
 import '../../../l10n/l10n.dart';
 import '../domain/mantra.dart';
 
-class MantraDetailsScreen extends ConsumerWidget {
+class MantraDetailsScreen extends ConsumerStatefulWidget {
   const MantraDetailsScreen({super.key, required this.mantraId});
   final String mantraId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final mantra = ref.watch(mantraByIdProvider(mantraId));
+  ConsumerState<MantraDetailsScreen> createState() => _MantraDetailsScreenState();
+}
+
+class _MantraDetailsScreenState extends ConsumerState<MantraDetailsScreen> {
+  bool _starting = false;
+
+  /// Checks what enrolment exists for this mantra and routes to the first
+  /// missing step. If everything is already enrolled, goes straight to
+  /// set-target so the user can create the program without re-collecting samples.
+  Future<void> _start() async {
+    if (_starting) return;
+    setState(() => _starting = true);
+    try {
+      final profile = ref.read(activeProfileProvider).value;
+      if (profile == null || !mounted) return;
+
+      // 1. Check voice enrolment
+      final voiceEnrolment = await ref
+          .read(voiceEnrolmentRepositoryProvider)
+          .get(profile.id, widget.mantraId);
+      final hasVoice = voiceEnrolment != null && voiceEnrolment.isComplete;
+
+      // 2. Check handwriting sample
+      final hwSamples = await ref
+          .read(handwritingRepositoryProvider)
+          .listForProfile(profile.id);
+      final hasHandwriting = hwSamples.any((s) =>
+          s.mode == HandwritingMode.writeOnScreen &&
+          (s.mantraId == null || s.mantraId == widget.mantraId));
+
+      if (!mounted) return;
+
+      if (hasVoice && hasHandwriting) {
+        // Both already registered — skip enrolment, go straight to targets.
+        context.push('${KvlRoute.setTargetWritings}/${widget.mantraId}');
+      } else if (hasVoice) {
+        // Voice done, handwriting missing — skip voice, collect handwriting.
+        context.push('${KvlRoute.handwritingSubmit}/${widget.mantraId}');
+      } else {
+        // Start full enrolment from voice.
+        context.push('${KvlRoute.voiceTraining}/${widget.mantraId}');
+      }
+    } finally {
+      if (mounted) setState(() => _starting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final mantra = ref.watch(mantraByIdProvider(widget.mantraId));
     if (mantra == null) {
       return KvlScaffold(
         title: context.l10n.mantraNotFoundTitle,
@@ -31,7 +80,6 @@ class MantraDetailsScreen extends ConsumerWidget {
     final name = mantra.name.displayForLanguage(settings.languageCode);
     return KvlScaffold(
       title: '$name Mantra Details',
-
       scrollable: true,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -43,9 +91,7 @@ class MantraDetailsScreen extends ConsumerWidget {
           const SizedBox(height: KvlSpacing.md),
           Text(
             mantra.description,
-            style: KvlText.body(
-              12,
-            ).copyWith(height: 1.55, color: KvlColors.inkSoft),
+            style: KvlText.body(12).copyWith(height: 1.55, color: KvlColors.inkSoft),
           ),
           const SizedBox(height: KvlSpacing.md),
           _PronunciationCard(
@@ -54,9 +100,10 @@ class MantraDetailsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: KvlSpacing.md),
           KvlButton(
-            label: context.l10n.startPracticeWithMantra(name),
-            onPressed: () =>
-                context.push('${KvlRoute.voiceTraining}/$mantraId'),
+            label: _starting
+                ? 'Loading…'
+                : context.l10n.startPracticeWithMantra(name),
+            onPressed: _starting ? null : _start,
           ),
         ],
       ),

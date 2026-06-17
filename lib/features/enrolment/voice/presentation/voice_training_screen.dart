@@ -111,6 +111,13 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final catalogAsync = ref.watch(mantraCatalogProvider);
+    // Wait for catalog to load before showing the screen.
+    if (!catalogAsync.hasValue) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
     final mantra = ref.watch(mantraByIdProvider(widget.mantraId));
     final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
     final script =

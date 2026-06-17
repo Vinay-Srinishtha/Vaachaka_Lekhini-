@@ -1325,27 +1325,25 @@ class _DottedGuideText extends StatelessWidget {
       MantraScript.telugu => 'Tiro Telugu, Noto Sans Telugu, serif',
       MantraScript.kannada => 'Tiro Kannada, Noto Sans Kannada, serif',
     };
-    // flutter_svg renders <text> via Flutter's native text engine which
-    // ignores stroke-dasharray. Workaround: use a dash <pattern> masked to
-    // the text stroke shape — both <mask> and <pattern> on <rect> DO work.
-    // Diagonal pill shapes at ~40° create dashes that visually follow curves.
+    // flutter_svg ignores stroke-dasharray on <text> and does not support
+    // <mask>. Workaround: apply a dash pattern as the fill of the text itself.
+    // The pattern tiles fill each glyph, giving a clearly visible dashed look.
+    final dashOpacity = (opacity * 1.5).clamp(0.0, 1.0).toStringAsFixed(2);
     final svg = '''
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="340" viewBox="0 0 1400 340">
   <defs>
-    <pattern id="dashes" x="0" y="0" width="22" height="14" patternUnits="userSpaceOnUse">
-      <rect x="2" y="4" width="16" height="6" rx="3" fill="#25211D" fill-opacity="${(opacity * 1.4).clamp(0.0, 1.0).toStringAsFixed(2)}"/>
+    <pattern id="dashes" x="0" y="0" width="18" height="12" patternUnits="userSpaceOnUse">
+      <rect x="1" y="3" width="13" height="6" rx="3" fill="#CC6A2B" fill-opacity="$dashOpacity"/>
     </pattern>
-    <mask id="textMask">
-      <text x="700" y="260" text-anchor="middle"
-        font-family="$fontFamily"
-        font-size="$fontSize"
-        font-weight="500"
-        fill="none"
-        stroke="white"
-        stroke-width="18">$escapedText</text>
-    </mask>
   </defs>
-  <rect x="0" y="0" width="1400" height="340" fill="url(#dashes)" mask="url(#textMask)"/>
+  <text x="700" y="260" text-anchor="middle"
+    font-family="$fontFamily"
+    font-size="$fontSize"
+    font-weight="500"
+    fill="url(#dashes)"
+    stroke="#CC6A2B"
+    stroke-opacity="${(opacity * 0.18).clamp(0.0, 1.0).toStringAsFixed(2)}"
+    stroke-width="1">$escapedText</text>
 </svg>
 ''';
     return SvgPicture.string(svg, fit: BoxFit.contain);
@@ -1408,10 +1406,10 @@ class _LandscapeTopBar extends StatelessWidget {
         item(icon: ringerIcon, label: ringerLabel, onTap: onCycleRinger),
         const SizedBox(width: 20),
         item(
-          icon: guideVisible ? Icons.visibility_rounded : Icons.visibility_off_rounded,
-          label: context.l10n.ownWritingModeLabel,
+          icon: guideVisible ? Icons.edit_rounded : Icons.auto_stories_rounded,
+          label: guideVisible ? 'Own Writing' : 'Show Reference',
           onTap: onGuideToggle,
-          iconColor: guideVisible ? KvlColors.primary : KvlColors.muted,
+          iconColor: guideVisible ? KvlColors.ink : KvlColors.primary,
         ),
       ],
     );
@@ -1689,7 +1687,7 @@ class _GuideToggleButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Tooltip(
-      message: visible ? 'Hide guide' : 'Show guide',
+      message: visible ? 'Own Writing Mode' : 'Show Reference',
       child: GestureDetector(
         onTap: onToggle,
         child: Container(
@@ -1697,13 +1695,13 @@ class _GuideToggleButton extends StatelessWidget {
           height: compact ? 36 : 42,
           decoration: BoxDecoration(
             color: visible
-                ? KvlColors.primaryGhost
-                : KvlColors.surface.withValues(alpha: .9),
+                ? KvlColors.surface.withValues(alpha: .9)
+                : KvlColors.primaryGhost,
             shape: BoxShape.circle,
             border: Border.all(
               color: visible
-                  ? KvlColors.primary.withValues(alpha: .4)
-                  : KvlColors.border,
+                  ? KvlColors.border
+                  : KvlColors.primary.withValues(alpha: .4),
             ),
             boxShadow: [
               BoxShadow(
@@ -1714,9 +1712,9 @@ class _GuideToggleButton extends StatelessWidget {
             ],
           ),
           child: Icon(
-            visible ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+            visible ? Icons.edit_rounded : Icons.auto_stories_rounded,
             size: compact ? 17 : 20,
-            color: visible ? KvlColors.primaryDeep : KvlColors.inkSoft,
+            color: visible ? KvlColors.inkSoft : KvlColors.primaryDeep,
           ),
         ),
       ),

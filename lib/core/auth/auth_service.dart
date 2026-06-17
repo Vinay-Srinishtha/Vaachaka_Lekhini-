@@ -54,7 +54,12 @@ class AuthService {
   Future<void> startOtp(String mobile, {String countryCode = '+91'}) async {
     await _api.dio.post<Map<String, Object?>>(
       '/api/v1/auth/otp/start',
-      data: {'mobile': mobile, 'country_code': countryCode},
+      data: {
+        'mobile': mobile,
+        'country_code': countryCode,
+        'channel': 'sms',
+        'template': 'Namaste. Your OTP is {otp}. May your sadhana stay uninterrupted.',
+      },
     );
   }
 

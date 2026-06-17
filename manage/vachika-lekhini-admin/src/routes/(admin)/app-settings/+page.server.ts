@@ -53,6 +53,7 @@ export const actions: Actions = {
 			})
 		]);
 
-		return { ok: true };
+		const settings = await loadSettings();
+		return { ok: true, settings, error: null };
 	}
 };

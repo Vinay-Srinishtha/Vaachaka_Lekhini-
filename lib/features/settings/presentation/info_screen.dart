@@ -107,7 +107,7 @@ class _AboutScreen extends ConsumerWidget {
       scrollable: false,
       body: settingsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, __) => _MarkdownBody(
+        error: (err, st) => _MarkdownBody(
           markdown: context.l10n.infoAboutBody,
           headerIcon: Icons.self_improvement_rounded,
           headerIconBg: KvlColors.primaryGhost,
@@ -144,7 +144,7 @@ class _PrivacyScreen extends ConsumerWidget {
       scrollable: false,
       body: settingsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, __) => _MarkdownBody(
+        error: (err, st) => _MarkdownBody(
           markdown: context.l10n.infoPrivacyBody,
           headerIcon: Icons.lock_rounded,
           headerIconBg: KvlColors.accentSoft,
@@ -190,7 +190,6 @@ class _MarkdownBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final mdStyle = MarkdownStyleSheet(
       // Body text
       p: KvlText.body(14).copyWith(height: 1.75, color: KvlColors.inkSoft),

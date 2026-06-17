@@ -42,7 +42,7 @@ export const actions: Actions = {
 				pronunciationUrl: parsed.pronunciationUrl ?? null,
 				previewImageUrl: parsed.previewImageUrl ?? null,
 				imageUrl: parsed.imageUrl ?? null,
-				milestones: parsed.milestones ?? null,
+				milestones: parsed.milestones ?? undefined,
 				isActive: parsed.isActive,
 				sortOrder: parsed.sortOrder
 			}

@@ -24,7 +24,8 @@
 		previewImageUrl: v.previewImageUrl ? String(v.previewImageUrl) : null,
 		imageUrl: v.imageUrl ? String(v.imageUrl) : null,
 		isActive: v.isActive !== undefined ? v.isActive === 'on' || v.isActive === 'true' : true,
-		sortOrder: v.sortOrder ? Number(v.sortOrder) : 0
+		sortOrder: v.sortOrder ? Number(v.sortOrder) : 0,
+		milestones: null
 	});
 
 	function close() {

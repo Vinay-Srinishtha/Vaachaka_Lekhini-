@@ -180,7 +180,7 @@
 	}
 </script>
 
-<div class="mt-2 space-y-3">
+<div class="mt-1 space-y-2">
 
 	<!-- ── Existing file preview ─────────────────────────────────────── -->
 	{#if existingUrl && !selectedFile}
@@ -280,7 +280,7 @@
 	{#if !existingUrl || selectedFile}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
-			class="relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-8 text-center transition-colors cursor-pointer
+			class="relative flex flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed px-4 py-5 text-center transition-colors cursor-pointer
 				{dragOver
 					? 'border-indigo-400 bg-indigo-50'
 					: selectedFile
@@ -296,15 +296,15 @@
 			aria-label="Upload file"
 		>
 			{#if selectedFile}
-				<CheckCircle size={26} class="text-green-500" />
-				<p class="text-sm font-semibold text-green-700 truncate max-w-full">{selectedFile.name}</p>
-				<p class="text-xs text-green-500">{(selectedFile.size / 1024).toFixed(0)} KB — ready to upload</p>
+				<CheckCircle size={18} class="text-green-500" />
+				<p class="text-xs font-semibold text-green-700 truncate max-w-full">{selectedFile.name}</p>
+				<p class="text-[10px] text-green-500">{(selectedFile.size / 1024).toFixed(0)} KB — ready</p>
 			{:else}
-				<Upload size={26} class="text-slate-400" />
-				<p class="text-sm text-slate-600">
-					<span class="font-semibold text-indigo-600">Click to browse</span> or drag & drop
+				<Upload size={18} class="text-slate-400" />
+				<p class="text-xs text-slate-600">
+					<span class="font-semibold text-indigo-600">Click</span> or drag & drop
 				</p>
-				<p class="text-xs text-slate-400">{accept}</p>
+				<p class="text-[10px] text-slate-400">{accept}</p>
 			{/if}
 
 			<input

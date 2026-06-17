@@ -56,7 +56,7 @@
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="modal-title"
-			class="bg-white w-full {sizes[size]} sm:rounded-2xl shadow-2xl ring-1 ring-black/5 my-0 sm:my-3 flex flex-col max-h-screen sm:max-h-[calc(100vh-1.5rem)] transition-all duration-200"
+			class="bg-white w-full {sizes[size]} sm:rounded-2xl shadow-2xl ring-1 ring-black/5 my-0 sm:my-3 flex flex-col h-screen sm:h-[calc(100svh-1.5rem)] max-h-screen sm:max-h-[calc(100svh-1.5rem)] transition-all duration-200"
 		>
 			<!-- Header -->
 			<div class="flex items-start justify-between gap-3 px-5 py-4 bg-gradient-to-r from-slate-900 to-slate-800 sm:rounded-t-2xl shrink-0">

@@ -49,7 +49,7 @@
 <div class="space-y-6">
 
 	<!-- ── Hero stat grid ── -->
-	<section class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+	<section class="grid grid-cols-2 xl:grid-cols-4 gap-4">
 		<StatCard
 			label="Sessions Today"
 			value={s.sessionsToday.toLocaleString()}
@@ -76,7 +76,7 @@
 	</section>
 
 	<!-- ── Charts row ── -->
-	<section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+	<section class="grid grid-cols-1 xl:grid-cols-3 gap-4">
 
 		<!-- 30-day bar chart -->
 		<div class="card p-5 lg:col-span-2">
@@ -136,7 +136,7 @@
 	</section>
 
 	<!-- ── 7-day detail + top members ── -->
-	<section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+	<section class="grid grid-cols-1 xl:grid-cols-3 gap-4">
 
 		<!-- 7-day bar chart -->
 		<div class="card p-5 lg:col-span-2">

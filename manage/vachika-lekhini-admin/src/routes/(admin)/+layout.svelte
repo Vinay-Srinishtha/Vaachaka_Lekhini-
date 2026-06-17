@@ -49,7 +49,7 @@
 	}
 </script>
 
-<div class="min-h-screen">
+<div class="min-h-screen overflow-x-hidden">
 	{#if navigationBusy}
 		<div class="fixed inset-x-0 top-0 z-[60] h-[3px] overflow-hidden bg-brand-950/15" aria-hidden="true">
 			<div class="nav-progress h-full w-1/3 bg-gradient-to-r from-brand-300 via-brand-500 to-brand-300"></div>
@@ -66,10 +66,10 @@
 		onNavigateStart={(href) => (pendingPath = href)}
 	/>
 
-	<div class="transition-[padding] duration-200 {collapsed ? 'md:pl-16' : 'md:pl-64'}">
+	<div class="min-w-0 transition-[padding] duration-200 {collapsed ? 'md:pl-16' : 'md:pl-64'}">
 		<Topbar {admin} {pendingPath} onOpenMobile={() => (mobileOpen = true)} />
 		<main
-			class="relative px-4 md:px-6 lg:px-8 py-6"
+			class="relative min-w-0 px-4 md:px-6 lg:px-8 py-6"
 			aria-busy={navigationBusy}
 		>
 			{#if navigationBusy}

@@ -167,7 +167,13 @@
 
 			<!-- Visibility — stretches to fill -->
 			<div class="flex-1 rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden flex flex-col">
-				<label class="flex items-center justify-between gap-3 px-5 py-4 cursor-pointer select-none flex-1">
+				<label class="flex items-center gap-3 px-5 py-4 cursor-pointer select-none flex-1">
+					<input type="checkbox" name="isActive" bind:checked={isActive} class="sr-only" />
+					<div class="relative shrink-0 w-12 h-[26px] rounded-full transition-all duration-300 cursor-pointer
+						{isActive ? 'bg-emerald-500 shadow-emerald-200 shadow-md' : 'bg-slate-200'}">
+						<span class="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-300
+							{isActive ? 'left-[calc(100%-1.375rem)]' : 'left-0.5'}"></span>
+					</div>
 					<div>
 						<p class="text-base font-semibold transition-colors {isActive ? 'text-emerald-700' : 'text-slate-500'}">
 							{isActive ? 'Published' : 'Draft'}
@@ -175,12 +181,6 @@
 						<p class="text-sm mt-1 {isActive ? 'text-emerald-500' : 'text-slate-400'}">
 							{isActive ? 'Live in Flutter app' : 'Hidden from users'}
 						</p>
-					</div>
-					<input type="checkbox" name="isActive" bind:checked={isActive} class="sr-only" />
-					<div class="relative shrink-0 w-12 h-[26px] rounded-full transition-all duration-300 cursor-pointer
-						{isActive ? 'bg-emerald-500 shadow-emerald-200 shadow-md' : 'bg-slate-200'}">
-						<span class="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-300
-							{isActive ? 'left-[calc(100%-1.375rem)]' : 'left-0.5'}"></span>
 					</div>
 				</label>
 			</div>

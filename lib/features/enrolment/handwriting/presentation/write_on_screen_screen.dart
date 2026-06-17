@@ -14,7 +14,6 @@ import '../../../../app/providers.dart';
 import '../../../../app/router.dart';
 import '../../../../core/handwriting/handwriting_comparator.dart';
 import '../../../../core/i18n/language_options.dart';
-import '../../../../core/navigation/back_navigation.dart';
 import '../../../../core/remote_config/remote_config.dart';
 import '../../../../core/remote_config/remote_config_keys.dart';
 import '../../../../core/theme/theme.dart';
@@ -343,8 +342,7 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
       guide: guide,
       guideScript: guideScript,
       saving: _saving,
-      onBack: () =>
-          context.popOrGo('${KvlRoute.handwritingSubmit}/${widget.mantraId}'),
+      onBack: () => context.canPop() ? context.pop() : context.go('/'),
       onSave: _saving ? null : _save,
       onClear: _controller.clear,
       onUndo: _controller.undo,

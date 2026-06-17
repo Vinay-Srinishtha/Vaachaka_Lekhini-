@@ -356,7 +356,7 @@ class _DailyReminder extends ConsumerWidget {
                 ),
                 const SizedBox(height: KvlSpacing.xs),
                 Text(
-                  mantra?.name.displayForLanguage(settings.mantraLanguageCode) ?? '',
+                  mantra?.name.displayForLanguage(settings.languageCode) ?? '',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: KvlText.ui(

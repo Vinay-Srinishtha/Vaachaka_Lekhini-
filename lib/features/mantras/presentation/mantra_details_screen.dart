@@ -64,7 +64,7 @@ class _MantraDetailsScreenState extends ConsumerState<MantraDetailsScreen> {
     }
     final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
     final script = mantra.name.scriptForLanguage(settings.languageCode);
-    final name = mantra.name.displayForLanguage(settings.mantraLanguageCode);
+    final name = mantra.name.displayForLanguage(settings.languageCode);
     return KvlScaffold(
       title: '$name Mantra Details',
       scrollable: true,

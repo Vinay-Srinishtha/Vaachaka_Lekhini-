@@ -130,7 +130,7 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen> {
         mantra?.name.scriptForLanguage(settings.languageCode) ??
         settings.languageCode.mantraScriptForLanguage;
     final mantraText =
-        mantra?.name.displayForLanguage(settings.mantraLanguageCode) ??
+        mantra?.name.displayForLanguage(settings.languageCode) ??
         widget.mantraId;
 
     return KvlScaffold(

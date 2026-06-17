@@ -129,7 +129,7 @@ class _BodyState extends ConsumerState<_Body> {
     final globalCount =
         (statsAsync.value?.globalChantCount ?? 0) + state.sessionCount;
     final mantraLabel =
-        mantra?.name.displayForLanguage(settings.mantraLanguageCode) ??
+        mantra?.name.displayForLanguage(settings.languageCode) ??
         state.program.mantraId;
 
     return Scaffold(

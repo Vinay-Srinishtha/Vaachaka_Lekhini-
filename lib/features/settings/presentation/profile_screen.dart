@@ -2406,7 +2406,7 @@ class _AvatarViewerPage extends StatelessWidget {
         maxScale: PhotoViewComputedScale.covered * 3.0,
         heroAttributes: const PhotoViewHeroAttributes(tag: 'profile_avatar'),
         backgroundDecoration: const BoxDecoration(color: Colors.black),
-        loadingBuilder: (_, __) => const Center(
+        loadingBuilder: (_, event) => const Center(
           child: CircularProgressIndicator(color: Colors.white),
         ),
       ),

@@ -331,7 +331,7 @@ class _BulletinState extends State<_Bulletin>
       child: ClipRect(
         child: AnimatedBuilder(
           animation: _ctrl,
-          builder: (_, __) => CustomPaint(
+          builder: (_, child) => CustomPaint(
             size: Size.infinite,
             painter: _TickerPainter(
               text: _text,
@@ -652,7 +652,7 @@ class _ProgramCard extends ConsumerWidget {
                             width: imgSize - 12,
                             height: imgSize - 12,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, _a, _b) => _fallbackThumb(imgSize - 12),
+                            errorBuilder: (ctx, err, st) => _fallbackThumb(imgSize - 12),
                           )
                         : _fallbackThumb(imgSize - 12),
                   ),
@@ -755,7 +755,7 @@ class _ProgramCardShimmerState extends State<_ProgramCardShimmer>
     final h = widget.compact ? 84.0 : 100.0;
     return AnimatedBuilder(
       animation: _anim,
-      builder: (_, __) {
+      builder: (_, snap) {
         final opacity = 0.04 + _anim.value * 0.06;
         return Container(
           height: h,

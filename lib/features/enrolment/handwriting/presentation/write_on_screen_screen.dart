@@ -243,32 +243,6 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
     messenger.showSnackBar(snackBar);
   }
 
-  /// Shown when no enrolled handwriting sample exists for this mantra.
-  void _showNoReferenceBanner() {
-    _showSnack(SnackBar(
-      duration: const Duration(seconds: 4),
-      backgroundColor: KvlColors.danger,
-      behavior: SnackBarBehavior.floating,
-      content: const Row(
-        children: [
-          Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
-          SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'No handwriting sample found for this mantra.\n'
-              'Please complete handwriting setup first.',
-              style: TextStyle(color: Colors.white, fontSize: 13, height: 1.4),
-            ),
-          ),
-        ],
-      ),
-      action: SnackBarAction(
-        label: '✕',
-        textColor: Colors.white,
-        onPressed: () => ScaffoldMessenger.of(context).clearSnackBars(),
-      ),
-    ));
-  }
 
   void _showSampleSavedFeedback(int saved, int total) {
     final isDone = saved >= total;

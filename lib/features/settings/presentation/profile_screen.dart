@@ -2304,26 +2304,26 @@ class _EditableAvatarState extends State<_EditableAvatar> {
               ListTile(
                 leading: const Icon(Icons.visibility_rounded),
                 title: const Text('View photo'),
-                onTap: () { Navigator.pop(_); _viewFullScreen(); },
+                onTap: () { Navigator.pop(context); _viewFullScreen(); },
               ),
               const Divider(height: 1, indent: 16, endIndent: 16),
             ],
             ListTile(
               leading: const Icon(Icons.camera_alt_rounded),
               title: const Text('Take a photo'),
-              onTap: () { Navigator.pop(_); _pickAndCrop(ImageSource.camera); },
+              onTap: () { Navigator.pop(context); _pickAndCrop(ImageSource.camera); },
             ),
             ListTile(
               leading: const Icon(Icons.photo_library_rounded),
               title: const Text('Choose from gallery'),
-              onTap: () { Navigator.pop(_); _pickAndCrop(ImageSource.gallery); },
+              onTap: () { Navigator.pop(context); _pickAndCrop(ImageSource.gallery); },
             ),
             if (hasPhoto) ...[
               const Divider(height: 1, indent: 16, endIndent: 16),
               ListTile(
                 leading: const Icon(Icons.delete_outline_rounded, color: Colors.red),
                 title: const Text('Remove photo', style: TextStyle(color: Colors.red)),
-                onTap: () { Navigator.pop(_); _delete(); },
+                onTap: () { Navigator.pop(context); _delete(); },
               ),
             ],
             const SizedBox(height: 8),

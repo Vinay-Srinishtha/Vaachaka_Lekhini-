@@ -89,6 +89,11 @@ dev_dependencies:
   # their analyzer ^9 constraint conflicts with drift_dev's analyzer ^10.
   # Plain Riverpod 3 (Provider/Notifier classes) works without codegen.
 
+hooks:
+  user_defines:
+    sqlite3:
+      source: process
+
 flutter:
   uses-material-design: true
   generate: true

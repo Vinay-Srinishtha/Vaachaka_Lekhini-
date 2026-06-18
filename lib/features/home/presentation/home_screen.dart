@@ -382,7 +382,7 @@ class _TickerPainter extends CustomPainter {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _ProgramCarousel extends StatefulWidget {
-  const _ProgramCarousel({required this.programs, required this.compact});
+  const _ProgramCarousel({super.key, required this.programs, required this.compact});
   final List<Program> programs;
   final bool compact;
 
@@ -445,13 +445,13 @@ class _ProgramCarouselState extends State<_ProgramCarousel> {
               if (idx < count) {
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 1),
-                  child: _ProgramCard(program: widget.programs[idx], compact: compact),
+                  child: _ProgramCard(program: widget.programs[idx], compact: widget.compact),
                 );
               }
               // "Add new Sadhana" promo card.
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 1),
-                child: _NewSadhanaCard(compact: compact),
+                child: _NewSadhanaCard(compact: widget.compact),
               );
             },
           ),
@@ -730,7 +730,7 @@ class _ProgramCard extends ConsumerWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _ProgramCardShimmer extends StatefulWidget {
-  const _ProgramCardShimmer({required this.compact});
+  const _ProgramCardShimmer({super.key, required this.compact});
   final bool compact;
 
   @override

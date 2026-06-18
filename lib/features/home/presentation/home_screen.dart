@@ -113,11 +113,15 @@ class HomeScreen extends ConsumerWidget {
                   duration: const Duration(milliseconds: 220),
                   switchInCurve: Curves.easeOut,
                   switchOutCurve: Curves.easeIn,
+                  // Always show the carousel — it includes the "Start a new
+                  // Sadhana" card even when there are no active programs.
                   child: isLoadingPrograms
                       ? _ProgramCardShimmer(key: const ValueKey('shimmer'), compact: compact)
-                      : activePrograms.isNotEmpty
-                          ? _ProgramCarousel(key: const ValueKey('carousel'), programs: activePrograms, compact: compact)
-                          : const SizedBox.shrink(key: ValueKey('empty')),
+                      : _ProgramCarousel(
+                          key: const ValueKey('carousel'),
+                          programs: activePrograms,
+                          compact: compact,
+                        ),
                 ),
                 SizedBox(height: gap),
                 Expanded(
@@ -391,13 +395,19 @@ class _ProgramCarouselState extends State<_ProgramCarousel> {
   Timer? _autoTimer;
   int _page = 0;
 
+  // Total logical items = active programs + 1 "add new" card at the end.
+  int get _totalItems => widget.programs.length + 1;
+
   @override
   void initState() {
     super.initState();
-    final initial = widget.programs.length * 500;
+    // When there are programs, start mid-sequence so backward scroll feels
+    // natural. When empty (only the add card), start at 0.
+    final initial = widget.programs.isEmpty ? 0 : widget.programs.length * 500;
     _ctrl = PageController(initialPage: initial);
-    _page = initial % widget.programs.length;
-    if (widget.programs.length > 1) {
+    _page = _totalItems == 1 ? 0 : initial % _totalItems;
+    // Only auto-scroll if there's more than one card.
+    if (_totalItems > 1) {
       _autoTimer = Timer.periodic(const Duration(seconds: 3), (_) {
         if (!_ctrl.hasClients) return;
         _ctrl.nextPage(
@@ -419,6 +429,8 @@ class _ProgramCarouselState extends State<_ProgramCarousel> {
   Widget build(BuildContext context) {
     final count = widget.programs.length;
     final cardH = widget.compact ? 84.0 : 100.0;
+    // Dots: one per program + one for the "add" card.
+    final dotCount = _totalItems;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -427,39 +439,152 @@ class _ProgramCarouselState extends State<_ProgramCarousel> {
           height: cardH,
           child: PageView.builder(
             controller: _ctrl,
-            onPageChanged: (i) => setState(() => _page = i % count),
-            itemBuilder: (ctx, i) => Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 1),
-              child: _ProgramCard(
-                program: widget.programs[i % count],
-                compact: widget.compact,
-              ),
-            ),
+            onPageChanged: (i) => setState(() => _page = i % _totalItems),
+            itemBuilder: (ctx, i) {
+              final idx = count > 0 ? i % _totalItems : _totalItems - 1;
+              if (idx < count) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 1),
+                  child: _ProgramCard(program: widget.programs[idx], compact: compact),
+                );
+              }
+              // "Add new Sadhana" promo card.
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 1),
+                child: _NewSadhanaCard(compact: compact),
+              );
+            },
           ),
         ),
-        if (count > 1) ...[
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(count, (i) {
-              final active = i == _page;
-              return AnimatedContainer(
-                duration: const Duration(milliseconds: 260),
-                curve: Curves.easeOut,
-                margin: const EdgeInsets.symmetric(horizontal: 3),
-                width: active ? 18 : 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: active
-                      ? KvlColors.primary
-                      : KvlColors.primary.withValues(alpha: 0.25),
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              );
-            }),
-          ),
-        ],
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(dotCount, (i) {
+            final active = i == _page;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOut,
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: active ? 18 : 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: active
+                    ? KvlColors.primary
+                    : KvlColors.primary.withValues(alpha: 0.25),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            );
+          }),
+        ),
       ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// "Start a new Sadhana" promo card — always last in the carousel
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _NewSadhanaCard extends StatelessWidget {
+  const _NewSadhanaCard({required this.compact});
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final iconSize = compact ? 46.0 : 56.0;
+    return GestureDetector(
+      onTap: () => context.push(KvlRoute.mantraSelection),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFFFF3E8), Color(0xFFFFE4C8)],
+          ),
+          borderRadius: KvlRadius.brLG,
+          border: Border.all(
+            color: KvlColors.primary.withValues(alpha: 0.35),
+            width: 1.4,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: KvlColors.primary.withValues(alpha: 0.06),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        padding: EdgeInsets.symmetric(
+          horizontal: KvlSpacing.md,
+          vertical: compact ? KvlSpacing.sm : 12,
+        ),
+        child: Row(
+          children: [
+            // Plus icon in a circle — matches the program ring style
+            Container(
+              width: iconSize,
+              height: iconSize,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: KvlColors.primary.withValues(alpha: 0.10),
+                border: Border.all(
+                  color: KvlColors.primary.withValues(alpha: 0.30),
+                  width: 2,
+                ),
+              ),
+              child: Icon(
+                Icons.add_rounded,
+                color: KvlColors.primary,
+                size: iconSize * 0.46,
+              ),
+            ),
+            const SizedBox(width: KvlSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Start a new Sadhana',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: compact ? 13.5 : 15,
+                      fontWeight: FontWeight.w700,
+                      color: KvlColors.ink,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    'Choose a mantra & set your goal',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: compact ? 11 : 12,
+                      color: KvlColors.primary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: KvlSpacing.sm),
+            Container(
+              width: compact ? 32 : 38,
+              height: compact ? 32 : 38,
+              decoration: BoxDecoration(
+                color: KvlColors.primary,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.arrow_forward_rounded,
+                color: Colors.white,
+                size: compact ? 15 : 17,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

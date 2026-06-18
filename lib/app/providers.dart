@@ -500,9 +500,11 @@ final mostRecentProgramProvider = FutureProvider<Program?>((ref) async {
 });
 
 /// Reactive session state. `null` ⇒ logged out.
+/// Emits the Hive-cached session synchronously on the first frame so the
+/// profile and program providers never wait behind an async I/O boundary.
 final sessionProvider = StreamProvider<Session?>((ref) async* {
   final repo = ref.watch(authRepositoryProvider);
-  yield await repo.currentSession();
+  yield repo.cachedSession(); // synchronous Hive read — zero delay
   yield* repo.sessionChanges();
 });
 

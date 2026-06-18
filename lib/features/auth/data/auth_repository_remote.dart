@@ -67,6 +67,9 @@ class AuthRepositoryRemote implements AuthRepository {
   // ---------------------------------------------------------------------------
 
   @override
+  Session? cachedSession() => _readSession();
+
+  @override
   Future<Session?> currentSession() async => _readSession();
 
   @override

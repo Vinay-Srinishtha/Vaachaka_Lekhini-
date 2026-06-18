@@ -5,6 +5,9 @@ import 'session.dart';
 /// OTP entirely; the remote implementation in Phase 9 will hit a backend.
 /// UI code must only depend on this abstract type.
 abstract class AuthRepository {
+  /// Synchronously read the cached session from Hive — zero async delay.
+  Session? cachedSession();
+
   /// Currently persisted session, or null if not signed in.
   Future<Session?> currentSession();
 

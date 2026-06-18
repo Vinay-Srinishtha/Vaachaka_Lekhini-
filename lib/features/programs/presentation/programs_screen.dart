@@ -28,22 +28,34 @@ class ProgramsScreen extends ConsumerWidget {
   }
 }
 
-class _Body extends ConsumerWidget {
+class _Body extends ConsumerStatefulWidget {
   const _Body({required this.programs});
   final List<Program> programs;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final totalTarget = programs.fold<int>(0, (a, p) => a + p.targetWritings);
-    final overallProgress = (programs.isEmpty || totalTarget == 0)
+  ConsumerState<_Body> createState() => _BodyState();
+}
+
+class _BodyState extends ConsumerState<_Body> {
+  bool _showCompleted = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final programs = widget.programs;
+    final active = programs.where((p) => !p.isGoalReached).toList();
+    final completed = programs.where((p) => p.isGoalReached).toList();
+
+    // Overall progress is based on active programs only
+    final activeTarget = active.fold<int>(0, (a, p) => a + p.targetWritings);
+    final overallProgress = (active.isEmpty || activeTarget == 0)
         ? 0.0
-        : (programs.fold<int>(0, (a, p) => a + p.totalProgress) / totalTarget)
+        : (active.fold<int>(0, (a, p) => a + p.totalProgress) / activeTarget)
             .clamp(0.0, 1.0);
     final totalChants = programs.fold<int>(0, (a, p) => a + p.totalProgress);
-    final daysAvg = programs.isEmpty
+    final daysAvg = active.isEmpty
         ? 0
-        : (programs.map((p) => p.daysElapsed).reduce((a, b) => a + b) /
-                  programs.length)
+        : (active.map((p) => p.daysElapsed).reduce((a, b) => a + b) /
+                  active.length)
               .round();
 
     final bottomInset = MediaQuery.paddingOf(context).bottom;
@@ -73,9 +85,11 @@ class _Body extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                programs.isEmpty
-                    ? context.l10n.everyJourneyBegins
-                    : '"Every chant is a step closer to the divine. Keep going!"',
+                active.isEmpty && completed.isNotEmpty
+                    ? '"All Sadhanas complete. Begin a new one!"'
+                    : active.isEmpty
+                        ? context.l10n.everyJourneyBegins
+                        : '"Every chant is a step closer to the divine. Keep going!"',
                 style: KvlText.body(13).copyWith(
                   color: Colors.white,
                   fontStyle: FontStyle.italic,
@@ -104,7 +118,7 @@ class _Body extends ConsumerWidget {
                   ),
                   _Kpi(
                     label: context.l10n.programs,
-                    value: '${programs.length}',
+                    value: '${active.length}',
                     onDark: true,
                   ),
                 ],
@@ -123,7 +137,7 @@ class _Body extends ConsumerWidget {
         const SizedBox(height: KvlSpacing.md),
         Text(context.l10n.myRecitationPrograms, style: KvlText.title(16)),
         const SizedBox(height: KvlSpacing.sm),
-        if (programs.isEmpty)
+        if (active.isEmpty && completed.isEmpty)
           KvlCard(
             child: Column(
               children: [
@@ -143,30 +157,89 @@ class _Body extends ConsumerWidget {
               ],
             ),
           )
+        else if (active.isEmpty)
+          KvlCard(
+            child: Column(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: KvlColors.primary, size: 36),
+                const SizedBox(height: 8),
+                Text('No active Sadhanas', style: KvlText.title(13)),
+                const SizedBox(height: 4),
+                Text(
+                  'Start a new one to keep your practice going.',
+                  textAlign: TextAlign.center,
+                  style: KvlText.caption(11.5),
+                ),
+              ],
+            ),
+          )
         else ...[
-          ...() {
-            final active = programs.where((p) => !p.isGoalReached).toList();
-            final completed = programs.where((p) => p.isGoalReached).toList();
-            return [
-              if (active.isNotEmpty) ...[
-                for (final p in active) ...[
-                  _ProgramCard(program: p),
-                  const SizedBox(height: KvlSpacing.sm),
-                ],
-              ],
-              if (completed.isNotEmpty) ...[
-                const SizedBox(height: KvlSpacing.sm),
-                Text(context.l10n.completedPrograms, style: KvlText.title(14).copyWith(color: KvlColors.inkSoft)),
-                const SizedBox(height: KvlSpacing.sm),
-                for (final p in completed) ...[
-                  _ProgramCard(program: p),
-                  const SizedBox(height: KvlSpacing.sm),
-                ],
-              ],
-            ];
-          }(),
+          for (final p in active) ...[
+            _ProgramCard(program: p),
+            const SizedBox(height: KvlSpacing.sm),
+          ],
+        ],
+        if (completed.isNotEmpty) ...[
+          const SizedBox(height: KvlSpacing.sm),
+          _ViewCompletedButton(
+            count: completed.length,
+            expanded: _showCompleted,
+            onTap: () => setState(() => _showCompleted = !_showCompleted),
+          ),
+          if (_showCompleted) ...[
+            const SizedBox(height: KvlSpacing.sm),
+            for (final p in completed) ...[
+              _ProgramCard(program: p),
+              const SizedBox(height: KvlSpacing.sm),
+            ],
+          ],
         ],
       ],
+    );
+  }
+}
+
+class _ViewCompletedButton extends StatelessWidget {
+  const _ViewCompletedButton({
+    required this.count,
+    required this.expanded,
+    required this.onTap,
+  });
+  final int count;
+  final bool expanded;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: KvlSpacing.md, vertical: 12),
+        decoration: BoxDecoration(
+          color: KvlColors.primaryGhost,
+          borderRadius: KvlRadius.brMD,
+          border: Border.all(color: KvlColors.primarySoft, width: 1.2),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.archive_rounded, size: 18, color: KvlColors.primary),
+            const SizedBox(width: KvlSpacing.sm),
+            Expanded(
+              child: Text(
+                expanded
+                    ? 'Hide Completed Sadhanas'
+                    : 'View Completed Sadhanas ($count)',
+                style: KvlText.ui(13, FontWeight.w600).copyWith(color: KvlColors.primaryDeep),
+              ),
+            ),
+            Icon(
+              expanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+              color: KvlColors.primary,
+              size: 20,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -284,30 +357,22 @@ class _ProgramCard extends ConsumerWidget {
     final name =
         mantra?.name.displayForLanguage(settings.languageCode) ??
         program.mantraId;
-    final pct = (program.progressFraction * 100).round();
     final complete = program.isCompleted;
+    final imgUrl = mantra?.previewImageUrl ?? mantra?.imageUrl;
+    final glyph = mantra?.name.thumbGlyph() ?? '';
+
     return KvlCard(
       onTap: () => context.push('${KvlRoute.dailyProgress}/${program.id}'),
       child: Row(
         children: [
-          SizedBox(
-            width: 44,
-            height: 44,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                CustomPaint(
-                  size: const Size(44, 44),
-                  painter: _RingPainter(progress: program.progressFraction),
-                ),
-                Text(
-                  '$pct%',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
+          MilestoneRing.fraction(
+            fraction: program.progressFraction,
+            strokeWidth: 3.5,
+            gap: 3,
+            child: MantraThumb(
+              glyph: glyph,
+              imageUrl: imgUrl,
+              size: 46,
             ),
           ),
           const SizedBox(width: KvlSpacing.md),

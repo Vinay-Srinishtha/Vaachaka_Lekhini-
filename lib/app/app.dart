@@ -61,6 +61,9 @@ class _KvlAppState extends ConsumerState<KvlApp> with WidgetsBindingObserver {
     // existing consumer yet — keep this read so the first fetch fires.
     ref.watch(mantraRepositoryProvider);
     ref.watch(remoteConfigProvider);
+    // Pre-warm programs so the Drift stream is already running by the time
+    // the home screen builds — eliminates the shimmer flash for returning users.
+    ref.watch(programsForActiveProfileProvider);
 
     // CRITICAL: SyncEngine is a lazy provider — nothing else watches it, so
     // without this line the outbox never drains and nothing reaches Prisma.

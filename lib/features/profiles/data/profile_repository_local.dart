@@ -66,22 +66,34 @@ class ProfileRepositoryLocal implements ProfileRepository {
     return Profile.fromJson(Map<String, dynamic>.from(raw as Map));
   }
 
-  @override
-  Future<Profile?> getActive() async {
+  Profile? _readActive() {
     final id = _session.get(KvlKeys.activeProfileId) as String?;
     if (id == null) return null;
-    return getById(id);
+    final raw = _profiles.get(id);
+    if (raw == null) return null;
+    try {
+      return Profile.fromJson(Map<String, dynamic>.from(raw as Map));
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
+  Future<Profile?> getActive() async => _readActive();
+
+  @override
   Stream<Profile?> watchActive() async* {
-    yield await getActive();
+    yield _readActive(); // synchronous Hive read — zero async delay
     yield* _activeController.stream;
   }
 
   @override
   Stream<List<Profile>> watchForUser(String userId) async* {
-    yield await listForUser(userId);
+    // Emit cached list synchronously before the broadcast stream.
+    yield _readAll()
+        .where((p) => p.userId == userId)
+        .toList()
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
     yield* _allController.stream
         .map((all) => all.where((p) => p.userId == userId).toList()..sort((a, b) => a.createdAt.compareTo(b.createdAt)));
   }

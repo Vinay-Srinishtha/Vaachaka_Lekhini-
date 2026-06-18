@@ -58,6 +58,10 @@ class ProfileSelectScreen extends ConsumerWidget {
                         await ref
                             .read(profileRepositoryProvider)
                             .setActive(p.id);
+                        // Pre-warm the programs provider so Drift starts its
+                        // query before the home screen builds — the data arrives
+                        // before or shortly after the first frame renders.
+                        ref.read(programsForActiveProfileProvider);
                         if (context.mounted) context.go(KvlRoute.home);
                       },
                       onTapAddMember: () =>

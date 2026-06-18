@@ -102,10 +102,16 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ),
                 SizedBox(height: gap),
-                if (isLoadingPrograms)
-                  _ProgramCardShimmer(compact: compact)
-                else if (activePrograms.isNotEmpty)
-                  _ProgramCarousel(programs: activePrograms, compact: compact),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 220),
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeIn,
+                  child: isLoadingPrograms
+                      ? _ProgramCardShimmer(key: const ValueKey('shimmer'), compact: compact)
+                      : activePrograms.isNotEmpty
+                          ? _ProgramCarousel(key: const ValueKey('carousel'), programs: activePrograms, compact: compact)
+                          : const SizedBox.shrink(key: ValueKey('empty')),
+                ),
                 SizedBox(height: gap),
                 Expanded(
                   child: _HeroQuote(compact: compact, tight: tight),

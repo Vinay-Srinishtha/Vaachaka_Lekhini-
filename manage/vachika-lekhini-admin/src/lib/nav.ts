@@ -11,7 +11,6 @@ import {
 	Activity,
 	Coins,
 	MessageSquareDot,
-	Mic2,
 	UserPlus,
 	Smartphone,
 	HelpCircle,
@@ -48,7 +47,6 @@ export const NAV_ITEMS: NavItem[] = [
 	{ href: '/accounts', label: 'Accounts', icon: Users, section: 'accounts', group: 'Practice' },
 	{ href: '/programs', label: 'Programs', icon: Layers, section: 'programs', group: 'Practice' },
 	{ href: '/sessions', label: 'Sessions', icon: Activity, section: 'sessions', group: 'Practice' },
-	{ href: '/enrolments', label: 'Enrolments', icon: Mic2, section: 'enrolments', group: 'Practice' },
 
 	// ── Rewards ───────────────────────────────────────────────────────────────
 	{ href: '/rewards', label: 'Rewards Ledger', icon: Coins, section: 'rewards', group: 'Rewards' },

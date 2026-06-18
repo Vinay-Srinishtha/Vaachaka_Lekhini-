@@ -67,7 +67,6 @@ export const PERMISSION_GROUPS = [
 			{ key: 'programs.view',    label: 'Programs View' },
 			{ key: 'sessions.view',    label: 'Sessions View' },
 			{ key: 'sessions.delete',  label: 'Sessions Delete' },
-			{ key: 'enrolments.view',  label: 'Enrolments View' },
 		]
 	},
 	{

@@ -33,7 +33,6 @@ const ROLE_SECTIONS: Record<AdminRole, readonly string[] | '*'> = {
 		'accounts',
 		'programs',
 		'sessions',
-		'enrolments',
 		'rewards',
 		'reward-rules',
 		'invites'

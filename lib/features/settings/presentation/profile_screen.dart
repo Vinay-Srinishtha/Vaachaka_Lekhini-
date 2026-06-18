@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
+import 'package:photo_view/photo_view.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -2190,102 +2192,152 @@ class _EditableAvatarState extends State<_EditableAvatar> {
     }
   }
 
-  Future<void> _pick() async {
-    final id = widget.profileId;
-    if (id == null) return;
+  // ── View full-screen ────────────────────────────────────────────────────
 
-    // Let user choose camera or gallery.
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-      ),
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 36, height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 12),
-            ListTile(
-              leading: const Icon(Icons.camera_alt_rounded),
-              title: const Text('Take a photo'),
-              onTap: () => Navigator.pop(context, ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_rounded),
-              title: const Text('Choose from gallery'),
-              onTap: () => Navigator.pop(context, ImageSource.gallery),
-            ),
-            if (_localPath != null)
-              ListTile(
-                leading: const Icon(Icons.delete_outline_rounded, color: Colors.red),
-                title: const Text('Remove photo', style: TextStyle(color: Colors.red)),
-                onTap: () => Navigator.pop(context, null),
-              ),
-            const SizedBox(height: 8),
-          ],
-        ),
+  Future<void> _viewFullScreen() async {
+    if (_localPath == null) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => _AvatarViewerPage(imagePath: _localPath!),
       ),
     );
+  }
 
-    // null = sheet dismissed without selection; handle remove separately
-    if (!mounted) return;
+  // ── Pick & crop ─────────────────────────────────────────────────────────
 
-    if (source == null && _localPath != null) {
-      // "Remove photo" tapped — clear the stored path
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_prefsKey(id));
-      avatarChangeNotifier.value++;
-      if (mounted) setState(() => _localPath = null);
-      return;
-    }
-    if (source == null) return;
-
+  Future<void> _pickAndCrop(ImageSource source) async {
+    final id = widget.profileId;
+    if (id == null) return;
     try {
-      final picked = await ImagePicker().pickImage(
-        source: source,
-        maxWidth: 512,
-        maxHeight: 512,
-        imageQuality: 85,
-      );
+      final picked = await ImagePicker().pickImage(source: source, imageQuality: 90);
       if (picked == null || !mounted) return;
 
-      // Copy to app documents so it survives cache clears.
+      final cropped = await ImageCropper().cropImage(
+        sourcePath: picked.path,
+        aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Adjust Photo',
+            toolbarColor: KvlColors.primary,
+            toolbarWidgetColor: Colors.white,
+            activeControlsWidgetColor: KvlColors.primary,
+            initAspectRatio: CropAspectRatioPreset.square,
+            lockAspectRatio: true,
+            showCropGrid: true,
+            hideBottomControls: false,
+          ),
+          IOSUiSettings(
+            title: 'Adjust Photo',
+            aspectRatioLockEnabled: true,
+            resetAspectRatioEnabled: false,
+            rotateButtonsHidden: false,
+          ),
+        ],
+      );
+      if (cropped == null || !mounted) return;
+
       final dir = await getApplicationDocumentsDirectory();
       final dest = File('${dir.path}/avatar_$id.jpg');
-      await File(picked.path).copy(dest.path);
-
-      // Evict old image from Flutter's cache so the new one shows immediately.
+      await File(cropped.path).copy(dest.path);
       await FileImage(dest).evict();
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_prefsKey(id), dest.path);
       avatarChangeNotifier.value++;
-
       if (mounted) setState(() => _localPath = dest.path);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Could not set photo: $e'),
-          behavior: SnackBarBehavior.floating,
-        ),
+        SnackBar(content: Text('Could not set photo: $e'), behavior: SnackBarBehavior.floating),
       );
     }
+  }
+
+  // ── Delete ──────────────────────────────────────────────────────────────
+
+  Future<void> _delete() async {
+    final id = widget.profileId;
+    if (id == null || _localPath == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Remove photo?'),
+        content: const Text('Your profile picture will be removed.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Remove', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_prefsKey(id));
+    try { await File(_localPath!).delete(); } catch (_) {}
+    avatarChangeNotifier.value++;
+    if (mounted) setState(() => _localPath = null);
+  }
+
+  // ── Action sheet ─────────────────────────────────────────────────────────
+
+  Future<void> _showOptions() async {
+    final hasPhoto = _localPath != null;
+    await showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 6),
+            Container(
+              width: 36, height: 4,
+              decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+            ),
+            const SizedBox(height: 8),
+            if (hasPhoto) ...[
+              ListTile(
+                leading: const Icon(Icons.visibility_rounded),
+                title: const Text('View photo'),
+                onTap: () { Navigator.pop(_); _viewFullScreen(); },
+              ),
+              const Divider(height: 1, indent: 16, endIndent: 16),
+            ],
+            ListTile(
+              leading: const Icon(Icons.camera_alt_rounded),
+              title: const Text('Take a photo'),
+              onTap: () { Navigator.pop(_); _pickAndCrop(ImageSource.camera); },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_rounded),
+              title: const Text('Choose from gallery'),
+              onTap: () { Navigator.pop(_); _pickAndCrop(ImageSource.gallery); },
+            ),
+            if (hasPhoto) ...[
+              const Divider(height: 1, indent: 16, endIndent: 16),
+              ListTile(
+                leading: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                title: const Text('Remove photo', style: TextStyle(color: Colors.red)),
+                onTap: () { Navigator.pop(_); _delete(); },
+              ),
+            ],
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final hasPhoto = _localPath != null;
     return GestureDetector(
-      onTap: _pick,
+      onTap: _showOptions,
       child: Stack(
         children: [
           Container(
@@ -2301,10 +2353,7 @@ class _EditableAvatarState extends State<_EditableAvatar> {
                       colors: [Color(0xFFFFB572), KvlColors.primary],
                     ),
               image: hasPhoto
-                  ? DecorationImage(
-                      image: FileImage(File(_localPath!)),
-                      fit: BoxFit.cover,
-                    )
+                  ? DecorationImage(image: FileImage(File(_localPath!)), fit: BoxFit.cover)
                   : null,
             ),
             alignment: Alignment.center,
@@ -2312,11 +2361,7 @@ class _EditableAvatarState extends State<_EditableAvatar> {
                 ? null
                 : Text(
                     widget.initials,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w600),
                   ),
           ),
           Positioned(
@@ -2330,10 +2375,40 @@ class _EditableAvatarState extends State<_EditableAvatar> {
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: 1.5),
               ),
-              child: const Icon(Icons.edit_rounded, color: Colors.white, size: 12),
+              child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 11),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Full-screen avatar viewer ───────────────────────────────────────────────
+
+class _AvatarViewerPage extends StatelessWidget {
+  const _AvatarViewerPage({required this.imagePath});
+  final String imagePath;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: PhotoView(
+        imageProvider: FileImage(File(imagePath)),
+        minScale: PhotoViewComputedScale.contained,
+        maxScale: PhotoViewComputedScale.covered * 3.0,
+        heroAttributes: const PhotoViewHeroAttributes(tag: 'profile_avatar'),
+        backgroundDecoration: const BoxDecoration(color: Colors.black),
+        loadingBuilder: (_, __) => const Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
       ),
     );
   }

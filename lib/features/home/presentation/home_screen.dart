@@ -92,14 +92,21 @@ class HomeScreen extends ConsumerWidget {
                 SizedBox(height: headerGap),
                 _RewardPointsTile(points: points, compact: compact),
                 SizedBox(height: gap),
-                // Bulletin — edge-to-edge: escape the column padding via negative
-                // translate, then size to full screen width.
-                Transform.translate(
-                  offset: Offset(-side, 0),
-                  child: SizedBox(
-                    width: constraints.maxWidth + side * 2,
-                    child: const _Bulletin(),
-                  ),
+                // Bulletin — truly edge-to-edge regardless of SafeArea insets.
+                // We escape the column padding by measuring from MediaQuery so
+                // even devices with horizontal view-padding fill perfectly.
+                Builder(
+                  builder: (ctx) {
+                    final mq = MediaQuery.of(ctx);
+                    final leftOffset = mq.viewPadding.left + side;
+                    return Transform.translate(
+                      offset: Offset(-leftOffset, 0),
+                      child: SizedBox(
+                        width: mq.size.width,
+                        child: const _Bulletin(),
+                      ),
+                    );
+                  },
                 ),
                 SizedBox(height: gap),
                 AnimatedSwitcher(

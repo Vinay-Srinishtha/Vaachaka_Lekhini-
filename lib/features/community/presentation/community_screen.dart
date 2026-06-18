@@ -26,6 +26,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
     final leaderboardAsync = ref.watch(leaderboardProvider(filter));
     final list = leaderboardAsync.value ?? const <Friend>[];
     final mantras = ref.watch(mantraCatalogProvider).value ?? const <Mantra>[];
+    final hasError = leaderboardAsync.hasError && list.isEmpty;
 
     return _Body(
       list: list,
@@ -35,6 +36,8 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
       onSortChanged: (s) => setState(() => _sort = s),
       onMantraChanged: (id) => setState(() => _mantraId = id),
       loading: leaderboardAsync.isLoading && list.isEmpty,
+      hasError: hasError,
+      onRetry: () => ref.invalidate(leaderboardProvider(filter)),
     );
   }
 }
@@ -48,6 +51,8 @@ class _Body extends StatelessWidget {
     required this.onSortChanged,
     required this.onMantraChanged,
     this.loading = false,
+    this.hasError = false,
+    this.onRetry,
   });
   final List<Friend> list;
   final LeaderboardSort sort;
@@ -56,6 +61,8 @@ class _Body extends StatelessWidget {
   final ValueChanged<LeaderboardSort> onSortChanged;
   final ValueChanged<String?> onMantraChanged;
   final bool loading;
+  final bool hasError;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -76,7 +83,11 @@ class _Body extends StatelessWidget {
 
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return SingleChildScrollView(
+    return RefreshIndicator(
+      onRefresh: onRetry != null ? () async => onRetry!() : () async {},
+      color: KvlColors.primary,
+      child: SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.fromLTRB(
         KvlSpacing.lg,
         topInset + 68,
@@ -100,6 +111,33 @@ class _Body extends StatelessWidget {
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 48),
               child: Center(child: CircularProgressIndicator()),
+            )
+          else if (hasError)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 48),
+              child: Column(
+                children: [
+                  Icon(Icons.cloud_off_rounded, size: 48, color: KvlColors.primarySoft),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Could not load rankings',
+                    style: KvlText.ui(15, FontWeight.w600).copyWith(color: KvlColors.inkSoft),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Check your connection and try again.',
+                    textAlign: TextAlign.center,
+                    style: KvlText.caption(12).copyWith(color: KvlColors.muted),
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: onRetry,
+                    icon: const Icon(Icons.refresh_rounded, size: 16),
+                    label: const Text('Retry'),
+                    style: FilledButton.styleFrom(backgroundColor: KvlColors.primary),
+                  ),
+                ],
+              ),
             )
           else if (deduped.isEmpty)
             Padding(
@@ -137,7 +175,8 @@ class _Body extends StatelessWidget {
           ],
         ],
       ),
-    );
+    ),   // SingleChildScrollView
+    );   // RefreshIndicator
   }
 }
 

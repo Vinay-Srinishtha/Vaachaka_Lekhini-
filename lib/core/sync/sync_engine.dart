@@ -166,6 +166,12 @@ class SyncEngine with WidgetsBindingObserver {
     // Kick an immediate drain on startup so any outbox items queued
     // during a previous session (even with dummy auth) are flushed.
     unawaited(drain());
+    // If bootstrap() already completed before we subscribed (broadcast stream
+    // does not replay), we still need to pull the latest server snapshot so
+    // programs, reward balances and the leaderboard reflect real DB data.
+    if (_auth.isAuthenticated) {
+      unawaited(syncNow());
+    }
   }
 
   void _watchConnectivity() {

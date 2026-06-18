@@ -737,9 +737,8 @@ final leaderboardProvider =
         await box.put(cacheKey, entries);
         yield parse(entries);
       } catch (e, st) {
-        // ignore: avoid_print
-        print('[leaderboard] fetch error: $e\n$st');
-        if (cached == null) yield const <Friend>[];
+        debugPrint('[leaderboard] fetch error: $e\n$st');
+        if (cached == null) rethrow; // surface the error so UI can show Retry
       }
     });
 

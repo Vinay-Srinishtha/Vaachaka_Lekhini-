@@ -76,7 +76,10 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
     final topInset = MediaQuery.viewPaddingOf(context).top.clamp(36.0, 48.0);
 
-    return ListView(
+    return RefreshIndicator(
+      onRefresh: () => ref.read(syncEngineProvider).syncNow(),
+      color: KvlColors.primary,
+      child: ListView(
       padding: EdgeInsets.fromLTRB(
         KvlSpacing.lg,
         topInset + 88,
@@ -167,7 +170,8 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
             ),
         ],
       ],
-    );
+    ),  // ListView
+    );  // RefreshIndicator
   }
 }
 

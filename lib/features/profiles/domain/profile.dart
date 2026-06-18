@@ -171,7 +171,7 @@ class Profile extends Equatable {
         profileCompletedAt: j['profileCompletedAt'] != null
             ? DateTime.tryParse(j['profileCompletedAt'] as String)
             : null,
-        createdAt: DateTime.parse(j['createdAt'] as String),
+        createdAt: DateTime.tryParse(j['createdAt'] as String? ?? '') ?? DateTime.now(),
       );
 
   @override

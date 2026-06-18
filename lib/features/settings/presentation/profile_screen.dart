@@ -52,9 +52,7 @@ class ProfileScreen extends ConsumerWidget {
     final settingsRepo = ref.read(settingsRepositoryProvider);
 
     final totalChants = programs.fold<int>(0, (a, p) => a + p.totalProgress);
-    final longestStreak = programs.isEmpty
-        ? 0
-        : programs.map((p) => p.longestStreak).reduce((a, b) => a > b ? a : b);
+    final longestStreak = programs.fold<int>(0, (best, p) => p.longestStreak > best ? p.longestStreak : best);
 
     return KvlScaffold(
       title: context.l10n.profileTitle,

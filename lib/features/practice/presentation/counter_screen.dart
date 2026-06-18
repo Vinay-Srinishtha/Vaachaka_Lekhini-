@@ -36,7 +36,28 @@ class CounterScreen extends ConsumerWidget {
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => KvlScaffold(
         title: 'Practice',
-        body: Center(child: Text('$e')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline_rounded, size: 48, color: Colors.grey),
+                const SizedBox(height: 16),
+                Text(
+                  'Could not load this Sadhana.\nIt may have been deleted.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  child: const Text('Go Back'),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
       data: (state) => _Body(programId: programId, state: state),
     );

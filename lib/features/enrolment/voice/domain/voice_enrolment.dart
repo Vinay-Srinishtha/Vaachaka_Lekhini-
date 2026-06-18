@@ -34,7 +34,7 @@ class VoiceEnrolment extends Equatable {
     profileId: j['profileId'] as String,
     mantraId: j['mantraId'] as String,
     samples: (j['samples'] as num).toInt(),
-    trainedAt: DateTime.parse(j['trainedAt'] as String),
+    trainedAt: DateTime.tryParse(j['trainedAt'] as String? ?? '') ?? DateTime.now(),
   );
 
   @override

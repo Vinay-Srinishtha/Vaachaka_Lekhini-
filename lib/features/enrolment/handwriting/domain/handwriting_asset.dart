@@ -45,7 +45,7 @@ class HandwritingAsset extends Equatable {
         id: j['id'] as String,
         profileId: j['profileId'] as String,
         mode: HandwritingMode.fromName(j['mode'] as String? ?? ''),
-        createdAt: DateTime.parse(j['createdAt'] as String),
+        createdAt: DateTime.tryParse(j['createdAt'] as String? ?? '') ?? DateTime.now(),
         filePath: j['filePath'] as String?,
         mantraId: j['mantraId'] as String?,
       );

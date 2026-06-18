@@ -39,14 +39,17 @@ class OutboxItem {
         'last_error': lastError,
       };
 
-  factory OutboxItem.fromJson(Map<dynamic, dynamic> json) => OutboxItem(
-        id: json['id'] as String,
-        kind: json['kind'] as String,
-        payload: Map<String, Object?>.from(json['payload'] as Map),
-        createdAt: DateTime.parse(json['created_at'] as String),
-        attempts: (json['attempts'] as int?) ?? 0,
-        lastError: json['last_error'] as String?,
-      );
+  factory OutboxItem.fromJson(Map<dynamic, dynamic> json) {
+    final payload = json['payload'];
+    return OutboxItem(
+      id: json['id'] as String? ?? '',
+      kind: json['kind'] as String? ?? '',
+      payload: payload is Map ? Map<String, Object?>.from(payload) : {},
+      createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ?? DateTime.now(),
+      attempts: (json['attempts'] as int?) ?? 0,
+      lastError: json['last_error'] as String?,
+    );
+  }
 }
 
 /// Append-only FIFO of pending mutations, persisted to Hive.
@@ -78,10 +81,18 @@ class SyncOutbox {
   Future<List<OutboxItem>> peekAll({int limit = 100}) async {
     final keys = _box.keys.where((k) => k is String && k.startsWith(_prefix)).toList();
     keys.sort();
-    return [
-      for (final k in keys.take(limit))
-        OutboxItem.fromJson(Map<dynamic, dynamic>.from(_box.get(k) as Map)),
-    ];
+    final items = <OutboxItem>[];
+    for (final k in keys.take(limit)) {
+      final raw = _box.get(k);
+      if (raw is! Map) continue;
+      try {
+        items.add(OutboxItem.fromJson(Map<dynamic, dynamic>.from(raw)));
+      } catch (e) {
+        if (kDebugMode) debugPrint('[outbox] corrupt item $k — dropping: $e');
+        await _box.delete(k);
+      }
+    }
+    return items;
   }
 
   Future<void> remove(String id) async {

@@ -17,10 +17,10 @@ class AuthTokens extends Equatable {
   bool get isAccessExpired => DateTime.now().isAfter(accessExpiresAt.subtract(const Duration(seconds: 30)));
 
   factory AuthTokens.fromJson(Map<String, Object?> json) => AuthTokens(
-        accessToken: json['access_token'] as String,
-        refreshToken: json['refresh_token'] as String,
-        accessExpiresAt: DateTime.parse(json['access_token_expires_at'] as String),
-        refreshExpiresAt: DateTime.parse(json['refresh_token_expires_at'] as String),
+        accessToken: json['access_token'] as String? ?? '',
+        refreshToken: json['refresh_token'] as String? ?? '',
+        accessExpiresAt: DateTime.tryParse(json['access_token_expires_at'] as String? ?? '') ?? DateTime.now().add(const Duration(hours: 1)),
+        refreshExpiresAt: DateTime.tryParse(json['refresh_token_expires_at'] as String? ?? '') ?? DateTime.now().add(const Duration(days: 30)),
       );
 
   Map<String, Object?> toJson() => {
@@ -50,11 +50,11 @@ class AuthAccount extends Equatable {
   final String? primaryMemberId;
 
   factory AuthAccount.fromAuthResponse(Map<String, Object?> json) {
-    final acc = json['account'] as Map<String, Object?>;
-    final primary = json['primary_member'] as Map<String, Object?>?;
+    final acc = (json['account'] as Map?)?.cast<String, Object?>() ?? {};
+    final primary = (json['primary_member'] as Map?)?.cast<String, Object?>();
     return AuthAccount(
-      id: acc['id'] as String,
-      mobile: acc['mobile'] as String,
+      id: acc['id'] as String? ?? '',
+      mobile: acc['mobile'] as String? ?? '',
       countryCode: (acc['country_code'] as String?) ?? '+91',
       primaryMemberId: primary?['id'] as String?,
     );
@@ -68,8 +68,8 @@ class AuthAccount extends Equatable {
       };
 
   factory AuthAccount.fromJson(Map<String, Object?> json) => AuthAccount(
-        id: json['id'] as String,
-        mobile: json['mobile'] as String,
+        id: json['id'] as String? ?? '',
+        mobile: json['mobile'] as String? ?? '',
         countryCode: (json['country_code'] as String?) ?? '+91',
         primaryMemberId: json['primary_member_id'] as String?,
       );

@@ -67,7 +67,7 @@ class Session extends Equatable {
         mobile: j['mobile'] as String,
         language: j['language'] as String? ?? 'en',
         referralCode: j['referralCode'] as String?,
-        createdAt: DateTime.parse(j['createdAt'] as String),
+        createdAt: DateTime.tryParse(j['createdAt'] as String? ?? '') ?? DateTime.now(),
         primaryMemberId: j['primaryMemberId'] as String?,
       );
 

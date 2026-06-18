@@ -57,8 +57,6 @@ class AuthService {
       data: {
         'mobile': mobile,
         'country_code': countryCode,
-        'channel': 'sms',
-        'template': 'Namaste. Your OTP is {otp}. May your sadhana stay uninterrupted.',
       },
     );
   }

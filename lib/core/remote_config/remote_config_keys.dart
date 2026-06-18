@@ -16,6 +16,10 @@ abstract final class RemoteConfigKeys {
   /// Default: 20 (20%). Adjustable from admin without an app update.
   static const minHandwritingAccuracy = 'config.min_handwriting_accuracy';
 
+  /// How many initial writings to collect as reference samples before
+  /// switching to auto-compare mode. Default: 3.
+  static const handwritingSampleCount = 'config.handwriting_sample_count';
+
   // Reward economy — must stay in sync with admin reward-config.ts seedDefaultFlags()
   static const rewardDailyPoints = 'reward_daily_points';
   static const rewardMilestonePoints = 'reward_milestone_points';

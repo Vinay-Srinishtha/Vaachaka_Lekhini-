@@ -18,7 +18,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get appMottoChant => 'उद्देश्य के साथ जपें | गर्व के साथ ट्रैक करें';
 
   @override
-  String get setLanguage => 'भाषा सेट करें';
+  String get setLanguage => 'भाषा चुनें';
 
   @override
   String get existingUser => 'पहले से उपयोगकर्ता हैं?';
@@ -141,8 +141,8 @@ class AppLocalizationsHi extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'शानदार! $count कार्यक्रम सक्रिय हैं',
-      one: 'शानदार! 1 कार्यक्रम सक्रिय है',
+      other: 'शानदार! $count साधनाएं सक्रिय हैं',
+      one: 'शानदार! 1 साधना सक्रिय है',
     );
     return '$_temp0';
   }
@@ -183,10 +183,10 @@ class AppLocalizationsHi extends AppLocalizations {
   String get browseMantras => 'मंत्र देखें';
 
   @override
-  String get selectFromPrograms => 'अपने कार्यक्रमों से चुनें';
+  String get selectFromPrograms => 'अपनी साधनाओं से चुनें';
 
   @override
-  String get createNewProgram => 'नया कार्यक्रम बनाएं';
+  String get createNewProgram => 'नई साधना बनाएं';
 
   @override
   String get mantraSelectionTitle => 'मंत्र चयन';
@@ -291,14 +291,14 @@ class AppLocalizationsHi extends AppLocalizations {
   String get startButton => 'शुरू करें';
 
   @override
-  String get noActivePrograms => 'कोई सक्रिय कार्यक्रम नहीं';
+  String get noActivePrograms => 'कोई सक्रिय साधना नहीं';
 
   @override
   String get chooseMantra => 'मंत्र चुनें';
 
   @override
   String get selectActiveProgramDescription =>
-      'इस डैशबोर्ड को अपडेट करने के लिए सक्रिय कार्यक्रम चुनें।';
+      'इस डैशबोर्ड को अपडेट करने के लिए सक्रिय साधना चुनें।';
 
   @override
   String get noActivePractice => 'अभी तक कोई सक्रिय साधना नहीं';
@@ -372,26 +372,26 @@ class AppLocalizationsHi extends AppLocalizations {
   String get daysPractising => 'साधना के दिन';
 
   @override
-  String get programs => 'कार्यक्रम';
+  String get programs => 'साधनाएं';
 
   @override
   String get overallProgress => 'कुल प्रगति';
 
   @override
-  String get createNewProgramButton => 'नया कार्यक्रम';
+  String get createNewProgramButton => 'नई साधना';
 
   @override
-  String get myRecitationPrograms => 'मेरे पाठ कार्यक्रम';
+  String get myRecitationPrograms => 'मेरी पाठ साधनाएं';
 
   @override
-  String get completedPrograms => 'पूर्ण कार्यक्रम';
+  String get completedPrograms => 'पूर्ण साधनाएं';
 
   @override
-  String get noProgramsYet => 'अभी तक कोई कार्यक्रम नहीं';
+  String get noProgramsYet => 'अभी तक कोई साधना नहीं';
 
   @override
   String get pickMantraAndTargetToStart =>
-      'अपना पहला कार्यक्रम शुरू करने के लिए मंत्र और लक्ष्य चुनें।';
+      'अपनी पहली साधना शुरू करने के लिए मंत्र और लक्ष्य चुनें।';
 
   @override
   String get completedWithCheck => 'पूर्ण ✓';
@@ -617,7 +617,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get deleteDialogContent =>
-      'यह इस डिवाइस पर सभी कार्यक्रम, सत्र, पुरस्कार और प्रोफ़ाइल मिटा देगा। यह क्रिया पूर्ववत नहीं की जा सकती।';
+      'यह इस डिवाइस पर सभी साधनाएं, सत्र, पुरस्कार और प्रोफ़ाइल मिटा देगा। यह क्रिया पूर्ववत नहीं की जा सकती।';
 
   @override
   String get deleteDialogCancel => 'रद्द करें';
@@ -684,10 +684,10 @@ class AppLocalizationsHi extends AppLocalizations {
   String get startPractice => 'साधना शुरू करें';
 
   @override
-  String get dedicateProgram => 'यह कार्यक्रम समर्पित करें';
+  String get dedicateProgram => 'यह साधना समर्पित करें';
 
   @override
-  String get dedicateSheetTitle => 'यह कार्यक्रम समर्पित करें';
+  String get dedicateSheetTitle => 'यह साधना समर्पित करें';
 
   @override
   String get dedicateOfferPractice =>
@@ -723,7 +723,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get editGoal => 'लक्ष्य संपादित करें';
 
   @override
-  String get shareProgram => 'कार्यक्रम साझा करें';
+  String get shareProgram => 'साधना साझा करें';
 
   @override
   String get dailyProgressTitle => 'दैनिक प्रगति';
@@ -741,10 +741,10 @@ class AppLocalizationsHi extends AppLocalizations {
   String get inviteFriendsButton => 'मित्रों को आमंत्रित करें';
 
   @override
-  String get streakChallenge => 'स्ट्रीक चुनौती';
+  String get streakChallenge => 'स्ट्रीक्स';
 
   @override
-  String get totalChantsSort => 'कुल जप';
+  String get totalChantsSort => 'जप';
 
   @override
   String get sendEncouragement => 'प्रोत्साहन भेजें';
@@ -988,13 +988,13 @@ class AppLocalizationsHi extends AppLocalizations {
   String get navHome => 'होम';
 
   @override
-  String get navPrograms => 'मेरे कार्यक्रम';
+  String get navPrograms => 'मेरी साधनाएं';
 
   @override
   String get navPractice => 'साधना';
 
   @override
-  String get navCommunity => 'स्ट्रीक लीडरबोर्ड';
+  String get navCommunity => 'ग्लोबल लीडरबोर्ड';
 
   @override
   String get navStore => 'पुरस्कार स्टोर';
@@ -1220,4 +1220,29 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get appTitle => 'वाचिक लेखिनी';
+
+  @override
+  String get noRankingsYet => 'अभी कोई रैंकिंग नहीं';
+
+  @override
+  String get noRankingsSubtitle => 'लीडरबोर्ड पर आने के लिए साधना शुरू करें';
+
+  @override
+  String get longestStreakLabel => 'सबसे लंबी स्ट्रीक';
+
+  @override
+  String get currentStreakLabel => 'वर्तमान स्ट्रीक';
+
+  @override
+  String streakDaysCount(int days) {
+    return '$days दिन';
+  }
+
+  @override
+  String get continueSadhana => 'अपनी साधना जारी रखें';
+
+  @override
+  String programDayOf(int current, int total) {
+    return 'दिन $current / $total';
+  }
 }

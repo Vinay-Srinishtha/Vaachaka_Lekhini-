@@ -37,6 +37,8 @@ class MantraDto {
     this.pronunciationUrl,
     this.imageUrl,
     this.previewImageUrl,
+    this.shareImageUrl,
+    this.shareText,
     this.milestones,
   });
 
@@ -54,6 +56,8 @@ class MantraDto {
   final String? pronunciationUrl;
   final String? imageUrl;
   final String? previewImageUrl;
+  final String? shareImageUrl;
+  final String? shareText;
   final List<MantraMilestone>? milestones;
 
   factory MantraDto.fromJson(Map<String, Object?> json) => MantraDto(
@@ -74,6 +78,8 @@ class MantraDto {
         pronunciationUrl: json['pronunciation_url'] as String?,
         imageUrl: json['image_url'] as String?,
         previewImageUrl: json['preview_image_url'] as String?,
+        shareImageUrl: json['share_image_url'] as String?,
+        shareText: json['share_text'] as String?,
         milestones: _parseMilestones(json['milestones']),
       );
 
@@ -92,6 +98,8 @@ class MantraDto {
         'pronunciation_url': pronunciationUrl,
         'image_url': imageUrl,
         'preview_image_url': previewImageUrl,
+        'share_image_url': shareImageUrl,
+        'share_text': shareText,
         'milestones': milestones
             ?.map((m) => {'count': m.count, 'day_options': m.dayOptions})
             .toList(),
@@ -118,6 +126,8 @@ class MantraDto {
         pronunciationAsset: pronunciationUrl,
         imageUrl: imageUrl,
         previewImageUrl: previewImageUrl,
+        shareImageUrl: shareImageUrl,
+        shareText: shareText,
         milestones: milestones,
       );
 }

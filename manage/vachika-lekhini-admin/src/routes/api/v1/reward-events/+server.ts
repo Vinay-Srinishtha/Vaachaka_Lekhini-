@@ -50,29 +50,11 @@ export const POST: RequestHandler = async (event) => {
 
 	await assertOwnsMembers(account.id, body.events.map((e) => e.member_id));
 
-	// Separate spend events from non-spend events so we can apply the balance
-	// guard only where it is needed.
-	const spendEvents = body.events.filter((e) => e.kind === 'spend');
-	const otherEvents = body.events.filter((e) => e.kind !== 'spend');
-
-	// Insert non-spend events without any balance check (they never reduce balance).
+	// Only spend events reach here (CLIENT_ALLOWED_KINDS = { 'spend' }).
+	// Each runs in its own serialisable transaction so a failed spend does not
+	// roll back unrelated ones in the batch.
+	const spendEvents = body.events;
 	let insertedCount = 0;
-
-	if (otherEvents.length > 0) {
-		const result = await prisma.rewardEvent.createMany({
-			data: otherEvents.map((e) => ({
-				id: e.id,
-				memberId: e.member_id,
-				kind: e.kind,
-				amount: e.amount,
-				source: e.source,
-				storeItemId: e.store_item_id ?? null,
-				occurredAt: e.occurred_at ? new Date(e.occurred_at) : undefined
-			})),
-			skipDuplicates: true
-		});
-		insertedCount += result.count;
-	}
 
 	// For spend events: verify balance per member inside a serialisable
 	// transaction so concurrent requests cannot both pass the same check.

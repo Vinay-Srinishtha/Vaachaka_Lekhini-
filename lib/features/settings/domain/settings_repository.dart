@@ -24,7 +24,7 @@ enum MicSensitivity {
       };
 
   static MicSensitivity fromName(String? name) =>
-      MicSensitivity.values.firstWhere((m) => m.name == name, orElse: () => MicSensitivity.medium);
+      MicSensitivity.values.firstWhere((m) => m.name == name, orElse: () => MicSensitivity.high);
 }
 
 /// Whole-app settings state. Used both by SettingsRepository.snapshot

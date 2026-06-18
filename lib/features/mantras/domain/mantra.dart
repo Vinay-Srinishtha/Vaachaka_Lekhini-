@@ -95,6 +95,8 @@ class Mantra extends Equatable {
     this.deity,
     this.imageUrl,
     this.previewImageUrl,
+    this.shareImageUrl,
+    this.shareText,
     this.pronunciationAsset,
     this.recommendedCount,
     this.recommendedDays,
@@ -119,6 +121,12 @@ class Mantra extends Equatable {
   /// Smaller preview image shown in selection list and reminders.
   final String? previewImageUrl;
 
+  /// Image attached when sharing this mantra's progress on WhatsApp / social.
+  final String? shareImageUrl;
+
+  /// Share message template. Placeholders: {mantra_name} {chant_count} {app_link}
+  final String? shareText;
+
   /// Pronunciation audio URL (remote) or asset path (legacy).
   final String? pronunciationAsset;
 
@@ -131,5 +139,5 @@ class Mantra extends Equatable {
   final List<MantraMilestone>? milestones;
 
   @override
-  List<Object?> get props => [id, isActive, imageUrl];
+  List<Object?> get props => [id, isActive, imageUrl, shareImageUrl, shareText];
 }

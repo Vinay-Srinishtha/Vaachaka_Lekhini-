@@ -163,80 +163,39 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen>
 
     return KvlScaffold(
       title: '',
-      scrollable: true,
+      scrollable: false,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SizedBox(height: KvlSpacing.md),
-
-          // ── Mantra image card (premium) ────────────────────────────────
+          // ── Mantra image card — taller, edge-to-edge feel ─────────────
           if (imageUrl != null && imageUrl.isNotEmpty)
             _MantraImageCard(imageUrl: imageUrl, mantraText: mantraText, script: script),
 
-          // ── Orb mic with ripples ───────────────────────────────────────
-          SizedBox(
-            height: 260,
-            child: _OrbMic(
-              recording: _recording,
-              pool: _pool,
-              slotIntensity: _slotIntensity,
-              level: _micLevel,
-              onTap: _recording ? _stop : _start,
+          // ── Orb mic ───────────────────────────────────────────────────
+          Expanded(
+            child: Center(
+              child: _OrbMic(
+                recording: _recording,
+                pool: _pool,
+                slotIntensity: _slotIntensity,
+                level: _micLevel,
+                onTap: _recording ? _stop : _start,
+              ),
             ),
           ),
 
-          // ── Title ──────────────────────────────────────────────────────
-          Text(
-            context.l10n.trainYourVoice,
-            textAlign: TextAlign.center,
-            style: KvlText.title(20),
+          // ── Chant instruction card ─────────────────────────────────────
+          _ChantInstructionCard(
+            mantraText: mantraText,
+            script: script,
+            target: _target,
           ),
-          const SizedBox(height: 6),
-          Text(
-            context.l10n.learnChantingPattern,
-            textAlign: TextAlign.center,
-            style: KvlText.caption(11.5),
-          ),
-          const SizedBox(height: KvlSpacing.lg),
+          const SizedBox(height: KvlSpacing.sm),
 
-          // ── Instruction card ───────────────────────────────────────────
-          KvlCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                RichText(
-                  text: TextSpan(
-                    style: KvlText.ui(16, FontWeight.w700),
-                    children: [
-                      TextSpan(text: context.l10n.sayMantraInstruction),
-                      TextSpan(
-                        text: mantraText,
-                        style: KvlText.mantraByScript(script, 18).copyWith(
-                          color: KvlColors.primaryDeep,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      TextSpan(text: context.l10n.sayMantraElevenTimes),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  context.l10n.speakNaturally,
-                  style: KvlText.caption(13).copyWith(
-                    color: KvlColors.muted,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: KvlSpacing.md),
-
-          // ── Progress bar — only visible once recording starts ──────────
+          // ── Progress / hint ────────────────────────────────────────────
           if (_recording) ...[
             _TrainingProgress(count: _count, target: _target),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Center(
               child: Text(
                 context.l10n.recordingStatus(_count, _target),
@@ -246,24 +205,23 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen>
                 ),
               ),
             ),
-          ] else ...[
+          ] else
             Center(
               child: Text(
                 context.l10n.tapStartToBegin,
                 style: KvlText.caption(11.5).copyWith(color: KvlColors.muted),
               ),
             ),
-          ],
 
           if (_error != null) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
               _error!,
               textAlign: TextAlign.center,
               style: KvlText.caption(11.5).copyWith(color: KvlColors.danger),
             ),
           ],
-          const SizedBox(height: KvlSpacing.lg),
+          const SizedBox(height: KvlSpacing.md),
           KvlButton(
             label: _recording
                 ? context.l10n.stopButton
@@ -295,26 +253,27 @@ class _MantraImageCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: KvlSpacing.md),
       child: Container(
-        height: 160,
+        height: 210,
         decoration: BoxDecoration(
-          borderRadius: KvlRadius.brLG,
+          borderRadius: KvlRadius.brXL,
           boxShadow: [
             BoxShadow(
-              color: KvlColors.primaryDeep.withValues(alpha: .18),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
+              color: KvlColors.primaryDeep.withValues(alpha: .22),
+              blurRadius: 32,
+              spreadRadius: -4,
+              offset: const Offset(0, 12),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: KvlRadius.brLG,
+          borderRadius: KvlRadius.brXL,
           child: Stack(
             fit: StackFit.expand,
             children: [
               Image.network(
                 imageUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (ctx, err, stack) => Container(
+                errorBuilder: (_, _, _) => Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
@@ -324,7 +283,7 @@ class _MantraImageCard extends StatelessWidget {
                   ),
                 ),
               ),
-              // Gradient scrim so the text is legible.
+              // Rich bottom scrim
               DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -332,36 +291,115 @@ class _MantraImageCard extends StatelessWidget {
                     end: Alignment.bottomCenter,
                     colors: [
                       Colors.transparent,
-                      Colors.black.withValues(alpha: .55),
+                      Colors.black.withValues(alpha: .30),
+                      Colors.black.withValues(alpha: .72),
                     ],
-                    stops: const [0.4, 1.0],
+                    stops: const [0.3, 0.65, 1.0],
                   ),
                 ),
               ),
+              // Mantra name overlay
               Positioned(
                 left: KvlSpacing.md,
                 right: KvlSpacing.md,
-                bottom: KvlSpacing.sm,
-                child: Text(
-                  mantraText,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: KvlText.mantraByScript(script, 22).copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    shadows: [
-                      const Shadow(
-                        color: Colors.black45,
-                        blurRadius: 8,
-                        offset: Offset(0, 2),
+                bottom: KvlSpacing.md,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      mantraText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: KvlText.mantraByScript(script, 26).copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.3,
+                        shadows: [
+                          const Shadow(color: Colors.black54, blurRadius: 10, offset: Offset(0, 2)),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                    // Subtle Devanagari subtitle if Roman is shown
+                    if (script == MantraScript.latin)
+                      Text(
+                        mantraText,
+                        maxLines: 1,
+                        style: KvlText.mantraDevanagari(13).copyWith(
+                          color: Colors.white.withValues(alpha: .70),
+                          shadows: [const Shadow(color: Colors.black38, blurRadius: 6)],
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Chant instruction card — stacked layout
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ChantInstructionCard extends StatelessWidget {
+  const _ChantInstructionCard({
+    required this.mantraText,
+    required this.script,
+    required this.target,
+  });
+  final String mantraText;
+  final MantraScript script;
+  final int target;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: KvlSpacing.lg, vertical: KvlSpacing.md),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: KvlRadius.brLG,
+        border: Border.all(color: KvlColors.primarySoft, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: KvlColors.primary.withValues(alpha: .06),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Chant',
+            style: KvlText.ui(13, FontWeight.w500).copyWith(color: KvlColors.inkSoft),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            mantraText,
+            style: KvlText.mantraByScript(script, 22).copyWith(
+              color: KvlColors.primary,
+              fontWeight: FontWeight.w800,
+              height: 1.15,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '$target times clearly',
+            style: KvlText.ui(15, FontWeight.w700).copyWith(color: KvlColors.ink),
+          ),
+          const SizedBox(height: 6),
+          Container(height: 1, color: KvlColors.primarySoft),
+          const SizedBox(height: 6),
+          Text(
+            'Speak naturally at your normal pace and volume',
+            style: KvlText.caption(11.5).copyWith(color: KvlColors.muted),
+          ),
+        ],
       ),
     );
   }
@@ -392,164 +430,219 @@ class _OrbMic extends StatefulWidget {
 class _OrbMicState extends State<_OrbMic> with SingleTickerProviderStateMixin {
   static const _poolSize = 4;
 
-  // Slow breathing halo for idle + active state
-  late final AnimationController _breath = AnimationController(
+  // Pulse animation — only runs when signal detected
+  late final AnimationController _pulse = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 2800),
-  )..repeat(reverse: true);
+    duration: const Duration(milliseconds: 900),
+  );
+
+  // Track whether signal is active
+  double _lastLevel = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.level.addListener(_onLevel);
+  }
+
+  void _onLevel() {
+    final lvl = widget.level.value;
+    if (lvl > 0.05 && _lastLevel <= 0.05) {
+      // Signal arrived — start pulsing
+      _pulse.repeat(reverse: true);
+    } else if (lvl <= 0.05 && _lastLevel > 0.05) {
+      // Signal gone — stop and reset
+      _pulse.stop();
+      _pulse.value = 0.0;
+    }
+    _lastLevel = lvl;
+  }
 
   @override
   void dispose() {
-    _breath.dispose();
+    widget.level.removeListener(_onLevel);
+    _pulse.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    const orbDiam = 110.0;
+    const orbDiam = 86.0;
 
     return LayoutBuilder(
       builder: (ctx, constraints) {
         final available = constraints.biggest.shortestSide;
-        return Stack(
-          alignment: Alignment.center,
-          children: [
-            // ── Sonar ripple rings (expand on each detected chant) ──
-            for (var i = 0; i < _poolSize; i++)
-              AnimatedBuilder(
-                animation: widget.pool[i],
-                builder: (ctx, child) {
-                  final raw = widget.pool[i].value;
-                  if (raw == 0.0) return const SizedBox.shrink();
-                  final t = Curves.easeOutCubic.transform(raw);
-                  final intensity = widget.slotIntensity[i];
-                  final maxR = (available * 0.5) * (0.55 + intensity * 0.45);
-                  final r = (orbDiam / 2) + (maxR - orbDiam / 2) * t;
-                  final opacity = ((1.0 - t) * (0.55 + intensity * 0.35))
-                      .clamp(0.0, 0.9);
-                  final strokeW = (3.5 - t * 2.5).clamp(0.8, 3.5);
-                  return CustomPaint(
-                    size: Size(r * 2, r * 2),
-                    painter: _RingPainter(
-                      radius: r,
-                      color: KvlColors.primary.withValues(alpha: opacity),
-                      strokeWidth: strokeW,
-                    ),
-                  );
-                },
-              ),
-
-            // ── Breathing halo layers (always visible) ──
-            AnimatedBuilder(
-              animation: _breath,
-              builder: (ctx, child) {
-                final b = Curves.easeInOut.transform(_breath.value);
-                final isRec = widget.recording;
-                return Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Outer halo
-                    _Halo(
-                      diam: orbDiam * (2.55 + b * (isRec ? 0.22 : 0.08)),
-                      opacity: isRec ? (0.13 + b * 0.10) : (0.06 + b * 0.04),
-                      strokeWidth: 1.2,
-                    ),
-                    // Mid halo
-                    _Halo(
-                      diam: orbDiam * (1.90 + b * (isRec ? 0.16 : 0.06)),
-                      opacity: isRec ? (0.20 + b * 0.14) : (0.09 + b * 0.05),
-                      strokeWidth: 1.5,
-                    ),
-                    // Inner halo
-                    _Halo(
-                      diam: orbDiam * (1.42 + b * (isRec ? 0.10 : 0.04)),
-                      opacity: isRec ? (0.30 + b * 0.18) : (0.13 + b * 0.07),
-                      strokeWidth: 2.0,
-                    ),
-                  ],
-                );
-              },
-            ),
-
-            // ── Ambient warm glow ──
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 500),
-              curve: Curves.easeOut,
-              width: orbDiam * 2.0,
-              height: orbDiam * 2.0,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    const Color(0xFFFFA552)
-                        .withValues(alpha: widget.recording ? 0.28 : 0.12),
-                    const Color(0xFFE8782A)
-                        .withValues(alpha: widget.recording ? 0.10 : 0.03),
-                    Colors.transparent,
-                  ],
-                  stops: const [0.0, 0.5, 1.0],
-                ),
-              ),
-            ),
-
-            // ── Reactive level bars (only while recording) ──
-            if (widget.recording)
-              IgnorePointer(
-                child: SizedBox.fromSize(
-                  size: Size(orbDiam * 2.6, orbDiam * 2.6),
-                  child: _LevelRing(level: widget.level, orbDiam: orbDiam),
-                ),
-              ),
-
-            // ── Premium orb button ──
-            GestureDetector(
-              onTap: widget.onTap,
-              child: Container(
-                width: orbDiam,
-                height: orbDiam,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: const RadialGradient(
-                    center: Alignment(-0.3, -0.4),
-                    radius: 1.0,
-                    colors: [
-                      Color(0xFFFFD49A),
-                      Color(0xFFFF9A4A),
-                      Color(0xFFD9622A),
-                      Color(0xFFAA3E10),
-                    ],
-                    stops: [0.0, 0.38, 0.72, 1.0],
+        return ValueListenableBuilder<double>(
+          valueListenable: widget.level,
+          builder: (ctx, lvl, child) {
+            final hasSignal = lvl > 0.05;
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                // ── Sonar ripple rings (fire on each detected chant) ──
+                for (var i = 0; i < _poolSize; i++)
+                  AnimatedBuilder(
+                    animation: widget.pool[i],
+                    builder: (ctx, _) {
+                      final raw = widget.pool[i].value;
+                      if (raw == 0.0) return const SizedBox.shrink();
+                      final t = Curves.easeOutCubic.transform(raw);
+                      final intensity = widget.slotIntensity[i];
+                      final maxR =
+                          (available * 0.5) * (0.55 + intensity * 0.45);
+                      final r = (orbDiam / 2) + (maxR - orbDiam / 2) * t;
+                      final opacity = ((1.0 - t) *
+                              (0.55 + intensity * 0.35))
+                          .clamp(0.0, 0.9);
+                      final strokeW =
+                          (3.5 - t * 2.5).clamp(0.8, 3.5);
+                      return CustomPaint(
+                        size: Size(r * 2, r * 2),
+                        painter: _RingPainter(
+                          radius: r,
+                          color: KvlColors.primary
+                              .withValues(alpha: opacity),
+                          strokeWidth: strokeW,
+                        ),
+                      );
+                    },
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFFB8521C).withValues(alpha: 0.55),
-                      blurRadius: 40,
-                      spreadRadius: 0,
-                      offset: const Offset(0, 16),
+
+                // ── Halo rings — pulse only when signal is active ──
+                if (hasSignal)
+                  AnimatedBuilder(
+                    animation: _pulse,
+                    builder: (ctx, _) {
+                      final b =
+                          Curves.easeInOut.transform(_pulse.value);
+                      return Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          _Halo(
+                            diam: orbDiam * (2.55 + b * 0.22),
+                            opacity: 0.13 + b * 0.10,
+                            strokeWidth: 1.2,
+                          ),
+                          _Halo(
+                            diam: orbDiam * (1.90 + b * 0.16),
+                            opacity: 0.20 + b * 0.14,
+                            strokeWidth: 1.5,
+                          ),
+                          _Halo(
+                            diam: orbDiam * (1.42 + b * 0.10),
+                            opacity: 0.30 + b * 0.18,
+                            strokeWidth: 2.0,
+                          ),
+                        ],
+                      );
+                    },
+                  )
+                else
+                  // Static faint rings when silent
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      _Halo(
+                          diam: orbDiam * 2.55,
+                          opacity: 0.06,
+                          strokeWidth: 1.2),
+                      _Halo(
+                          diam: orbDiam * 1.90,
+                          opacity: 0.09,
+                          strokeWidth: 1.5),
+                      _Halo(
+                          diam: orbDiam * 1.42,
+                          opacity: 0.13,
+                          strokeWidth: 2.0),
+                    ],
+                  ),
+
+                // ── Ambient glow — brightens only when signal active ──
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
+                  width: orbDiam * 2.0,
+                  height: orbDiam * 2.0,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        const Color(0xFFFFA552)
+                            .withValues(alpha: hasSignal ? 0.32 : 0.0),
+                        const Color(0xFFE8782A)
+                            .withValues(alpha: hasSignal ? 0.12 : 0.0),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.5, 1.0],
                     ),
-                    BoxShadow(
-                      color: KvlColors.primary.withValues(alpha: 0.35),
-                      blurRadius: 20,
-                      spreadRadius: -2,
-                      offset: const Offset(0, 6),
-                    ),
-                    BoxShadow(
-                      color: Colors.white.withValues(alpha: 0.60),
-                      blurRadius: 1,
-                      spreadRadius: 0,
-                      offset: const Offset(-3, -4),
-                    ),
-                  ],
+                  ),
                 ),
-                alignment: Alignment.center,
-                child: Icon(
-                  widget.recording ? Icons.stop_rounded : Icons.mic_rounded,
-                  color: Colors.white.withValues(alpha: 0.95),
-                  size: orbDiam * 0.44,
+
+                // ── Level bars — only while signal present ──
+                if (hasSignal)
+                  IgnorePointer(
+                    child: SizedBox.fromSize(
+                      size: Size(orbDiam * 2.6, orbDiam * 2.6),
+                      child: _LevelRing(
+                          level: widget.level, orbDiam: orbDiam),
+                    ),
+                  ),
+
+                // ── Orb button ──
+                GestureDetector(
+                  onTap: widget.onTap,
+                  child: Container(
+                    width: orbDiam,
+                    height: orbDiam,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const RadialGradient(
+                        center: Alignment(-0.3, -0.4),
+                        radius: 1.0,
+                        colors: [
+                          Color(0xFFFFD49A),
+                          Color(0xFFFF9A4A),
+                          Color(0xFFD9622A),
+                          Color(0xFFAA3E10),
+                        ],
+                        stops: [0.0, 0.38, 0.72, 1.0],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFB8521C)
+                              .withValues(alpha: 0.55),
+                          blurRadius: 40,
+                          spreadRadius: 0,
+                          offset: const Offset(0, 16),
+                        ),
+                        BoxShadow(
+                          color: KvlColors.primary
+                              .withValues(alpha: 0.35),
+                          blurRadius: 20,
+                          spreadRadius: -2,
+                          offset: const Offset(0, 6),
+                        ),
+                        BoxShadow(
+                          color: Colors.white.withValues(alpha: 0.60),
+                          blurRadius: 1,
+                          spreadRadius: 0,
+                          offset: const Offset(-3, -4),
+                        ),
+                      ],
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      widget.recording
+                          ? Icons.stop_rounded
+                          : Icons.mic_rounded,
+                      color: Colors.white.withValues(alpha: 0.95),
+                      size: orbDiam * 0.44,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         );
       },
     );

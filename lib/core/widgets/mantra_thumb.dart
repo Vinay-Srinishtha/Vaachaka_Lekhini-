@@ -1,15 +1,16 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/typography.dart';
 
-/// Circular thumbnail for a mantra. Gradient is derived deterministically
-/// from the glyph's first code-unit so each mantra is consistently
-/// coloured without needing an explicit palette field.
+/// Circular thumbnail for a mantra. Shows [imageUrl] when provided,
+/// otherwise falls back to a deterministic gradient circle with the [glyph].
 class MantraThumb extends StatelessWidget {
-  const MantraThumb({super.key, required this.glyph, this.size = 42});
+  const MantraThumb({super.key, required this.glyph, this.size = 42, this.imageUrl});
 
   final String glyph;
   final double size;
+  final String? imageUrl;
 
   static const _gradients = <List<Color>>[
     [Color(0xFFF4A056), Color(0xFFC97328)], // saffron
@@ -24,7 +25,8 @@ class MantraThumb extends StatelessWidget {
   Widget build(BuildContext context) {
     final idx = glyph.isEmpty ? 0 : glyph.codeUnitAt(0) % _gradients.length;
     final colors = _gradients[idx];
-    return Container(
+
+    final glyphCircle = Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
@@ -49,6 +51,19 @@ class MantraThumb extends StatelessWidget {
           color: Colors.white,
           fontWeight: FontWeight.w600,
         ),
+      ),
+    );
+
+    if (imageUrl == null || imageUrl!.isEmpty) return glyphCircle;
+
+    return ClipOval(
+      child: CachedNetworkImage(
+        imageUrl: imageUrl!,
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        placeholder: (_, _) => glyphCircle,
+        errorWidget: (_, _, _) => glyphCircle,
       ),
     );
   }

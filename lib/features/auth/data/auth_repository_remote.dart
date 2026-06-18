@@ -26,17 +26,12 @@ class AuthRepositoryRemote implements AuthRepository {
     required Box<dynamic> sessionBox,
   })  : _auth = authService,
         _sessionBox = sessionBox {
-    // Seed the broadcast stream from whatever is already in secure storage.
+    // Seed the broadcast stream from whatever is already in Hive.
+    // NOTE: do NOT listen to accountStream for null here — bootstrap() emits
+    // null when secure storage is empty (common after Android app updates),
+    // which would race with the router's initial read and spuriously log the
+    // user out. Explicit logout() handles the cleanup correctly.
     _controller.add(_readSession());
-
-    // Forward sign-in / sign-out events from AuthService → our session stream.
-    _auth.accountStream.listen((account) {
-      if (account == null) {
-        _sessionBox.delete(KvlKeys.currentSession);
-        _controller.add(null);
-      }
-      // sign-in is handled inside verifyOtp after we have the full session shape
-    });
   }
 
   final AuthService _auth;

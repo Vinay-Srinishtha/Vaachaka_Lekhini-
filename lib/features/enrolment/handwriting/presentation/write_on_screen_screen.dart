@@ -49,9 +49,10 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
   late SignatureController _controller = _newController(KvlColors.ink);
 
   bool _saving = false;
-  bool _checking = false; // true while running handwriting comparison
+  bool _checking = false;
   Color _penColor = KvlColors.ink;
   int _writingCount = 0;
+  Timer? _idleTimer;
 
   /// Language the user chose for this writing session.
   /// null = not yet chosen (picker not completed).
@@ -74,14 +75,26 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
       _penColor = color;
       _controller = _newController(color, points: points);
     });
+    _controller.addListener(_onCanvasChanged);
     oldController.dispose();
+  }
+
+  // ── Auto-submit idle timer ─────────────────────────────────────────────────
+
+  void _onCanvasChanged() {
+    _idleTimer?.cancel();
+    if (_controller.isEmpty || _checking || _saving) return;
+    _idleTimer = Timer(
+      const Duration(milliseconds: 1500),
+      _submitOne,
+    );
   }
 
   @override
   void initState() {
     super.initState();
     _setScreenOrientation();
-    // Auto-open language picker on sample-collection screen (no programId).
+    _controller.addListener(_onCanvasChanged);
     if (widget.programId == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _showLanguagePicker();
@@ -117,6 +130,7 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
 
   @override
   void dispose() {
+    _idleTimer?.cancel();
     _controller.dispose();
     SystemChrome.setPreferredOrientations(const [
       DeviceOrientation.portraitUp,
@@ -142,7 +156,6 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
   }
 
   Future<void> _validateAndSubmit() async {
-    // Export what the user just wrote
     final png = await _controller.toPngBytes();
     if (png == null) return;
 
@@ -155,7 +168,9 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
         return;
       }
 
-      // Find the most recent enrolled reference for this mantra
+      final cfg = ref.read(remoteConfigProvider).value ?? RemoteConfig.empty;
+      final sampleN = cfg.intFlag(RemoteConfigKeys.handwritingSampleCount, fallback: 3);
+
       final assets = await ref
           .read(handwritingRepositoryProvider)
           .listForProfile(profile.id);
@@ -168,38 +183,31 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
           .toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-      // ── No reference sample stored ─────────────────────────────────────────
-      if (candidates.isEmpty) {
-        if (mounted) _showNoReferenceBanner();
-        setState(() => _checking = false);
-        return;
-      }
-
-      // Reference file might have been deleted (reinstall / storage clear)
-      final refFile = File(candidates.first.filePath!);
-      if (!refFile.existsSync()) {
-        if (mounted) _showNoReferenceBanner();
-        setState(() => _checking = false);
-        return;
-      }
-
-      // ── Pick a random reference from the pool ─────────────────────────────
       final validCandidates = candidates
           .where((a) => File(a.filePath!).existsSync())
           .toList();
-      if (validCandidates.isEmpty) {
-        if (mounted) _showNoReferenceBanner();
+
+      // ── Sampling phase: first N writings become reference samples ──────────
+      if (validCandidates.length < sampleN) {
+        await ref.read(handwritingRepositoryProvider).savePng(
+          profileId: profile.id,
+          mantraId: widget.mantraId,
+          bytes: png,
+          mode: HandwritingMode.writeOnScreen,
+        );
+        final saved = validCandidates.length + 1;
         setState(() => _checking = false);
+        _controller.clear();
+        if (mounted) _showSampleSavedFeedback(saved, sampleN);
         return;
       }
+
+      // ── Compare phase: score against a random sample from the pool ─────────
       final ref_ = validCandidates[Random().nextInt(validCandidates.length)];
       final refBytes = await File(ref_.filePath!).readAsBytes();
       final score = await HandwritingComparator.compare(png, refBytes);
 
-      // Threshold from RemoteConfig — default 20 (= 20%)
-      final cfg = ref.read(remoteConfigProvider).value ?? RemoteConfig.empty;
-      final thresholdPct =
-          cfg.intFlag(RemoteConfigKeys.minHandwritingAccuracy, fallback: 20);
+      final thresholdPct = cfg.intFlag(RemoteConfigKeys.minHandwritingAccuracy, fallback: 20);
       final threshold = thresholdPct / 100.0;
 
       if (score >= threshold) {
@@ -258,6 +266,33 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
         label: '✕',
         textColor: Colors.white,
         onPressed: () => ScaffoldMessenger.of(context).clearSnackBars(),
+      ),
+    ));
+  }
+
+  void _showSampleSavedFeedback(int saved, int total) {
+    final isDone = saved >= total;
+    _showSnack(SnackBar(
+      duration: Duration(milliseconds: isDone ? 2500 : 1800),
+      backgroundColor: isDone ? const Color(0xFF15803D) : KvlColors.primary,
+      behavior: SnackBarBehavior.floating,
+      content: Row(
+        children: [
+          Icon(
+            isDone ? Icons.check_circle_rounded : Icons.edit_rounded,
+            color: Colors.white,
+            size: 18,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              isDone
+                  ? 'Samples collected! Auto-checking your writing now.'
+                  : 'Sample $saved/$total saved — keep writing to build your style.',
+              style: const TextStyle(color: Colors.white, fontSize: 13),
+            ),
+          ),
+        ],
       ),
     ));
   }
@@ -693,7 +728,7 @@ class _SampleLandscapeCanvas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = compact ? 210.0 : 250.0;
+    final size = compact ? 200.0 : 240.0;
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -701,14 +736,14 @@ class _SampleLandscapeCanvas extends StatelessWidget {
           Positioned.fill(
             left: compact ? 8 : 12,
             right: compact ? 8 : 12,
-            top: compact ? 44 : 54,
+            top: compact ? 28 : 36,
             bottom: compact ? 8 : 12,
             child: Center(
               child: FittedBox(
                 fit: BoxFit.contain,
                 child: SizedBox(
                   width: compact ? 1060 : 1180,
-                  height: compact ? 320 : 340,
+                  height: compact ? 380 : 420,
                   child: _DottedGuideText(
                     text: guide,
                     script: guideScript,
@@ -1288,7 +1323,7 @@ class _ProtoWritingCanvas extends StatelessWidget {
               fit: BoxFit.contain,
               child: SizedBox(
                 width: compact ? 1180 : 1320,
-                height: compact ? 320 : 340,
+                height: compact ? 380 : 420,
                 child: _DottedGuideText(
                   text: guide,
                   script: guideScript,
@@ -1339,14 +1374,14 @@ class _DottedGuideText extends StatelessWidget {
     final fillOpacity = (opacity * 0.14).clamp(0.0, 1.0).toStringAsFixed(2);
     final rimOpacity  = (opacity * 0.70).clamp(0.0, 1.0).toStringAsFixed(2);
     final svg = '''
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="340" viewBox="0 0 1400 340">
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="420" viewBox="0 0 1400 420">
   <defs>
     <pattern id="dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
       <circle cx="10" cy="10" r="5.5" fill="#CC6A2B" fill-opacity="$dotOpacity"/>
     </pattern>
   </defs>
   <!-- layer 1: ghost fill so character shape is always visible -->
-  <text x="700" y="260" text-anchor="middle"
+  <text x="700" y="320" text-anchor="middle"
     font-family="$fontFamily"
     font-size="$fontSize"
     font-weight="600"
@@ -1354,14 +1389,14 @@ class _DottedGuideText extends StatelessWidget {
     fill-opacity="$fillOpacity"
     stroke="none">$escapedText</text>
   <!-- layer 2: round-dot pattern fill -->
-  <text x="700" y="260" text-anchor="middle"
+  <text x="700" y="320" text-anchor="middle"
     font-family="$fontFamily"
     font-size="$fontSize"
     font-weight="600"
     fill="url(#dots)"
     stroke="none">$escapedText</text>
   <!-- layer 3: crisp outline so every stroke edge is clear -->
-  <text x="700" y="260" text-anchor="middle"
+  <text x="700" y="320" text-anchor="middle"
     font-family="$fontFamily"
     font-size="$fontSize"
     font-weight="600"

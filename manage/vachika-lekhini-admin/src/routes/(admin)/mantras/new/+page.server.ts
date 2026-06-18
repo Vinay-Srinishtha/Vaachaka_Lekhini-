@@ -51,6 +51,8 @@ export const actions: Actions = {
 				pronunciationUrl: parsed.pronunciationUrl ?? null,
 				previewImageUrl: parsed.previewImageUrl ?? null,
 				imageUrl: parsed.imageUrl ?? null,
+				shareImageUrl: parsed.shareImageUrl ?? null,
+				shareText: parsed.shareText ?? null,
 				milestones: parsed.milestones ?? undefined,
 				isActive: parsed.isActive,
 				sortOrder: parsed.sortOrder

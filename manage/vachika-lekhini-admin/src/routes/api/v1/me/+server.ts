@@ -26,10 +26,12 @@ export const GET: RequestHandler = async (event) => {
 					id: true,
 					displayName: true,
 					relation: true,
+					gender: true,
+					birthYear: true,
+					motherTongue: true,
 					avatarKey: true,
 					language: true,
 					mantraLanguage: true,
-					birthYear: true,
 					preferences: true,
 					isPrimary: true,
 					rewardPointsBalance: true,
@@ -50,7 +52,7 @@ export const GET: RequestHandler = async (event) => {
 							longestStreak: true,
 							lastActiveDate: true,
 							updatedAt: true,
-							mantra: { select: { slug: true } }
+							mantra: { select: { slug: true, shareImageUrl: true, shareText: true } }
 						}
 					},
 					rewardEvents: {

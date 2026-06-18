@@ -9,6 +9,8 @@ import '../core/remote_config/remote_config_keys.dart';
 import '../core/navigation/back_navigation.dart';
 import '../core/theme/theme.dart';
 import '../core/utils/indian_number_format.dart';
+import '../core/widgets/kvl_profile_avatar.dart';
+import '../features/profiles/domain/profile.dart';
 import '../core/widgets/widgets.dart';
 import '../features/auth/presentation/create_account_screen.dart';
 import '../features/auth/presentation/otp_login_screen.dart';
@@ -274,8 +276,8 @@ class _ShellPageState extends ConsumerState<_ShellPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(storeItemsProvider);
-      ref.read(leaderboardProvider(LeaderboardSort.streak));
-      ref.read(leaderboardProvider(LeaderboardSort.totalChants));
+      ref.read(leaderboardProvider(const LeaderboardFilter(sort: LeaderboardSort.streak)));
+      ref.read(leaderboardProvider(const LeaderboardFilter(sort: LeaderboardSort.totalChants)));
       _checkLaunchNotification();
     });
     notificationTapRoute.addListener(_onNotificationTap);
@@ -373,6 +375,7 @@ class _ShellPageState extends ConsumerState<_ShellPage> {
                     : null,
                 trailing: _AvatarChip(
                   initial: initial,
+                  profileId: profile?.id ?? '',
                   onTap: () => context.push(KvlRoute.profile),
                 ),
               ),
@@ -439,47 +442,43 @@ class _RewardHistoryChip extends StatelessWidget {
   }
 }
 
+double _profileCompletion(Profile? profile) {
+  if (profile == null) return 0.0;
+  int filled = 0;
+  const total = 5;
+  if (profile.name.trim().isNotEmpty) filled++;
+  if (profile.gender != null) filled++;
+  if (profile.birthYear != null) filled++;
+  if (profile.motherTongue != null) filled++;
+  if (profile.avatarSeed != null && profile.avatarSeed!.isNotEmpty) filled++;
+  return filled / total;
+}
+
 class _AvatarChip extends ConsumerWidget {
-  const _AvatarChip({required this.initial, required this.onTap});
+  const _AvatarChip({required this.initial, required this.onTap, required this.profileId});
   final String initial;
+  final String profileId;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final programs = ref.watch(programsForActiveProfileProvider).value ?? const [];
-    final completed = programs.where((p) => p.isGoalReached).length;
-    final total = programs.length;
-
-    final avatar = Container(
-      width: 36,
-      height: 36,
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFFFB572), KvlColors.primary],
-        ),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        initial,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
+    final profile = ref.watch(activeProfileProvider).value;
+    final fraction = _profileCompletion(profile);
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(22),
-      child: MilestoneRing(
-        completed: completed,
-        total: total,
-        strokeWidth: 2.5,
-        gap: 2.0,
-        child: avatar,
+      borderRadius: BorderRadius.circular(26),
+      child: MilestoneRing.fraction(
+        fraction: fraction,
+        strokeWidth: 2,
+        gap: 0.5,
+        child: KvlProfileAvatar(
+          profileId: profileId,
+          initials: initial,
+          size: 36,
+          textSize: 14,
+          gradientSeed: profileId,
+        ),
       ),
     );
   }

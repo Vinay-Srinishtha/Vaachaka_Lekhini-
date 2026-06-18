@@ -43,6 +43,9 @@ dependencies:
   # --- Handwriting ---
   signature: ^6.3.0
 
+  # --- Media ---
+  image_picker: ^1.1.2
+
   # --- Notifications, share, permissions ---
   # firebase_core and firebase_messaging are intentionally omitted until
   # google-services.json / GoogleService-Info.plist are added to the project.

@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 
 import '../theme/theme.dart';
 
-/// Thin arc ring drawn around a child widget reflecting milestone progress.
-/// [completed] / [total] drives the sweep. Only the child is interactive —
-/// the ring itself is purely decorative (IgnorePointer).
+/// Thin arc ring drawn around a child widget.
+/// Use [MilestoneRing] for integer completed/total, or
+/// [MilestoneRing.fraction] for a direct 0.0–1.0 value.
 class MilestoneRing extends StatelessWidget {
   const MilestoneRing({
     super.key,
@@ -15,10 +15,21 @@ class MilestoneRing extends StatelessWidget {
     required this.child,
     this.strokeWidth = 2.5,
     this.gap = 3.0,
-  });
+  }) : _fraction = null;
+
+  const MilestoneRing.fraction({
+    super.key,
+    required double fraction,
+    required this.child,
+    this.strokeWidth = 2.5,
+    this.gap = 3.0,
+  })  : completed = 0,
+        total = 0,
+        _fraction = fraction;
 
   final int completed;
   final int total;
+  final double? _fraction;
   final Widget child;
   final double strokeWidth;
   /// Extra space between the ring and the child.
@@ -26,7 +37,9 @@ class MilestoneRing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final progress = (total > 0) ? (completed / total).clamp(0.0, 1.0) : 0.0;
+    final progress = _fraction != null
+        ? _fraction.clamp(0.0, 1.0)
+        : (total > 0 ? (completed / total).clamp(0.0, 1.0) : 0.0);
 
     final inset = -(strokeWidth + gap);
 

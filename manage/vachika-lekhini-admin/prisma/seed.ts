@@ -2,6 +2,7 @@ import 'dotenv/config';
 import bcrypt from 'bcryptjs';
 import { PrismaClient } from '../src/generated/prisma/client.js';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { DEFAULT_PERMISSIONS } from '../src/lib/permissions.js';
 
 const prisma = new PrismaClient({
 	adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! })
@@ -143,7 +144,17 @@ async function main() {
 		console.log(`  ✔ admin "${username}" created`);
 	}
 
-		// No demo accounts — real users register via the Flutter app.
+	console.log('▶ Seeding role permission configs…');
+	for (const [role, permissions] of Object.entries(DEFAULT_PERMISSIONS)) {
+		await (prisma as any).adminRoleConfig.upsert({
+			where: { role },
+			create: { role, permissions },
+			update: {}  // don't overwrite customised permissions on re-seed
+		});
+	}
+	console.log(`  ✔ ${Object.keys(DEFAULT_PERMISSIONS).length} role configs seeded`);
+
+	// No demo accounts — real users register via the Flutter app.
 
 	console.log('▶ Seeding FAQs…');
 	const faqs = [

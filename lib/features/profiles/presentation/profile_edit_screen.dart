@@ -171,9 +171,10 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
             // Relation
             _buildLabel('Relation'),
             const SizedBox(height: 4),
-            _ChipSelector<FamilyRelation>(
+            _EnumDropdown<FamilyRelation>(
               options: FamilyRelation.values,
               selected: _relation,
+              hint: 'Select relation',
               label: (r) => r.label,
               onSelected: (r) => setState(() => _relation = r),
             ),
@@ -182,9 +183,10 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
             // Gender
             _buildLabel('Gender'),
             const SizedBox(height: 4),
-            _ChipSelector<Gender>(
-              options: Gender.values,
+            _EnumDropdown<Gender>(
+              options: Gender.values.where((g) => g != Gender.other).toList(),
               selected: _gender,
+              hint: 'Select gender',
               label: (g) => g.label,
               onSelected: (g) => setState(() => _gender = g),
             ),
@@ -298,48 +300,49 @@ class _SectionHeader extends StatelessWidget {
       );
 }
 
-class _ChipSelector<T> extends StatelessWidget {
-  const _ChipSelector({
+class _EnumDropdown<T> extends StatelessWidget {
+  const _EnumDropdown({
     required this.options,
     required this.selected,
+    required this.hint,
     required this.label,
     required this.onSelected,
   });
 
   final List<T> options;
   final T? selected;
+  final String hint;
   final String Function(T) label;
   final ValueChanged<T> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: options.map((o) {
-        final isSelected = o == selected;
-        return InkWell(
-          onTap: () => onSelected(o),
-          borderRadius: KvlRadius.brSM,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-            decoration: BoxDecoration(
-              color: isSelected ? KvlColors.primary : KvlColors.surface,
-              borderRadius: KvlRadius.brSM,
-              border: Border.all(
-                color: isSelected ? KvlColors.primary : KvlColors.border,
-              ),
-            ),
-            child: Text(
-              label(o),
-              style: KvlText.ui(13, FontWeight.w500).copyWith(
-                color: isSelected ? Colors.white : KvlColors.ink,
-              ),
-            ),
+    return Container(
+      decoration: BoxDecoration(
+        color: KvlColors.surface,
+        borderRadius: KvlRadius.brMD,
+        border: Border.all(color: KvlColors.border),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<T>(
+          value: selected,
+          hint: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Text(hint, style: KvlText.muted(13)),
           ),
-        );
-      }).toList(),
+          isExpanded: true,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          borderRadius: KvlRadius.brMD,
+          style: KvlText.body(),
+          items: options.map((o) {
+            return DropdownMenuItem<T>(
+              value: o,
+              child: Text(label(o), style: KvlText.body()),
+            );
+          }).toList(),
+          onChanged: (v) { if (v != null) onSelected(v); },
+        ),
+      ),
     );
   }
 }

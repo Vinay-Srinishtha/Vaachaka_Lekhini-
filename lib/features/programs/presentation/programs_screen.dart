@@ -34,10 +34,11 @@ class _Body extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final overallProgress = programs.isEmpty
+    final totalTarget = programs.fold<int>(0, (a, p) => a + p.targetWritings);
+    final overallProgress = (programs.isEmpty || totalTarget == 0)
         ? 0.0
-        : programs.map((p) => p.progressFraction).reduce((a, b) => a + b) /
-              programs.length;
+        : (programs.fold<int>(0, (a, p) => a + p.totalProgress) / totalTarget)
+            .clamp(0.0, 1.0);
     final totalChants = programs.fold<int>(0, (a, p) => a + p.totalProgress);
     final daysAvg = programs.isEmpty
         ? 0

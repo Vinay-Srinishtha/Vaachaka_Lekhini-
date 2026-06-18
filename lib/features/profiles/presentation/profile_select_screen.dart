@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/providers.dart';
 import '../../../app/router.dart';
 import '../../../core/theme/theme.dart';
+import '../../../core/widgets/kvl_profile_avatar.dart';
 import '../../../l10n/l10n.dart';
 import '../domain/profile.dart';
 
@@ -20,12 +21,7 @@ class ProfileSelectScreen extends ConsumerWidget {
     return Scaffold(
       body: DecoratedBox(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF1A1035), Color(0xFF2D1B6B), Color(0xFF1A2C50)],
-            stops: [0.0, 0.55, 1.0],
-          ),
+          gradient: KvlColors.welcomeGradient,
         ),
         child: SafeArea(
           child: Padding(
@@ -200,31 +196,23 @@ class _ProfileTile extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: avatarSize,
-            height: avatarSize,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: _avatarGradient(profile),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: .38),
-                width: 1.4,
+          KvlProfileAvatar(
+            profileId: profile.id,
+            initials: profile.initials,
+            size: avatarSize,
+            textSize: compact ? 34 : 40,
+            gradientSeed: profile.avatarSeed ?? profile.id,
+            border: Border.all(
+              color: Colors.white.withValues(alpha: .38),
+              width: 1.4,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: .22),
+                blurRadius: 18,
+                offset: const Offset(0, 9),
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: .22),
-                  blurRadius: 18,
-                  offset: const Offset(0, 9),
-                ),
-              ],
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              profile.initials,
-              style: KvlText.title(
-                compact ? 34 : 40,
-              ).copyWith(color: Colors.white),
-            ),
+            ],
           ),
           SizedBox(height: compact ? 10 : 14),
           SizedBox(
@@ -245,23 +233,6 @@ class _ProfileTile extends StatelessWidget {
     );
   }
 
-  LinearGradient _avatarGradient(Profile profile) {
-    final seed = (profile.avatarSeed ?? profile.id).hashCode.abs();
-    const palettes = [
-      [Color(0xFF6C63FF), Color(0xFF3B28CC)], // violet
-      [Color(0xFF0EA5E9), Color(0xFF0369A1)], // sky blue
-      [Color(0xFF10B981), Color(0xFF065F46)], // emerald
-      [Color(0xFFEC4899), Color(0xFF9D174D)], // rose
-      [Color(0xFFF59E0B), Color(0xFFB45309)], // amber (not orange)
-      [Color(0xFF8B5CF6), Color(0xFF5B21B6)], // purple
-    ];
-    final colors = palettes[seed % palettes.length];
-    return LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: colors,
-    );
-  }
 }
 
 class _AddMemberTile extends StatelessWidget {

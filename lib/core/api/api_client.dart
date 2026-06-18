@@ -131,6 +131,9 @@ class _AuthInterceptor extends Interceptor {
       return handler.resolve(retried);
     } on DioException catch (refreshErr) {
       if (kDebugMode) debugPrint('[api] refresh failed: ${refreshErr.message}');
+      // Refresh token is expired or invalid — wipe storage so the router
+      // redirects to the login screen cleanly instead of looping on 401.
+      await storage.clear();
     } finally {
       ApiClient._refreshInFlight = false;
     }

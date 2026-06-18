@@ -18,7 +18,8 @@ import {
 	Sliders,
 	Flag,
 	MessageCircleHeart,
-	Gift
+	Gift,
+	KeyRound
 } from '@lucide/svelte';
 export interface NavItem {
 	href: string;
@@ -62,4 +63,5 @@ export const NAV_ITEMS: NavItem[] = [
 	{ href: '/otp-log', label: 'OTP Log', icon: MessageSquareDot, section: 'otp-log', group: 'Audit' },
 	{ href: '/devices', label: 'Devices', icon: Smartphone, section: 'devices', group: 'Audit' },
 	{ href: '/admins', label: 'Admins', icon: ShieldCheck, section: 'admins', group: 'Audit' },
+	{ href: '/roles', label: 'Roles', icon: KeyRound, section: 'roles', group: 'Audit' },
 ];

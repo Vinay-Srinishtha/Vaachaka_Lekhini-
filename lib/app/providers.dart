@@ -219,6 +219,7 @@ final accountHydrationProvider = Provider<void>((ref) {
         final memberId = member['id'] as String?;
         if (memberId == null) continue;
         final isPrimary = member['is_primary'] == true;
+        final genderRaw = member['gender'] as String?;
         final profile = Profile(
           id: memberId,
           userId: accountId,
@@ -227,8 +228,11 @@ final accountHydrationProvider = Provider<void>((ref) {
               ? FamilyRelation.me
               : _familyRelationFromServer(
                   member['relation'] as String?,
-                  member['gender'] as String?,
+                  genderRaw,
                 ),
+          gender: Gender.fromServer(genderRaw),
+          birthYear: (member['birth_year'] as num?)?.toInt(),
+          motherTongue: member['mother_tongue'] as String?,
           avatarSeed: member['avatar_key'] as String?,
           language: member['language'] as String? ?? 'en',
           mantraLanguage: member['mantra_language'] as String? ?? 'hi',
@@ -523,7 +527,7 @@ final activeProfileProvider = StreamProvider<Profile?>((ref) async* {
 // Hive cache keys for the cache-first remote providers below. Stored in the
 // shared cacheBox() as decoded JSON (same approach as the mantra catalogue).
 const _kStoreCache = 'remote.store.payload';
-const _kLeaderboardCachePrefix = 'remote.leaderboard.';
+const _kLeaderboardCachePrefix = 'remote.leaderboard.v2.';
 const _kStatsCachePrefix = 'remote.stats.';
 
 /// Live store catalogue from /api/v1/store — cache-first.
@@ -630,41 +634,71 @@ final faqsProvider = FutureProvider<List<({String question, String answer})>>((r
   }
 });
 
-/// App-wide settings (privacy policy, about app, logo URL) from /api/v1/app-settings.
-final appSettingsProvider =
-    FutureProvider<({String privacyPolicy, String? aboutApp, String? logoUrl, String inviteHost})>((ref) async {
+/// App-wide settings from /api/v1/app-settings.
+final appSettingsProvider = FutureProvider<AppSettings>((ref) async {
   try {
     final api = ref.watch(apiClientProvider);
     final res = await api.dio.get<Map<String, dynamic>>('/api/v1/app-settings');
     final d = res.data ?? <String, dynamic>{};
-    return (
+    return AppSettings(
       privacyPolicy: d['privacy_policy'] as String? ?? '',
       aboutApp: (d['about_app'] as String?)?.isNotEmpty == true ? d['about_app'] as String : null,
       logoUrl: d['app_logo_url'] as String?,
       inviteHost: (d['invite_host'] as String?)?.isNotEmpty == true
           ? d['invite_host'] as String
           : 'vaachakalekhini.com',
+      appDownloadLink: (d['app_download_link'] as String?)?.isNotEmpty == true
+          ? d['app_download_link'] as String
+          : null,
+      shareQuoteImageUrl: (d['share_quote_image_url'] as String?)?.isNotEmpty == true
+          ? d['share_quote_image_url'] as String
+          : null,
+      shareQuoteText: (d['share_quote_text'] as String?)?.isNotEmpty == true
+          ? d['share_quote_text'] as String
+          : null,
     );
   } catch (_) {
-    return (
+    return const AppSettings(
       privacyPolicy: '',
       aboutApp: null,
       logoUrl: null,
       inviteHost: 'vaachakalekhini.com',
+      appDownloadLink: null,
+      shareQuoteImageUrl: null,
+      shareQuoteText: null,
     );
   }
 });
+
+class AppSettings {
+  const AppSettings({
+    required this.privacyPolicy,
+    required this.aboutApp,
+    required this.logoUrl,
+    required this.inviteHost,
+    required this.appDownloadLink,
+    required this.shareQuoteImageUrl,
+    required this.shareQuoteText,
+  });
+  final String privacyPolicy;
+  final String? aboutApp;
+  final String? logoUrl;
+  final String inviteHost;
+  final String? appDownloadLink;
+  final String? shareQuoteImageUrl;
+  final String? shareQuoteText;
+}
 
 /// Real leaderboard from /api/v1/leaderboard (Bearer required) — cache-first.
 /// Emits the last cached board for this sort instantly (no spinner on return
 /// visits or when offline), then refreshes. Never throws: an error with no
 /// cache yields an empty list so the Community screen shows its empty state.
 final leaderboardProvider =
-    StreamProvider.family<List<Friend>, LeaderboardSort>((ref, sort) async* {
+    StreamProvider.family<List<Friend>, LeaderboardFilter>((ref, filter) async* {
       final box = cacheBox();
       final sortParam =
-          sort == LeaderboardSort.streak ? 'streak' : 'total_chants';
-      final cacheKey = '$_kLeaderboardCachePrefix$sortParam';
+          filter.sort == LeaderboardSort.streak ? 'streak' : 'total_chants';
+      final cacheKey = '$_kLeaderboardCachePrefix${sortParam}_${filter.mantraId ?? 'all'}';
 
       List<Friend> parse(dynamic raw) =>
           ((raw as List<dynamic>?) ?? const []).map((e) {
@@ -672,7 +706,8 @@ final leaderboardProvider =
             return Friend(
               id: m['id'] as String,
               name: m['name'] as String,
-              streakDays: (m['streak_days'] as num?)?.toInt() ?? 0,
+              longestStreak: (m['longest_streak'] as num?)?.toInt() ?? 0,
+              currentStreak: (m['current_streak'] as num?)?.toInt() ?? 0,
               totalChants: (m['total_chants'] as num?)?.toInt() ?? 0,
               isSelf: m['is_self'] == true,
               streakActive: m['streak_active'] == true,
@@ -690,13 +725,18 @@ final leaderboardProvider =
 
       try {
         final api = ref.watch(apiClientProvider);
+        final mantraParam = filter.mantraId != null
+            ? '&mantra_id=${filter.mantraId}'
+            : '';
         final res = await api.dio.get<Map<String, dynamic>>(
-          '/api/v1/leaderboard?sort=$sortParam',
+          '/api/v1/leaderboard?sort=$sortParam$mantraParam',
         );
         final entries = (res.data?['entries'] as List<dynamic>?) ?? const [];
         await box.put(cacheKey, entries);
         yield parse(entries);
-      } catch (_) {
+      } catch (e, st) {
+        // ignore: avoid_print
+        print('[leaderboard] fetch error: $e\n$st');
         if (cached == null) yield const <Friend>[];
       }
     });

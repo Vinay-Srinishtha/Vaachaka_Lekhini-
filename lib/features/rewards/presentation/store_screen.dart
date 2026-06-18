@@ -86,6 +86,8 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       children: [
         _PromoBanner(),
         const SizedBox(height: KvlSpacing.md),
+        const _EarnGuide(),
+        const SizedBox(height: KvlSpacing.md),
         KvlInput(
           hint: context.l10n.searchRewards,
           prefix: const Icon(
@@ -165,6 +167,218 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
             ),
         ],
       ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// How to earn points — collapsible guide (mirrors profile screen's version)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _EarnGuide extends ConsumerStatefulWidget {
+  const _EarnGuide();
+
+  @override
+  ConsumerState<_EarnGuide> createState() => _EarnGuideState();
+}
+
+class _EarnGuideState extends ConsumerState<_EarnGuide>
+    with SingleTickerProviderStateMixin {
+  bool _expanded = false;
+  late final AnimationController _ctrl;
+  late final Animation<double> _sizeFactor;
+  late final Animation<double> _iconTurn;
+
+  static const _rules = [
+    (icon: Icons.celebration_rounded,           label: 'Joining bonus',              pts: 100, note: 'One-time, on sign-up',   earnedKey: 'joining'),
+    (icon: Icons.person_rounded,                label: 'Complete your profile',       pts: 50,  note: 'One-time bonus',         earnedKey: ''),
+    (icon: Icons.auto_awesome_rounded,          label: 'Every 11 chants or writings', pts: 1,   note: 'Per 11 count batch',     earnedKey: ''),
+    (icon: Icons.local_fire_department_rounded, label: '7-day continuous streak',     pts: 50,  note: 'Per week milestone',     earnedKey: ''),
+    (icon: Icons.group_add_rounded,             label: 'Invite a friend',             pts: 50,  note: 'When they join',         earnedKey: ''),
+    (icon: Icons.card_giftcard_rounded,         label: 'Join via referral link',      pts: 50,  note: 'Extra on sign-up',       earnedKey: ''),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    );
+    _sizeFactor = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
+    _iconTurn = Tween<double>(begin: 0, end: 0.5).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _toggle() {
+    setState(() => _expanded = !_expanded);
+    _expanded ? _ctrl.forward() : _ctrl.reverse();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return KvlCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: [
+          InkWell(
+            onTap: _toggle,
+            borderRadius: KvlRadius.brLG,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: KvlSpacing.md,
+                vertical: KvlSpacing.md,
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.card_giftcard_rounded,
+                      color: KvlColors.primary, size: 16),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'How to earn points',
+                      style: KvlText.caption(12).copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: KvlColors.inkSoft,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                  ),
+                  RotationTransition(
+                    turns: _iconTurn,
+                    child: const Icon(Icons.keyboard_arrow_down_rounded,
+                        size: 18, color: KvlColors.muted),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SizeTransition(
+            sizeFactor: _sizeFactor,
+            child: Column(
+              children: [
+                const Divider(height: 1, thickness: 0.5),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    KvlSpacing.md, KvlSpacing.xs, KvlSpacing.md, KvlSpacing.sm,
+                  ),
+                  child: Column(
+                    children: [
+                      for (final r in _rules) ...[
+                        _EarnRuleRow(
+                          icon: r.icon,
+                          label: r.label,
+                          pts: r.pts,
+                          note: r.note,
+                          earned: r.earnedKey == 'joining',
+                        ),
+                        if (r != _rules.last)
+                          const Divider(height: 1, thickness: 0.5),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EarnRuleRow extends StatelessWidget {
+  const _EarnRuleRow({
+    required this.icon,
+    required this.label,
+    required this.pts,
+    required this.note,
+    this.earned = false,
+  });
+  final IconData icon;
+  final String label;
+  final int pts;
+  final String note;
+  final bool earned;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: KvlSpacing.xs),
+      child: Row(
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: earned ? const Color(0xFFE8F5E9) : KvlColors.primaryGhost,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 15, color: earned ? const Color(0xFF388E3C) : KvlColors.primary),
+          ),
+          const SizedBox(width: KvlSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: KvlText.ui(12, FontWeight.w600)),
+                Text(note,
+                    style: KvlText.caption(10.5)
+                        .copyWith(color: KvlColors.muted)),
+              ],
+            ),
+          ),
+          earned
+              ? Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8F5E9),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFF81C784), width: 1),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.check_rounded, size: 11, color: Color(0xFF388E3C)),
+                      const SizedBox(width: 3),
+                      Text(
+                        'earned',
+                        style: KvlText.ui(11, FontWeight.w700)
+                            .copyWith(color: const Color(0xFF388E3C)),
+                      ),
+                    ],
+                  ),
+                )
+              : Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: KvlColors.gold.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                        color: KvlColors.gold.withValues(alpha: 0.35), width: 1),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.star_rounded, size: 10, color: KvlColors.gold),
+                      const SizedBox(width: 2),
+                      Text(
+                        '+$pts',
+                        style: KvlText.ui(11, FontWeight.w700)
+                            .copyWith(color: KvlColors.gold),
+                      ),
+                    ],
+                  ),
+                ),
+        ],
+      ),
     );
   }
 }

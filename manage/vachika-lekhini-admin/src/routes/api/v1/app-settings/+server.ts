@@ -6,7 +6,10 @@ const DEFAULTS: Record<string, string> = {
 	privacy_policy: '',
 	about_app: '',
 	app_logo_url: '',
-	invite_host: 'vaachakalekhini.com'
+	invite_host: 'vaachakalekhini.com',
+	app_download_link: '',
+	share_quote_image_url: '',
+	share_quote_text: ''
 };
 
 export const GET: RequestHandler = async () => {
@@ -20,10 +23,13 @@ export const GET: RequestHandler = async () => {
 
 	return snakeJson(
 		{
-			privacy_policy: map['privacy_policy'],
-			about_app: map['about_app'] || null,
-			app_logo_url: map['app_logo_url'] || null,
-			invite_host: map['invite_host'] || 'vaachakalekhini.com'
+			privacy_policy:        map['privacy_policy'],
+			about_app:             map['about_app'] || null,
+			app_logo_url:          map['app_logo_url'] || null,
+			invite_host:           map['invite_host'] || 'vaachakalekhini.com',
+			app_download_link:     map['app_download_link'] || null,
+			share_quote_image_url: map['share_quote_image_url'] || null,
+			share_quote_text:      map['share_quote_text'] || null
 		},
 		{
 			headers: {

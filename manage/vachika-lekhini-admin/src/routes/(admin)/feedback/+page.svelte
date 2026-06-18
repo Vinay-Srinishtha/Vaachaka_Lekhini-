@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { page } from '$app/state';
+	import SearchInput from '$lib/components/SearchInput.svelte';
 	import type { PageData } from './$types';
 	const { data }: { data: PageData } = $props();
 
@@ -7,6 +9,18 @@
 		resolved: 'bg-green-100 text-green-800 border-green-200',
 		dismissed: 'bg-gray-100 text-gray-500 border-gray-200'
 	};
+
+	const q = $derived((page.url.searchParams.get('q') ?? '').toLowerCase().trim());
+	const visibleReports = $derived(
+		q
+			? data.reports.filter(
+					(r) =>
+						r.subject.toLowerCase().includes(q) ||
+						(r.mobile ?? '').toLowerCase().includes(q) ||
+						r.status.toLowerCase().includes(q)
+				)
+			: data.reports
+	);
 </script>
 
 <svelte:head><title>Feedback</title></svelte:head>
@@ -17,11 +31,13 @@
 			<h1 class="text-xl font-semibold">User Feedback</h1>
 			<p class="text-sm text-gray-500 mt-0.5">Sorted newest first · click a row to view details</p>
 		</div>
-		<span class="bg-slate-100 text-slate-600 text-xs font-semibold px-3 py-1 rounded-full">{data.reports.length} total</span>
+		<span class="bg-slate-100 text-slate-600 text-xs font-semibold px-3 py-1 rounded-full">{visibleReports.length}{q ? ` of ${data.reports.length}` : ''} total</span>
 	</div>
 
-	{#if data.reports.length === 0}
-		<div class="flex flex-col items-center justify-center py-16 text-gray-400">
+	<SearchInput placeholder="Search by subject, mobile or status…" />
+
+	{#if visibleReports.length === 0}
+		<div class="flex flex-col items-center justify-center py-16 text-gray-400" role="status">
 			<svg class="w-10 h-10 mb-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
 			</svg>
@@ -36,7 +52,7 @@
 				<span>Date</span>
 			</div>
 
-			{#each data.reports as r (r.id)}
+			{#each visibleReports as r (r.id)}
 				<a
 					href="/feedback/{r.id}"
 					class="grid grid-cols-[120px_1fr_160px_110px] gap-4 px-4 py-3 border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors items-center group"

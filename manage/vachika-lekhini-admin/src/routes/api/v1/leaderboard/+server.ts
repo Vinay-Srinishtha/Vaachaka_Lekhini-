@@ -3,80 +3,117 @@ import { prisma } from '$lib/server/prisma';
 import { snakeJson } from '$lib/server/snake-case';
 import { requireAccount } from '$lib/server/user-auth';
 
-/// GET /api/v1/leaderboard?sort=total_chants|streak  (Bearer)
-/// Returns members ranked by totalProgress (chants + writings) or current streak.
-/// Capped at 50. Uses pre-computed Program totals — authoritative and fast.
+/// GET /api/v1/leaderboard?sort=total_chants|streak[&mantra_id=<id>]  (Bearer)
 ///
-/// Each entry:
-///   id           — member id
-///   name         — display name
-///   total_chants — totalChants + totalWritings (combined totalProgress)
-///   streak_days  — highest Program.currentStreak across all member programs
-///   is_self      — true if the member belongs to the calling account
+/// Global leaderboard — every practising member from every non-banned account
+/// is ranked individually (no one-per-family deduplication).
+///
+/// Totals and streaks come from pre-computed Program denormalised columns
+/// (kept up to date by POST /api/v1/sessions).
+///
+/// When mantra_id is supplied only programs for that mantra count and members
+/// who never practised it are excluded.
+///
+/// Response shape per entry:
+///   id              member id
+///   name            display name
+///   total_chants    totalChants + totalWritings across (filtered) programs
+///   longest_streak  best-ever consecutive-day run  (rank key when sort=streak)
+///   current_streak  active consecutive-day run right now
+///   streak_active   current_streak > 0 AND practised today-or-yesterday
+///   is_self         true when the member belongs to the caller's account
 export const GET: RequestHandler = async (event) => {
-	const account = await requireAccount(event);
-	const sortParam = event.url.searchParams.get('sort') ?? 'total_chants';
-	const byStreak = sortParam === 'streak';
+	const account   = await requireAccount(event);
+	const sortParam  = event.url.searchParams.get('sort') ?? 'total_chants';
+	const mantraSlug = event.url.searchParams.get('mantra_id') ?? null;
+	const byStreak   = sortParam === 'streak';
 
-	// Aggregate per member from pre-computed Program totals (server-authoritative).
-	// One row per account — ROW_NUMBER() keeps the best-scoring member per account.
-	// last_active_date: most recent session date across all programs for the member.
-	// streak_active = current_streak > 0 AND last practice was today or yesterday
-	// (i.e. the streak has not yet been broken by a missed day).
-	type Row = { id: string; name: string; total_progress: number; streak_days: number; current_streak: number; account_id: string; last_active_date: Date | null };
-	const rows = byStreak
-		? await prisma.$queryRaw<Row[]>`
-			WITH agg AS (
-			  SELECT m.id,
-			         m."displayName"                                              AS name,
-			         COALESCE(SUM(p."totalChants" + p."totalWritings"), 0)::int   AS total_progress,
-			         COALESCE(MAX(p."longestStreak"), 0)::int                     AS streak_days,
-			         COALESCE(MAX(p."currentStreak"), 0)::int                     AS current_streak,
-			         MAX(p."lastActiveDate")                                       AS last_active_date,
-			         m."accountId"                                                AS account_id
-			  FROM "Member" m
-			  JOIN "Account" a2 ON a2.id = m."accountId" AND a2."isBanned" = false
-			  LEFT JOIN "Program" p ON p."memberId" = m.id
-			  GROUP BY m.id, m."displayName", m."accountId"
-			),
-			ranked AS (
-			  SELECT *, ROW_NUMBER() OVER (
-			    PARTITION BY account_id
-			    ORDER BY streak_days DESC, total_progress DESC
-			  ) AS rn
-			  FROM agg
-			)
-			SELECT id, name, total_progress, streak_days, current_streak, last_active_date, account_id
-			FROM ranked
-			WHERE rn = 1
-			ORDER BY streak_days DESC, total_progress DESC
-			LIMIT 50`
-		: await prisma.$queryRaw<Row[]>`
-			WITH agg AS (
-			  SELECT m.id,
-			         m."displayName"                                              AS name,
-			         COALESCE(SUM(p."totalChants" + p."totalWritings"), 0)::int   AS total_progress,
-			         COALESCE(MAX(p."longestStreak"), 0)::int                     AS streak_days,
-			         COALESCE(MAX(p."currentStreak"), 0)::int                     AS current_streak,
-			         MAX(p."lastActiveDate")                                       AS last_active_date,
-			         m."accountId"                                                AS account_id
-			  FROM "Member" m
-			  JOIN "Account" a2 ON a2.id = m."accountId" AND a2."isBanned" = false
-			  LEFT JOIN "Program" p ON p."memberId" = m.id
-			  GROUP BY m.id, m."displayName", m."accountId"
-			),
-			ranked AS (
-			  SELECT *, ROW_NUMBER() OVER (
-			    PARTITION BY account_id
-			    ORDER BY total_progress DESC, streak_days DESC
-			  ) AS rn
-			  FROM agg
-			)
-			SELECT id, name, total_progress, streak_days, current_streak, last_active_date, account_id
-			FROM ranked
-			WHERE rn = 1
-			ORDER BY total_progress DESC, streak_days DESC
-			LIMIT 50`;
+	// Flutter passes the mantra slug (e.g. "sri_rama"), not the DB cuid.
+	// Resolve it here so the JOIN on Program.mantraId works correctly.
+	let mantraId: string | null = null;
+	if (mantraSlug) {
+		const mantra = await prisma.mantra.findUnique({
+			where: { slug: mantraSlug },
+			select: { id: true }
+		});
+		if (!mantra) {
+			// Unknown slug → empty leaderboard rather than full platform scan.
+			return snakeJson({ entries: [] }, { headers: { 'cache-control': 'private, max-age=60' } });
+		}
+		mantraId = mantra.id;
+	}
+
+	type Row = {
+		id: string;
+		name: string;
+		total_progress: bigint | number;
+		longest_streak: bigint | number;
+		current_streak: bigint | number;
+		last_active_date: Date | null;
+		account_id: string;
+	};
+
+	// Two separate queries keep the SQL simple and avoids dynamic fragment
+	// interpolation bugs.  Both share the same shape; only ORDER BY differs.
+	const rows: Row[] = byStreak
+		? mantraId
+			? await prisma.$queryRaw<Row[]>`
+				SELECT m.id,
+				       m."displayName"                                              AS name,
+				       COALESCE(SUM(p."totalChants" + p."totalWritings"), 0)::int   AS total_progress,
+				       COALESCE(MAX(p."longestStreak"),  0)::int                    AS longest_streak,
+				       COALESCE(MAX(p."currentStreak"),  0)::int                    AS current_streak,
+				       MAX(p."lastActiveDate")                                       AS last_active_date,
+				       m."accountId"                                                AS account_id
+				FROM "Member" m
+				JOIN "Account" a ON a.id = m."accountId" AND a."isBanned" = false
+				JOIN "Program" p ON p."memberId" = m.id AND p."mantraId" = ${mantraId}
+				GROUP BY m.id, m."displayName", m."accountId"
+				ORDER BY longest_streak DESC, total_progress DESC
+				LIMIT 50`
+			: await prisma.$queryRaw<Row[]>`
+				SELECT m.id,
+				       m."displayName"                                              AS name,
+				       COALESCE(SUM(p."totalChants" + p."totalWritings"), 0)::int   AS total_progress,
+				       COALESCE(MAX(p."longestStreak"),  0)::int                    AS longest_streak,
+				       COALESCE(MAX(p."currentStreak"),  0)::int                    AS current_streak,
+				       MAX(p."lastActiveDate")                                       AS last_active_date,
+				       m."accountId"                                                AS account_id
+				FROM "Member" m
+				JOIN "Account" a ON a.id = m."accountId" AND a."isBanned" = false
+				LEFT JOIN "Program" p ON p."memberId" = m.id
+				GROUP BY m.id, m."displayName", m."accountId"
+				ORDER BY longest_streak DESC, total_progress DESC
+				LIMIT 50`
+		: mantraId
+			? await prisma.$queryRaw<Row[]>`
+				SELECT m.id,
+				       m."displayName"                                              AS name,
+				       COALESCE(SUM(p."totalChants" + p."totalWritings"), 0)::int   AS total_progress,
+				       COALESCE(MAX(p."longestStreak"),  0)::int                    AS longest_streak,
+				       COALESCE(MAX(p."currentStreak"),  0)::int                    AS current_streak,
+				       MAX(p."lastActiveDate")                                       AS last_active_date,
+				       m."accountId"                                                AS account_id
+				FROM "Member" m
+				JOIN "Account" a ON a.id = m."accountId" AND a."isBanned" = false
+				JOIN "Program" p ON p."memberId" = m.id AND p."mantraId" = ${mantraId}
+				GROUP BY m.id, m."displayName", m."accountId"
+				ORDER BY total_progress DESC, longest_streak DESC
+				LIMIT 50`
+			: await prisma.$queryRaw<Row[]>`
+				SELECT m.id,
+				       m."displayName"                                              AS name,
+				       COALESCE(SUM(p."totalChants" + p."totalWritings"), 0)::int   AS total_progress,
+				       COALESCE(MAX(p."longestStreak"),  0)::int                    AS longest_streak,
+				       COALESCE(MAX(p."currentStreak"),  0)::int                    AS current_streak,
+				       MAX(p."lastActiveDate")                                       AS last_active_date,
+				       m."accountId"                                                AS account_id
+				FROM "Member" m
+				JOIN "Account" a ON a.id = m."accountId" AND a."isBanned" = false
+				LEFT JOIN "Program" p ON p."memberId" = m.id
+				GROUP BY m.id, m."displayName", m."accountId"
+				ORDER BY total_progress DESC, longest_streak DESC
+				LIMIT 50`;
 
 	const todayUtc = new Date();
 	todayUtc.setUTCHours(0, 0, 0, 0);
@@ -85,17 +122,19 @@ export const GET: RequestHandler = async (event) => {
 	const entries = rows.map((r) => {
 		const lastDate = r.last_active_date ? new Date(r.last_active_date) : null;
 		if (lastDate) lastDate.setUTCHours(0, 0, 0, 0);
-		const practicedTodayOrYesterday =
+		const practicedRecently =
 			lastDate !== null &&
 			(lastDate.getTime() === todayUtc.getTime() ||
 				lastDate.getTime() === yesterdayUtc.getTime());
+		const currentStreak = Number(r.current_streak);
 		return {
-			id: r.id,
-			name: r.name,
-			total_chants: Number(r.total_progress),
-			streak_days: Number(r.streak_days),
-			streak_active: Number(r.current_streak) > 0 && practicedTodayOrYesterday,
-			is_self: r.account_id === account.id
+			id:             r.id,
+			name:           r.name,
+			total_chants:   Number(r.total_progress),
+			longest_streak: Number(r.longest_streak),
+			current_streak: currentStreak,
+			streak_active:  currentStreak > 0 && practicedRecently,
+			is_self:        r.account_id === account.id
 		};
 	});
 

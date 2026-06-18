@@ -12,7 +12,7 @@ class KvlNavItem {
 
 const kvlNavItems = <KvlNavItem>[
   KvlNavItem(label: 'Home', icon: Icons.home_outlined),
-  KvlNavItem(label: 'My Programs', icon: Icons.dashboard_outlined),
+  KvlNavItem(label: 'My Sadhanas', icon: Icons.dashboard_outlined),
   KvlNavItem(label: 'Practice', icon: Icons.edit_note_rounded),
   KvlNavItem(label: 'Community', icon: Icons.groups_outlined),
   KvlNavItem(label: 'Store', icon: Icons.shopping_bag_outlined),

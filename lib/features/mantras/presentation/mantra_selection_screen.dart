@@ -55,12 +55,6 @@ class _MantraSelectionScreenState extends ConsumerState<MantraSelectionScreen> {
           ),
           const SizedBox(height: KvlSpacing.sm),
           KvlButton(
-            variant: KvlButtonVariant.ghost,
-            label: context.l10n.selectMantraByNeed,
-            onPressed: () => context.push(KvlRoute.mantraByNeed),
-          ),
-          const SizedBox(height: KvlSpacing.sm),
-          KvlButton(
             label: context.l10n.confirmSelection,
             onPressed: _selectedId == null
                 ? null

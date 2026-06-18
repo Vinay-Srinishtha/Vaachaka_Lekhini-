@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import MediaUploadField from '$lib/components/MediaUploadField.svelte';
 
 	let { data, form } = $props();
 
@@ -9,6 +10,9 @@
 
 	const logoUrl = $derived(s.app_logo_url ?? '');
 	const hasLogo = $derived(logoUrl.length > 0);
+
+	let shareQuoteImageUrl = $state<string>(s.share_quote_image_url ?? '');
+	$effect.pre(() => { shareQuoteImageUrl = s.share_quote_image_url ?? ''; });
 </script>
 
 <!-- Header + Save -->
@@ -158,7 +162,80 @@
 			</div>
 
 		</div>
+
 	</div>
 
+	<!-- ── Share Settings (full-width row below the 2-col grid) ─────────────── -->
+	<div class="mt-6 rounded-2xl border border-green-200 bg-white p-6 shadow-sm">
+		<div class="flex items-start gap-3 mb-5">
+			<span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-green-50 text-green-600">
+				<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185z"/>
+				</svg>
+			</span>
+			<div>
+				<h2 class="text-sm font-semibold text-slate-800">Share Settings</h2>
+				<p class="mt-0.5 text-xs text-slate-500">
+					Configure the WhatsApp / social share format for the <strong>daily quote card</strong> and set the global <strong>app download link</strong> used in all share messages.
+				</p>
+			</div>
+		</div>
+
+		<div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
+
+			<!-- App Download Link -->
+			<div class="flex flex-col gap-2">
+				<label class="text-xs font-semibold text-slate-700" for="app_download_link">App Download Link</label>
+				<p class="text-xs text-slate-400">Inserted as <code class="bg-slate-100 px-1 rounded">{'{app_link}'}</code> in every share message template.</p>
+				<input
+					id="app_download_link"
+					name="app_download_link"
+					type="url"
+					value={s.app_download_link ?? ''}
+					placeholder="https://vaachakalekhini.com/download"
+					class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+				/>
+				<p class="text-[10px] text-slate-400">Use a universal link that redirects to Play Store / App Store.</p>
+			</div>
+
+			<!-- Quote Share Image -->
+			<div class="flex flex-col gap-2">
+				<p class="text-xs font-semibold text-slate-700">Quote Share Image</p>
+				<p class="text-xs text-slate-400">Image attached when the user shares the daily quote card on WhatsApp.</p>
+				<MediaUploadField
+					category="share-quote"
+					targetId="share_quote_image_url"
+					accept="image/*"
+					buttonLabel={shareQuoteImageUrl ? 'Replace image' : 'Upload image'}
+					currentUrl={shareQuoteImageUrl || null}
+					onUrlChange={(url) => { shareQuoteImageUrl = url ?? ''; }}
+				/>
+				<input type="hidden" id="share_quote_image_url" name="share_quote_image_url" value={shareQuoteImageUrl} />
+				{#if shareQuoteImageUrl}
+					<img src={shareQuoteImageUrl} alt="Quote share preview" class="mt-1 h-20 w-auto rounded-lg border border-slate-200 object-cover shadow-sm" />
+				{/if}
+			</div>
+
+			<!-- Quote Share Text Template -->
+			<div class="flex flex-col gap-2">
+				<label class="text-xs font-semibold text-slate-700" for="share_quote_text">Quote Share Message Template</label>
+				<p class="text-xs text-slate-400">The text sent when sharing the daily quote. Leave blank for the default.</p>
+				<textarea
+					id="share_quote_text"
+					name="share_quote_text"
+					rows="5"
+					placeholder="&quot;{quote}&quot;&#10;— {attribution}&#10;&#10;Shared via Vachika Lekhini 🙏&#10;{app_link}"
+					class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 resize-none"
+				>{s.share_quote_text ?? ''}</textarea>
+				<p class="text-[10px] text-slate-400 leading-relaxed">
+					Placeholders:
+					<code class="bg-slate-100 px-1 rounded">{'{quote}'}</code>
+					<code class="bg-slate-100 px-1 rounded">{'{attribution}'}</code>
+					<code class="bg-slate-100 px-1 rounded">{'{app_link}'}</code>
+				</p>
+			</div>
+
+		</div>
+	</div>
 
 </form>

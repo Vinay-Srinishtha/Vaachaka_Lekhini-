@@ -18,7 +18,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appMottoChant => 'Chant with Purpose | Track with Pride';
 
   @override
-  String get setLanguage => 'Set Language';
+  String get setLanguage => 'Choose Language';
 
   @override
   String get existingUser => 'Existing user?';
@@ -141,8 +141,8 @@ class AppLocalizationsEn extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'You\'re doing great! $count Programs Active',
-      one: 'You\'re doing great! 1 Program Active',
+      other: 'You\'re doing great! $count Sadhanas Active',
+      one: 'You\'re doing great! 1 Sadhana Active',
     );
     return '$_temp0';
   }
@@ -183,10 +183,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get browseMantras => 'Browse Mantras';
 
   @override
-  String get selectFromPrograms => 'Select from your Programs';
+  String get selectFromPrograms => 'Select from your Sadhanas';
 
   @override
-  String get createNewProgram => 'Create a New Program';
+  String get createNewProgram => 'Start New Sadhana';
 
   @override
   String get mantraSelectionTitle => 'Mantra Selection';
@@ -291,14 +291,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get startButton => 'START';
 
   @override
-  String get noActivePrograms => 'No active programs';
+  String get noActivePrograms => 'No active sadhanas';
 
   @override
   String get chooseMantra => 'Choose Mantra';
 
   @override
   String get selectActiveProgramDescription =>
-      'Select an active program to update this dashboard.';
+      'Select an active sadhana to update this dashboard.';
 
   @override
   String get noActivePractice => 'No active practice yet';
@@ -372,26 +372,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get daysPractising => 'Days Practising';
 
   @override
-  String get programs => 'Programs';
+  String get programs => 'Sadhanas';
 
   @override
   String get overallProgress => 'Overall Progress';
 
   @override
-  String get createNewProgramButton => 'Create New Program';
+  String get createNewProgramButton => 'Create New Sadhana';
 
   @override
-  String get myRecitationPrograms => 'My Recitation Programs';
+  String get myRecitationPrograms => 'My Recitation Sadhanas';
 
   @override
-  String get completedPrograms => 'Completed Programs';
+  String get completedPrograms => 'Completed Sadhanas';
 
   @override
-  String get noProgramsYet => 'No programs yet';
+  String get noProgramsYet => 'No sadhanas yet';
 
   @override
   String get pickMantraAndTargetToStart =>
-      'Pick a mantra and set a target to start your first program.';
+      'Pick a mantra and set a target to start your first sadhana.';
 
   @override
   String get completedWithCheck => 'Completed ✓';
@@ -616,7 +616,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get deleteDialogContent =>
-      'This wipes all programs, sessions, rewards, and profiles on this device. This action cannot be undone.';
+      'This wipes all sadhanas, sessions, rewards, and profiles on this device. This action cannot be undone.';
 
   @override
   String get deleteDialogCancel => 'Cancel';
@@ -683,10 +683,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get startPractice => 'Start Practice';
 
   @override
-  String get dedicateProgram => 'Dedicate this program';
+  String get dedicateProgram => 'Dedicate this sadhana';
 
   @override
-  String get dedicateSheetTitle => 'Dedicate this Program';
+  String get dedicateSheetTitle => 'Dedicate this Sadhana';
 
   @override
   String get dedicateOfferPractice =>
@@ -722,7 +722,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get editGoal => 'Edit Goal';
 
   @override
-  String get shareProgram => 'Share Program';
+  String get shareProgram => 'Share Sadhana';
 
   @override
   String get dailyProgressTitle => 'Daily Progress';
@@ -740,10 +740,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get inviteFriendsButton => 'Invite Friends';
 
   @override
-  String get streakChallenge => 'Streak Challenge';
+  String get streakChallenge => 'Streaks';
 
   @override
-  String get totalChantsSort => 'Total Chants';
+  String get totalChantsSort => 'Chants';
 
   @override
   String get sendEncouragement => 'Send Encouragement';
@@ -986,13 +986,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navHome => 'Home';
 
   @override
-  String get navPrograms => 'My Programs';
+  String get navPrograms => 'My Sadhanas';
 
   @override
   String get navPractice => 'Practice';
 
   @override
-  String get navCommunity => 'Streak Leaderboard';
+  String get navCommunity => 'Global Leaderboard';
 
   @override
   String get navStore => 'Reward Store';
@@ -1223,4 +1223,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get appTitle => 'Vaachaka Lekhini';
+
+  @override
+  String get noRankingsYet => 'No rankings yet';
+
+  @override
+  String get noRankingsSubtitle =>
+      'Start a sadhana to appear on the leaderboard';
+
+  @override
+  String get longestStreakLabel => 'Longest Streak';
+
+  @override
+  String get currentStreakLabel => 'Current Streak';
+
+  @override
+  String streakDaysCount(int days) {
+    return '$days Days';
+  }
+
+  @override
+  String get continueSadhana => 'Continue your Sadhana';
+
+  @override
+  String programDayOf(int current, int total) {
+    return 'Day $current of $total';
+  }
 }

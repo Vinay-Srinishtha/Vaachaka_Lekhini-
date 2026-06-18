@@ -12,6 +12,7 @@ import '../../../core/i18n/language_options.dart';
 import '../../../core/phone/phone_mode_service.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/utils/indian_number_format.dart';
+import '../../../core/widgets/kvl_profile_avatar.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../programs/domain/session.dart';
 import '../../programs/presentation/daily_progress_screen.dart';
@@ -155,6 +156,7 @@ class _BodyState extends ConsumerState<_Body> {
                 children: [
                   _TopBar(
                     initial: profile?.initials ?? '?',
+                    profileId: profile?.id ?? '',
                     onProfileTap: () => context.push(KvlRoute.profile),
                     compact: compact,
                     onBack: () {
@@ -388,6 +390,7 @@ class _BodyState extends ConsumerState<_Body> {
 class _TopBar extends ConsumerWidget {
   const _TopBar({
     required this.initial,
+    required this.profileId,
     required this.onProfileTap,
     required this.compact,
     required this.onBack,
@@ -396,6 +399,7 @@ class _TopBar extends ConsumerWidget {
     required this.onCycleRinger,
   });
   final String initial;
+  final String profileId;
   final VoidCallback onProfileTap;
   final bool compact;
   final VoidCallback onBack;
@@ -499,23 +503,11 @@ class _TopBar extends ConsumerWidget {
               total: programs.length,
               strokeWidth: 2.5,
               gap: 2.5,
-              child: Container(
-                width: avatar,
-                height: avatar,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [Color(0xFFFFB572), KvlColors.primary],
-                  ),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  initial,
-                  style: KvlText.ui(
-                    compact ? 14 : 16,
-                    FontWeight.w700,
-                  ).copyWith(color: Colors.white),
-                ),
+              child: KvlProfileAvatar(
+                profileId: profileId,
+                initials: initial,
+                size: avatar,
+                textSize: compact ? 14 : 16,
               ),
             ),
           ),

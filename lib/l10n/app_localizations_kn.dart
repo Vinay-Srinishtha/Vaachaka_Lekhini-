@@ -18,7 +18,7 @@ class AppLocalizationsKn extends AppLocalizations {
   String get appMottoChant => 'ಉದ್ದೇಶದಿಂದ ಜಪಿಸಿ | ಹೆಮ್ಮೆಯಿಂದ ಟ್ರ್ಯಾಕ್ ಮಾಡಿ';
 
   @override
-  String get setLanguage => 'ಭಾಷೆ ಹೊಂದಿಸಿ';
+  String get setLanguage => 'ಭಾಷೆ ಆಯ್ಕೆಮಾಡಿ';
 
   @override
   String get existingUser => 'ಈಗಾಗಲೇ ಬಳಕೆದಾರರಿದ್ದೀರಾ?';
@@ -141,8 +141,8 @@ class AppLocalizationsKn extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'ಅದ್ಭುತ! $count ಕಾರ್ಯಕ್ರಮಗಳು ಸಕ್ರಿಯವಾಗಿವೆ',
-      one: 'ಅದ್ಭುತ! 1 ಕಾರ್ಯಕ್ರಮ ಸಕ್ರಿಯವಾಗಿದೆ',
+      other: 'ಅದ್ಭುತ! $count ಸಾಧನಗಳು ಸಕ್ರಿಯವಾಗಿವೆ',
+      one: 'ಅದ್ಭುತ! 1 ಸಾಧನ ಸಕ್ರಿಯವಾಗಿದೆ',
     );
     return '$_temp0';
   }
@@ -186,7 +186,7 @@ class AppLocalizationsKn extends AppLocalizations {
   String get selectFromPrograms => 'ನಿಮ್ಮ ಕಾರ್ಯಕ್ರಮಗಳಿಂದ ಆಯ್ಕೆ ಮಾಡಿ';
 
   @override
-  String get createNewProgram => 'ಹೊಸ ಕಾರ್ಯಕ್ರಮ ರಚಿಸಿ';
+  String get createNewProgram => 'ಹೊಸ ಸಾಧನ ರಚಿಸಿ';
 
   @override
   String get mantraSelectionTitle => 'ಮಂತ್ರ ಆಯ್ಕೆ';
@@ -291,7 +291,7 @@ class AppLocalizationsKn extends AppLocalizations {
   String get startButton => 'ಪ್ರಾರಂಭಿಸಿ';
 
   @override
-  String get noActivePrograms => 'ಸಕ್ರಿಯ ಕಾರ್ಯಕ್ರಮಗಳಿಲ್ಲ';
+  String get noActivePrograms => 'ಸಕ್ರಿಯ ಸಾಧನಗಳಿಲ್ಲ';
 
   @override
   String get chooseMantra => 'ಮಂತ್ರ ಆಯ್ಕೆ ಮಾಡಿ';
@@ -373,22 +373,22 @@ class AppLocalizationsKn extends AppLocalizations {
   String get daysPractising => 'ಅಭ್ಯಾಸದ ದಿನಗಳು';
 
   @override
-  String get programs => 'ಕಾರ್ಯಕ್ರಮಗಳು';
+  String get programs => 'ಸಾಧನಗಳು';
 
   @override
   String get overallProgress => 'ಒಟ್ಟಾರೆ ಪ್ರಗತಿ';
 
   @override
-  String get createNewProgramButton => 'ಹೊಸ ಕಾರ್ಯಕ್ರಮ';
+  String get createNewProgramButton => 'ಹೊಸ ಸಾಧನ';
 
   @override
-  String get myRecitationPrograms => 'ನನ್ನ ಪಠಣ ಕಾರ್ಯಕ್ರಮಗಳು';
+  String get myRecitationPrograms => 'ನನ್ನ ಪಠಣ ಸಾಧನಗಳು';
 
   @override
-  String get completedPrograms => 'ಪೂರ್ಣಗೊಂಡ ಕಾರ್ಯಕ್ರಮಗಳು';
+  String get completedPrograms => 'ಪೂರ್ಣಗೊಂಡ ಸಾಧನಗಳು';
 
   @override
-  String get noProgramsYet => 'ಇನ್ನೂ ಕಾರ್ಯಕ್ರಮಗಳಿಲ್ಲ';
+  String get noProgramsYet => 'ಇನ್ನೂ ಸಾಧನಗಳಿಲ್ಲ';
 
   @override
   String get pickMantraAndTargetToStart =>
@@ -724,7 +724,7 @@ class AppLocalizationsKn extends AppLocalizations {
   String get editGoal => 'ಗುರಿ ಸಂಪಾದಿಸಿ';
 
   @override
-  String get shareProgram => 'ಕಾರ್ಯಕ್ರಮ ಹಂಚಿಕೊಳ್ಳಿ';
+  String get shareProgram => 'ಸಾಧನ ಹಂಚಿಕೊಳ್ಳಿ';
 
   @override
   String get dailyProgressTitle => 'ದೈನಂದಿನ ಪ್ರಗತಿ';
@@ -742,10 +742,10 @@ class AppLocalizationsKn extends AppLocalizations {
   String get inviteFriendsButton => 'ಸ್ನೇಹಿತರನ್ನು ಆಮಂತ್ರಿಸಿ';
 
   @override
-  String get streakChallenge => 'ಸ್ಟ್ರೀಕ್ ಸವಾಲು';
+  String get streakChallenge => 'ಸ್ಟ್ರೀಕ್ಸ್';
 
   @override
-  String get totalChantsSort => 'ಒಟ್ಟು ಜಪಗಳು';
+  String get totalChantsSort => 'ಜಪಗಳು';
 
   @override
   String get sendEncouragement => 'ಪ್ರೋತ್ಸಾಹ ಕಳುಹಿಸಿ';
@@ -989,13 +989,13 @@ class AppLocalizationsKn extends AppLocalizations {
   String get navHome => 'ಮನೆ';
 
   @override
-  String get navPrograms => 'ನನ್ನ ಕಾರ್ಯಕ್ರಮಗಳು';
+  String get navPrograms => 'ನನ್ನ ಸಾಧನಗಳು';
 
   @override
   String get navPractice => 'ಅಭ್ಯಾಸ';
 
   @override
-  String get navCommunity => 'ಸ್ಟ್ರೀಕ್ ಲೀಡರ್‌ಬೋರ್ಡ್';
+  String get navCommunity => 'ಗ್ಲೋಬಲ್ ಲೀಡರ್‌ಬೋರ್ಡ್';
 
   @override
   String get navStore => 'ಬಹುಮಾನ ಅಂಗಡಿ';
@@ -1221,4 +1221,30 @@ class AppLocalizationsKn extends AppLocalizations {
 
   @override
   String get appTitle => 'ವಾಚಿಕ ಲೇಖಿನಿ';
+
+  @override
+  String get noRankingsYet => 'ಇನ್ನೂ ರ್ಯಾಂಕಿಂಗ್ ಇಲ್ಲ';
+
+  @override
+  String get noRankingsSubtitle =>
+      'ಲೀಡರ್‌ಬೋರ್ಡ್‌ನಲ್ಲಿ ಕಾಣಿಸಲು ಸಾಧನೆ ಪ್ರಾರಂಭಿಸಿ';
+
+  @override
+  String get longestStreakLabel => 'ಅತ್ಯಂತ ದೀರ್ಘ ಸ್ಟ್ರೀಕ್';
+
+  @override
+  String get currentStreakLabel => 'ಪ್ರಸ್ತುತ ಸ್ಟ್ರೀಕ್';
+
+  @override
+  String streakDaysCount(int days) {
+    return '$days ದಿನಗಳು';
+  }
+
+  @override
+  String get continueSadhana => 'ನಿಮ್ಮ ಸಾಧನೆ ಮುಂದುವರಿಸಿ';
+
+  @override
+  String programDayOf(int current, int total) {
+    return 'ದಿನ $current / $total';
+  }
 }

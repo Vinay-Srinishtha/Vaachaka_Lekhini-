@@ -43,10 +43,13 @@ export const POST: RequestHandler = async (event) => {
 			prisma.member.count({ where: { accountId: account.id } }),
 			prisma.featureFlag.findUnique({ where: { key: 'max_profiles_per_user' } })
 		]);
+		const rawLimit = flag?.value;
 		const limit =
-			flag && typeof (flag.value as unknown) === 'number'
-				? (flag.value as number)
-				: DEFAULT_MAX_PROFILES;
+			typeof rawLimit === 'number'
+				? rawLimit
+				: typeof rawLimit === 'string' && !isNaN(Number(rawLimit))
+					? Number(rawLimit)
+					: DEFAULT_MAX_PROFILES;
 		if (currentCount + newMemberCount > limit) {
 			throw error(422, `Member limit reached (max ${limit} per account)`);
 		}

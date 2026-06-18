@@ -18,7 +18,7 @@ class AppLocalizationsTe extends AppLocalizations {
   String get appMottoChant => 'ఉద్దేశంతో జపించండి | గర్వంగా ట్రాక్ చేయండి';
 
   @override
-  String get setLanguage => 'భాష సెట్ చేయండి';
+  String get setLanguage => 'భాష ఎంచుకోండి';
 
   @override
   String get existingUser => 'ఇప్పటికే వినియోగదారా?';
@@ -141,7 +141,7 @@ class AppLocalizationsTe extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'బాగుంది! $count కార్యక్రమాలు చురుకుగా ఉన్నాయి',
+      other: 'బాగుంది! $count సాధనలు చురుకుగా ఉన్నాయి',
       one: 'బాగుంది! 1 కార్యక్రమం చురుకుగా ఉంది',
     );
     return '$_temp0';
@@ -183,10 +183,10 @@ class AppLocalizationsTe extends AppLocalizations {
   String get browseMantras => 'మంత్రాలు చూడండి';
 
   @override
-  String get selectFromPrograms => 'మీ కార్యక్రమాల నుండి ఎంచుకోండి';
+  String get selectFromPrograms => 'మీ సాధనల నుండి ఎంచుకోండి';
 
   @override
-  String get createNewProgram => 'కొత్త కార్యక్రమం సృష్టించండి';
+  String get createNewProgram => 'కొత్త సాధన సృష్టించండి';
 
   @override
   String get mantraSelectionTitle => 'మంత్ర ఎంపిక';
@@ -291,7 +291,7 @@ class AppLocalizationsTe extends AppLocalizations {
   String get startButton => 'ప్రారంభించు';
 
   @override
-  String get noActivePrograms => 'చురుకైన కార్యక్రమాలు లేవు';
+  String get noActivePrograms => 'చురుకైన సాధనలు లేవు';
 
   @override
   String get chooseMantra => 'మంత్రం ఎంచుకోండి';
@@ -372,22 +372,22 @@ class AppLocalizationsTe extends AppLocalizations {
   String get daysPractising => 'సాధన రోజులు';
 
   @override
-  String get programs => 'కార్యక్రమాలు';
+  String get programs => 'సాధనలు';
 
   @override
   String get overallProgress => 'మొత్తం పురోగతి';
 
   @override
-  String get createNewProgramButton => 'కొత్త కార్యక్రమం';
+  String get createNewProgramButton => 'కొత్త సాధన';
 
   @override
-  String get myRecitationPrograms => 'నా పఠన కార్యక్రమాలు';
+  String get myRecitationPrograms => 'నా పఠన సాధనలు';
 
   @override
-  String get completedPrograms => 'పూర్తయిన కార్యక్రమాలు';
+  String get completedPrograms => 'పూర్తయిన సాధనలు';
 
   @override
-  String get noProgramsYet => 'ఇంకా కార్యక్రమాలు లేవు';
+  String get noProgramsYet => 'ఇంకా సాధనలు లేవు';
 
   @override
   String get pickMantraAndTargetToStart =>
@@ -617,7 +617,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get deleteDialogContent =>
-      'ఇది ఈ పరికరంలోని అన్ని కార్యక్రమాలు, సెషన్లు, బహుమతులు మరియు ప్రొఫైల్‌లను తొలగిస్తుంది. ఈ చర్యను రద్దు చేయడం సాధ్యపడదు.';
+      'ఇది ఈ పరికరంలోని అన్ని సాధనలు, సెషన్లు, బహుమతులు మరియు ప్రొఫైల్‌లను తొలగిస్తుంది. ఈ చర్యను రద్దు చేయడం సాధ్యపడదు.';
 
   @override
   String get deleteDialogCancel => 'రద్దు';
@@ -684,10 +684,10 @@ class AppLocalizationsTe extends AppLocalizations {
   String get startPractice => 'సాధన ప్రారంభించండి';
 
   @override
-  String get dedicateProgram => 'ఈ కార్యక్రమాన్ని అంకితం చేయండి';
+  String get dedicateProgram => 'ఈ సాధనను అంకితం చేయండి';
 
   @override
-  String get dedicateSheetTitle => 'ఈ కార్యక్రమాన్ని అంకితం చేయండి';
+  String get dedicateSheetTitle => 'ఈ సాధనను అంకితం చేయండి';
 
   @override
   String get dedicateOfferPractice =>
@@ -741,10 +741,10 @@ class AppLocalizationsTe extends AppLocalizations {
   String get inviteFriendsButton => 'స్నేహితులను ఆహ్వానించండి';
 
   @override
-  String get streakChallenge => 'స్ట్రీక్ సవాలు';
+  String get streakChallenge => 'స్ట్రీక్స్';
 
   @override
-  String get totalChantsSort => 'మొత్తం జపాలు';
+  String get totalChantsSort => 'జపాలు';
 
   @override
   String get sendEncouragement => 'ప్రోత్సాహం పంపండి';
@@ -988,13 +988,13 @@ class AppLocalizationsTe extends AppLocalizations {
   String get navHome => 'హోమ్';
 
   @override
-  String get navPrograms => 'నా కార్యక్రమాలు';
+  String get navPrograms => 'నా సాధనలు';
 
   @override
   String get navPractice => 'సాధన';
 
   @override
-  String get navCommunity => 'స్ట్రీక్ లీడర్‌బోర్డ్';
+  String get navCommunity => 'గ్లోబల్ లీడర్‌బోర్డ్';
 
   @override
   String get navStore => 'బహుమతి స్టోర్';
@@ -1222,4 +1222,30 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get appTitle => 'వాచిక లేఖిని';
+
+  @override
+  String get noRankingsYet => 'ఇంకా ర్యాంకింగ్ లేదు';
+
+  @override
+  String get noRankingsSubtitle =>
+      'లీడర్‌బోర్డ్‌లో కనిపించడానికి సాధన ప్రారంభించండి';
+
+  @override
+  String get longestStreakLabel => 'అత్యంత దీర్ఘమైన స్ట్రీక్';
+
+  @override
+  String get currentStreakLabel => 'ప్రస్తుత స్ట్రీక్';
+
+  @override
+  String streakDaysCount(int days) {
+    return '$days రోజులు';
+  }
+
+  @override
+  String get continueSadhana => 'మీ సాధనను కొనసాగించండి';
+
+  @override
+  String programDayOf(int current, int total) {
+    return 'రోజు $current / $total';
+  }
 }

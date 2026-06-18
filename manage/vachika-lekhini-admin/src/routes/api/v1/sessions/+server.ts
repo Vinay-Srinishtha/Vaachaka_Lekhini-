@@ -81,9 +81,16 @@ export const POST: RequestHandler = async (event) => {
 					const completedAt =
 						program?.completedAt ??
 						(totalProgress >= target && target > 0 ? new Date() : null);
+					// Derive lastActiveDate from the most recent session for this program.
+					const latestSession = await tx.session.findFirst({
+						where: { programId },
+						orderBy: { startedAt: 'desc' },
+						select: { startedAt: true }
+					});
+					const lastActiveDate = latestSession?.startedAt ?? null;
 					return tx.program.update({
 						where: { id: programId },
-						data: { totalWritings, totalChants, completedAt }
+						data: { totalWritings, totalChants, completedAt, lastActiveDate }
 					});
 				})
 			);

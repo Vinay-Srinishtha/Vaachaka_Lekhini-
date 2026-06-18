@@ -123,7 +123,7 @@ abstract class AppLocalizations {
   /// No description provided for @setLanguage.
   ///
   /// In en, this message translates to:
-  /// **'Set Language'**
+  /// **'Choose Language'**
   String get setLanguage;
 
   /// No description provided for @existingUser.
@@ -345,7 +345,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeSublineActive.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{You\'re doing great! 1 Program Active} other{You\'re doing great! {count} Programs Active}}'**
+  /// **'{count, plural, =1{You\'re doing great! 1 Sadhana Active} other{You\'re doing great! {count} Sadhanas Active}}'**
   String homeSublineActive(int count);
 
   /// No description provided for @saveNameButton.
@@ -417,13 +417,13 @@ abstract class AppLocalizations {
   /// No description provided for @selectFromPrograms.
   ///
   /// In en, this message translates to:
-  /// **'Select from your Programs'**
+  /// **'Select from your Sadhanas'**
   String get selectFromPrograms;
 
   /// No description provided for @createNewProgram.
   ///
   /// In en, this message translates to:
-  /// **'Create a New Program'**
+  /// **'Start New Sadhana'**
   String get createNewProgram;
 
   /// No description provided for @mantraSelectionTitle.
@@ -609,7 +609,7 @@ abstract class AppLocalizations {
   /// No description provided for @noActivePrograms.
   ///
   /// In en, this message translates to:
-  /// **'No active programs'**
+  /// **'No active sadhanas'**
   String get noActivePrograms;
 
   /// No description provided for @chooseMantra.
@@ -621,7 +621,7 @@ abstract class AppLocalizations {
   /// No description provided for @selectActiveProgramDescription.
   ///
   /// In en, this message translates to:
-  /// **'Select an active program to update this dashboard.'**
+  /// **'Select an active sadhana to update this dashboard.'**
   String get selectActiveProgramDescription;
 
   /// No description provided for @noActivePractice.
@@ -759,7 +759,7 @@ abstract class AppLocalizations {
   /// No description provided for @programs.
   ///
   /// In en, this message translates to:
-  /// **'Programs'**
+  /// **'Sadhanas'**
   String get programs;
 
   /// No description provided for @overallProgress.
@@ -771,31 +771,31 @@ abstract class AppLocalizations {
   /// No description provided for @createNewProgramButton.
   ///
   /// In en, this message translates to:
-  /// **'Create New Program'**
+  /// **'Create New Sadhana'**
   String get createNewProgramButton;
 
   /// No description provided for @myRecitationPrograms.
   ///
   /// In en, this message translates to:
-  /// **'My Recitation Programs'**
+  /// **'My Recitation Sadhanas'**
   String get myRecitationPrograms;
 
   /// No description provided for @completedPrograms.
   ///
   /// In en, this message translates to:
-  /// **'Completed Programs'**
+  /// **'Completed Sadhanas'**
   String get completedPrograms;
 
   /// No description provided for @noProgramsYet.
   ///
   /// In en, this message translates to:
-  /// **'No programs yet'**
+  /// **'No sadhanas yet'**
   String get noProgramsYet;
 
   /// No description provided for @pickMantraAndTargetToStart.
   ///
   /// In en, this message translates to:
-  /// **'Pick a mantra and set a target to start your first program.'**
+  /// **'Pick a mantra and set a target to start your first sadhana.'**
   String get pickMantraAndTargetToStart;
 
   /// No description provided for @completedWithCheck.
@@ -1233,7 +1233,7 @@ abstract class AppLocalizations {
   /// No description provided for @deleteDialogContent.
   ///
   /// In en, this message translates to:
-  /// **'This wipes all programs, sessions, rewards, and profiles on this device. This action cannot be undone.'**
+  /// **'This wipes all sadhanas, sessions, rewards, and profiles on this device. This action cannot be undone.'**
   String get deleteDialogContent;
 
   /// No description provided for @deleteDialogCancel.
@@ -1353,13 +1353,13 @@ abstract class AppLocalizations {
   /// No description provided for @dedicateProgram.
   ///
   /// In en, this message translates to:
-  /// **'Dedicate this program'**
+  /// **'Dedicate this sadhana'**
   String get dedicateProgram;
 
   /// No description provided for @dedicateSheetTitle.
   ///
   /// In en, this message translates to:
-  /// **'Dedicate this Program'**
+  /// **'Dedicate this Sadhana'**
   String get dedicateSheetTitle;
 
   /// No description provided for @dedicateOfferPractice.
@@ -1425,7 +1425,7 @@ abstract class AppLocalizations {
   /// No description provided for @shareProgram.
   ///
   /// In en, this message translates to:
-  /// **'Share Program'**
+  /// **'Share Sadhana'**
   String get shareProgram;
 
   /// No description provided for @dailyProgressTitle.
@@ -1455,13 +1455,13 @@ abstract class AppLocalizations {
   /// No description provided for @streakChallenge.
   ///
   /// In en, this message translates to:
-  /// **'Streak Challenge'**
+  /// **'Streaks'**
   String get streakChallenge;
 
   /// No description provided for @totalChantsSort.
   ///
   /// In en, this message translates to:
-  /// **'Total Chants'**
+  /// **'Chants'**
   String get totalChantsSort;
 
   /// No description provided for @sendEncouragement.
@@ -1917,7 +1917,7 @@ abstract class AppLocalizations {
   /// No description provided for @navPrograms.
   ///
   /// In en, this message translates to:
-  /// **'My Programs'**
+  /// **'My Sadhanas'**
   String get navPrograms;
 
   /// No description provided for @navPractice.
@@ -1929,7 +1929,7 @@ abstract class AppLocalizations {
   /// No description provided for @navCommunity.
   ///
   /// In en, this message translates to:
-  /// **'Streak Leaderboard'**
+  /// **'Global Leaderboard'**
   String get navCommunity;
 
   /// No description provided for @navStore.
@@ -2333,6 +2333,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Vaachaka Lekhini'**
   String get appTitle;
+
+  /// No description provided for @noRankingsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No rankings yet'**
+  String get noRankingsYet;
+
+  /// No description provided for @noRankingsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a sadhana to appear on the leaderboard'**
+  String get noRankingsSubtitle;
+
+  /// No description provided for @longestStreakLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Longest Streak'**
+  String get longestStreakLabel;
+
+  /// No description provided for @currentStreakLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Current Streak'**
+  String get currentStreakLabel;
+
+  /// No description provided for @streakDaysCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} Days'**
+  String streakDaysCount(int days);
+
+  /// No description provided for @continueSadhana.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue your Sadhana'**
+  String get continueSadhana;
+
+  /// No description provided for @programDayOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Day {current} of {total}'**
+  String programDayOf(int current, int total);
 }
 
 class _AppLocalizationsDelegate

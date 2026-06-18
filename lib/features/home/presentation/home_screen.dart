@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,10 +12,24 @@ import '../../../core/remote_config/remote_config.dart';
 import '../../../core/remote_config/remote_config_keys.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/utils/indian_number_format.dart';
+import '../../../core/widgets/kvl_profile_avatar.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../profiles/domain/profile.dart';
 import '../../programs/domain/program.dart';
 import '../../settings/domain/settings_repository.dart';
 import '../../../l10n/l10n.dart';
+
+double _profileCompletion(Profile? profile) {
+  if (profile == null) return 0.0;
+  int filled = 0;
+  const total = 5;
+  if (profile.name.trim().isNotEmpty) filled++;
+  if (profile.gender != null) filled++;
+  if (profile.birthYear != null) filled++;
+  if (profile.motherTongue != null) filled++;
+  if (profile.avatarSeed != null && profile.avatarSeed!.isNotEmpty) filled++;
+  return filled / total;
+}
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -23,17 +39,17 @@ class HomeScreen extends ConsumerWidget {
     final profile = ref.watch(activeProfileProvider).value;
     final programsAsync = ref.watch(programsForActiveProfileProvider);
     final programs = programsAsync.value ?? const <Program>[];
-    final activePrograms = programs
-        .where((program) => !program.isCompleted)
-        .toList();
-    final recent = activePrograms.isEmpty ? null : activePrograms.first;
+    final activePrograms = programs.where((p) => !p.isCompleted).toList();
 
+    final isLoadingPrograms = programsAsync.isLoading && programsAsync.value == null;
     final greeting = (profile == null || profile.name.trim().isEmpty)
         ? context.l10n.welcomeGreeting
         : context.l10n.welcomeGreetingUser(profile.name.trim());
-    final subline = activePrograms.isEmpty
+    final subline = isLoadingPrograms
         ? context.l10n.homeSublineEmpty
-        : context.l10n.homeSublineActive(activePrograms.length);
+        : activePrograms.isEmpty
+            ? context.l10n.homeSublineEmpty
+            : context.l10n.homeSublineActive(activePrograms.length);
     final points = ref.watch(rewardTotalProvider).value ?? 0;
 
     return SafeArea(
@@ -44,18 +60,15 @@ class HomeScreen extends ConsumerWidget {
           final height = constraints.maxHeight;
           final tight = height < 680;
           final compact = height < 740;
-          final side = tight ? KvlSpacing.md : KvlSpacing.lg;
+          const side = 10.0;
           final gap = tight
               ? KvlSpacing.xs
               : (compact ? KvlSpacing.sm : KvlSpacing.md);
           final headerGap = tight
-              ? KvlSpacing.sm
+              ? KvlSpacing.xs
               : (compact ? KvlSpacing.md : KvlSpacing.xl);
-          final actionHeight = tight ? 46.0 : (compact ? 50.0 : 54.0);
-          final cameraGap = MediaQuery.viewPaddingOf(
-            context,
-          ).top.clamp(44.0, 56.0);
-          final topInset = cameraGap + (tight ? KvlSpacing.xs : KvlSpacing.sm);
+          final cameraGap = MediaQuery.viewPaddingOf(context).top.clamp(40.0, 52.0);
+          final topInset = cameraGap + 4.0;
 
           return Padding(
             padding: EdgeInsets.fromLTRB(
@@ -71,55 +84,34 @@ class HomeScreen extends ConsumerWidget {
                   greeting: greeting,
                   subline: subline,
                   initial: profile?.initials ?? '?',
+                  profileId: profile?.id ?? '',
                   compact: compact,
                   onProfileTap: () => context.push(KvlRoute.profile),
-                  milestoneCompleted: programs.where((p) => p.isGoalReached).length,
-                  milestoneTotal: programs.length,
+                  profileCompletion: _profileCompletion(profile),
                 ),
                 SizedBox(height: headerGap),
                 _RewardPointsTile(points: points, compact: compact),
-                if (activePrograms.isNotEmpty) ...[
-                  SizedBox(height: gap),
+                SizedBox(height: gap),
+                // Bulletin — edge-to-edge: escape the column padding via negative
+                // translate, then size to full screen width.
+                Transform.translate(
+                  offset: Offset(-side, 0),
+                  child: SizedBox(
+                    width: constraints.maxWidth + side * 2,
+                    child: const _Bulletin(),
+                  ),
+                ),
+                SizedBox(height: gap),
+                if (isLoadingPrograms)
+                  _ProgramCardShimmer(compact: compact)
+                else if (activePrograms.isNotEmpty)
                   _ProgramCarousel(programs: activePrograms, compact: compact),
-                ],
                 SizedBox(height: gap),
                 Expanded(
                   child: _HeroQuote(compact: compact, tight: tight),
                 ),
                 SizedBox(height: gap),
-                _HomeActionButton(
-                  label: recent == null
-                      ? context.l10n.quickStartPractice
-                      : context.l10n.continuePractice,
-                  icon: Icons.play_circle_outline_rounded,
-                  primary: true,
-                  height: actionHeight,
-                  onPressed: () {
-                    if (recent != null) {
-                      context.push('${KvlRoute.practice}/${recent.id}');
-                    } else {
-                      context.push(KvlRoute.quickStart);
-                    }
-                  },
-                ),
-                SizedBox(height: gap),
-                _HomeActionButton(
-                  label: programs.isEmpty
-                      ? context.l10n.browseMantras
-                      : context.l10n.selectFromPrograms,
-                  height: actionHeight,
-                  onPressed: () => context.go(
-                    programs.isEmpty
-                        ? KvlRoute.mantraSelection
-                        : KvlRoute.programs,
-                  ),
-                ),
-                SizedBox(height: gap),
-                _HomeActionButton(
-                  label: context.l10n.createNewProgram,
-                  height: actionHeight,
-                  onPressed: () => context.push(KvlRoute.mantraSelection),
-                ),
+                _SadhanaList(compact: compact),
               ],
             ),
           );
@@ -129,30 +121,34 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Header
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _HomeHeader extends StatelessWidget {
   const _HomeHeader({
     required this.greeting,
     required this.subline,
     required this.initial,
+    required this.profileId,
     required this.compact,
     required this.onProfileTap,
-    required this.milestoneCompleted,
-    required this.milestoneTotal,
+    required this.profileCompletion,
   });
 
   final String greeting;
   final String subline;
   final String initial;
+  final String profileId;
   final bool compact;
   final VoidCallback onProfileTap;
-  final int milestoneCompleted;
-  final int milestoneTotal;
+  final double profileCompletion;
 
   @override
   Widget build(BuildContext context) {
-    final size = compact ? 46.0 : 52.0;
+    final size = compact ? 54.0 : 60.0;
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
           child: Column(
@@ -179,9 +175,8 @@ class _HomeHeader extends StatelessWidget {
                   child: Text(
                     subline,
                     maxLines: 1,
-                    style: KvlText.caption(
-                      compact ? 13.5 : 15,
-                    ).copyWith(color: KvlColors.inkSoft),
+                    style: KvlText.caption(compact ? 13.5 : 15)
+                        .copyWith(color: KvlColors.inkSoft),
                   ),
                 ),
               ),
@@ -191,31 +186,16 @@ class _HomeHeader extends StatelessWidget {
         const SizedBox(width: KvlSpacing.md),
         InkWell(
           onTap: onProfileTap,
-          borderRadius: BorderRadius.circular(28),
-          child: MilestoneRing(
-            completed: milestoneCompleted,
-            total: milestoneTotal,
+          borderRadius: BorderRadius.circular(34),
+          child: MilestoneRing.fraction(
+            fraction: profileCompletion,
             strokeWidth: 2.5,
             gap: 2.5,
-            child: Container(
-              width: size,
-              height: size,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFFFFB572), KvlColors.primary],
-                ),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                initial,
-                style: KvlText.ui(
-                  20,
-                  FontWeight.w700,
-                ).copyWith(color: Colors.white),
-              ),
+            child: KvlProfileAvatar(
+              profileId: profileId,
+              initials: initial,
+              size: size,
+              textSize: 20,
             ),
           ),
         ),
@@ -223,6 +203,10 @@ class _HomeHeader extends StatelessWidget {
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Reward points tile
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _RewardPointsTile extends StatelessWidget {
   const _RewardPointsTile({required this.points, required this.compact});
@@ -235,7 +219,10 @@ class _RewardPointsTile extends StatelessWidget {
       onTap: () => GoRouter.of(context).go(KvlRoute.store),
       borderRadius: KvlRadius.brLG,
       child: Container(
-        padding: EdgeInsets.all(compact ? KvlSpacing.sm : KvlSpacing.md),
+        padding: EdgeInsets.symmetric(
+          horizontal: KvlSpacing.md,
+          vertical: compact ? KvlSpacing.xs : KvlSpacing.sm,
+        ),
         decoration: BoxDecoration(
           color: KvlColors.surfaceAlt,
           borderRadius: KvlRadius.brLG,
@@ -243,48 +230,20 @@ class _RewardPointsTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Container(
-              width: compact ? 36 : 44,
-              height: compact ? 36 : 44,
-              decoration: const BoxDecoration(
-                color: KvlColors.primaryGhost,
-                shape: BoxShape.circle,
-              ),
-              alignment: Alignment.center,
-              child: const Icon(
-                Icons.workspace_premium_outlined,
-                color: KvlColors.primary,
-                size: 25,
-              ),
-            ),
-            const SizedBox(width: KvlSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    context.l10n.rewardPoints,
-                    style: KvlText.caption(
-                      compact ? 10.5 : 12,
-                    ).copyWith(color: KvlColors.inkSoft),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    IndianNumberFormat.format(points),
-                    style: KvlText.ui(
-                      compact ? 17 : 22,
-                      FontWeight.w700,
-                    ).copyWith(color: KvlColors.ink),
-                  ),
-                ],
-              ),
-            ),
+            const Icon(Icons.workspace_premium_outlined,
+                color: KvlColors.primary, size: 22),
             const SizedBox(width: KvlSpacing.sm),
+            Text(context.l10n.rewardPoints,
+                style: KvlText.caption(12).copyWith(color: KvlColors.inkSoft)),
+            const SizedBox(width: KvlSpacing.xs),
+            Text(
+              IndianNumberFormat.format(points),
+              style: KvlText.ui(14, FontWeight.w700).copyWith(color: KvlColors.ink),
+            ),
+            const Spacer(),
             Container(
               padding: const EdgeInsets.symmetric(
-                horizontal: KvlSpacing.md,
-                vertical: KvlSpacing.xs,
-              ),
+                  horizontal: KvlSpacing.md, vertical: KvlSpacing.xs),
               decoration: BoxDecoration(
                 borderRadius: KvlRadius.brPill,
                 border: Border.all(color: KvlColors.primary, width: 1.4),
@@ -301,11 +260,8 @@ class _RewardPointsTile extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: KvlSpacing.xs),
-                  const Icon(
-                    Icons.arrow_forward_rounded,
-                    color: KvlColors.primaryDeep,
-                    size: 16,
-                  ),
+                  const Icon(Icons.arrow_forward_rounded,
+                      color: KvlColors.primaryDeep, size: 16),
                 ],
               ),
             ),
@@ -316,7 +272,98 @@ class _RewardPointsTile extends StatelessWidget {
   }
 }
 
-// ── Horizontally swipeable program carousel ──────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Bulletin — edge-to-edge orange scrolling ticker
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _Bulletin extends StatefulWidget {
+  const _Bulletin();
+
+  @override
+  State<_Bulletin> createState() => _BulletinState();
+}
+
+class _BulletinState extends State<_Bulletin>
+    with SingleTickerProviderStateMixin {
+  static const _text =
+      '  🕉  Join Global Sadhanas   •   Chant Together, Grow Together   •   🙏  Thousands Practicing Now   •   Start Your Journey Today   •   ✨  Join Global Sadhanas   •   Chant Together, Grow Together   •   ';
+
+  late final AnimationController _ctrl = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 28),
+  )..repeat();
+
+  Timer? _autoTimer;
+
+  @override
+  void dispose() {
+    _autoTimer?.cancel();
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 34,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFFE8650A), Color(0xFFD4520A), Color(0xFFE8650A)],
+        ),
+      ),
+      child: ClipRect(
+        child: AnimatedBuilder(
+          animation: _ctrl,
+          builder: (_, __) => CustomPaint(
+            size: Size.infinite,
+            painter: _TickerPainter(
+              text: _text,
+              progress: _ctrl.value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.2,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TickerPainter extends CustomPainter {
+  _TickerPainter({
+    required this.text,
+    required this.progress,
+    required this.style,
+  });
+  final String text;
+  final double progress;
+  final TextStyle style;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final tp = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+    )..layout(minWidth: 0, maxWidth: double.infinity);
+
+    final totalW = tp.width;
+    final offset = -(progress * totalW);
+    tp.paint(canvas, Offset(offset, (size.height - tp.height) / 2));
+    tp.paint(canvas, Offset(offset + totalW, (size.height - tp.height) / 2));
+  }
+
+  @override
+  bool shouldRepaint(_TickerPainter old) => old.progress != progress;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Program carousel
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _ProgramCarousel extends StatefulWidget {
   const _ProgramCarousel({required this.programs, required this.compact});
   final List<Program> programs;
@@ -328,19 +375,29 @@ class _ProgramCarousel extends StatefulWidget {
 
 class _ProgramCarouselState extends State<_ProgramCarousel> {
   late final PageController _ctrl;
+  Timer? _autoTimer;
   int _page = 0;
 
   @override
   void initState() {
     super.initState();
-    // Large offset so backward swipe also loops (virtual infinite scroll).
     final initial = widget.programs.length * 500;
     _ctrl = PageController(initialPage: initial);
     _page = initial % widget.programs.length;
+    if (widget.programs.length > 1) {
+      _autoTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+        if (!_ctrl.hasClients) return;
+        _ctrl.nextPage(
+          duration: const Duration(milliseconds: 420),
+          curve: Curves.easeInOut,
+        );
+      });
+    }
   }
 
   @override
   void dispose() {
+    _autoTimer?.cancel();
     _ctrl.dispose();
     super.dispose();
   }
@@ -357,8 +414,7 @@ class _ProgramCarouselState extends State<_ProgramCarousel> {
           height: cardH,
           child: PageView.builder(
             controller: _ctrl,
-            onPageChanged: (i) =>
-                setState(() => _page = i % count),
+            onPageChanged: (i) => setState(() => _page = i % count),
             itemBuilder: (ctx, i) => Padding(
               padding: const EdgeInsets.symmetric(horizontal: 1),
               child: _ProgramCard(
@@ -405,8 +461,7 @@ class _ProgramCard extends ConsumerWidget {
     final mantra = ref.watch(mantraByIdProvider(program.mantraId));
     final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
     final imgUrl = mantra?.previewImageUrl ?? mantra?.imageUrl;
-    final name =
-        mantra?.name.displayForLanguage(settings.languageCode) ?? '';
+    final name = mantra?.name.displayForLanguage(settings.languageCode) ?? '';
     final imgSize = compact ? 56.0 : 68.0;
     final ringPct = (program.targetDays > 0)
         ? (program.daysElapsed / program.targetDays).clamp(0.0, 1.0)
@@ -437,7 +492,6 @@ class _ProgramCard extends ConsumerWidget {
         ),
         child: Row(
           children: [
-            // Mantra image with circular progress ring
             SizedBox(
               width: imgSize,
               height: imgSize,
@@ -448,10 +502,8 @@ class _ProgramCard extends ConsumerWidget {
                     child: CircularProgressIndicator(
                       value: ringPct,
                       strokeWidth: 3.5,
-                      backgroundColor:
-                          KvlColors.primary.withValues(alpha: 0.12),
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                          KvlColors.primary),
+                      backgroundColor: KvlColors.primary.withValues(alpha: 0.12),
+                      valueColor: AlwaysStoppedAnimation<Color>(KvlColors.primary),
                     ),
                   ),
                   ClipRRect(
@@ -462,8 +514,7 @@ class _ProgramCard extends ConsumerWidget {
                             width: imgSize - 12,
                             height: imgSize - 12,
                             fit: BoxFit.cover,
-                            errorBuilder: (ctx, err, stack) =>
-                                _fallbackThumb(imgSize - 12),
+                            errorBuilder: (_, _a, _b) => _fallbackThumb(imgSize - 12),
                           )
                         : _fallbackThumb(imgSize - 12),
                   ),
@@ -471,24 +522,21 @@ class _ProgramCard extends ConsumerWidget {
               ),
             ),
             const SizedBox(width: KvlSpacing.md),
-            // Text info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    name,
+                    name.isEmpty ? context.l10n.dailyPractice : name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: KvlText.ui(
-                      compact ? 15.5 : 17,
-                      FontWeight.w800,
-                    ).copyWith(color: KvlColors.ink),
+                    style: KvlText.ui(compact ? 15.5 : 17, FontWeight.w800)
+                        .copyWith(color: KvlColors.ink),
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    'Continue your Sadhana',
+                    context.l10n.continueSadhana,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: KvlText.caption(compact ? 12 : 13)
@@ -497,7 +545,8 @@ class _ProgramCard extends ConsumerWidget {
                   if (program.targetDays > 0) ...[
                     const SizedBox(height: 4),
                     Text(
-                      'Day ${program.daysElapsed + 1} of ${program.targetDays}',
+                      context.l10n.programDayOf(
+                          program.daysElapsed + 1, program.targetDays),
                       maxLines: 1,
                       style: KvlText.caption(compact ? 10.5 : 11.5)
                           .copyWith(color: KvlColors.muted),
@@ -507,7 +556,6 @@ class _ProgramCard extends ConsumerWidget {
               ),
             ),
             const SizedBox(width: KvlSpacing.sm),
-            // Arrow
             Container(
               width: compact ? 36 : 42,
               height: compact ? 36 : 42,
@@ -517,11 +565,8 @@ class _ProgramCard extends ConsumerWidget {
                 boxShadow: KvlShadows.primaryGlow,
               ),
               alignment: Alignment.center,
-              child: const Icon(
-                Icons.arrow_forward_ios_rounded,
-                color: Colors.white,
-                size: 15,
-              ),
+              child: const Icon(Icons.chevron_right_rounded,
+                  color: Colors.white, size: 22),
             ),
           ],
         ),
@@ -542,18 +587,110 @@ class _ProgramCard extends ConsumerWidget {
       );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Program card shimmer — shown while programs are loading
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ProgramCardShimmer extends StatefulWidget {
+  const _ProgramCardShimmer({required this.compact});
+  final bool compact;
+
+  @override
+  State<_ProgramCardShimmer> createState() => _ProgramCardShimmerState();
+}
+
+class _ProgramCardShimmerState extends State<_ProgramCardShimmer>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _anim = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1100),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _anim.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final h = widget.compact ? 84.0 : 100.0;
+    return AnimatedBuilder(
+      animation: _anim,
+      builder: (_, __) {
+        final opacity = 0.04 + _anim.value * 0.06;
+        return Container(
+          height: h,
+          decoration: BoxDecoration(
+            color: KvlColors.primary.withValues(alpha: opacity),
+            borderRadius: KvlRadius.brLG,
+            border: Border.all(color: KvlColors.primarySoft, width: 1.2),
+          ),
+          padding: EdgeInsets.symmetric(
+            horizontal: KvlSpacing.md,
+            vertical: widget.compact ? KvlSpacing.sm : 12,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: widget.compact ? 56 : 68,
+                height: widget.compact ? 56 : 68,
+                decoration: BoxDecoration(
+                  color: KvlColors.primary.withValues(alpha: opacity + 0.04),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: KvlSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      height: 14,
+                      width: 120,
+                      decoration: BoxDecoration(
+                        color: KvlColors.primary.withValues(alpha: opacity + 0.04),
+                        borderRadius: BorderRadius.circular(7),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      height: 11,
+                      width: 80,
+                      decoration: BoxDecoration(
+                        color: KvlColors.primary.withValues(alpha: opacity + 0.02),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hero quote card
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _HeroQuote extends ConsumerWidget {
   const _HeroQuote({required this.compact, required this.tight});
-
   final bool compact;
   final bool tight;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cfg = ref.watch(remoteConfigProvider).value ?? RemoteConfig.empty;
-    final quote = cfg.stringFlag(RemoteConfigKeys.dailyQuoteTelugu, fallback: '');
-    final attribution = cfg.stringFlag(RemoteConfigKeys.dailyQuoteAttribution, fallback: '');
-    // Don't render the card if the DB has no quote configured yet.
+    final appSettings = ref.watch(appSettingsProvider).value;
+    final quote =
+        cfg.stringFlag(RemoteConfigKeys.dailyQuoteTelugu, fallback: '');
+    final attribution =
+        cfg.stringFlag(RemoteConfigKeys.dailyQuoteAttribution, fallback: '');
     if (quote.isEmpty) return const SizedBox.shrink();
     return KvlCard(
       variant: KvlCardVariant.warm,
@@ -611,12 +748,13 @@ class _HeroQuote extends ConsumerWidget {
                           ),
                         ),
                         if (attribution.isNotEmpty) ...[
-                          SizedBox(height: tight ? KvlSpacing.xs : KvlSpacing.sm),
+                          SizedBox(
+                              height:
+                                  tight ? KvlSpacing.xs : KvlSpacing.sm),
                           Text(
                             '— $attribution',
-                            style: KvlText.muted(
-                              tight ? 11.5 : 14,
-                            ).copyWith(fontWeight: FontWeight.w600),
+                            style: KvlText.muted(tight ? 11.5 : 14)
+                                .copyWith(fontWeight: FontWeight.w600),
                           ),
                         ],
                       ],
@@ -624,10 +762,25 @@ class _HeroQuote extends ConsumerWidget {
                   ),
                   InkWell(
                     onTap: () {
-                      final shareText = attribution.isNotEmpty
-                          ? '"$quote"\n— $attribution\n\nShared via Vachika Lekhini 🙏'
-                          : '"$quote"\n\nShared via Vachika Lekhini 🙏';
-                      SharePlus.instance.share(ShareParams(text: shareText));
+                      final appLink = appSettings?.appDownloadLink ?? '';
+                      String shareText;
+                      final template = appSettings?.shareQuoteText;
+                      if (template != null && template.isNotEmpty) {
+                        shareText = template
+                            .replaceAll('{quote}', quote)
+                            .replaceAll('{attribution}', attribution)
+                            .replaceAll('{app_link}', appLink);
+                      } else {
+                        shareText = attribution.isNotEmpty
+                            ? '"$quote"\n— $attribution\n\nShared via Vachika Lekhini 🙏'
+                            : '"$quote"\n\nShared via Vachika Lekhini 🙏';
+                        if (appLink.isNotEmpty) shareText += '\n$appLink';
+                      }
+                      final imgUrl = appSettings?.shareQuoteImageUrl;
+                      SharePlus.instance.share(ShareParams(
+                        text: shareText,
+                        uri: imgUrl != null && imgUrl.isNotEmpty ? Uri.tryParse(imgUrl) : null,
+                      ));
                     },
                     borderRadius: BorderRadius.circular(18),
                     child: Container(
@@ -638,11 +791,8 @@ class _HeroQuote extends ConsumerWidget {
                         shape: BoxShape.circle,
                       ),
                       alignment: Alignment.center,
-                      child: const Icon(
-                        Icons.share_outlined,
-                        color: KvlColors.inkSoft,
-                        size: 21,
-                      ),
+                      child: const Icon(Icons.share_outlined,
+                          color: KvlColors.inkSoft, size: 21),
                     ),
                   ),
                 ],
@@ -655,74 +805,59 @@ class _HeroQuote extends ConsumerWidget {
   }
 }
 
-class _HomeActionButton extends StatefulWidget {
-  const _HomeActionButton({
-    required this.label,
-    required this.onPressed,
-    required this.height,
-    this.icon,
-    this.primary = false,
-  });
+// ─────────────────────────────────────────────────────────────────────────────
+// Sadhana list — auto-scrolling carousel of active program cards
+// ─────────────────────────────────────────────────────────────────────────────
 
-  final String label;
-  final VoidCallback onPressed;
-  final double height;
-  final IconData? icon;
-  final bool primary;
+class _SadhanaList extends ConsumerStatefulWidget {
+  const _SadhanaList({required this.compact});
+  final bool compact;
 
   @override
-  State<_HomeActionButton> createState() => _HomeActionButtonState();
+  ConsumerState<_SadhanaList> createState() => _SadhanaListState();
 }
 
-class _HomeActionButtonState extends State<_HomeActionButton> {
-  bool _pressed = false;
+class _SadhanaListState extends ConsumerState<_SadhanaList> {
+  late final PageController _ctrl;
+  Timer? _autoTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = PageController(initialPage: 500);
+    _autoTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!_ctrl.hasClients) return;
+      _ctrl.nextPage(
+        duration: const Duration(milliseconds: 420),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _autoTimer?.cancel();
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final fg = widget.primary ? Colors.white : KvlColors.primaryDeep;
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapCancel: () => setState(() => _pressed = false),
-      onTapUp: (_) => setState(() => _pressed = false),
-      onTap: widget.onPressed,
-      child: AnimatedScale(
-        scale: _pressed ? .985 : 1,
-        duration: const Duration(milliseconds: 110),
-        curve: Curves.easeOut,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          height: widget.height,
-          decoration: BoxDecoration(
-            color: widget.primary ? KvlColors.primary : KvlColors.surfaceAlt,
-            gradient: widget.primary ? KvlColors.primaryGradient : null,
-            borderRadius: KvlRadius.brLG,
-            border: widget.primary
-                ? null
-                : Border.all(color: KvlColors.primary, width: 1.5),
-            boxShadow: widget.primary ? KvlShadows.primaryGlow : null,
-          ),
-          alignment: Alignment.center,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (widget.icon != null) ...[
-                Icon(widget.icon, color: fg, size: 22),
-                const SizedBox(width: KvlSpacing.sm),
-              ],
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    widget.label,
-                    maxLines: 1,
-                    style: KvlText.ui(15, FontWeight.w600).copyWith(color: fg),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+    final programs = ref.watch(programsForActiveProfileProvider).value ?? [];
+    final active = programs.where((p) => !p.isCompleted).toList();
+    if (active.isEmpty) return const SizedBox.shrink();
+
+    final cardH = widget.compact ? 84.0 : 100.0;
+    return SizedBox(
+      height: cardH,
+      child: PageView.builder(
+        controller: _ctrl,
+        itemBuilder: (context, i) {
+          final program = active[i % active.length];
+          return _ProgramCard(program: program, compact: widget.compact);
+        },
       ),
     );
   }
 }
+

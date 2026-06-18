@@ -4,7 +4,7 @@
 	import MediaUploadField from './MediaUploadField.svelte';
 	import TagMultiSelect from './TagMultiSelect.svelte';
 	import { MANTRA_TAGS } from '$lib/constants';
-	import { Save, Plus, Trash2, Image, Music } from '@lucide/svelte';
+	import { Save, Plus, Trash2, Image, Music, Share2 } from '@lucide/svelte';
 
 	interface MantraMilestone {
 		count: number;
@@ -26,6 +26,8 @@
 		pronunciationUrl: string | null;
 		previewImageUrl: string | null;
 		imageUrl: string | null;
+		shareImageUrl: string | null;
+		shareText: string | null;
 		milestones: MantraMilestone[] | null;
 		isActive: boolean;
 		sortOrder: number;
@@ -86,10 +88,12 @@
 	let previewImageUrl = $state<string | null>(value.previewImageUrl ?? null);
 	let imageUrl = $state<string | null>(value.imageUrl ?? null);
 	let pronunciationUrl = $state<string | null>(value.pronunciationUrl ?? null);
+	let shareImageUrl = $state<string | null>(value.shareImageUrl ?? null);
 	$effect.pre(() => {
 		previewImageUrl = value.previewImageUrl ?? null;
 		imageUrl = value.imageUrl ?? null;
 		pronunciationUrl = value.pronunciationUrl ?? null;
+		shareImageUrl = value.shareImageUrl ?? null;
 	});
 
 	let submitting = $state(false);
@@ -172,7 +176,7 @@
 			<!-- Milestones (moved here — compact 2×2 grid in col 1 bottom) -->
 			<div class="flex-1 min-h-0 rounded-xl border border-amber-100 bg-white shadow-sm overflow-hidden flex flex-col">
 				<div class="px-3 pt-3 pb-2 border-b border-amber-50 bg-amber-50/40 flex items-center gap-2 shrink-0">
-					<span class="flex-1 section-label text-amber-800">Milestones</span>
+					<span class="flex-1 section-label text-amber-800">Preset Goals</span>
 					<button type="button" onclick={addMilestone}
 						class="flex items-center gap-1 rounded-lg border border-dashed border-slate-200 bg-slate-50
 							px-2.5 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-100 transition-colors">
@@ -336,6 +340,44 @@
 						onUrlChange={(url) => { pronunciationUrl = url; }}
 					/>
 					<input type="hidden" id="pronunciationUrl" name="pronunciationUrl" value={pronunciationUrl ?? ''} />
+				</div>
+			</div>
+
+			<!-- Share / WhatsApp -->
+			<div class="flex-1 min-h-0 rounded-xl border border-green-100 bg-white shadow-sm overflow-hidden flex flex-col">
+				<div class="px-3 pt-3 pb-2 border-b border-green-50 bg-green-50/40 flex items-center gap-1.5 shrink-0">
+					<Share2 size={12} class="text-green-600" />
+					<span class="section-label text-green-800">Share / WhatsApp</span>
+				</div>
+				<div class="flex-1 min-h-0 p-3 overflow-y-auto space-y-3">
+					<!-- Share image -->
+					<div>
+						<p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Share Image</p>
+						<MediaUploadField
+							category="mantra-share"
+							targetId="shareImageUrl"
+							accept="image/*"
+							buttonLabel={shareImageUrl ? 'Replace' : 'Upload share image'}
+							currentUrl={shareImageUrl}
+							onUrlChange={(url) => { shareImageUrl = url; }}
+						/>
+						<input type="hidden" id="shareImageUrl" name="shareImageUrl" value={shareImageUrl ?? ''} />
+					</div>
+					<!-- Share text template -->
+					<div>
+						<p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Message Template</p>
+						<textarea
+							name="shareText"
+							rows="4"
+							placeholder="🙏 I am chanting {mantra_name}!&#10;Count: {chant_count}&#10;&#10;Join me: {app_link}"
+							class="w-full rounded-lg border border-slate-200 px-2.5 py-2 text-xs font-mono focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400 resize-none"
+						>{value.shareText ?? ''}</textarea>
+						<p class="mt-1 text-[10px] text-slate-400">
+							Placeholders: <code class="bg-slate-100 px-1 rounded">{'{mantra_name}'}</code>
+							<code class="bg-slate-100 px-1 rounded">{'{chant_count}'}</code>
+							<code class="bg-slate-100 px-1 rounded">{'{app_link}'}</code>
+						</p>
+					</div>
 				</div>
 			</div>
 

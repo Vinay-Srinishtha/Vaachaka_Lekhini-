@@ -3,7 +3,7 @@
   "appName": "Vaachaka Lekhini",
   "appTagline": "Your Personal Spiritual Practice Companion",
   "appMottoChant": "Chant with Purpose | Track with Pride",
-  "setLanguage": "Set Language",
+  "setLanguage": "Choose Language",
   "existingUser": "Existing user?",
   "loginButton": "Login",
   "newUser": "New user?",
@@ -61,7 +61,7 @@
     }
   },
   "homeSublineEmpty": "Start your spiritual journey",
-  "homeSublineActive": "{count, plural, =1{You're doing great! 1 Program Active} other{You're doing great! {count} Programs Active}}",
+  "homeSublineActive": "{count, plural, =1{You're doing great! 1 Sadhana Active} other{You're doing great! {count} Sadhanas Active}}",
   "@homeSublineActive": {
     "placeholders": {
       "count": {
@@ -87,8 +87,8 @@
   "quickStartPractice": "Quick Start Practice",
   "continuePractice": "Continue Practice",
   "browseMantras": "Browse Mantras",
-  "selectFromPrograms": "Select from your Programs",
-  "createNewProgram": "Create a New Program",
+  "selectFromPrograms": "Select from your Sadhanas",
+  "createNewProgram": "Start New Sadhana",
   "mantraSelectionTitle": "Mantra Selection",
   "selectMantraByNeed": "Select mantra based on your need →",
   "confirmSelection": "Confirm Selection",
@@ -161,9 +161,9 @@
     }
   },
   "startButton": "START",
-  "noActivePrograms": "No active programs",
+  "noActivePrograms": "No active sadhanas",
   "chooseMantra": "Choose Mantra",
-  "selectActiveProgramDescription": "Select an active program to update this dashboard.",
+  "selectActiveProgramDescription": "Select an active sadhana to update this dashboard.",
   "noActivePractice": "No active practice yet",
   "pickMantraAndTarget": "Pick a mantra and set a target to begin chanting or writing.",
   "chooseAMantra": "Choose a Mantra",
@@ -200,13 +200,13 @@
   "totalChants": "Total Chants",
   "complete": "Complete",
   "daysPractising": "Days Practising",
-  "programs": "Programs",
+  "programs": "Sadhanas",
   "overallProgress": "Overall Progress",
-  "createNewProgramButton": "Create New Program",
-  "myRecitationPrograms": "My Recitation Programs",
-  "completedPrograms": "Completed Programs",
-  "noProgramsYet": "No programs yet",
-  "pickMantraAndTargetToStart": "Pick a mantra and set a target to start your first program.",
+  "createNewProgramButton": "Create New Sadhana",
+  "myRecitationPrograms": "My Recitation Sadhanas",
+  "completedPrograms": "Completed Sadhanas",
+  "noProgramsYet": "No sadhanas yet",
+  "pickMantraAndTargetToStart": "Pick a mantra and set a target to start your first sadhana.",
   "completedWithCheck": "Completed ✓",
   "setYourPracticeTarget": "Set Your Practice Target",
   "daysValue": "{days} days",
@@ -293,7 +293,7 @@
   "logoutDialogCancel": "Cancel",
   "logoutDialogConfirm": "Logout",
   "deleteDialogTitle": "Delete account?",
-  "deleteDialogContent": "This wipes all programs, sessions, rewards, and profiles on this device. This action cannot be undone.",
+  "deleteDialogContent": "This wipes all sadhanas, sessions, rewards, and profiles on this device. This action cannot be undone.",
   "deleteDialogCancel": "Cancel",
   "deleteDialogConfirm": "Delete everything",
   "infoHelpTitle": "Help & FAQs",
@@ -320,8 +320,8 @@
   "handwritingUsedYes": "Yes",
   "handwritingUsedNo": "No",
   "startPractice": "Start Practice",
-  "dedicateProgram": "Dedicate this program",
-  "dedicateSheetTitle": "Dedicate this Program",
+  "dedicateProgram": "Dedicate this sadhana",
+  "dedicateSheetTitle": "Dedicate this Sadhana",
   "dedicateOfferPractice": "Offer your chanting practice to someone special",
   "dedicateOfferNamedPractice": "Offer your {mantraName} practice to someone special",
   "@dedicateOfferNamedPractice": {
@@ -339,7 +339,7 @@
   "updateDedication": "Update Dedication",
   "saveDedication": "Save Dedication",
   "editGoal": "Edit Goal",
-  "shareProgram": "Share Program",
+  "shareProgram": "Share Sadhana",
   "dailyProgressTitle": "Daily Progress",
   "communityInviteBanner": "Invite up to {count} friends to your practice circle",
   "@communityInviteBanner": {
@@ -351,8 +351,8 @@
   },
   "communityInviteSubline": "Create a community to support each other's spiritual journey.",
   "inviteFriendsButton": "Invite Friends",
-  "streakChallenge": "Streak Challenge",
-  "totalChantsSort": "Total Chants",
+  "streakChallenge": "Streaks",
+  "totalChantsSort": "Chants",
   "sendEncouragement": "Send Encouragement",
   "viewGroupStats": "View Group Stats",
   "youLabel": "You",
@@ -466,9 +466,9 @@
   "startRecordingButton": "Start Recording",
   "skipUseManualCounter": "Skip & Use Manual Counter",
   "navHome": "Home",
-  "navPrograms": "My Programs",
+  "navPrograms": "My Sadhanas",
   "navPractice": "Practice",
-  "navCommunity": "Streak Leaderboard",
+  "navCommunity": "Global Leaderboard",
   "navStore": "Reward Store",
   "seeHistory": "See History",
   "rewardStore": "Reward Store",
@@ -556,5 +556,21 @@
   "mantraNeedSpiritualLiberation": "Spiritual Liberation",
   "mantraNeedWisdomEnlightenment": "Wisdom & Enlightenment",
   "mantraNeedDevotion": "Devotion",
-  "appTitle": "Vaachaka Lekhini"
+  "appTitle": "Vaachaka Lekhini",
+  "noRankingsYet": "No rankings yet",
+  "noRankingsSubtitle": "Start a sadhana to appear on the leaderboard",
+  "longestStreakLabel": "Longest Streak",
+  "currentStreakLabel": "Current Streak",
+  "streakDaysCount": "{days} Days",
+  "@streakDaysCount": {
+    "placeholders": { "days": { "type": "int" } }
+  },
+  "continueSadhana": "Continue your Sadhana",
+  "programDayOf": "Day {current} of {total}",
+  "@programDayOf": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  }
 }

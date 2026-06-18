@@ -3,6 +3,7 @@
 	import { page } from '$app/state';
 	import { enhance } from '$app/forms';
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
+	import SearchInput from '$lib/components/SearchInput.svelte';
 	import { patchQuery } from '$lib/url';
 	import { toasts } from '$lib/stores/toast';
 	import { PlusCircle, ArrowUp, ArrowDown, Pencil, Trash2 } from '@lucide/svelte';
@@ -12,6 +13,16 @@
 	const deleteId = $derived(page.url.searchParams.get('delete'));
 	const target = $derived(deleteId ? data.faqs.find((f: { id: string }) => f.id === deleteId) : null);
 	let submitting = $state(false);
+
+	const q = $derived((page.url.searchParams.get('q') ?? '').toLowerCase().trim());
+	const visibleFaqs = $derived(
+		q
+			? data.faqs.filter(
+					(f: { question: string; answer: string }) =>
+						f.question.toLowerCase().includes(q) || f.answer.toLowerCase().includes(q)
+				)
+			: data.faqs
+	);
 
 	function close() {
 		goto(patchQuery(page.url, { delete: null }), { keepFocus: true, noScroll: true, replaceState: true });
@@ -49,7 +60,7 @@
 <div class="mb-6 flex items-center justify-between">
 	<div>
 		<h1 class="text-xl font-semibold text-slate-900">FAQs</h1>
-		<p class="mt-1 text-sm text-slate-500">{data.faqs.length} questions · served to the Flutter app at /api/v1/faqs</p>
+		<p class="mt-1 text-sm text-slate-500">{visibleFaqs.length}{q ? ` of ${data.faqs.length}` : ''} questions · served to the Flutter app at /api/v1/faqs</p>
 	</div>
 	<a href="/faqs/new" class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 transition-colors">
 		<PlusCircle size={16} />
@@ -57,9 +68,13 @@
 	</a>
 </div>
 
+<div class="mb-4">
+	<SearchInput placeholder="Search by question or answer…" />
+</div>
+
 <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-	{#if data.faqs.length === 0}
-		<div class="py-16 text-center text-slate-500 text-sm">No FAQs yet — create one to show it in the app.</div>
+	{#if visibleFaqs.length === 0}
+		<div class="py-16 text-center text-slate-500 text-sm">{q ? `No FAQs match "${q}"` : 'No FAQs yet — create one to show it in the app.'}</div>
 	{:else}
 		<table class="w-full text-sm">
 			<thead class="bg-slate-50 border-b border-slate-200">
@@ -71,7 +86,7 @@
 				</tr>
 			</thead>
 			<tbody class="divide-y divide-slate-100">
-				{#each data.faqs as faq, i (faq.id)}
+				{#each visibleFaqs as faq, i (faq.id)}
 					<tr class="hover:bg-slate-50 {!faq.isActive ? 'opacity-50' : ''}">
 						<td class="px-4 py-3">
 							<div class="font-medium text-slate-800 truncate max-w-md">{faq.question}</div>

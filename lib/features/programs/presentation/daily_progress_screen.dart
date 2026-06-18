@@ -84,13 +84,9 @@ class _DailyProgressScreenState extends ConsumerState<DailyProgressScreen> {
         final program = snap.data;
         final settings =
             ref.watch(settingsProvider).value ?? KvlSettings.fallback;
-        final mantraName = program == null
-            ? ''
-            : ref
-                      .watch(mantraByIdProvider(program.mantraId))
-                      ?.name
-                      .displayForLanguage(settings.languageCode) ??
-                  '';
+        final mantra = program == null ? null : ref.watch(mantraByIdProvider(program.mantraId));
+        final mantraName = mantra?.name.displayForLanguage(settings.languageCode) ?? '';
+        final appDownloadLink = ref.watch(appSettingsProvider).value?.appDownloadLink;
         final title = mantraName.isEmpty
             ? context.l10n.dailyProgressTitle
             : '$mantraName Mantra';
@@ -309,6 +305,9 @@ class _DailyProgressScreenState extends ConsumerState<DailyProgressScreen> {
                                 mantraName: mantraName,
                                 programId: widget.programId,
                                 progress: program?.totalProgress ?? 0,
+                                shareText: mantra?.shareText,
+                                shareImageUrl: mantra?.shareImageUrl,
+                                appDownloadLink: appDownloadLink,
                               ),
                             ),
                           ),
@@ -616,22 +615,35 @@ class _ShareSheet {
     required String mantraName,
     required String programId,
     required int progress,
+    String? shareText,
+    String? shareImageUrl,
+    String? appDownloadLink,
   }) {
-    final message =
-        'I am chanting the $mantraName mantra 🙏\n'
-        'I have completed ${IndianNumberFormat.format(progress)} chants so far.\n'
-        'Join me on Vachika Lekhini!';
+    final appLink = appDownloadLink ?? '';
+    final String message;
+    if (shareText != null && shareText.isNotEmpty) {
+      message = shareText
+          .replaceAll('{mantra_name}', mantraName)
+          .replaceAll('{chant_count}', IndianNumberFormat.format(progress))
+          .replaceAll('{app_link}', appLink);
+    } else {
+      message = 'I am chanting the $mantraName mantra 🙏\n'
+          'I have completed ${IndianNumberFormat.format(progress)} chants so far.\n'
+          'Join me on Vachika Lekhini!'
+          '${appLink.isNotEmpty ? '\n$appLink' : ''}';
+    }
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (_) => _ShareSheetContent(message: message),
+      builder: (_) => _ShareSheetContent(message: message, shareImageUrl: shareImageUrl),
     );
   }
 }
 
 class _ShareSheetContent extends StatelessWidget {
-  const _ShareSheetContent({required this.message});
+  const _ShareSheetContent({required this.message, this.shareImageUrl});
   final String message;
+  final String? shareImageUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -667,19 +679,27 @@ class _ShareSheetContent extends StatelessWidget {
                 icon: Icons.chat_rounded,
                 onTap: () async {
                   Navigator.pop(context);
-                  final appUri = Uri(
-                    scheme: 'whatsapp',
-                    host: 'send',
-                    queryParameters: {'text': message},
-                  );
-                  if (await canLaunchUrl(appUri)) {
-                    await launchUrl(appUri, mode: LaunchMode.externalApplication);
+                  // If there's a share image, use share_plus to attach it
+                  // (WhatsApp on Android picks up the image from the share intent).
+                  if (shareImageUrl != null && shareImageUrl!.isNotEmpty) {
+                    await SharePlus.instance.share(ShareParams(
+                      text: message,
+                      uri: Uri.tryParse(shareImageUrl!),
+                    ));
                   } else {
-                    // fallback: web
-                    final webUri = Uri.parse(
-                      'https://wa.me/?text=${Uri.encodeComponent(message)}',
+                    final appUri = Uri(
+                      scheme: 'whatsapp',
+                      host: 'send',
+                      queryParameters: {'text': message},
                     );
-                    await launchUrl(webUri, mode: LaunchMode.externalApplication);
+                    if (await canLaunchUrl(appUri)) {
+                      await launchUrl(appUri, mode: LaunchMode.externalApplication);
+                    } else {
+                      final webUri = Uri.parse(
+                        'https://wa.me/?text=${Uri.encodeComponent(message)}',
+                      );
+                      await launchUrl(webUri, mode: LaunchMode.externalApplication);
+                    }
                   }
                 },
               ),

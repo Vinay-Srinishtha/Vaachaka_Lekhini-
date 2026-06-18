@@ -40,6 +40,10 @@ model Mantra {
   previewImageUrl  String?
   /// Shown in the mantra detail / chanting view.
   imageUrl         String?
+  /// Image attached when sharing this mantra's progress on WhatsApp / social.
+  shareImageUrl    String?
+  /// Share message template. Placeholders: {mantra_name} {chant_count} {app_link}
+  shareText        String?  @db.Text
   /// Program count presets + day options shown on the Set Target screen.
   /// JSON: [{ count: number, dayOptions: number[] }]
   milestones       Json?    @db.JsonB
@@ -396,6 +400,14 @@ enum AdminRole {
   main_admin
   assets_admin
   marketplace_admin
+}
+
+/// Stores the permission set for each admin role.
+/// One row per role, seeded with defaults and editable via the Roles page.
+model AdminRoleConfig {
+  role        AdminRole @id
+  permissions String[]  @default([])
+  updatedAt   DateTime  @updatedAt
 }
 
 model RevokedToken {

@@ -69,5 +69,11 @@
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Choose a photo for your profile picture.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Take a photo for your profile picture.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Save your profile picture to Photos.</string>
 </dict>
 </plist>

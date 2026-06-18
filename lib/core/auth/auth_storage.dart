@@ -7,7 +7,13 @@ import 'auth_tokens.dart';
 /// Encrypted at-rest storage for the user's JWT pair + cached account stub.
 /// Uses platform-native keychain (iOS) / EncryptedSharedPreferences (Android).
 class AuthStorage {
-  AuthStorage({FlutterSecureStorage? storage}) : _storage = storage ?? const FlutterSecureStorage();
+  AuthStorage({FlutterSecureStorage? storage})
+      : _storage = storage ??
+            const FlutterSecureStorage(
+              // Prevents Android keystore hiccups (e.g. after app updates)
+              // from silently wiping all stored tokens and logging users out.
+              aOptions: AndroidOptions(resetOnError: false),
+            );
 
   final FlutterSecureStorage _storage;
 

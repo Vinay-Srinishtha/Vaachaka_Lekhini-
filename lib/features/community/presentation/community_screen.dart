@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-
 import '../../../app/providers.dart';
-import '../../../app/router.dart';
+
 import '../../../core/theme/theme.dart';
 import '../../../core/utils/indian_number_format.dart';
 import '../../../core/widgets/widgets.dart';
 import '../domain/friend.dart';
+import '../../mantras/domain/mantra.dart';
 import '../../../l10n/l10n.dart';
-import '../domain/leaderboard_repository.dart';
 
 class CommunityScreen extends ConsumerStatefulWidget {
   const CommunityScreen({super.key});
@@ -20,17 +18,23 @@ class CommunityScreen extends ConsumerStatefulWidget {
 
 class _CommunityScreenState extends ConsumerState<CommunityScreen> {
   LeaderboardSort _sort = LeaderboardSort.streak;
+  String? _mantraId;
 
   @override
   Widget build(BuildContext context) {
-    // Real leaderboard from /api/v1/leaderboard — no mock friends.
-    final leaderboardAsync = ref.watch(leaderboardProvider(_sort));
+    final filter = LeaderboardFilter(sort: _sort, mantraId: _mantraId);
+    final leaderboardAsync = ref.watch(leaderboardProvider(filter));
     final list = leaderboardAsync.value ?? const <Friend>[];
+    final mantras = ref.watch(mantraCatalogProvider).value ?? const <Mantra>[];
+
     return _Body(
       list: list,
       sort: _sort,
+      mantras: mantras,
+      selectedMantraId: _mantraId,
       onSortChanged: (s) => setState(() => _sort = s),
-      loading: leaderboardAsync.isLoading,
+      onMantraChanged: (id) => setState(() => _mantraId = id),
+      loading: leaderboardAsync.isLoading && list.isEmpty,
     );
   }
 }
@@ -39,73 +43,23 @@ class _Body extends StatelessWidget {
   const _Body({
     required this.list,
     required this.sort,
+    required this.mantras,
+    required this.selectedMantraId,
     required this.onSortChanged,
+    required this.onMantraChanged,
     this.loading = false,
   });
   final List<Friend> list;
   final LeaderboardSort sort;
+  final List<Mantra> mantras;
+  final String? selectedMantraId;
   final ValueChanged<LeaderboardSort> onSortChanged;
+  final ValueChanged<String?> onMantraChanged;
   final bool loading;
 
   @override
   Widget build(BuildContext context) {
     final topInset = MediaQuery.viewPaddingOf(context).top.clamp(36.0, 48.0);
-
-    // Loading state — only show spinner on true first load (no cached data yet).
-    if (loading && list.isEmpty) {
-      return Padding(
-        padding: EdgeInsets.fromLTRB(
-          KvlSpacing.lg,
-          topInset + 84,
-          KvlSpacing.lg,
-          KvlSpacing.lg,
-        ),
-        child: Column(
-          children: [
-            _InviteBanner(),
-            const SizedBox(height: KvlSpacing.xl),
-            const CircularProgressIndicator(),
-          ],
-        ),
-      );
-    }
-
-    // Empty state — no community members yet
-    if (!loading && list.isEmpty) {
-      return Padding(
-        padding: EdgeInsets.fromLTRB(
-          KvlSpacing.lg,
-          topInset + 84,
-          KvlSpacing.lg,
-          KvlSpacing.lg,
-        ),
-        child: Column(
-          children: [
-            _InviteBanner(),
-            const SizedBox(height: KvlSpacing.xl),
-            const Icon(Icons.group_off_outlined, size: 48, color: KvlColors.muted),
-            const SizedBox(height: KvlSpacing.md),
-            Text(
-              'No one here yet',
-              style: KvlText.title(16),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: KvlSpacing.xs),
-            Text(
-              'Invite friends to see the leaderboard',
-              style: KvlText.muted(13),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: KvlSpacing.lg),
-            KvlButton(
-              label: context.l10n.inviteFriendsButton,
-              icon: Icons.person_add_alt_1_outlined,
-              onPressed: () => context.push(KvlRoute.inviteFriends),
-            ),
-          ],
-        ),
-      );
-    }
 
     // One entry per account: keep only the first (highest-ranked) self row.
     bool selfSeen = false;
@@ -119,82 +73,74 @@ class _Body extends StatelessWidget {
     final podium = deduped.take(3).toList();
     final selfInPodium = podium.any((f) => f.isSelf);
     final rest = deduped.skip(3).where((f) => !selfInPodium || !f.isSelf).toList();
-    final topInset2 = topInset; // alias for use inside ListView builder
 
     final bottomInset = MediaQuery.paddingOf(context).bottom;
-    return ListView(
+
+    return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
         KvlSpacing.lg,
-        topInset2 + 84,
+        topInset + 68,
         KvlSpacing.lg,
         bottomInset + 104,
       ),
-      children: [
-        _InviteBanner(),
-        const SizedBox(height: KvlSpacing.md),
-        _SortToggle(sort: sort, onChanged: onSortChanged),
-        const SizedBox(height: KvlSpacing.lg),
-        _Podium(top3: podium, sort: sort),
-        const SizedBox(height: KvlSpacing.md),
-        for (var i = 0; i < rest.length; i++) ...[
-          _RankRow(
-            rank: i + 4,
-            friend: rest[i],
-            sort: sort,
-            highlight: rest[i].isSelf,
-          ),
-          const SizedBox(height: KvlSpacing.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _SortToggle(sort: sort, onChanged: onSortChanged),
+          if (mantras.isNotEmpty) ...[
+            const SizedBox(height: KvlSpacing.sm),
+            _MantraFilter(
+              mantras: mantras,
+              selectedId: selectedMantraId,
+              onChanged: onMantraChanged,
+            ),
+          ],
+          const SizedBox(height: KvlSpacing.md),
+          if (loading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 48),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (deduped.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 48),
+              child: Column(
+                children: [
+                  Icon(Icons.leaderboard_outlined, size: 48, color: KvlColors.primarySoft),
+                  const SizedBox(height: 12),
+                  Text(
+                    context.l10n.noRankingsYet,
+                    style: KvlText.ui(15, FontWeight.w600).copyWith(color: KvlColors.inkSoft),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    context.l10n.noRankingsSubtitle,
+                    textAlign: TextAlign.center,
+                    style: KvlText.caption(12).copyWith(color: KvlColors.muted),
+                  ),
+                ],
+              ),
+            )
+          else ...[
+            _Podium(top3: podium, sort: sort),
+            const SizedBox(height: KvlSpacing.sm),
+            for (int i = 0; i < rest.length; i++) ...[
+              _RankRow(
+                rank: i + 4,
+                friend: rest[i],
+                sort: sort,
+                highlight: rest[i].isSelf,
+              ),
+              if (i < rest.length - 1)
+                const SizedBox(height: KvlSpacing.xs),
+            ],
+          ],
         ],
-        const SizedBox(height: KvlSpacing.md),
-        KvlButton(
-          variant: KvlButtonVariant.secondary,
-          label: context.l10n.viewGroupStats,
-          onPressed: () => showDialog<void>(
-            context: context,
-            builder: (_) => const _GroupStatsDialog(),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
 
-class _InviteBanner extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return KvlCard(
-      variant: KvlCardVariant.soft,
-      gradient: const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [KvlColors.primarySoft, KvlColors.primaryGhost],
-      ),
-      child: Column(
-        children: [
-          Text(
-            context.l10n.communityInviteBanner(LeaderboardRepository.maxCircle),
-            textAlign: TextAlign.center,
-            style: KvlText.ui(12.5, FontWeight.w600),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            context.l10n.communityInviteSubline,
-            textAlign: TextAlign.center,
-            style: KvlText.caption(11),
-          ),
-          const SizedBox(height: KvlSpacing.sm),
-          KvlButton(
-            size: KvlButtonSize.tiny,
-            expand: false,
-            label: context.l10n.inviteFriendsButton,
-            icon: Icons.person_add_alt_1_rounded,
-            onPressed: () => context.push(KvlRoute.inviteFriends),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _SortToggle extends StatelessWidget {
   const _SortToggle({required this.sort, required this.onChanged});
@@ -306,7 +252,7 @@ class _Pod extends StatelessWidget {
     final size = place == 1 ? 60.0 : 52.0;
     final border = _borders[place]!;
     final metric = sort == LeaderboardSort.streak
-        ? '${friend.streakDays} Days'
+        ? context.l10n.streakDaysCount(friend.longestStreak)
         : IndianNumberFormat.compact(friend.totalChants);
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -356,54 +302,80 @@ class _Pod extends StatelessWidget {
   }
 }
 
-class _GroupStatsDialog extends ConsumerWidget {
-  const _GroupStatsDialog();
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final leaderboardAsync = ref.watch(leaderboardProvider(LeaderboardSort.streak));
-    final list = leaderboardAsync.value ?? const <Friend>[];
-    final totalChants = list.fold<int>(0, (s, f) => s + f.totalChants);
-    final bestStreak = list.isEmpty ? 0 : list.map((f) => f.streakDays).reduce((a, b) => a > b ? a : b);
-
-    return AlertDialog(
-      title: Text(context.l10n.viewGroupStats),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _StatRow(label: context.l10n.membersLabel, value: '${list.length}'),
-          const SizedBox(height: KvlSpacing.sm),
-          _StatRow(label: context.l10n.totalChantsSort, value: IndianNumberFormat.compact(totalChants)),
-          const SizedBox(height: KvlSpacing.sm),
-          _StatRow(label: context.l10n.bestStreakLabel, value: '$bestStreak ${context.l10n.daysLabel}'),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(context.l10n.closeLabel),
-        ),
-      ],
-    );
-  }
-}
-
-class _StatRow extends StatelessWidget {
-  const _StatRow({required this.label, required this.value});
-  final String label;
-  final String value;
+class _MantraFilter extends StatelessWidget {
+  const _MantraFilter({
+    required this.mantras,
+    required this.selectedId,
+    required this.onChanged,
+  });
+  final List<Mantra> mantras;
+  final String? selectedId;
+  final ValueChanged<String?> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: KvlText.muted(13)),
-        Text(value, style: KvlText.ui(14, FontWeight.w700)),
-      ],
+    return SizedBox(
+      height: 36,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          _FilterChip(
+            label: context.l10n.allFilter,
+            selected: selectedId == null,
+            onTap: () => onChanged(null),
+          ),
+          const SizedBox(width: 8),
+          for (final m in mantras) ...[
+            _FilterChip(
+              label: m.name.roman,
+              selected: selectedId == m.id,
+              onTap: () => onChanged(m.id),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ],
+      ),
     );
   }
 }
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? KvlColors.primary : KvlColors.primaryGhost,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? KvlColors.primary : KvlColors.primarySoft,
+            width: 1.2,
+          ),
+        ),
+        child: Text(
+          label,
+          style: KvlText.ui(12, FontWeight.w600).copyWith(
+            color: selected ? Colors.white : KvlColors.primaryDeep,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 
 class _RankRow extends StatefulWidget {
   const _RankRow({
@@ -425,7 +397,7 @@ class _RankRowState extends State<_RankRow> {
   @override
   Widget build(BuildContext context) {
     final metric = widget.sort == LeaderboardSort.streak
-        ? '${widget.friend.streakDays} Days'
+        ? context.l10n.streakDaysCount(widget.friend.longestStreak)
         : IndianNumberFormat.compact(widget.friend.totalChants);
     return KvlCard(
       variant: widget.highlight ? KvlCardVariant.soft : KvlCardVariant.plain,
@@ -480,16 +452,30 @@ class _RankRowState extends State<_RankRow> {
                 ),
                 Text(
                   widget.sort == LeaderboardSort.streak
-                      ? context.l10n.streakLabel
+                      ? context.l10n.longestStreakLabel
                       : context.l10n.totalChantsSort,
                   style: KvlText.muted(10),
                 ),
               ],
             ),
           ),
-          Text(
-            widget.friend.streakActive ? '$metric ⏱️' : metric,
-            style: KvlText.ui(12, FontWeight.w600),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                widget.friend.streakActive ? '$metric 🔥' : metric,
+                style: KvlText.ui(12, FontWeight.w600),
+              ),
+              if (widget.sort == LeaderboardSort.streak &&
+                  widget.friend.currentStreak > 0 &&
+                  widget.friend.currentStreak != widget.friend.longestStreak)
+                Text(
+                  context.l10n.streakDaysCount(widget.friend.currentStreak),
+                  style: KvlText.muted(9)
+                      .copyWith(color: KvlColors.primary),
+                ),
+            ],
           ),
         ],
       ),

@@ -25,6 +25,8 @@ export const GET: RequestHandler = async () => {
 			pronunciationUrl: true,
 			imageUrl: true,
 			previewImageUrl: true,
+			shareImageUrl: true,
+			shareText: true,
 			milestones: true,
 			sortOrder: true,
 			updatedAt: true

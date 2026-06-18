@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -25,6 +26,7 @@ import '../../../l10n/l10n.dart';
 import '../../../app/router.dart';
 import '../../../core/i18n/language_options.dart';
 import '../../../core/theme/theme.dart';
+import '../../../core/widgets/kvl_profile_avatar.dart';
 import '../../../core/utils/indian_number_format.dart';
 import '../../../core/storage/hive_setup.dart';
 import '../../../core/widgets/widgets.dart';
@@ -77,26 +79,9 @@ class ProfileScreen extends ConsumerWidget {
               total: programs.length,
               strokeWidth: 3.5,
               gap: 3.0,
-              child: Container(
-                width: 74,
-                height: 74,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFFFFB572), KvlColors.primary],
-                  ),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  profile?.initials ?? '?',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+              child: _EditableAvatar(
+                profileId: profile?.id,
+                initials: profile?.initials ?? '?',
               ),
             ),
           ),
@@ -111,7 +96,7 @@ class ProfileScreen extends ConsumerWidget {
             Center(child: Text(session.mobile, style: KvlText.muted(11))),
 
           const SizedBox(height: KvlSpacing.sm),
-          if (profile != null && !profile.isProfileComplete)
+          if (profile != null && !profile.isProfileComplete && profile.profileCompletedAt == null)
             GestureDetector(
               onTap: () => context.push(KvlRoute.profileEdit),
               child: KvlCard(
@@ -208,7 +193,7 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(width: 6),
               Expanded(
                 child: _Kpi(
-                  value: '$longestStreak',
+                  value: '$longestStreak days',
                   label: context.l10n.currentStreak,
                 ),
               ),
@@ -287,16 +272,6 @@ class ProfileScreen extends ConsumerWidget {
             title: context.l10n.familyCommunitySection,
             children: [
               SettingRow(
-                icon: Icons.switch_account_rounded,
-                label: 'Switch User',
-                onTap: () async {
-                  await ref
-                      .read(profileRepositoryProvider)
-                      .clearActive();
-                  if (context.mounted) context.go(KvlRoute.profileSelect);
-                },
-              ),
-              SettingRow(
                 icon: Icons.smartphone_rounded,
                 label: context.l10n.changeMobileNumber,
                 onTap: () => showModalBottomSheet(
@@ -306,17 +281,41 @@ class ProfileScreen extends ConsumerWidget {
                   builder: (_) => _ChangeMobileSheet(parentRef: ref),
                 ),
               ),
-              // Only the primary member (Me) can manage family members.
-              if (profile?.relation == FamilyRelation.me)
-                SettingRow(
-                  icon: Icons.group_outlined,
-                  label: context.l10n.familyMembers,
-                  onTap: () => context.push(KvlRoute.addFamily),
-                ),
               SettingRow(
-                icon: Icons.person_add_alt_1_outlined,
-                label: context.l10n.inviteFriends,
-                onTap: () => context.push(KvlRoute.inviteFriends),
+                icon: Icons.switch_account_rounded,
+                label: 'Switch User',
+                onTap: () async {
+                  await ref
+                      .read(profileRepositoryProvider)
+                      .clearActive();
+                  if (context.mounted) context.go(KvlRoute.profileSelect);
+                },
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(KvlSpacing.md, KvlSpacing.sm, KvlSpacing.md, KvlSpacing.sm),
+                child: Row(
+                  children: [
+                    if (profile?.relation == FamilyRelation.me) ...[
+                      Expanded(
+                        child: _CommunityCard(
+                          icon: Icons.group_outlined,
+                          label: context.l10n.familyMembers,
+                          onTap: () => context.push(KvlRoute.addFamily),
+                        ),
+                      ),
+                      const SizedBox(width: KvlSpacing.sm),
+                    ],
+                    Expanded(
+                      child: _CommunityCard(
+                        icon: Icons.person_add_alt_1_outlined,
+                        label: context.l10n.inviteFriends,
+                        onTap: () => context.push(KvlRoute.inviteFriends),
+                      ),
+                    ),
+                    if (profile?.relation != FamilyRelation.me)
+                      const Expanded(child: SizedBox()),
+                  ],
+                ),
               ),
             ],
           ),
@@ -377,24 +376,6 @@ class ProfileScreen extends ConsumerWidget {
                   }
                   _RetrainMantraPicker.show(context, ref, activePrograms);
                 },
-              ),
-              SettingRow(
-                icon: Icons.tune_rounded,
-                label: context.l10n.microphoneSensitivity,
-                value: settings.micSensitivity.label,
-                onTap: () => _pickFromList(
-                  context,
-                  title: context.l10n.microphoneSensitivity,
-                  options: MicSensitivity.values.map((m) => m.label).toList(),
-                  current: settings.micSensitivity.label,
-                  onPicked: (v) async {
-                    final next = MicSensitivity.values.firstWhere(
-                      (m) => m.label == v,
-                      orElse: () => MicSensitivity.medium,
-                    );
-                    await settingsRepo.setMicSensitivity(next);
-                  },
-                ),
               ),
             ],
           ),
@@ -1476,52 +1457,124 @@ class _MinuteChip extends StatelessWidget {
   }
 }
 
-class _RewardRulesCard extends StatelessWidget {
+class _RewardRulesCard extends StatefulWidget {
   const _RewardRulesCard({required this.profileComplete});
   final bool profileComplete;
 
   @override
+  State<_RewardRulesCard> createState() => _RewardRulesCardState();
+}
+
+class _RewardRulesCardState extends State<_RewardRulesCard>
+    with SingleTickerProviderStateMixin {
+  bool _expanded = false;
+  late final AnimationController _ctrl;
+  late final Animation<double> _sizeFactor;
+  late final Animation<double> _iconTurn;
+
+  static const _rules = [
+    (icon: Icons.celebration_rounded,           label: 'Joining bonus',               pts: 100, note: 'One-time, on sign-up'),
+    (icon: Icons.person_rounded,                label: 'Complete your profile',        pts: 50,  note: 'One-time bonus'),
+    (icon: Icons.auto_awesome_rounded,          label: 'Every 11 chants or writings',  pts: 1,   note: 'Per 11 count batch'),
+    (icon: Icons.local_fire_department_rounded, label: '7-day continuous streak',      pts: 50,  note: 'Per week milestone'),
+    (icon: Icons.group_add_rounded,             label: 'Invite a friend',              pts: 50,  note: 'When they join'),
+    (icon: Icons.card_giftcard_rounded,         label: 'Join via referral link',       pts: 50,  note: 'Extra on sign-up'),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    );
+    _sizeFactor = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
+    _iconTurn = Tween<double>(begin: 0, end: 0.5).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _toggle() {
+    setState(() => _expanded = !_expanded);
+    _expanded ? _ctrl.forward() : _ctrl.reverse();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    const rules = [
-      (icon: Icons.celebration_rounded,          label: 'Joining bonus',               pts: 100, note: 'One-time, on sign-up'),
-      (icon: Icons.person_rounded,               label: 'Complete your profile',        pts: 50,  note: 'One-time bonus'),
-      (icon: Icons.auto_awesome_rounded,         label: 'Every 11 chants or writings',  pts: 1,   note: 'Per 11 count batch'),
-      (icon: Icons.local_fire_department_rounded, label: '7-day continuous streak',     pts: 50,  note: 'Per week milestone'),
-      (icon: Icons.group_add_rounded,            label: 'Invite a friend',              pts: 50,  note: 'When they join'),
-      (icon: Icons.card_giftcard_rounded,        label: 'Join via referral link',       pts: 50,  note: 'Extra on sign-up'),
-    ];
     return KvlCard(
-      padding: const EdgeInsets.all(KvlSpacing.md),
+      padding: EdgeInsets.zero,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.card_giftcard_rounded, color: KvlColors.primary, size: 16),
-              const SizedBox(width: 6),
-              Text(
-                'How to earn points',
-                style: KvlText.caption(12).copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: KvlColors.inkSoft,
-                  letterSpacing: 0.4,
-                ),
+          // ── Header / tap target ──────────────────────────────────────
+          InkWell(
+            onTap: _toggle,
+            borderRadius: KvlRadius.brLG,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: KvlSpacing.md,
+                vertical: KvlSpacing.md,
               ),
-            ],
-          ),
-          const SizedBox(height: KvlSpacing.sm),
-          for (final r in rules) ...[
-            _RuleRow(
-              icon: r.icon,
-              label: r.label,
-              pts: r.pts,
-              note: r.note,
-              earned: r.icon == Icons.celebration_rounded ||
-                      (r.icon == Icons.person_rounded && profileComplete),
+              child: Row(
+                children: [
+                  const Icon(Icons.card_giftcard_rounded,
+                      color: KvlColors.primary, size: 16),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'How to earn points',
+                      style: KvlText.caption(12).copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: KvlColors.inkSoft,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                  ),
+                  RotationTransition(
+                    turns: _iconTurn,
+                    child: const Icon(Icons.keyboard_arrow_down_rounded,
+                        size: 18, color: KvlColors.muted),
+                  ),
+                ],
+              ),
             ),
-            if (r != rules.last)
-              const Divider(height: 1, thickness: 0.5),
-          ],
+          ),
+          // ── Animated body ────────────────────────────────────────────
+          SizeTransition(
+            sizeFactor: _sizeFactor,
+            child: Column(
+              children: [
+                const Divider(height: 1, thickness: 0.5),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    KvlSpacing.md, KvlSpacing.xs, KvlSpacing.md, KvlSpacing.sm,
+                  ),
+                  child: Column(
+                    children: [
+                      for (final r in _rules) ...[
+                        _RuleRow(
+                          icon: r.icon,
+                          label: r.label,
+                          pts: r.pts,
+                          note: r.note,
+                          earned: r.icon == Icons.celebration_rounded ||
+                              (r.icon == Icons.person_rounded &&
+                                  widget.profileComplete),
+                        ),
+                        if (r != _rules.last)
+                          const Divider(height: 1, thickness: 0.5),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -1767,6 +1820,43 @@ class _MantraPickerTile extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+class _CommunityCard extends StatelessWidget {
+  const _CommunityCard({required this.icon, required this.label, required this.onTap});
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: KvlRadius.brLG,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: KvlColors.primaryGhost,
+          borderRadius: KvlRadius.brLG,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: KvlColors.primary, size: 24),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: KvlText.caption(11.5).copyWith(
+                color: KvlColors.primaryDeep,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // Change Mobile Sheet (two-step: enter new number → OTP)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -2060,4 +2150,191 @@ class _ProgramExportData {
   final String dedicationLine;
   /// PNG bytes for each sample in the rolling pool (may be empty).
   final List<Uint8List> handwritingPool;
+}
+
+// ── Editable avatar ────────────────────────────────────────────────────────
+
+class _EditableAvatar extends StatefulWidget {
+  const _EditableAvatar({required this.profileId, required this.initials});
+  final String? profileId;
+  final String initials;
+
+  @override
+  State<_EditableAvatar> createState() => _EditableAvatarState();
+}
+
+class _EditableAvatarState extends State<_EditableAvatar> {
+  String? _localPath;
+
+  static String _prefsKey(String id) => 'avatar_path_$id';
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(_EditableAvatar old) {
+    super.didUpdateWidget(old);
+    if (old.profileId != widget.profileId) _load();
+  }
+
+  Future<void> _load() async {
+    final id = widget.profileId;
+    if (id == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    final path = prefs.getString(_prefsKey(id));
+    if (path != null && File(path).existsSync() && mounted) {
+      setState(() => _localPath = path);
+    }
+  }
+
+  Future<void> _pick() async {
+    final id = widget.profileId;
+    if (id == null) return;
+
+    // Let user choose camera or gallery.
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 36, height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_rounded),
+              title: const Text('Take a photo'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_rounded),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+            if (_localPath != null)
+              ListTile(
+                leading: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                title: const Text('Remove photo', style: TextStyle(color: Colors.red)),
+                onTap: () => Navigator.pop(context, null),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+
+    // null = sheet dismissed without selection; handle remove separately
+    if (!mounted) return;
+
+    if (source == null && _localPath != null) {
+      // "Remove photo" tapped — clear the stored path
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_prefsKey(id));
+      avatarChangeNotifier.value++;
+      if (mounted) setState(() => _localPath = null);
+      return;
+    }
+    if (source == null) return;
+
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: source,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 85,
+      );
+      if (picked == null || !mounted) return;
+
+      // Copy to app documents so it survives cache clears.
+      final dir = await getApplicationDocumentsDirectory();
+      final dest = File('${dir.path}/avatar_$id.jpg');
+      await File(picked.path).copy(dest.path);
+
+      // Evict old image from Flutter's cache so the new one shows immediately.
+      await FileImage(dest).evict();
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_prefsKey(id), dest.path);
+      avatarChangeNotifier.value++;
+
+      if (mounted) setState(() => _localPath = dest.path);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not set photo: $e'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasPhoto = _localPath != null;
+    return GestureDetector(
+      onTap: _pick,
+      child: Stack(
+        children: [
+          Container(
+            width: 74,
+            height: 74,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: hasPhoto
+                  ? null
+                  : const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFFFFB572), KvlColors.primary],
+                    ),
+              image: hasPhoto
+                  ? DecorationImage(
+                      image: FileImage(File(_localPath!)),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
+            ),
+            alignment: Alignment.center,
+            child: hasPhoto
+                ? null
+                : Text(
+                    widget.initials,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+          ),
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: Container(
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                color: KvlColors.primary,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 1.5),
+              ),
+              child: const Icon(Icons.edit_rounded, color: Colors.white, size: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

@@ -28,7 +28,7 @@ class KvlTopBar extends StatelessWidget implements PreferredSizeWidget {
   final Color? topGapColor;
 
   @override
-  Size get preferredSize => const Size.fromHeight(100);
+  Size get preferredSize => const Size.fromHeight(84);
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +45,7 @@ class KvlTopBar extends StatelessWidget implements PreferredSizeWidget {
     return Material(
       color: Colors.transparent,
       child: SizedBox(
-        height: topGap + 64,
+        height: topGap + 48,
         child: Column(
           children: [
             ColoredBox(
@@ -53,7 +53,7 @@ class KvlTopBar extends StatelessWidget implements PreferredSizeWidget {
               child: SizedBox(height: topGap),
             ),
             Container(
-              height: 64,
+              height: 48,
               padding: const EdgeInsets.symmetric(horizontal: KvlSpacing.lg),
               decoration: BoxDecoration(
                 color: KvlColors.bg.withValues(alpha: .6),

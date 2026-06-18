@@ -45,7 +45,7 @@
 </script>
 
 {#if open}
-	<div class="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
+	<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
 		<button
 			type="button"
 			class="absolute inset-0 -z-10"
@@ -56,10 +56,10 @@
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="modal-title"
-			class="bg-white w-full {sizes[size]} sm:rounded-2xl shadow-2xl ring-1 ring-black/5 my-0 sm:my-3 flex flex-col h-screen sm:h-[calc(100svh-1.5rem)] max-h-screen sm:max-h-[calc(100svh-1.5rem)] transition-all duration-200"
+			class="bg-white w-full {sizes[size]} rounded-2xl shadow-2xl ring-1 ring-black/5 my-auto flex flex-col max-h-[calc(100svh-2rem)] transition-all duration-200"
 		>
 			<!-- Header -->
-			<div class="flex items-start justify-between gap-3 px-5 py-4 bg-gradient-to-r from-slate-900 to-slate-800 sm:rounded-t-2xl shrink-0">
+			<div class="flex items-start justify-between gap-3 px-5 py-4 bg-gradient-to-r from-slate-900 to-slate-800 rounded-t-2xl shrink-0">
 				<div class="min-w-0">
 					<h2 id="modal-title" class="text-base font-bold text-white tracking-tight truncate">{title}</h2>
 					{#if subtitle}<p class="text-xs text-slate-400 mt-0.5 truncate">{subtitle}</p>{/if}
@@ -80,7 +80,7 @@
 			</div>
 
 			{#if footer}
-				<div class="px-5 py-3 border-t border-gray-100 flex justify-end gap-2 shrink-0 bg-white sm:rounded-b-2xl">
+				<div class="px-5 py-3 border-t border-gray-100 flex justify-end gap-2 shrink-0 bg-white rounded-b-2xl">
 					{@render footer()}
 				</div>
 			{/if}

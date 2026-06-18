@@ -207,7 +207,7 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
       final refBytes = await File(ref_.filePath!).readAsBytes();
       final score = await HandwritingComparator.compare(png, refBytes);
 
-      final thresholdPct = cfg.intFlag(RemoteConfigKeys.minHandwritingAccuracy, fallback: 20);
+      final thresholdPct = cfg.intFlag(RemoteConfigKeys.minHandwritingAccuracy, fallback: 35);
       final threshold = thresholdPct / 100.0;
 
       if (score >= threshold) {

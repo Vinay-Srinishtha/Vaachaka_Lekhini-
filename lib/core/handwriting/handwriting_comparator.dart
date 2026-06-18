@@ -4,81 +4,95 @@ import 'dart:ui' as ui;
 
 /// Compares two handwriting PNG images using a multi-signal approach
 /// that tolerates natural variation in writing style, stroke thickness,
-/// minor positional shifts and proportion differences — while enforcing
-/// that the user wrote the *complete* word/phrase, not just a fragment.
+/// positional shifts (writing slightly left / right / up / down) — while
+/// rejecting garbage inputs such as straight lines, scribbles, commas,
+/// blackouts, and empty canvases.
 ///
-/// ## Completeness gates (checked first — return 0.0 on failure)
+/// ## Hard gates (checked in order — any failure returns 0.0)
 ///
-/// Before any similarity signal is computed two hard gates are applied:
+/// 1. **Empty gate**: user drew nothing (< 1 % ink pixels) → reject.
+/// 2. **Blackout gate**: user filled > 70 % of the canvas → reject.
+/// 3. **Straight-line gate**: user ink spans < 5 rows OR < 5 columns in the
+///    48-pixel grid → reject.  Catches horizontal/vertical strokes, dashes,
+///    and single commas.
+/// 4. **Ink-volume gate**: user ink < 40 % of reference ink → reject.
+///    Ensures a partial letter/stroke can't pass as the full word.
+/// 5. **Spatial-coverage gate**: user ink occupies < 50 % of the zones the
+///    reference uses → reject.  Catches ink bunched in one corner.
 ///
-/// * **Ink-volume gate**: the user's total ink pixel count must be at least
-///   [_minInkRatio] × the reference's count (default 40 %).  Writing just
-///   one letter of a multi-letter word fails this gate immediately.
+/// ## Similarity signals (only reached when all gates pass)
 ///
-/// * **Spatial-coverage gate**: the number of zones where the user has
-///   meaningful ink must cover at least [_minZoneCoverage] × the zones the
-///   reference occupies (default 50 %).  This rejects ink concentrated in
-///   one corner even if the total volume happens to pass.
+/// 1. **Dilated Jaccard** (weight 0.45) — both grids dilated with a 5×5
+///    structuring element (radius 2) before IoU.  Tolerates ±2 px positional
+///    shift so writing a character slightly down/left/right still scores well.
 ///
-/// ## Similarity signals (only reached when both gates pass)
+/// 2. **Zone density cosine** (weight 0.35) — 36-element zone-density vectors
+///    compared with cosine similarity.  Captures spatial distribution without
+///    requiring pixel alignment.
 ///
-/// 1. **Dilated Jaccard** (weight 0.40)
-///    Both grids are morphologically dilated (each ink pixel expands to its
-///    8-neighbours) before computing IoU.  Tolerates ±1 px positional jitter
-///    and stroke-width variation.
+/// 3. **Coarse Jaccard** (weight 0.20) — 8×8 silhouette match for overall
+///    shape agreement.
 ///
-/// 2. **Zone density cosine** (weight 0.40)
-///    36-element zone-density vectors compared with cosine similarity.
-///    Captures "ink in roughly the same regions" without pixel alignment.
-///    Tolerates different letter forms with similar overall distribution.
-///    Weight increased vs dilated Jaccard because Devanagari script has
-///    complex spatial structure that cosine captures more robustly.
+/// Final score = 0.45 × dilatedJaccard + 0.35 × zoneCosine + 0.20 × coarseJaccard
 ///
-/// 3. **Coarse Jaccard** (weight 0.20)
-///    8×8 resolution Jaccard for overall shape silhouette match.
-///
-/// Final score = 0.40 × dilatedJaccard + 0.40 × zoneCosine + 0.20 × coarseJaccard
-///
-/// Range: 0.0 (nothing matches / gates failed) → 1.0 (perfect match).
-/// A score ≥ 0.25 (configurable via RemoteConfig) is considered accepted.
+/// Range: 0.0 (gate failed / no match) → 1.0 (perfect match).
+/// A score ≥ 0.35 (configurable via RemoteConfig) is considered accepted.
 class HandwritingComparator {
   HandwritingComparator._();
 
-  static const int _gridSize = 48;   // main grid resolution (was 32 — higher res for Devanagari)
-  static const int _coarseSize = 8;  // coarse grid resolution
-  static const int _zoneCount = 6;   // 6×6 zones (was 4×4 — finer spatial encoding)
-  static const int _zoneSize = _gridSize ~/ _zoneCount; // 8 px per zone edge
+  static const int _gridSize   = 48;
+  static const int _coarseSize = 8;
+  static const int _zoneCount  = 6;
+  static const int _zoneSize   = _gridSize ~/ _zoneCount;
 
-  // ── Completeness gates ────────────────────────────────────────────────────
-  /// User ink must be ≥ 40 % of reference ink (raised from 35 %).
-  /// Ensures a partial letter/stroke can't pass as the full word.
+  // ── Gate thresholds ───────────────────────────────────────────────────────
+
+  /// Reject if user ink is below this fraction of total pixels (empty canvas).
+  static const double _minAbsoluteInkFraction = 0.01;
+
+  /// Reject if user ink exceeds this fraction of total pixels (blackout).
+  static const double _maxInkFraction = 0.70;
+
+  /// Minimum number of distinct rows with ink in the 48-px grid.
+  /// A horizontal line or dash typically spans ≤ 3 rows.
+  static const int _minRowSpread = 5;
+
+  /// Minimum number of distinct columns with ink in the 48-px grid.
+  /// A vertical line typically spans ≤ 3 columns.
+  static const int _minColSpread = 5;
+
+  /// User ink must be ≥ 40 % of reference ink.
   static const double _minInkRatio = 0.40;
 
-  /// User ink must occupy ≥ 50 % of the zones the reference uses (raised from 45 %).
-  /// Ensures the writing spans the full spatial extent of the reference.
+  /// User ink must occupy ≥ 50 % of the zones the reference uses.
   static const double _minZoneCoverage = 0.50;
 
-  /// A zone is considered "occupied" when its ink fraction exceeds this.
+  /// A zone is "occupied" when its ink fraction exceeds this.
   static const double _zoneOccupiedThreshold = 0.04;
 
   // ── Blend weights (must sum to 1.0) ──────────────────────────────────────
-  static const double _wDilated = 0.40;
-  static const double _wZone    = 0.40;
+  static const double _wDilated = 0.45;
+  static const double _wZone    = 0.35;
   static const double _wCoarse  = 0.20;
 
+  /// Dilation radius in pixels.  Radius 2 → 5×5 neighbourhood → tolerates
+  /// writing shifted up to ~2 px in any direction.
+  static const int _dilateRadius = 2;
+
+  // ─────────────────────────────────────────────────────────────────────────
+
   /// Compares [userPng] against [referencePng].
-  /// Returns a similarity score from 0.0 to 1.0.
-  /// Returns 0.0 immediately if the completeness gates are not met.
+  /// Returns a similarity score 0.0–1.0.  Returns 0.0 when any hard gate
+  /// fails (empty, blackout, straight line, too little ink, wrong coverage).
   static Future<double> compare(
     Uint8List userPng,
     Uint8List referencePng,
   ) async {
-    // Decode both images at two resolutions in parallel.
     final results = await Future.wait([
-      _toGrid(userPng,       _gridSize),
-      _toGrid(referencePng,  _gridSize),
-      _toGrid(userPng,       _coarseSize),
-      _toGrid(referencePng,  _coarseSize),
+      _toGrid(userPng,      _gridSize),
+      _toGrid(referencePng, _gridSize),
+      _toGrid(userPng,      _coarseSize),
+      _toGrid(referencePng, _coarseSize),
     ]);
 
     final userFine   = results[0];
@@ -86,21 +100,31 @@ class HandwritingComparator {
     final userCoarse = results[2];
     final refCoarse  = results[3];
 
-    // ── Zone density (needed by both gates and signal 2) ──────────────────
-    final userDensity = _zoneDensity(userFine);
-    final refDensity  = _zoneDensity(refFine);
-
-    // ── Gate 1: ink volume ────────────────────────────────────────────────
+    final totalPixels = _gridSize * _gridSize;
     final userInk = userFine.where((p) => p).length;
     final refInk  = refFine.where((p) => p).length;
+
+    // ── Gate 1: empty canvas ──────────────────────────────────────────────
+    if (userInk < totalPixels * _minAbsoluteInkFraction) return 0.0;
+
+    // ── Gate 2: blackout ──────────────────────────────────────────────────
+    if (userInk > totalPixels * _maxInkFraction) return 0.0;
+
+    // ── Gate 3: straight line / comma / dot ───────────────────────────────
+    final spread = _inkSpread(userFine, _gridSize);
+    if (spread.rows < _minRowSpread || spread.cols < _minColSpread) return 0.0;
+
+    // ── Gate 4: ink volume vs reference ───────────────────────────────────
     if (refInk > 0 && userInk < refInk * _minInkRatio) return 0.0;
 
-    // ── Gate 2: spatial coverage ──────────────────────────────────────────
+    // ── Gate 5: spatial coverage ──────────────────────────────────────────
+    final userDensity = _zoneDensity(userFine);
+    final refDensity  = _zoneDensity(refFine);
     final userZones = userDensity.where((d) => d > _zoneOccupiedThreshold).length;
     final refZones  = refDensity.where((d) => d > _zoneOccupiedThreshold).length;
     if (refZones > 0 && userZones < refZones * _minZoneCoverage) return 0.0;
 
-    // ── Signal 1: Dilated Jaccard ─────────────────────────────────────────
+    // ── Signal 1: Dilated Jaccard (radius 2 → ±2 px shift tolerance) ─────
     final dilatedUser  = _dilate(userFine, _gridSize);
     final dilatedRef   = _dilate(refFine,  _gridSize);
     final dilatedScore = _jaccard(dilatedUser, dilatedRef);
@@ -111,21 +135,37 @@ class HandwritingComparator {
     // ── Signal 3: Coarse Jaccard ──────────────────────────────────────────
     final coarseScore = _jaccard(userCoarse, refCoarse);
 
-    return _wDilated * dilatedScore
-         + _wZone    * cosineScore
-         + _wCoarse  * coarseScore;
+    return (_wDilated * dilatedScore
+          + _wZone    * cosineScore
+          + _wCoarse  * coarseScore)
+        .clamp(0.0, 1.0);
   }
 
-  // ─── Morphological dilation: 3×3 structuring element ──────────────────────
-  /// Expands each ink pixel to all 8 immediate neighbours.
-  /// Smooths over ±1 pixel misalignment and stroke-width variation.
+  // ─── Ink spread: count distinct rows and columns that have any ink ─────────
+  static ({int rows, int cols}) _inkSpread(List<bool> grid, int size) {
+    final rows = <int>{};
+    final cols = <int>{};
+    for (int y = 0; y < size; y++) {
+      for (int x = 0; x < size; x++) {
+        if (grid[y * size + x]) {
+          rows.add(y);
+          cols.add(x);
+        }
+      }
+    }
+    return (rows: rows.length, cols: cols.length);
+  }
+
+  // ─── Morphological dilation: (2r+1)×(2r+1) structuring element ────────────
+  /// Expands each ink pixel to all neighbours within [_dilateRadius].
+  /// Radius 2 tolerates up to ±2 px positional shift in any direction.
   static List<bool> _dilate(List<bool> grid, int size) {
     final out = List<bool>.filled(size * size, false);
     for (int y = 0; y < size; y++) {
       for (int x = 0; x < size; x++) {
         if (!grid[y * size + x]) continue;
-        for (int dy = -1; dy <= 1; dy++) {
-          for (int dx = -1; dx <= 1; dx++) {
+        for (int dy = -_dilateRadius; dy <= _dilateRadius; dy++) {
+          for (int dx = -_dilateRadius; dx <= _dilateRadius; dx++) {
             final ny = y + dy;
             final nx = x + dx;
             if (ny >= 0 && ny < size && nx >= 0 && nx < size) {
@@ -152,7 +192,6 @@ class HandwritingComparator {
   }
 
   // ─── Zone ink density: _zoneCount × _zoneCount zones ──────────────────────
-  /// Returns a vector of ink fractions, one per zone, in row-major order.
   static List<double> _zoneDensity(List<bool> grid) {
     final zones = List<double>.filled(_zoneCount * _zoneCount, 0.0);
     const area = _zoneSize * _zoneSize;
@@ -187,7 +226,7 @@ class HandwritingComparator {
 
   // ─── PNG decode → boolean ink grid ────────────────────────────────────────
   /// Decodes [png] and downsamples to [size]×[size] boolean grid.
-  /// true = ink (alpha > 50), false = transparent background.
+  /// true = ink (alpha > 50), false = transparent/background.
   static Future<List<bool>> _toGrid(Uint8List png, int size) async {
     final codec = await ui.instantiateImageCodec(
       png,
@@ -203,7 +242,6 @@ class HandwritingComparator {
 
     final grid = <bool>[];
     for (int i = 0; i < byteData.lengthInBytes; i += 4) {
-      // RGBA — pixel is ink if alpha > 50
       grid.add(byteData.getUint8(i + 3) > 50);
     }
     return grid;

@@ -31,6 +31,8 @@ import '../features/mantras/domain/mantra.dart';
 import '../features/mantras/domain/mantra_repository.dart';
 import '../features/global_sadhana/data/global_sadhana_repository.dart';
 import '../features/global_sadhana/domain/global_sadhana.dart';
+import '../features/home/data/quote_repository.dart';
+import '../features/home/domain/quote.dart';
 import '../features/programs/data/program_repository_drift.dart';
 import '../features/programs/domain/program.dart';
 import '../features/programs/domain/program_repository.dart';
@@ -789,6 +791,32 @@ final globalSadhanaEnrollmentProvider = FutureProvider.autoDispose
   if (profile == null) return null;
   final repo = ref.watch(globalSadhanaRepositoryProvider);
   return repo.fetchEnrollment(sadhanaId, profile.id);
+});
+
+// ── Quotes ───────────────────────────────────────────────────────────────────
+
+final quoteRepositoryProvider = Provider<QuoteRepository>((ref) {
+  return QuoteRepository(api: ref.watch(apiClientProvider), cache: cacheBox());
+});
+
+/// Active quotes from the server. Seeds from Hive cache immediately, then
+/// fetches with mantra_ids filtered to the active member's programs.
+final quotesProvider = StreamProvider<List<Quote>>((ref) async* {
+  final repo = ref.watch(quoteRepositoryProvider);
+  final programs = ref.watch(programsForActiveProfileProvider).value ?? [];
+  final mantraIds = programs.map((p) => p.mantraId).toList();
+
+  // Instant from cache (no mantra filtering at cache layer)
+  yield repo.cachedQuotes();
+
+  // Network fetch with mantra filter
+  final fresh = await repo.fetchActive(mantraIds: mantraIds);
+  yield fresh;
+
+  // Refresh every 5 minutes
+  await for (final _ in Stream<void>.periodic(const Duration(minutes: 5))) {
+    yield await repo.fetchActive(mantraIds: mantraIds);
+  }
 });
 
 /// Incremented each time a practice session is finished so that

@@ -51,6 +51,7 @@ Future<void> main() async {
   container.read(appSettingsProvider);          // kicks off app-settings fetch
   container.read(mantraCatalogProvider);        // seeds mantra list from cache
   container.read(activeGlobalSadhanaProvider);  // seeds global sadhana from cache
+  container.read(quotesProvider);               // seeds quote cards from cache
   container.read(storeItemsProvider);           // seeds store catalogue from cache
   container.read(activeProfileProvider);        // starts profile stream
   container.read(programsForActiveProfileProvider); // starts programs stream

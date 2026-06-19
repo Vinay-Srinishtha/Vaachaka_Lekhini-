@@ -3,13 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../app/providers.dart';
 import '../../../app/router.dart';
 import '../../../core/i18n/language_options.dart';
-import '../../../core/remote_config/remote_config.dart';
-import '../../../core/remote_config/remote_config_keys.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/utils/indian_number_format.dart';
 import '../../../core/widgets/kvl_profile_avatar.dart';
@@ -18,6 +17,7 @@ import '../../profiles/domain/profile.dart';
 import '../../programs/domain/program.dart';
 import '../../settings/domain/settings_repository.dart';
 import '../../../l10n/l10n.dart';
+import '../domain/quote.dart';
 
 double _profileCompletion(Profile? profile) {
   if (profile == null) return 0.0;
@@ -820,13 +820,25 @@ class _HeroQuote extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cfg = ref.watch(remoteConfigProvider).value ?? RemoteConfig.empty;
     final appSettings = ref.watch(appSettingsProvider).value;
-    final quote =
-        cfg.stringFlag(RemoteConfigKeys.dailyQuoteTelugu, fallback: '');
-    final attribution =
-        cfg.stringFlag(RemoteConfigKeys.dailyQuoteAttribution, fallback: '');
-    if (quote.isEmpty) return const SizedBox.shrink();
+    final profile = ref.watch(activeProfileProvider).value;
+    final mantraLanguage = profile?.mantraLanguage;
+    final quotes = ref.watch(quotesProvider).value ?? const [];
+
+    // Pick the first displayable quote for this language; fall back to any.
+    Quote? chosen;
+    for (final q in quotes) {
+      if ((q.textFor(mantraLanguage) ?? '').isNotEmpty) {
+        chosen = q;
+        break;
+      }
+    }
+    if (chosen == null) return const SizedBox.shrink();
+
+    final quoteText = chosen.textFor(mantraLanguage) ?? '';
+    final attribution = chosen.sourceFor(mantraLanguage) ?? '';
+    final hasImage = chosen.imageUrl != null && chosen.imageUrl!.isNotEmpty;
+
     return KvlCard(
       variant: KvlCardVariant.warm,
       padding: EdgeInsets.zero,
@@ -838,10 +850,23 @@ class _HeroQuote extends ConsumerWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.asset(
-                    'assets/mantras/rama_quote_banner.png',
-                    fit: BoxFit.cover,
-                  ),
+                  hasImage
+                      ? CachedNetworkImage(
+                          imageUrl: chosen.imageUrl!,
+                          fit: BoxFit.cover,
+                          placeholder: (ctx, url) => Image.asset(
+                            'assets/mantras/rama_quote_banner.png',
+                            fit: BoxFit.cover,
+                          ),
+                          errorWidget: (ctx, url, err) => Image.asset(
+                            'assets/mantras/rama_quote_banner.png',
+                            fit: BoxFit.cover,
+                          ),
+                        )
+                      : Image.asset(
+                          'assets/mantras/rama_quote_banner.png',
+                          fit: BoxFit.cover,
+                        ),
                   const DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -873,7 +898,7 @@ class _HeroQuote extends ConsumerWidget {
                           child: FittedBox(
                             fit: BoxFit.scaleDown,
                             child: Text(
-                              '"$quote"',
+                              '"$quoteText"',
                               maxLines: 1,
                               textAlign: TextAlign.center,
                               style: KvlText.mantraTelugu(
@@ -883,9 +908,7 @@ class _HeroQuote extends ConsumerWidget {
                           ),
                         ),
                         if (attribution.isNotEmpty) ...[
-                          SizedBox(
-                              height:
-                                  tight ? KvlSpacing.xs : KvlSpacing.sm),
+                          SizedBox(height: tight ? KvlSpacing.xs : KvlSpacing.sm),
                           Text(
                             '— $attribution',
                             style: KvlText.muted(tight ? 11.5 : 14)
@@ -902,19 +925,20 @@ class _HeroQuote extends ConsumerWidget {
                       final template = appSettings?.shareQuoteText;
                       if (template != null && template.isNotEmpty) {
                         shareText = template
-                            .replaceAll('{quote}', quote)
+                            .replaceAll('{quote}', quoteText)
                             .replaceAll('{attribution}', attribution)
                             .replaceAll('{app_link}', appLink);
                       } else {
                         shareText = attribution.isNotEmpty
-                            ? '"$quote"\n— $attribution\n\nShared via Vachika Lekhini 🙏'
-                            : '"$quote"\n\nShared via Vachika Lekhini 🙏';
+                            ? '"$quoteText"\n— $attribution\n\nShared via Vachika Lekhini 🙏'
+                            : '"$quoteText"\n\nShared via Vachika Lekhini 🙏';
                         if (appLink.isNotEmpty) shareText += '\n$appLink';
                       }
-                      final imgUrl = appSettings?.shareQuoteImageUrl;
                       SharePlus.instance.share(ShareParams(
                         text: shareText,
-                        uri: imgUrl != null && imgUrl.isNotEmpty ? Uri.tryParse(imgUrl) : null,
+                        uri: chosen!.imageUrl != null
+                            ? Uri.tryParse(chosen.imageUrl!)
+                            : null,
                       ));
                     },
                     borderRadius: BorderRadius.circular(18),

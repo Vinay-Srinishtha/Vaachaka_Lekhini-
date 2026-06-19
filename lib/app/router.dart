@@ -37,6 +37,7 @@ import '../features/programs/presentation/daily_progress_screen.dart';
 import '../features/programs/presentation/programs_screen.dart';
 import '../features/programs/presentation/set_program_target_screen.dart';
 import '../features/global_sadhana/presentation/global_sadhana_detail_screen.dart';
+import '../features/global_sadhana/presentation/global_sadhana_list_screen.dart';
 import '../features/rewards/presentation/reward_history_screen.dart';
 import '../features/rewards/presentation/store_screen.dart';
 import '../l10n/l10n.dart';
@@ -76,6 +77,7 @@ abstract final class KvlRoute {
   static const rewardHistory = '/reward-history';
   static const inviteFriends = '/invite-friends';
   static const globalSadhana = '/global-sadhana'; // + /:id
+  static const globalSadhanaList = '/global-sadhana-list';
 
   static const _authPaths = {welcome, profileSelect, createAccount, otpLogin};
   static bool isAuthRoute(String path) => _authPaths.contains(path);
@@ -182,6 +184,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: KvlRoute.inviteFriends,
         builder: (_, _) => const InviteFriendsScreen(),
+      ),
+      GoRoute(
+        path: KvlRoute.globalSadhanaList,
+        builder: (_, _) => const GlobalSadhanaListScreen(),
       ),
       GoRoute(
         path: '${KvlRoute.globalSadhana}/:sadhanaId',

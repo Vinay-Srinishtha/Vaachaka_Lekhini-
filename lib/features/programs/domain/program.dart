@@ -68,6 +68,14 @@ class Program extends Equatable {
 
   int get daysRemaining => (targetDays - daysElapsed).clamp(0, targetDays);
 
+  /// Dynamic daily target: remaining chants spread over remaining days.
+  /// Recalculates as the user progresses so the goal stays achievable.
+  int get effectiveDailyTarget {
+    final remaining = (targetWritings - totalProgress).clamp(0, targetWritings);
+    final days = daysRemaining.clamp(1, targetDays);
+    return (remaining / days).ceil();
+  }
+
   Duration get estimatedDailyTime => Duration(seconds: dailyTarget);
 
   Program copyWith({

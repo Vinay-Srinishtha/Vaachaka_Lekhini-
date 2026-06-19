@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/audio/reward_sound_service.dart';
@@ -79,6 +80,7 @@ class _Body extends ConsumerStatefulWidget {
 
 class _BodyState extends ConsumerState<_Body> {
   bool _dedicationShown = false;
+  bool _dailyGoalShown = false;
   bool _draftDialogShown = false;
 
   @override
@@ -170,6 +172,13 @@ class _BodyState extends ConsumerState<_Body> {
           context.mounted) {
         _dedicationShown = true;
         _showDedicationDialog(context, ref, programId);
+      }
+      if (next.value?.dailyGoalReached == true &&
+          !_dailyGoalShown &&
+          !_dedicationShown &&
+          context.mounted) {
+        _dailyGoalShown = true;
+        _showDailyGoalSheet(context, ref, programId);
       }
     });
 
@@ -367,7 +376,7 @@ class _BodyState extends ConsumerState<_Body> {
                     _ProgressCard(state: state, compact: compact),
                   ],
                   SizedBox(height: compact ? 6 : 8),
-                  _PointsBadge(compact: compact),
+                  _PointsBadge(compact: compact, sessionCount: state.sessionCount),
                   SizedBox(height: compact ? 4 : 6),
                   BookPreviewButton(
                     compact: compact,
@@ -435,6 +444,42 @@ class _BodyState extends ConsumerState<_Body> {
         },
       ),
     );
+  }
+
+  Future<void> _showDailyGoalSheet(
+    BuildContext context,
+    WidgetRef ref,
+    String programId,
+  ) async {
+    final controller = ref.read(practiceControllerProvider(programId).notifier);
+    await controller.pause();
+    if (!context.mounted) return;
+    final mantraId = ref
+        .read(practiceControllerProvider(programId))
+        .value
+        ?.program
+        .mantraId;
+    final mantraName = mantraId != null
+        ? (ref.read(mantraByIdProvider(mantraId))?.name.devanagari ?? '')
+        : '';
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _DailyGoalSheet(
+        programId: programId,
+        mantraName: mantraName,
+      ),
+    );
+    // Resume after dismissal if still mounted and session active.
+    if (context.mounted) {
+      final s = ref.read(practiceControllerProvider(programId)).value;
+      if (s != null && s.activeSessionId != null && !s.isRunning) {
+        controller.start(
+          mantra: mantraId != null ? ref.read(mantraByIdProvider(mantraId)) : null,
+        );
+      }
+    }
   }
 
   Future<void> _cycleRingerMode(WidgetRef ref) async {
@@ -1123,8 +1168,9 @@ class _Counts extends StatelessWidget {
 }
 
 class _PointsBadge extends ConsumerStatefulWidget {
-  const _PointsBadge({required this.compact});
+  const _PointsBadge({required this.compact, required this.sessionCount});
   final bool compact;
+  final int sessionCount;
 
   @override
   ConsumerState<_PointsBadge> createState() => _PointsBadgeState();
@@ -1132,7 +1178,8 @@ class _PointsBadge extends ConsumerStatefulWidget {
 
 class _PointsBadgeState extends ConsumerState<_PointsBadge>
     with SingleTickerProviderStateMixin {
-  int? _prev;
+  // Tracks completed 11-count milestones in the current session.
+  int _prevSessionMilestones = 0;
   int _delta = 0;
   late final AnimationController _anim;
   late final Animation<double> _offsetAnim;
@@ -1158,13 +1205,16 @@ class _PointsBadgeState extends ConsumerState<_PointsBadge>
     super.dispose();
   }
 
-  void _onPoints(int points) {
-    if (_prev != null && points > _prev!) {
-      setState(() => _delta = points - _prev!);
+  // Animate only when another 11-chant milestone is crossed in the session.
+  void _checkSessionMilestone(int sessionCount) {
+    final milestones = sessionCount ~/ 11;
+    if (milestones > _prevSessionMilestones) {
+      final gained = milestones - _prevSessionMilestones;
+      setState(() => _delta = gained);
       _anim.forward(from: 0);
       unawaited(RewardSoundService.instance.playBell());
+      _prevSessionMilestones = milestones;
     }
-    _prev = points;
   }
 
   @override
@@ -1172,7 +1222,7 @@ class _PointsBadgeState extends ConsumerState<_PointsBadge>
     final points = ref.watch(rewardTotalProvider).value;
     if (points == null) return const SizedBox.shrink();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _onPoints(points);
+      if (mounted) _checkSessionMilestone(widget.sessionCount);
     });
     final compact = widget.compact;
     return Stack(
@@ -1707,6 +1757,154 @@ class _TipSheetState extends State<_TipSheet> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Daily Goal Celebration sheet
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _DailyGoalSheet extends StatefulWidget {
+  const _DailyGoalSheet({
+    required this.programId,
+    required this.mantraName,
+  });
+
+  final String programId;
+  final String mantraName;
+
+  @override
+  State<_DailyGoalSheet> createState() => _DailyGoalSheetState();
+}
+
+class _DailyGoalSheetState extends State<_DailyGoalSheet> {
+  final _phoneCtrl = TextEditingController();
+  bool _sharing = false;
+
+  @override
+  void dispose() {
+    _phoneCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _shareWhatsApp() async {
+    final phone = _phoneCtrl.text.trim().replaceAll(RegExp(r'\D'), '');
+    final mantra = widget.mantraName.isEmpty ? 'my mantra' : widget.mantraName;
+    final msg = Uri.encodeComponent(
+      '🙏 I completed my daily $mantra goal today! '
+      'Join me in this sacred sadhana. May your practice stay uninterrupted.',
+    );
+    final uri = phone.isNotEmpty
+        ? Uri.parse('https://wa.me/$phone?text=$msg')
+        : Uri.parse('https://wa.me/?text=$msg');
+    setState(() => _sharing = true);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } finally {
+      if (mounted) setState(() => _sharing = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottom),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: KvlColors.bg,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: const EdgeInsets.fromLTRB(
+          KvlSpacing.lg, KvlSpacing.lg, KvlSpacing.lg, KvlSpacing.xl,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  margin: const EdgeInsets.only(bottom: KvlSpacing.md),
+                  decoration: BoxDecoration(
+                    color: KvlColors.muted.withValues(alpha: .3),
+                    borderRadius: KvlRadius.brPill,
+                  ),
+                ),
+              ),
+              const Text('🎉', style: TextStyle(fontSize: 48), textAlign: TextAlign.center),
+              const SizedBox(height: KvlSpacing.sm),
+              Text(
+                'You reached your goal today 🙏',
+                textAlign: TextAlign.center,
+                style: KvlText.ui(20, FontWeight.w800),
+              ),
+              const SizedBox(height: KvlSpacing.xs),
+              Text(
+                'Your daily sadhana is complete. Keep the streak alive!',
+                textAlign: TextAlign.center,
+                style: KvlText.caption(13).copyWith(color: KvlColors.muted),
+              ),
+              const SizedBox(height: KvlSpacing.xl),
+              Text(
+                'Share with a devotee (optional)',
+                style: KvlText.ui(13, FontWeight.w600),
+              ),
+              const SizedBox(height: KvlSpacing.xs),
+              TextField(
+                controller: _phoneCtrl,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  hintText: 'Phone number with country code (e.g. 919876…)',
+                  hintStyle: KvlText.caption(13).copyWith(color: KvlColors.muted),
+                  filled: true,
+                  fillColor: KvlColors.surface,
+                  border: OutlineInputBorder(
+                    borderRadius: KvlRadius.brMD,
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: KvlSpacing.md,
+                    vertical: KvlSpacing.sm,
+                  ),
+                  prefixIcon: const Icon(Icons.phone_rounded, size: 18),
+                ),
+                style: KvlText.ui(14, FontWeight.w500),
+              ),
+              const SizedBox(height: KvlSpacing.md),
+              FilledButton.icon(
+                onPressed: _sharing ? null : _shareWhatsApp,
+                icon: _sharing
+                    ? const SizedBox(
+                        width: 16, height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.share_rounded, size: 18),
+                label: Text(_sharing ? 'Opening WhatsApp…' : 'Share via WhatsApp'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF25D366),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  textStyle: KvlText.ui(15, FontWeight.w700),
+                ),
+              ),
+              const SizedBox(height: KvlSpacing.sm),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(
+                  'Continue Practice',
+                  style: KvlText.ui(14, FontWeight.w600)
+                      .copyWith(color: KvlColors.primary),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

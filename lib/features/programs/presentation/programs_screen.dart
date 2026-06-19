@@ -134,6 +134,17 @@ class _BodyState extends ConsumerState<_Body> {
           icon: Icons.add,
           onPressed: () => context.push(KvlRoute.mantraSelection),
         ),
+        const SizedBox(height: KvlSpacing.sm),
+        OutlinedButton.icon(
+          onPressed: () => context.push(KvlRoute.globalSadhanaList),
+          icon: const Icon(Icons.public_rounded, size: 18),
+          label: const Text('Browse Global Sadhanas'),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 48),
+            foregroundColor: KvlColors.primary,
+            side: BorderSide(color: KvlColors.primary),
+          ),
+        ),
         const SizedBox(height: KvlSpacing.md),
         Text(context.l10n.myRecitationPrograms, style: KvlText.title(16)),
         const SizedBox(height: KvlSpacing.sm),

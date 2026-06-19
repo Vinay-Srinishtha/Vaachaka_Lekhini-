@@ -65,6 +65,7 @@
 						<div class="text-xs text-gray-500 mt-0.5">
 							{relationLabel[m.relation] ?? m.relation} · App: {m.language} · Mantra: {m.mantraLanguage}
 						</div>
+						{@const metrics = data.memberMetrics.find((x: { memberId: string }) => x.memberId === m.id)}
 						<div class="mt-3 grid grid-cols-3 gap-2 text-center">
 							<div>
 								<div class="text-base font-semibold text-gray-900">{m._count.programs}</div>
@@ -79,6 +80,22 @@
 								<div class="text-[10px] text-gray-500 uppercase tracking-wide">Points</div>
 							</div>
 						</div>
+						{#if metrics}
+						<div class="mt-2 grid grid-cols-3 gap-2 text-center border-t border-gray-100 pt-2">
+							<div>
+								<div class="text-sm font-semibold text-indigo-700">{metrics.totalChantCount.toLocaleString()}</div>
+								<div class="text-[10px] text-gray-500 uppercase tracking-wide">Total Chants</div>
+							</div>
+							<div>
+								<div class="text-sm font-semibold text-indigo-700">{metrics.voiceSampleCount}</div>
+								<div class="text-[10px] text-gray-500 uppercase tracking-wide">Voice Samples</div>
+							</div>
+							<div>
+								<div class="text-sm font-semibold text-indigo-700">{metrics.handwritingSampleCount}</div>
+								<div class="text-[10px] text-gray-500 uppercase tracking-wide">HW Samples</div>
+							</div>
+						</div>
+						{/if}
 					</div>
 				</div>
 			</div>

@@ -29,6 +29,7 @@ class PracticeState {
     this.errorMessage,
     this.micPermanentlyDenied = false,
     this.targetReached = false,
+    this.dailyGoalReached = false,
     this.draftCount,
     this.draftModality,
   });
@@ -51,8 +52,11 @@ class PracticeState {
   /// only way out is to open system settings.
   final bool micPermanentlyDenied;
 
-  /// True when todaysTotal just crossed dailyTarget — triggers dedication prompt.
+  /// True when totalProgress just crossed targetWritings — triggers full-program dedication.
   final bool targetReached;
+
+  /// True when todaysTotal just crossed effectiveDailyTarget — triggers daily goal sheet.
+  final bool dailyGoalReached;
 
   /// Non-null when a draft session exists for this program (app was killed mid-session).
   final int? draftCount;
@@ -71,6 +75,7 @@ class PracticeState {
     bool clearError = false,
     bool? micPermanentlyDenied,
     bool? targetReached,
+    bool? dailyGoalReached,
     int? draftCount,
     SessionModality? draftModality,
     bool clearDraft = false,
@@ -87,6 +92,7 @@ class PracticeState {
     errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
     micPermanentlyDenied: micPermanentlyDenied ?? this.micPermanentlyDenied,
     targetReached: targetReached ?? this.targetReached,
+    dailyGoalReached: dailyGoalReached ?? this.dailyGoalReached,
     draftCount: clearDraft ? null : (draftCount ?? this.draftCount),
     draftModality: clearDraft ? null : (draftModality ?? this.draftModality),
   );
@@ -306,11 +312,17 @@ class PracticeController extends AsyncNotifier<PracticeState> {
     final hitProgramTarget = !s.targetReached &&
         s.program.targetWritings > 0 &&
         programTotal >= s.program.targetWritings;
+    final dailyGoal = s.program.effectiveDailyTarget;
+    final hitDailyGoal = !s.dailyGoalReached &&
+        dailyGoal > 0 &&
+        s.todaysTotal < dailyGoal &&
+        newTotal >= dailyGoal;
 
     state = AsyncData(s.copyWith(
       sessionCount: newCount,
       todaysTotal: newTotal,
       targetReached: hitProgramTarget ? true : null,
+      dailyGoalReached: hitDailyGoal ? true : null,
     ));
 
     if (hitProgramTarget) {
@@ -394,6 +406,7 @@ class PracticeController extends AsyncNotifier<PracticeState> {
         streak: streak,
         clearSession: true,
         targetReached: false,
+        dailyGoalReached: false,
         clearDraft: true,
       ),
     );

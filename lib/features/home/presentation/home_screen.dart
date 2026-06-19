@@ -54,6 +54,18 @@ class HomeScreen extends ConsumerWidget {
                 ? context.l10n.homeSublineEmpty
                 : '${activePrograms.length} Sadhana${activePrograms.length == 1 ? '' : 's'} Active';
     final points = ref.watch(rewardTotalProvider).value ?? 0;
+    final rewardRules = ref.watch(rewardRulesProvider);
+
+    final currentStreak = activePrograms.fold<int>(
+        0, (best, p) => p.currentStreak > best ? p.currentStreak : best);
+    final longestStreak = programs.fold<int>(
+        0, (best, p) => p.longestStreak > best ? p.longestStreak : best);
+    final totalProgress = programs.fold<int>(0, (s, p) => s + p.totalProgress);
+    final nextMilestone = rewardRules.milestoneThresholds
+        .where((t) => t > totalProgress)
+        .fold<int?>(null, (best, t) => best == null || t < best ? t : best);
+    final chantsToMilestone =
+        nextMilestone != null ? nextMilestone - totalProgress : null;
 
     return SafeArea(
       top: false,
@@ -94,6 +106,13 @@ class HomeScreen extends ConsumerWidget {
                 ),
                 SizedBox(height: headerGap),
                 _RewardPointsTile(points: points, compact: compact),
+                SizedBox(height: gap),
+                _StreakMilestoneBanner(
+                  currentStreak: currentStreak,
+                  longestStreak: longestStreak,
+                  chantsToMilestone: chantsToMilestone,
+                  compact: compact,
+                ),
                 SizedBox(height: gap),
                 // Bulletin — truly edge-to-edge regardless of SafeArea insets.
                 // We escape the column padding by measuring from MediaQuery so
@@ -1174,4 +1193,114 @@ class _GlobalSadhanaSection extends ConsumerWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Streak + next-milestone banner
+// ─────────────────────────────────────────────────────────────────────────────
 
+class _StreakMilestoneBanner extends StatelessWidget {
+  const _StreakMilestoneBanner({
+    required this.currentStreak,
+    required this.longestStreak,
+    required this.chantsToMilestone,
+    required this.compact,
+  });
+
+  final int currentStreak;
+  final int longestStreak;
+  final int? chantsToMilestone;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    if (currentStreak == 0 && chantsToMilestone == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Row(
+      children: [
+        if (currentStreak > 0) ...[
+          Expanded(
+            child: _BannerChip(
+              icon: '🔥',
+              label: '$currentStreak day streak',
+              sublabel: longestStreak > 0 ? 'Best: $longestStreak days' : null,
+              color: const Color(0xFFFFF3E0),
+              borderColor: const Color(0xFFFFB74D),
+              textColor: const Color(0xFFE65100),
+            ),
+          ),
+          if (chantsToMilestone != null) const SizedBox(width: 8),
+        ],
+        if (chantsToMilestone != null)
+          Expanded(
+            child: _BannerChip(
+              icon: '⭐',
+              label: '${IndianNumberFormat.format(chantsToMilestone!)} more',
+              sublabel: 'to next milestone',
+              color: const Color(0xFFFFF8E1),
+              borderColor: const Color(0xFFFFD54F),
+              textColor: const Color(0xFF5a4400),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _BannerChip extends StatelessWidget {
+  const _BannerChip({
+    required this.icon,
+    required this.label,
+    this.sublabel,
+    required this.color,
+    required this.borderColor,
+    required this.textColor,
+  });
+
+  final String icon;
+  final String label;
+  final String? sublabel;
+  final Color color;
+  final Color borderColor;
+  final Color textColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor, width: 1.2),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(icon, style: const TextStyle(fontSize: 18)),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: KvlText.ui(13, FontWeight.w700).copyWith(color: textColor),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (sublabel != null)
+                  Text(
+                    sublabel!,
+                    style: KvlText.caption(10).copyWith(color: textColor.withValues(alpha: .7)),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

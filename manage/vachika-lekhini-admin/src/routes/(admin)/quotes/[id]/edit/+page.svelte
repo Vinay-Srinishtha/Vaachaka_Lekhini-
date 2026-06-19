@@ -39,14 +39,13 @@
 	let imageKey = $state<string | null>(q.imageUrl ?? null);
 	let uploading = $state(false);
 	let uploadError = $state('');
+	let dragOver = $state(false);
 
 	function close() { goto('/quotes', { keepFocus: true, noScroll: true }); }
 	function handleSuccess() { toasts.show('Quote updated'); close(); }
 
-	async function uploadImage(event: Event) {
-		const input = event.target as HTMLInputElement;
-		const file = input.files?.[0];
-		if (!file) return;
+	async function handleFile(file: File) {
+		if (!file.type.startsWith('image/')) { uploadError = 'Only image files are supported.'; return; }
 		uploadError = '';
 		uploading = true;
 		try {
@@ -59,15 +58,28 @@
 			if (!res.ok) { uploadError = 'Failed to get upload URL'; return; }
 			const { uploadUrl, url, headers } = await res.json();
 			const put = await fetch(uploadUrl, { method: 'PUT', headers, body: file });
-			if (!put.ok) { uploadError = 'Upload to S3 quarantine failed'; return; }
+			if (!put.ok) { uploadError = 'Upload to S3 failed'; return; }
 			imageKey = url;
 			imagePreview = URL.createObjectURL(file);
 		} catch {
 			uploadError = 'Upload error — please try again.';
 		} finally {
 			uploading = false;
-			input.value = '';
 		}
+	}
+
+	function onFileInput(event: Event) {
+		const input = event.target as HTMLInputElement;
+		const file = input.files?.[0];
+		if (file) handleFile(file);
+		input.value = '';
+	}
+
+	function onDrop(event: DragEvent) {
+		event.preventDefault();
+		dragOver = false;
+		const file = event.dataTransfer?.files?.[0];
+		if (file) handleFile(file);
 	}
 
 	function clearImage() { imageKey = null; imagePreview = null; }
@@ -156,11 +168,16 @@
 				</div>
 				<input type="hidden" name="image_url" value={imageKey ?? ''} />
 			{:else}
-				<label class="flex flex-col items-center justify-center h-32 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-brand-400 hover:bg-brand-50 transition-colors {uploading ? 'opacity-60 pointer-events-none' : ''}">
+				<label
+					class="flex flex-col items-center justify-center h-32 border-2 border-dashed rounded-lg cursor-pointer transition-colors {uploading ? 'opacity-60 pointer-events-none' : ''} {dragOver ? 'border-brand-500 bg-brand-100' : 'border-slate-300 hover:border-brand-400 hover:bg-brand-50'}"
+					ondragover={(e) => { e.preventDefault(); dragOver = true; }}
+					ondragleave={() => dragOver = false}
+					ondrop={onDrop}
+				>
 					<Upload size={24} class="text-slate-400 mb-2" />
-					<span class="text-sm text-slate-500">{uploading ? 'Uploading to quarantine…' : 'Click to upload image'}</span>
+					<span class="text-sm text-slate-500">{uploading ? 'Uploading…' : dragOver ? 'Drop to upload' : 'Click or drag & drop image'}</span>
 					<span class="text-xs text-slate-400 mt-0.5">JPG, PNG, WEBP — max 5 MB</span>
-					<input type="file" accept="image/*" class="sr-only" onchange={uploadImage} />
+					<input type="file" accept="image/*" class="sr-only" onchange={onFileInput} />
 				</label>
 				<input type="hidden" name="image_url" value="" />
 			{/if}

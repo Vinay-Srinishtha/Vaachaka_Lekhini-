@@ -276,7 +276,15 @@
 							<!-- Image -->
 							<td class="px-4 py-3">
 								{#if quote.imageUrl}
-									<img src={quote.imageUrl} alt="" class="h-10 w-16 rounded object-cover border border-slate-200" />
+									<a href={quote.imageUrl} target="_blank" rel="noopener noreferrer" class="block">
+										<img
+											src={quote.imageUrl}
+											alt=""
+											class="h-10 w-16 rounded object-cover border border-slate-200 hover:opacity-80 transition-opacity"
+											onerror={(e) => { (e.target as HTMLImageElement).style.display='none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }}
+										/>
+										<span class="hidden text-xs text-slate-400 italic">No preview</span>
+									</a>
 								{:else}
 									<span class="text-slate-300"><ImageOff size={18} /></span>
 								{/if}

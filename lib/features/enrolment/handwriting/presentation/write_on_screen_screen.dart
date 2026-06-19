@@ -28,6 +28,7 @@ import '../domain/handwriting_asset.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../core/widgets/widgets.dart';
 import '../../../../core/audio/reward_sound_service.dart';
+import '../../../enrolment/voice/domain/voice_enrolment.dart';
 import '../../../programs/data/writings_pdf_service.dart';
 import '../../../programs/presentation/book_preview_sheet.dart';
 import '../../../programs/presentation/daily_progress_screen.dart';
@@ -188,6 +189,9 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
     unawaited(_validateAndSubmit());
   }
 
+  // Minimum match score for any sample (reference or compare phase).
+  static const double _minMatchScore = 0.80;
+
   Future<void> _validateAndSubmit() async {
     final png = await _controller.toPngBytes();
     if (png == null) return;
@@ -221,17 +225,43 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
           .toList();
 
       // ── Sampling phase: first N writings become reference samples ──────────
+      // The very first sample is accepted automatically (it becomes the reference).
+      // Every subsequent reference sample must score ≥ 80 % against the first one.
       if (validCandidates.length < sampleN) {
-        await ref.read(handwritingRepositoryProvider).savePng(
-          profileId: profile.id,
-          mantraId: widget.mantraId,
-          bytes: png,
-          mode: HandwritingMode.writeOnScreen,
-        );
-        final saved = validCandidates.length + 1;
-        setState(() => _checking = false);
-        _controller.clear();
-        if (mounted) _showSampleSavedFeedback(saved, sampleN);
+        if (validCandidates.isEmpty) {
+          // First sample — accept unconditionally as the reference baseline.
+          await ref.read(handwritingRepositoryProvider).savePng(
+            profileId: profile.id,
+            mantraId: widget.mantraId,
+            bytes: png,
+            mode: HandwritingMode.writeOnScreen,
+          );
+          await _creditHandwritingSample(profile.id);
+          final saved = 1;
+          setState(() => _checking = false);
+          _controller.clear();
+          if (mounted) _showSampleSavedFeedback(saved, sampleN);
+        } else {
+          // Subsequent reference samples — must match the first reference at ≥ 80 %.
+          final refBytes = await File(validCandidates.last.filePath!).readAsBytes();
+          final score = await HandwritingComparator.compare(png, refBytes);
+          if (score >= _minMatchScore) {
+            await ref.read(handwritingRepositoryProvider).savePng(
+              profileId: profile.id,
+              mantraId: widget.mantraId,
+              bytes: png,
+              mode: HandwritingMode.writeOnScreen,
+            );
+            await _creditHandwritingSample(profile.id);
+            final saved = validCandidates.length + 1;
+            setState(() => _checking = false);
+            _controller.clear();
+            if (mounted) _showSampleSavedFeedback(saved, sampleN);
+          } else {
+            setState(() => _checking = false);
+            if (mounted) _showRejectedFeedback(score, (_minMatchScore * 100).round());
+          }
+        }
         return;
       }
 
@@ -240,10 +270,7 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
       final refBytes = await File(ref_.filePath!).readAsBytes();
       final score = await HandwritingComparator.compare(png, refBytes);
 
-      final thresholdPct = cfg.intFlag(RemoteConfigKeys.minHandwritingAccuracy, fallback: 35);
-      final threshold = thresholdPct / 100.0;
-
-      if (score >= threshold) {
+      if (score >= _minMatchScore) {
         // ── Accept: save immediately into the rolling pool ────────────────────
         await ref
             .read(handwritingRepositoryProvider)
@@ -252,20 +279,37 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
               mantraId: widget.mantraId,
               bytes: png,
             );
+        await _creditHandwritingSample(profile.id);
         setState(() {
           _writingCount++;
           _checking = false;
         });
         _controller.clear();
-        if (mounted) _showAcceptedFeedback(score, threshold);
+        if (mounted) _showAcceptedFeedback(score, _minMatchScore);
       } else {
         // ── Reject ───────────────────────────────────────────────────────────
         setState(() => _checking = false);
-        if (mounted) _showRejectedFeedback(score, thresholdPct);
+        if (mounted) _showRejectedFeedback(score, (_minMatchScore * 100).round());
       }
     } catch (_) {
       setState(() => _checking = false);
     }
+  }
+
+  /// Increments handwritingSamples on the VoiceEnrolment record so that
+  /// both voice and handwriting count toward the combined enrollment total.
+  Future<void> _creditHandwritingSample(String profileId) async {
+    final repo = ref.read(voiceEnrolmentRepositoryProvider);
+    final existing = await repo.get(profileId, widget.mantraId);
+    final updated = (existing ?? VoiceEnrolment(
+      profileId: profileId,
+      mantraId: widget.mantraId,
+      samples: 0,
+      trainedAt: DateTime.now(),
+    )).copyWith(
+      handwritingSamples: (existing?.handwritingSamples ?? 0) + 1,
+    );
+    await repo.save(updated);
   }
 
   /// Dismiss any current snackbar then show [snackBar].

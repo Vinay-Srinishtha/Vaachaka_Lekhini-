@@ -50,7 +50,11 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen>
   DateTime? _lastCountTime;
   final List<double> _slotIntensity = List.filled(_poolSize, 0.5);
 
-  static const int _target = 11;
+  // Handwriting samples already credited — reduces voice target accordingly.
+  int _existingHandwritingSamples = 0;
+
+  /// Voice samples still needed = total required − handwriting already credited.
+  int get _target => (VoiceEnrolment.requiredSamples - _existingHandwritingSamples).clamp(1, VoiceEnrolment.requiredSamples);
 
   @override
   void initState() {
@@ -63,6 +67,19 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen>
         duration: const Duration(milliseconds: 1800),
       ),
     );
+    _loadExistingEnrolment();
+  }
+
+  Future<void> _loadExistingEnrolment() async {
+    final profile = ref.read(activeProfileProvider).value;
+    if (profile == null) return;
+    final enrolment = await ref
+        .read(voiceEnrolmentRepositoryProvider)
+        .get(profile.id, widget.mantraId);
+    if (!mounted) return;
+    setState(() {
+      _existingHandwritingSamples = enrolment?.handwritingSamples ?? 0;
+    });
   }
 
   void _onEvent(VoiceTrainingEvent e) {
@@ -128,6 +145,7 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen>
         profileId: profile.id,
         mantraId: widget.mantraId,
         samples: _count,
+        handwritingSamples: _existingHandwritingSamples,
         trainedAt: DateTime.now(),
       ),
     );

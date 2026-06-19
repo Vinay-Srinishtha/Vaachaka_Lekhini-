@@ -102,7 +102,7 @@ function keyPrefix(category: UploadCategory, slug: string) {
 	if (category === 'mantra-image') return `mantras/images/main/${safeSlug}`;
 	if (category === 'mantra-preview') return `mantras/images/preview/${safeSlug}`;
 	if (category === 'mantra-share') return `mantras/images/share/${safeSlug}`;
-	if (category === 'quote-image') return `quotes/quarantine/${safeSlug}`;
+	if (category === 'quote-image') return `quotes/images/${safeSlug}`;
 	if (category === 'share-quote') return `quotes/share/${safeSlug}`;
 	return `store/images/${safeSlug}`;
 }

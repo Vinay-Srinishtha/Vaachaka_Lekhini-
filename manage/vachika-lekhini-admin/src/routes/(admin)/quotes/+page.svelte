@@ -131,7 +131,7 @@
 		<h1 class="text-xl font-semibold text-slate-900">Quotes</h1>
 		<p class="mt-1 text-sm text-slate-500">
 			{visibleQuotes.length}{q ? ` of ${data.quotes.length}` : ''} quotes ·
-			shown on the Flutter home screen · images saved to S3 quarantine
+			shown on the Flutter home screen · images saved to S3
 		</p>
 	</div>
 </div>

@@ -101,7 +101,7 @@
 	}}
 />
 
-<Modal open title="Edit Quote" subtitle="Update quote · image saved to S3 quarantine" size="lg" formId="quote-form" saveLabel="Save Changes" onClose={close}>
+<Modal open title="Edit Quote" subtitle="Update quote · image saved to S3" size="lg" formId="quote-form" saveLabel="Save Changes" onClose={close}>
 	{#snippet headerLeft()}
 		<button type="button" onclick={() => showDelete = true} class="inline-flex items-center gap-1.5 text-sm text-red-400 hover:text-red-300 font-medium transition-colors">
 			<Trash2 size={14} /> Delete
@@ -158,7 +158,7 @@
 
 		<!-- Image -->
 		<section class="card p-5 space-y-3">
-			<p class="section-label">Image <span class="text-xs font-normal text-slate-400 ml-1">(saved to S3 quarantine)</span></p>
+			<p class="section-label">Image <span class="text-xs font-normal text-slate-400 ml-1">(saved to S3)</span></p>
 			{#if imagePreview || imageKey}
 				<div class="relative inline-block">
 					<img src={imagePreview ?? imageKey ?? ''} alt="" class="h-40 rounded-lg object-cover border border-slate-200" />

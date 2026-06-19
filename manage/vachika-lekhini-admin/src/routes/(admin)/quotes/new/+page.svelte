@@ -80,9 +80,9 @@
 			</div>
 		</section>
 
-		<!-- Image upload (quarantine) -->
+		<!-- Image upload -->
 		<section class="card p-5 space-y-3">
-			<p class="section-label">Image <span class="text-xs font-normal text-slate-400 ml-1">(optional · saved to S3 quarantine)</span></p>
+			<p class="section-label">Image <span class="text-xs font-normal text-slate-400 ml-1">(optional · saved to S3)</span></p>
 			{#if imagePreview}
 				<div class="relative inline-block">
 					<img src={imagePreview} alt="" class="h-40 rounded-lg object-cover border border-slate-200" />

@@ -28,6 +28,23 @@
 	const items = $derived(NAV_ITEMS.filter((i) => canAccessSection(role, i.section)));
 	const grouped = $derived(buildGroups(items));
 
+	// Color accent per group for visual differentiation
+	const groupAccent: Record<string, string> = {
+		Content:  'text-violet-400',
+		Practice: 'text-sky-400',
+		Rewards:  'text-amber-400',
+		Support:  'text-rose-400',
+		Audit:    'text-slate-400',
+	};
+
+	const groupDot: Record<string, string> = {
+		Content:  'bg-violet-400',
+		Practice: 'bg-sky-400',
+		Rewards:  'bg-amber-400',
+		Support:  'bg-rose-400',
+		Audit:    'bg-slate-400',
+	};
+
 	function buildGroups(navItems: typeof items) {
 		const groups: { label: string | null; items: typeof items }[] = [];
 		const seen = new Set<string>();
@@ -77,105 +94,130 @@
 {#if mobileOpen}
 	<button
 		aria-label="Close menu"
-		class="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm md:hidden"
+		class="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm md:hidden"
 		onclick={onCloseMobile}
 	></button>
 {/if}
 
 <aside
-	class="fixed inset-y-0 left-0 z-40 flex flex-col transition-all duration-200 ease-out
-		bg-slate-900 text-slate-100
-		{collapsed ? 'md:w-16' : 'md:w-64'}
+	class="fixed inset-y-0 left-0 z-40 flex flex-col transition-all duration-300 ease-out
+		{collapsed ? 'md:w-[68px]' : 'md:w-64'}
 		{mobileOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full md:translate-x-0'}"
+	style="background: linear-gradient(180deg, #0f1623 0%, #111827 60%, #0d1520 100%);"
 >
 	<!-- Brand header -->
-	<div class="h-16 flex items-center px-4 shrink-0 border-b border-slate-700/60">
-		<div class="w-9 h-9 rounded-xl grid place-items-center font-bold text-lg shrink-0
-			bg-gradient-to-br from-brand-400 to-brand-700 text-white shadow-lg shadow-brand-900/40">
-			ॐ
+	<div class="h-[68px] flex items-center px-3 shrink-0 border-b border-white/[0.06]">
+		<!-- App logo -->
+		<div class="w-10 h-10 rounded-2xl shrink-0 overflow-hidden shadow-lg shadow-black/40 border border-white/10">
+			<img src="/app_icon.png" alt="Vaachaka Lekhini" class="w-full h-full object-cover" />
 		</div>
+
 		{#if !collapsed || mobileOpen}
-			<div class="ml-3 overflow-hidden">
-				<div class="text-sm font-bold text-white leading-tight tracking-tight">Vaachaka Lekhini</div>
-				<div class="text-[10px] text-slate-400 leading-tight font-medium uppercase tracking-widest">Admin Panel</div>
+			<div class="ml-3 overflow-hidden min-w-0">
+				<div class="text-[13px] font-bold text-white leading-tight tracking-tight truncate">Vaachaka Lekhini</div>
+				<div class="flex items-center gap-1.5 mt-0.5">
+					<span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+					<span class="text-[10px] text-slate-400 leading-none font-semibold uppercase tracking-widest">Admin Panel</span>
+				</div>
 			</div>
 		{/if}
+
 		<button
 			aria-label="Close menu"
-			class="ml-auto md:hidden text-slate-400 hover:text-white transition-colors"
+			class="ml-auto md:hidden text-slate-500 hover:text-white transition-colors p-1"
 			onclick={onCloseMobile}
 		>
-			<X size={20} />
+			<X size={18} />
 		</button>
 	</div>
 
 	<!-- Nav links -->
 	<nav
-		class="flex-1 overflow-y-auto py-4 px-2 space-y-0.5"
+		class="flex-1 overflow-y-auto py-3 space-y-0.5 scrollbar-thin"
+		style="scrollbar-color: #334155 transparent;"
 		data-sveltekit-preload-code="eager"
 		data-sveltekit-preload-data="hover"
 	>
-		{#each grouped as g}
-			{#if g.label && (!collapsed || mobileOpen)}
-				<div class="px-3 pt-4 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500 select-none">
-					{g.label}
-				</div>
-			{:else if g.label && collapsed && !mobileOpen}
-				<div class="my-3 border-t border-slate-700/50 mx-2"></div>
+		{#each grouped as g, gi}
+			{#if g.label}
+				{#if !collapsed || mobileOpen}
+					<!-- Section header with colored dot -->
+					<div class="px-4 pb-1.5 flex items-center gap-2 select-none" style="padding-top: {gi === 0 ? '8px' : '20px'}">
+						<span class="w-1.5 h-1.5 rounded-full shrink-0 {groupDot[g.label] ?? 'bg-slate-500'}"></span>
+						<span class="text-[10px] font-bold uppercase tracking-widest {groupAccent[g.label] ?? 'text-slate-500'}">
+							{g.label}
+						</span>
+					</div>
+				{:else}
+					<!-- Collapsed: just a thin divider -->
+					<div class="my-2 mx-3 border-t border-white/[0.06]"></div>
+				{/if}
 			{/if}
 
-			{#each g.items as item (item.href)}
-				{@const active = isActive(item.href)}
-				{@const loading = isLoading(item.href)}
-				<a
-					href={item.href}
-					onclick={(event) => {
-						startNavigation(event, item.href);
-						onCloseMobile();
-					}}
-					onpointerenter={() => preload(item.href)}
-					onfocus={() => preload(item.href)}
-					title={collapsed && !mobileOpen ? item.label : undefined}
-					class="group flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all relative
-						{active || loading
-						? 'bg-brand-600/20 text-brand-300 shadow-sm'
-						: 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'}"
-					aria-busy={loading}
-				>
-					{#if active || loading}
-						<div class="absolute left-0 inset-y-2 w-0.5 rounded-r-full bg-brand-400"></div>
-					{/if}
-					<item.icon
-						size={17}
-						class="shrink-0 transition-colors {active || loading ? 'text-brand-400' : 'text-slate-500 group-hover:text-slate-300'}"
-					/>
-					{#if !collapsed || mobileOpen}
-						<span class="ml-3 truncate">{item.label}</span>
-						{#if loading}
-							<span
-								class="ml-auto size-3.5 rounded-full border-2 border-brand-400/30 border-t-brand-300 animate-spin"
-								aria-hidden="true"
-							></span>
+			<div class="px-2 space-y-0.5">
+				{#each g.items as item (item.href)}
+					{@const active = isActive(item.href)}
+					{@const loading = isLoading(item.href)}
+					<a
+						href={item.href}
+						onclick={(event) => {
+							startNavigation(event, item.href);
+							onCloseMobile();
+						}}
+						onpointerenter={() => preload(item.href)}
+						onfocus={() => preload(item.href)}
+						title={collapsed && !mobileOpen ? item.label : undefined}
+						aria-busy={loading}
+						class="group relative flex items-center rounded-xl px-2.5 py-2 text-sm font-medium transition-all duration-150
+							{active
+								? 'bg-brand-600/15 text-brand-300'
+								: loading
+								? 'bg-slate-800/60 text-slate-200'
+								: 'text-slate-400 hover:bg-white/[0.05] hover:text-slate-100'}"
+					>
+						<!-- Active left bar -->
+						{#if active}
+							<span class="absolute left-0 top-2 bottom-2 w-[3px] rounded-r-full bg-brand-400"></span>
 						{/if}
-					{/if}
-				</a>
-			{/each}
+
+						<!-- Icon container -->
+						<span class="flex items-center justify-center w-7 h-7 rounded-lg shrink-0 transition-colors
+							{active
+								? 'bg-brand-500/20 text-brand-300'
+								: loading
+								? 'text-slate-300'
+								: 'text-slate-500 group-hover:text-slate-300'}">
+							<item.icon size={16} />
+						</span>
+
+						{#if !collapsed || mobileOpen}
+							<span class="ml-2.5 truncate text-[13px]">{item.label}</span>
+							{#if loading}
+								<span
+									class="ml-auto size-3.5 rounded-full border-[1.5px] border-brand-400/30 border-t-brand-300 animate-spin"
+									aria-hidden="true"
+								></span>
+							{/if}
+						{/if}
+					</a>
+				{/each}
+			</div>
 		{/each}
 	</nav>
 
 	<!-- Collapse toggle (desktop only) -->
-	<div class="border-t border-slate-700/60 p-2 hidden md:block shrink-0">
+	<div class="border-t border-white/[0.06] p-2 hidden md:block shrink-0">
 		<button
-			class="w-full flex items-center justify-center rounded-xl px-3 py-2 text-slate-500
-				hover:bg-slate-800 hover:text-slate-300 transition-colors"
+			class="w-full flex items-center justify-center rounded-xl px-3 py-2 text-slate-600
+				hover:bg-white/[0.05] hover:text-slate-300 transition-colors text-xs font-medium gap-2"
 			onclick={onToggleCollapsed}
 			aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
 		>
 			{#if collapsed}
-				<ChevronsRight size={17} />
+				<ChevronsRight size={16} />
 			{:else}
-				<ChevronsLeft size={17} />
-				<span class="ml-2 text-xs font-medium">Collapse</span>
+				<ChevronsLeft size={16} />
+				<span>Collapse</span>
 			{/if}
 		</button>
 	</div>

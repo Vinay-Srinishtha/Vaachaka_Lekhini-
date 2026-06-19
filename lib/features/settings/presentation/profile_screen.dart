@@ -22,7 +22,6 @@ import '../../enrolment/handwriting/domain/handwriting_asset.dart';
 import '../../auth/domain/auth_repository.dart';
 import '../../auth/domain/session.dart';
 import '../../auth/presentation/auth_shared_widgets.dart';
-import '../../profiles/domain/profile.dart';
 import '../../programs/domain/program.dart';
 import '../../../l10n/l10n.dart';
 import '../../../app/router.dart';

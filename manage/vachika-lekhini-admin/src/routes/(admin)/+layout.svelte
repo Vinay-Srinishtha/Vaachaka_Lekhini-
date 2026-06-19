@@ -66,7 +66,7 @@
 		onNavigateStart={(href) => (pendingPath = href)}
 	/>
 
-	<div class="min-w-0 transition-[padding] duration-200 {collapsed ? 'md:pl-16' : 'md:pl-64'}">
+	<div class="min-w-0 transition-[padding] duration-300 {collapsed ? 'md:pl-[68px]' : 'md:pl-64'}">
 		<Topbar {admin} {pendingPath} onOpenMobile={() => (mobileOpen = true)} />
 		<main
 			class="relative min-w-0 px-4 md:px-6 lg:px-8 py-6"

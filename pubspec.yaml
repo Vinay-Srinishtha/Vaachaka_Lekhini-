@@ -29,7 +29,7 @@ dependencies:
 
   # --- Storage ---
   drift: ^2.33.0
-  sqlite3_flutter_libs: 0.5.15
+  sqlite3_flutter_libs: 0.5.42
   hive_ce: ^2.19.3
   hive_ce_flutter: ^2.3.4
   path_provider: ^2.1.5
@@ -92,7 +92,7 @@ dev_dependencies:
 hooks:
   user_defines:
     sqlite3:
-      source: process
+      source: bundle
 
 flutter:
   uses-material-design: true

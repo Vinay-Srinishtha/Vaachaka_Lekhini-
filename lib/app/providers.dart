@@ -29,6 +29,8 @@ import '../features/enrolment/voice/domain/voice_enrolment_repository.dart';
 import '../features/mantras/data/mantra_repository_remote.dart';
 import '../features/mantras/domain/mantra.dart';
 import '../features/mantras/domain/mantra_repository.dart';
+import '../features/global_sadhana/data/global_sadhana_repository.dart';
+import '../features/global_sadhana/domain/global_sadhana.dart';
 import '../features/programs/data/program_repository_drift.dart';
 import '../features/programs/domain/program.dart';
 import '../features/programs/domain/program_repository.dart';
@@ -751,6 +753,42 @@ final redeemedItemIdsProvider = StreamProvider<Set<String>>((ref) async* {
     return;
   }
   yield* ref.watch(rewardRepositoryProvider).watchRedeemedItemIds(profile.id);
+});
+
+// ── Global Sadhana ────────────────────────────────────────────────────────────
+
+final globalSadhanaRepositoryProvider =
+    Provider<GlobalSadhanaRepository>((ref) {
+  return GlobalSadhanaRepository(
+    api: ref.watch(apiClientProvider),
+    cache: cacheBox(),
+  );
+});
+
+/// Active global sadhanas. Seeds from Hive cache immediately, refreshes
+/// from network and re-emits. Refreshes every 60 s while a screen is mounted.
+final activeGlobalSadhanaProvider =
+    StreamProvider<List<GlobalSadhana>>((ref) async* {
+  final repo = ref.watch(globalSadhanaRepositoryProvider);
+  // Instant from cache
+  yield repo.cachedActive();
+  // Network fetch
+  final fresh = await repo.fetchActive();
+  yield fresh;
+  // Periodic background refresh while the stream is alive.
+  await for (final _ in Stream<void>.periodic(const Duration(seconds: 60))) {
+    yield await repo.fetchActive();
+  }
+});
+
+/// Enrollment status for the active profile in a specific sadhana.
+/// Null means not enrolled (or still loading).
+final globalSadhanaEnrollmentProvider = FutureProvider.autoDispose
+    .family<GlobalSadhanaEnrollment?, String>((ref, sadhanaId) async {
+  final profile = ref.watch(activeProfileProvider).value;
+  if (profile == null) return null;
+  final repo = ref.watch(globalSadhanaRepositoryProvider);
+  return repo.fetchEnrollment(sadhanaId, profile.id);
 });
 
 /// Incremented each time a practice session is finished so that

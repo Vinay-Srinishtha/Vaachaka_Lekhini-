@@ -13,6 +13,7 @@ import '../../../../core/theme/theme.dart';
 import '../../../../core/widgets/widgets.dart';
 import '../../../settings/domain/settings_repository.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../programs/domain/session.dart';
 import '../data/voice_enrolment_service.dart';
 import '../domain/voice_enrolment.dart';
 
@@ -121,6 +122,7 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen>
     _micLevel.value = 0;
     final profile = ref.read(activeProfileProvider).value;
     if (profile == null) return;
+
     await ref.read(voiceEnrolmentRepositoryProvider).save(
       VoiceEnrolment(
         profileId: profile.id,
@@ -129,6 +131,26 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen>
         trainedAt: DateTime.now(),
       ),
     );
+
+    // Count the voice samples toward the program total.
+    if (_count > 0) {
+      final programs = ref.read(programsForActiveProfileProvider).value ?? [];
+      final program = programs
+          .where((p) => p.mantraId == widget.mantraId && !p.isGoalReached)
+          .firstOrNull;
+      if (program != null) {
+        final repo = ref.read(programRepositoryProvider);
+        final session = await repo.startSession(
+          programId: program.id,
+          memberId: profile.id,
+          modality: SessionModality.voice,
+        );
+        await repo.incrementSession(session.id, by: _count);
+        await repo.finishSession(session.id);
+        ref.invalidate(programsForActiveProfileProvider);
+      }
+    }
+
     if (!mounted) return;
     if (widget.isRetrain) {
       context.pop();

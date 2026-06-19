@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce/hive.dart';
+import 'package:sqlite3_flutter_libs/sqlite3_flutter_libs.dart';
 
 import 'app/app.dart';
 import 'app/providers.dart';
@@ -10,6 +11,10 @@ import 'core/storage/storage_keys.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Ensures the native sqlite3 library shipped by sqlite3_flutter_libs is
+  // loaded before Drift tries to open the database. Without this, the FFI
+  // resolver falls back to the process symbol table and fails on Android.
+  await applyWorkaroundToOpenSqlite3OnOldAndroidVersions();
   // edgeToEdge: app fills the full screen with transparent bars while keeping
   // the system gesture zone (bottom swipe, side swipes) always active.
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);

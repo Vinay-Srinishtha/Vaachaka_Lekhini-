@@ -55,6 +55,8 @@ model Mantra {
   programs           Program[]
   voiceEnrolments    VoiceEnrolment[]
   handwritingSamples HandwritingSample[]
+  quotes             Quote[]
+  globalSadhanas     GlobalSadhana[]
 
   @@index([isActive, sortOrder])
   @@index([nameRoman])
@@ -174,6 +176,8 @@ model Member {
   rewardEvents       RewardEvent[]
   voiceEnrolments    VoiceEnrolment[]
   handwritingSamples HandwritingSample[]
+  globalSadhanaEnrollments   GlobalSadhanaEnrollment[]
+  globalSadhanaContributions GlobalSadhanaContribution[]
 
   @@index([accountId])
   @@index([accountId, isPrimary])
@@ -448,6 +452,119 @@ model AppSetting {
   key       String   @id
   value     String   @db.Text
   updatedAt DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Quotes — inspirational cards shown on the Flutter home screen
+// ─────────────────────────────────────────────────────────────────────────
+
+/// One inspirational quote card. Shown on the home screen.
+/// If mantraId is set, only shown to members who have an active program for
+/// that mantra. If null, shown universally.
+/// Images are uploaded to the S3 quarantine bucket for review.
+model Quote {
+  id        String   @id @default(cuid())
+  /// Quote body text (supports Unicode / Telugu / Devanagari).
+  text      String   @db.Text
+  /// Attribution line, e.g. "— మహాభారతం" or "Bhagavad Gita 2.47"
+  source    String?
+  /// S3 image URL (quarantine prefix). Nullable — text-only quotes are valid.
+  imageUrl  String?
+  /// When set, only members with a program for this mantra see this quote.
+  mantraId  String?
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  mantra Mantra? @relation(fields: [mantraId], references: [id])
+
+  @@index([isActive, sortOrder])
+  @@index([mantraId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Global Sadhana — community-wide spiritual initiative
+// ─────────────────────────────────────────────────────────────────────────
+
+enum GlobalSadhanaStatus {
+  draft
+  published
+  active
+  paused
+  completed
+  archived
+}
+
+enum ParticipationMode {
+  voice
+  handwriting
+  both
+}
+
+/// An admin-created community spiritual drive. All enrolled members
+/// contribute their chants/writings toward a shared target count.
+/// Auto-closes when currentCount >= targetCount.
+model GlobalSadhana {
+  id                String              @id @default(cuid())
+  title             String
+  description       String              @db.Text
+  mantraId          String
+  mantra            Mantra              @relation(fields: [mantraId], references: [id])
+  mantraText        String?             @db.Text
+  mantraLanguage    String              @default("hi")
+  targetCount       Int
+  currentCount      Int                 @default(0)
+  startAt           DateTime
+  endAt             DateTime?
+  imageUrl          String?
+  isSponsored       Boolean             @default(false)
+  status            GlobalSadhanaStatus @default(draft)
+  participationMode ParticipationMode   @default(both)
+  instructions      String?             @db.Text
+  createdByAdminId  String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  completedAt       DateTime?
+
+  enrollments   GlobalSadhanaEnrollment[]
+  contributions GlobalSadhanaContribution[]
+
+  @@index([status, startAt])
+  @@index([mantraId])
+}
+
+model GlobalSadhanaEnrollment {
+  id              String        @id @default(cuid())
+  globalSadhanaId String
+  globalSadhana   GlobalSadhana @relation(fields: [globalSadhanaId], references: [id], onDelete: Cascade)
+  memberId        String
+  member          Member        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  enrolledAt      DateTime      @default(now())
+  voiceTrainingComplete       Boolean @default(false)
+  handwritingTrainingComplete Boolean @default(false)
+
+  @@unique([globalSadhanaId, memberId])
+  @@index([globalSadhanaId])
+  @@index([memberId])
+}
+
+/// One record per session that contributed to a GlobalSadhana. The countAdded
+/// is capped server-side so currentCount never exceeds targetCount.
+model GlobalSadhanaContribution {
+  id              String          @id @default(cuid())
+  globalSadhanaId String
+  globalSadhana   GlobalSadhana   @relation(fields: [globalSadhanaId], references: [id], onDelete: Cascade)
+  memberId        String
+  member          Member          @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  countAdded      Int
+  modality        SessionModality
+  sessionId       String?
+  createdAt       DateTime        @default(now())
+
+  @@index([globalSadhanaId, memberId])
+  @@index([globalSadhanaId, createdAt])
+  @@index([memberId])
 }
 
 /// In-app bug reports and feedback submissions.

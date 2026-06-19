@@ -29,7 +29,7 @@ dependencies:
 
   # --- Storage ---
   drift: ^2.33.0
-  sqlite3_flutter_libs: ^0.5.27
+  sqlite3_flutter_libs: 0.5.15
   hive_ce: ^2.19.3
   hive_ce_flutter: ^2.3.4
   path_provider: ^2.1.5
@@ -100,4 +100,5 @@ flutter:
   assets:
     - assets/models/vosk-model-small-hi-0.22.zip
     - assets/mantras/
+    - assets/audio/
     - assets/app_icon.png

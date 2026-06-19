@@ -3,12 +3,14 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:signature/signature.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../app/providers.dart';
 import '../../../../app/router.dart';
@@ -25,6 +27,9 @@ import '../../../settings/domain/settings_repository.dart';
 import '../domain/handwriting_asset.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../core/widgets/widgets.dart';
+import '../../../../core/audio/reward_sound_service.dart';
+import '../../../programs/data/writings_pdf_service.dart';
+import '../../../programs/presentation/book_preview_sheet.dart';
 import '../../../programs/presentation/daily_progress_screen.dart';
 
 class WriteOnScreenScreen extends ConsumerStatefulWidget {
@@ -99,6 +104,34 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _showLanguagePicker();
       });
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_maybeShowWritingTip());
+    });
+  }
+
+  Future<void> _maybeShowWritingTip() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool('tip_writing_v1') == true) return;
+    if (!mounted) return;
+    var dontShowAgain = true;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) => _TipSheet(
+        title: 'Writing Tips',
+        bullets: const [
+          '• Write clearly within the dotted guide area',
+          '• Tap ADD after each character to record it',
+          '• Tap DONE / Complete Session when finished',
+        ],
+        initialDontShowAgain: dontShowAgain,
+        onChanged: (v) => dontShowAgain = v,
+      ),
+    );
+    if (dontShowAgain) {
+      await prefs.setBool('tip_writing_v1', true);
     }
   }
 
@@ -338,6 +371,29 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
       if (!mounted) return;
       ref.invalidate(globalStatsProvider(widget.mantraId));
       ref.read(sessionCompletedProvider.notifier).increment();
+      // Rebuild writing book PDF in the background.
+      final pdfProfile = ref.read(activeProfileProvider).value;
+      if (pdfProfile != null) {
+        final allAssets = await ref
+            .read(handwritingRepositoryProvider)
+            .listForProfile(pdfProfile.id);
+        final mantraAssets = allAssets
+            .where((a) =>
+                a.mantraId == widget.mantraId &&
+                a.mode == HandwritingMode.writeOnScreen &&
+                a.filePath != null)
+            .toList();
+        if (mantraAssets.isNotEmpty) {
+          final mantra = ref.read(mantraByIdProvider(widget.mantraId));
+          unawaited(WritingsPdfService.generate(
+            profileId: pdfProfile.id,
+            mantraId: widget.mantraId,
+            mantraName: mantra?.name.roman ?? widget.mantraId,
+            assets: mantraAssets,
+          ));
+        }
+      }
+      if (!mounted) return;
       // Check if target was reached — show dedication dialog before leaving.
       final practiceState = ref
           .read(practiceControllerProvider(programId))
@@ -475,6 +531,10 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
         onRedo: _controller.redo,
         penColor: _penColor,
         onColorSelected: _setPenColor,
+        onSwitchToVoice: widget.programId != null
+            ? () => context.go('${KvlRoute.practice}/${widget.programId}')
+            : null,
+        mantraId: widget.mantraId,
         targetCount: programs
             .where((p) => p.id == widget.programId)
             .fold<int>(0, (_, p) => p.targetWritings),
@@ -537,7 +597,7 @@ class _SampleLandscapeWriteScaffold extends StatefulWidget {
 
 class _SampleLandscapeWriteScaffoldState
     extends State<_SampleLandscapeWriteScaffold> {
-  bool _guideVisible = true;
+  bool _guideVisible = false;
 
   @override
   Widget build(BuildContext context) {
@@ -722,7 +782,7 @@ class _SampleLandscapeCanvas extends StatelessWidget {
                     text: guide,
                     script: guideScript,
                     fontSize: size,
-                    opacity: .64,
+                    opacity: .50,
                   ),
                 ),
               ),
@@ -1040,6 +1100,26 @@ final _ringerModeProvider = StreamProvider.autoDispose<RingerMode>((ref) {
   return RingerModeService().watch();
 });
 
+// Ambient sound — true = playing.
+final _ambientOnProvider =
+    NotifierProvider.autoDispose<_AmbientNotifier, bool>(_AmbientNotifier.new);
+
+class _AmbientNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+  void toggle() => state = !state;
+}
+
+final _ambientPlayerProvider = Provider.autoDispose<AudioPlayer>((ref) {
+  final player = AudioPlayer();
+  player.setReleaseMode(ReleaseMode.loop);
+  ref.onDispose(() {
+    player.stop();
+    player.dispose();
+  });
+  return player;
+});
+
 class _ProtoWriteScaffold extends ConsumerStatefulWidget {
   const _ProtoWriteScaffold({
     required this.controller,
@@ -1056,6 +1136,8 @@ class _ProtoWriteScaffold extends ConsumerStatefulWidget {
     required this.onRedo,
     required this.penColor,
     required this.onColorSelected,
+    required this.onSwitchToVoice,
+    required this.mantraId,
     this.targetCount = 0,
   });
 
@@ -1073,6 +1155,8 @@ class _ProtoWriteScaffold extends ConsumerStatefulWidget {
   final VoidCallback onRedo;
   final Color penColor;
   final ValueChanged<Color> onColorSelected;
+  final VoidCallback? onSwitchToVoice;
+  final String mantraId;
   final int targetCount;
 
   @override
@@ -1082,7 +1166,7 @@ class _ProtoWriteScaffold extends ConsumerStatefulWidget {
 class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
   double _guideScale = 1.0;
   bool _canvasHasContent = false;
-  bool _guideVisible = true;
+  bool _guideVisible = false;
 
   static const double _scaleMin = 0.5;
   static const double _scaleMax = 2.0;
@@ -1174,11 +1258,18 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
                 right: 0,
                 top: topInset,
                 child: Center(
-                  child: _WritingCounts(
-                    globalCount: globalCount,
-                    yours: yours,
-                    increment: widget.writingCount,
-                    compact: compact,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _WritingCounts(
+                        globalCount: globalCount,
+                        yours: yours,
+                        increment: widget.writingCount,
+                        compact: compact,
+                      ),
+                      const SizedBox(height: 6),
+                      _PointsBadge(compact: compact),
+                    ],
                   ),
                 ),
               ),
@@ -1247,6 +1338,53 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
                 ),
                 ),
               ),
+              if (widget.onSwitchToVoice != null)
+                Positioned(
+                  right: compact ? 10 : 16,
+                  bottom: bottomStripH + (compact ? 6 : 10),
+                  child: GestureDetector(
+                    onTap: widget.onSwitchToVoice,
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: compact ? 10 : 13,
+                          vertical: compact ? 5 : 7),
+                      decoration: BoxDecoration(
+                        color: KvlColors.surface,
+                        borderRadius: BorderRadius.circular(20),
+                        border:
+                            Border.all(color: KvlColors.border, width: 1.1),
+                        boxShadow: [
+                          BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.06),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2))
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.mic_rounded,
+                              size: compact ? 14 : 16,
+                              color: KvlColors.accent),
+                          const SizedBox(width: 5),
+                          Text('Switch to Voice',
+                              style: KvlText.ui(
+                                      compact ? 11.5 : 12.5, FontWeight.w700)
+                                  .copyWith(color: KvlColors.accent)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              // Bottom-left: Preview My Book
+              Positioned(
+                left: compact ? 10 : 16,
+                bottom: bottomStripH + (compact ? 6 : 10),
+                child: BookPreviewButton(
+                  compact: compact,
+                  mantraId: widget.mantraId,
+                ),
+              ),
               // Bottom strip: Progress [bar] X/Y
               Positioned(
                 left: 0,
@@ -1302,7 +1440,7 @@ class _ProtoWritingCanvas extends StatelessWidget {
                   text: guide,
                   script: guideScript,
                   fontSize: size,
-                  opacity: .66,
+                  opacity: .50,
                 ),
               ),
             ),
@@ -1334,7 +1472,7 @@ class _DottedGuideText extends StatelessWidget {
       MantraScript.latin => 'Lexend, Arial, sans-serif',
       MantraScript.devanagari =>
         'Tiro Devanagari Hindi, Noto Sans Devanagari, serif',
-      MantraScript.telugu => 'Tiro Telugu, Noto Sans Telugu, serif',
+      MantraScript.telugu => 'Suravaram, Tiro Telugu, Noto Sans Telugu, serif',
       MantraScript.kannada => 'Tiro Kannada, Noto Sans Kannada, serif',
     };
     // flutter_svg ignores stroke-dasharray on <text> but supports <pattern>
@@ -1385,7 +1523,7 @@ class _DottedGuideText extends StatelessWidget {
   }
 }
 
-class _LandscapeTopBar extends StatelessWidget {
+class _LandscapeTopBar extends ConsumerWidget {
   const _LandscapeTopBar({
     required this.compact,
     required this.ringerMode,
@@ -1401,9 +1539,10 @@ class _LandscapeTopBar extends StatelessWidget {
   final VoidCallback onGuideToggle;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final double iconSize = compact ? 28 : 32;
     final double labelSize = compact ? 10.5 : 11.5;
+    final ambientOn = ref.watch(_ambientOnProvider);
 
     Widget item({
       required IconData icon,
@@ -1445,6 +1584,22 @@ class _LandscapeTopBar extends StatelessWidget {
           label: guideVisible ? 'Own Writing' : 'Show Reference',
           onTap: onGuideToggle,
           iconColor: guideVisible ? KvlColors.ink : KvlColors.primary,
+        ),
+        const SizedBox(width: 20),
+        item(
+          icon: ambientOn ? Icons.music_note_rounded : Icons.music_off_rounded,
+          label: 'Ambient',
+          onTap: () async {
+            ref.read(_ambientOnProvider.notifier).toggle();
+            final isNowOn = ref.read(_ambientOnProvider);
+            final player = ref.read(_ambientPlayerProvider);
+            if (isNowOn) {
+              await player.play(AssetSource('audio/ambient_loop.mp3'));
+            } else {
+              await player.stop();
+            }
+          },
+          iconColor: ambientOn ? KvlColors.primary : KvlColors.ink,
         ),
       ],
     );
@@ -1533,6 +1688,106 @@ class _WritingCounts extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _PointsBadge extends ConsumerStatefulWidget {
+  const _PointsBadge({required this.compact});
+  final bool compact;
+
+  @override
+  ConsumerState<_PointsBadge> createState() => _PointsBadgeState();
+}
+
+class _PointsBadgeState extends ConsumerState<_PointsBadge>
+    with SingleTickerProviderStateMixin {
+  int? _prev;
+  int _delta = 0;
+  late final AnimationController _anim;
+  late final Animation<double> _offsetAnim;
+  late final Animation<double> _fadeAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _anim = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+    _offsetAnim = Tween<double>(begin: 0, end: -28).animate(
+      CurvedAnimation(parent: _anim, curve: Curves.easeOut),
+    );
+    _fadeAnim = TweenSequence([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.0), weight: 15),
+      TweenSequenceItem(tween: ConstantTween(1.0), weight: 55),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 30),
+    ]).animate(_anim);
+  }
+
+  @override
+  void dispose() {
+    _anim.dispose();
+    super.dispose();
+  }
+
+  void _onPoints(int points) {
+    if (_prev != null && points > _prev!) {
+      setState(() => _delta = points - _prev!);
+      _anim.forward(from: 0);
+      unawaited(RewardSoundService.instance.playBell());
+    }
+    _prev = points;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final points = ref.watch(rewardTotalProvider).value;
+    if (points == null) return const SizedBox.shrink();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _onPoints(points);
+    });
+    final compact = widget.compact;
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.topCenter,
+      children: [
+        Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 10 : 13,
+            vertical: compact ? 4 : 5,
+          ),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFBF3D8),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFE8C04A), width: 1.1),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.star_rounded, size: compact ? 13 : 15, color: KvlColors.gold),
+              const SizedBox(width: 4),
+              Text(
+                '${IndianNumberFormat.format(points)} pts',
+                style: KvlText.ui(compact ? 12 : 13, FontWeight.w700)
+                    .copyWith(color: const Color(0xFF5a4400)),
+              ),
+            ],
+          ),
+        ),
+        AnimatedBuilder(
+          animation: _anim,
+          builder: (_, child) {
+            if (_anim.isDismissed) return const SizedBox.shrink();
+            return Positioned(
+              top: _offsetAnim.value,
+              child: Opacity(opacity: _fadeAnim.value, child: child),
+            );
+          },
+          child: Text(
+            '+${IndianNumberFormat.format(_delta)} pts',
+            style: KvlText.ui(compact ? 12 : 13, FontWeight.w800)
+                .copyWith(color: const Color(0xFF16A34A)),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1772,7 +2027,7 @@ class _MergedActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = canvasHasContent ? 'ADD' : 'DONE';
+    final label = canvasHasContent ? 'ADD' : 'Complete Session';
     final icon = canvasHasContent ? Icons.add_rounded : Icons.check_rounded;
     final bgColor =
         canvasHasContent ? KvlColors.primary : const Color(0xFF16A34A);
@@ -1906,6 +2161,94 @@ class _ProgressStrip extends StatelessWidget {
                 .copyWith(color: KvlColors.ink),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// One-time tip bottom sheet with a "Don't show again" checkbox.
+class _TipSheet extends StatefulWidget {
+  const _TipSheet({
+    required this.title,
+    required this.bullets,
+    required this.initialDontShowAgain,
+    required this.onChanged,
+  });
+
+  final String title;
+  final List<String> bullets;
+  final bool initialDontShowAgain;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  State<_TipSheet> createState() => _TipSheetState();
+}
+
+class _TipSheetState extends State<_TipSheet> {
+  late bool _dontShowAgain = widget.initialDontShowAgain;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Container(
+        margin: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+        decoration: BoxDecoration(
+          color: KvlColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: KvlColors.border),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.lightbulb_rounded,
+                    color: KvlColors.primaryDeep, size: 22),
+                const SizedBox(width: 8),
+                Text(widget.title, style: KvlText.ui(16, FontWeight.w800)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...widget.bullets.map((b) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    b,
+                    style: KvlText.body(13.5)
+                        .copyWith(height: 1.4, color: KvlColors.inkSoft),
+                  ),
+                )),
+            const SizedBox(height: 6),
+            InkWell(
+              onTap: () {
+                setState(() => _dontShowAgain = !_dontShowAgain);
+                widget.onChanged(_dontShowAgain);
+              },
+              child: Row(
+                children: [
+                  Checkbox(
+                    value: _dontShowAgain,
+                    onChanged: (v) {
+                      setState(() => _dontShowAgain = v ?? false);
+                      widget.onChanged(_dontShowAgain);
+                    },
+                  ),
+                  Text("Don't show again",
+                      style: KvlText.body(13).copyWith(color: KvlColors.ink)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: KvlButton(
+                label: 'Got it!',
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

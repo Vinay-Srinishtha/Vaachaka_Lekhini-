@@ -115,7 +115,8 @@ class _AboutScreen extends ConsumerWidget {
           title: context.l10n.infoAboutTitle,
         ),
         data: (s) => _MarkdownBody(
-          markdown: (s.aboutApp?.isNotEmpty == true)
+          markdown: (Localizations.localeOf(context).languageCode == 'en' &&
+                  s.aboutApp?.isNotEmpty == true)
               ? s.aboutApp!
               : context.l10n.infoAboutBody,
           headerIcon: Icons.self_improvement_rounded,

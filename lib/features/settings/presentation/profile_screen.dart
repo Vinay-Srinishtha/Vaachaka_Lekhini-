@@ -281,41 +281,8 @@ class ProfileScreen extends ConsumerWidget {
                   builder: (_) => _ChangeMobileSheet(parentRef: ref),
                 ),
               ),
-              SettingRow(
-                icon: Icons.switch_account_rounded,
-                label: 'Switch User',
-                onTap: () async {
-                  await ref
-                      .read(profileRepositoryProvider)
-                      .clearActive();
-                  if (context.mounted) context.go(KvlRoute.profileSelect);
-                },
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(KvlSpacing.md, KvlSpacing.sm, KvlSpacing.md, KvlSpacing.sm),
-                child: Row(
-                  children: [
-                    if (profile?.relation == FamilyRelation.me) ...[
-                      Expanded(
-                        child: _CommunityCard(
-                          icon: Icons.group_outlined,
-                          label: context.l10n.familyMembers,
-                          onTap: () => context.push(KvlRoute.addFamily),
-                        ),
-                      ),
-                      const SizedBox(width: KvlSpacing.sm),
-                    ],
-                    Expanded(
-                      child: _CommunityCard(
-                        icon: Icons.person_add_alt_1_outlined,
-                        label: context.l10n.inviteFriends,
-                        onTap: () => context.push(KvlRoute.inviteFriends),
-                      ),
-                    ),
-                    if (profile?.relation != FamilyRelation.me)
-                      const Expanded(child: SizedBox()),
-                  ],
-                ),
+              _InviteFriendsBanner(
+                onTap: () => context.push(KvlRoute.inviteFriends),
               ),
             ],
           ),
@@ -1820,37 +1787,79 @@ class _MantraPickerTile extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-class _CommunityCard extends StatelessWidget {
-  const _CommunityCard({required this.icon, required this.label, required this.onTap});
-  final IconData icon;
-  final String label;
+class _InviteFriendsBanner extends StatelessWidget {
+  const _InviteFriendsBanner({required this.onTap});
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: KvlRadius.brLG,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: KvlColors.primaryGhost,
-          borderRadius: KvlRadius.brLG,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: KvlColors.primary, size: 24),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              style: KvlText.caption(11.5).copyWith(
-                color: KvlColors.primaryDeep,
-                fontWeight: FontWeight.w600,
-              ),
-              textAlign: TextAlign.center,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        KvlSpacing.md, 0, KvlSpacing.md, KvlSpacing.sm,
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: KvlRadius.brLG,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: KvlSpacing.md,
+            vertical: KvlSpacing.sm + 2,
+          ),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFFFF3E0), Color(0xFFFFE0B2)],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
             ),
-          ],
+            borderRadius: KvlRadius.brLG,
+            border: Border.all(
+              color: const Color(0xFFFFB74D).withValues(alpha: 0.6),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF8F00).withValues(alpha: 0.12),
+                  borderRadius: KvlRadius.brMD,
+                ),
+                alignment: Alignment.center,
+                child: const Icon(
+                  Icons.person_add_alt_1_rounded,
+                  color: Color(0xFFE65100),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: KvlSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Invite Friends',
+                      style: KvlText.caption(13).copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFFBF360C),
+                      ),
+                    ),
+                    Text(
+                      'Earn 50 pts when they join',
+                      style: KvlText.caption(11).copyWith(
+                        color: const Color(0xFFE65100),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: Color(0xFFE65100),
+                size: 20,
+              ),
+            ],
+          ),
         ),
       ),
     );

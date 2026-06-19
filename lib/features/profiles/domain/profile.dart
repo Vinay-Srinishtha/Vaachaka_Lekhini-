@@ -28,29 +28,24 @@ enum FamilyRelation {
 
 enum Gender {
   male,
-  female,
-  other,
-  preferNotToSay;
+  female;
 
   String get label => switch (this) {
         Gender.male => 'Male',
         Gender.female => 'Female',
-        Gender.other => 'Other',
-        Gender.preferNotToSay => 'Prefer not to say',
       };
 
   String get serverValue => switch (this) {
         Gender.male => 'male',
         Gender.female => 'female',
-        Gender.other => 'other',
-        Gender.preferNotToSay => 'prefer_not_to_say',
       };
 
   static Gender? fromServer(String? value) => switch (value) {
         'male' => Gender.male,
         'female' => Gender.female,
-        'other' => Gender.other,
-        'prefer_not_to_say' => Gender.preferNotToSay,
+        // legacy values from old data
+        'other' => null,
+        'prefer_not_to_say' => null,
         _ => null,
       };
 }
@@ -68,6 +63,8 @@ class Profile extends Equatable {
     this.gender,
     this.birthYear,
     this.motherTongue,
+    this.location,
+    this.targetMantraId,
     this.profileCompletedAt,
   });
 
@@ -77,8 +74,6 @@ class Profile extends Equatable {
   final FamilyRelation relation;
   final DateTime createdAt;
 
-  /// Seed string used to generate deterministic placeholder avatars
-  /// (gradient + initials) when the user has no real photo.
   final String? avatarSeed;
 
   /// Preferred UI / app language for this family member (en/hi/te/kn).
@@ -95,6 +90,13 @@ class Profile extends Equatable {
 
   /// BCP-47 code for the user's mother tongue, e.g. 'hi', 'te', 'kn', 'ta'.
   final String? motherTongue;
+
+  /// City / region the user is from. User-editable.
+  final String? location;
+
+  /// Mantra ID set by admin as the user's target practice mantra.
+  /// Not visible or editable by the user.
+  final String? targetMantraId;
 
   /// Non-null once the 50-point profile-completion bonus has been awarded.
   final DateTime? profileCompletedAt;
@@ -126,6 +128,8 @@ class Profile extends Equatable {
     Gender? gender,
     int? birthYear,
     String? motherTongue,
+    String? location,
+    String? targetMantraId,
     DateTime? profileCompletedAt,
   }) => Profile(
         id: id,
@@ -138,6 +142,8 @@ class Profile extends Equatable {
         gender: gender ?? this.gender,
         birthYear: birthYear ?? this.birthYear,
         motherTongue: motherTongue ?? this.motherTongue,
+        location: location ?? this.location,
+        targetMantraId: targetMantraId ?? this.targetMantraId,
         profileCompletedAt: profileCompletedAt ?? this.profileCompletedAt,
         createdAt: createdAt,
       );
@@ -153,6 +159,8 @@ class Profile extends Equatable {
         'gender': gender?.serverValue,
         'birthYear': birthYear,
         'motherTongue': motherTongue,
+        'location': location,
+        // targetMantraId is admin-only — never sent from the client
         'profileCompletedAt': profileCompletedAt?.toIso8601String(),
         'createdAt': createdAt.toIso8601String(),
       };
@@ -168,6 +176,8 @@ class Profile extends Equatable {
         gender: Gender.fromServer(j['gender'] as String?),
         birthYear: j['birthYear'] as int?,
         motherTongue: j['motherTongue'] as String?,
+        location: j['location'] as String?,
+        targetMantraId: j['targetMantraId'] as String?,
         profileCompletedAt: j['profileCompletedAt'] != null
             ? DateTime.tryParse(j['profileCompletedAt'] as String)
             : null,
@@ -186,6 +196,8 @@ class Profile extends Equatable {
         gender,
         birthYear,
         motherTongue,
+        location,
+        targetMantraId,
         profileCompletedAt,
         createdAt,
       ];

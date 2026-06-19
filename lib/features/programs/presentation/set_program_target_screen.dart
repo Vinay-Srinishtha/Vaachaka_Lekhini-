@@ -23,9 +23,9 @@ class SetProgramTargetScreen extends ConsumerStatefulWidget {
 
 // Fallback milestones used when the mantra has none configured in the admin.
 const _defaultMilestones = [
-  MantraMilestone(count: 108,   dayOptions: [1,  7,  21,  40]),
-  MantraMilestone(count: 1008,  dayOptions: [7,  21, 40,  108]),
-  MantraMilestone(count: 5116,  dayOptions: [21, 40, 108, 180]),
+  MantraMilestone(count: 108, dayOptions: [1, 7, 21, 40]),
+  MantraMilestone(count: 1008, dayOptions: [7, 21, 40, 108]),
+  MantraMilestone(count: 5116, dayOptions: [21, 40, 108, 180]),
   MantraMilestone(count: 10116, dayOptions: [40, 108, 180, 365]),
 ];
 const _dayOptionsFallback = [7, 21, 108, 365];
@@ -99,38 +99,66 @@ class _SetProgramTargetScreenState
 
   Future<void> _confirm() async {
     if (_writings <= 0 || _days <= 0 || _busy) return;
-    final profile = ref.read(activeProfileProvider).value;
-    if (profile == null) return;
+    setState(() => _busy = true);
 
-    final enrolment = await ref
-        .read(voiceEnrolmentRepositoryProvider)
-        .get(profile.id, widget.mantraId);
-    if (!mounted) return;
-    if (enrolment == null || !enrolment.isComplete) {
+    try {
+      final profile = ref.read(activeProfileProvider).value;
+      if (profile == null) {
+        setState(() => _busy = false);
+        return;
+      }
+
+      final enrolment = await ref
+          .read(voiceEnrolmentRepositoryProvider)
+          .get(profile.id, widget.mantraId);
+      if (!mounted) return;
+      if (enrolment == null || !enrolment.isComplete) {
+        setState(() => _busy = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 5),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: KvlColors.primaryDeep,
+            content: Text(
+              'Complete voice training '
+              '(${VoiceEnrolment.requiredSamples}/${VoiceEnrolment.requiredSamples}) '
+              'before creating a voice program.',
+              style: KvlText.caption(12).copyWith(color: Colors.white),
+            ),
+          ),
+        );
+        context.push('${KvlRoute.voiceTraining}/${widget.mantraId}');
+        return;
+      }
+
+      await ref
+          .read(programRepositoryProvider)
+          .create(
+            memberId: profile.id,
+            mantraId: widget.mantraId,
+            targetWritings: _writings,
+            targetDays: _days,
+          );
+    } catch (e, st) {
+      debugPrint('[SetProgramTarget] create failed: $e\n$st');
+      if (!mounted) return;
+      setState(() => _busy = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           duration: const Duration(seconds: 5),
           behavior: SnackBarBehavior.floating,
-          backgroundColor: KvlColors.primaryDeep,
+          backgroundColor: KvlColors.danger,
           content: Text(
-            'Complete voice training '
-            '(${VoiceEnrolment.requiredSamples}/${VoiceEnrolment.requiredSamples}) '
-            'before creating a voice program.',
+            'Could not create this practice target. Please try again.',
             style: KvlText.caption(12).copyWith(color: Colors.white),
           ),
         ),
       );
-      context.push('${KvlRoute.voiceTraining}/${widget.mantraId}');
       return;
     }
 
-    setState(() => _busy = true);
-    await ref.read(programRepositoryProvider).create(
-          memberId: profile.id,
-          mantraId: widget.mantraId,
-          targetWritings: _writings,
-          targetDays: _days,
-        );
+    // Navigate only after the local write succeeds — kept outside the try so
+    // a GoRouter exception doesn't masquerade as a program-creation failure.
     if (!mounted) return;
     context.go(KvlRoute.programs);
   }
@@ -147,8 +175,9 @@ class _SetProgramTargetScreenState
         dayOptionsMap[_selectedCount] ?? _dayOptionsFallback;
 
     final minDays = _minDays;
-    final sliderMax =
-        _days > _maxSliderDays ? _days.toDouble() : _maxSliderDays.toDouble();
+    final sliderMax = _days > _maxSliderDays
+        ? _days.toDouble()
+        : _maxSliderDays.toDouble();
     final pace = _pace(_days);
     final canConfirm = _writings > 0 && _days > 0 && !_busy;
 
@@ -173,7 +202,8 @@ class _SetProgramTargetScreenState
               onTap: () => setState(() {
                 _selectedCount = milestones[i].count;
                 _customWritingsCtrl.text = '${milestones[i].count}';
-                _days = milestones[i].dayOptions.firstOrNull ??
+                _days =
+                    milestones[i].dayOptions.firstOrNull ??
                     _dayOptionsFallback.first;
               }),
             ),
@@ -216,8 +246,10 @@ class _SetProgramTargetScreenState
                     ),
                     Text(
                       context.l10n.daysValue(_days),
-                      style: KvlText.ui(14, FontWeight.w700)
-                          .copyWith(color: KvlColors.primaryDeep),
+                      style: KvlText.ui(
+                        14,
+                        FontWeight.w700,
+                      ).copyWith(color: KvlColors.primaryDeep),
                     ),
                   ],
                 ),
@@ -250,8 +282,11 @@ class _SetProgramTargetScreenState
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.timer_outlined,
-                      size: 14, color: KvlColors.primaryDeep),
+                  const Icon(
+                    Icons.timer_outlined,
+                    size: 14,
+                    color: KvlColors.primaryDeep,
+                  ),
                   const SizedBox(width: 6),
                   Flexible(
                     child: Text(
@@ -280,8 +315,9 @@ class _SetProgramTargetScreenState
           const SizedBox(height: KvlSpacing.sm),
           Center(
             child: TextButton(
-              onPressed: () =>
-                  context.canPop() ? context.pop() : context.go(KvlRoute.programs),
+              onPressed: () => context.canPop()
+                  ? context.pop()
+                  : context.go(KvlRoute.programs),
               child: Text(
                 context.l10n.cancelButton,
                 style: KvlText.caption(12).copyWith(

@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/storage/app_database.dart';
@@ -119,8 +122,16 @@ class ProgramRepositoryDrift implements ProgramRepository {
           ),
         );
 
-    // Queue to backend — Prisma will receive this and persist it
-    await _outbox.enqueue('programs.upsert', _programPayload(program));
+    // Queue to backend after the local write. The UI should not stay blocked
+    // if Hive/outbox sync is slow; SyncEngine will drain pending items later.
+    unawaited(
+      _outbox
+          .enqueue('programs.upsert', _programPayload(program))
+          .timeout(const Duration(seconds: 3))
+          .catchError((Object e, StackTrace st) {
+            if (kDebugMode) debugPrint('[programs] enqueue create failed: $e');
+          }),
+    );
     return program;
   }
 

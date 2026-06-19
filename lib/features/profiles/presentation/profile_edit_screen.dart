@@ -8,7 +8,7 @@ import '../../../core/widgets/widgets.dart';
 import '../domain/profile.dart';
 
 /// Full-screen profile editor. Lets the user fill in Gender, Age (birth year),
-/// and Mother Tongue in addition to the existing Name and Relation fields.
+/// and Mother Tongue.
 ///
 /// On first save when all required fields are filled, calls
 /// POST /api/v1/me/complete-profile which awards 50 reward points (once only).
@@ -23,10 +23,10 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameCtrl;
   late final TextEditingController _birthYearCtrl;
+  late final TextEditingController _locationCtrl;
 
   Gender? _gender;
   String? _motherTongue;
-  FamilyRelation? _relation;
   bool _busy = false;
   String? _error;
   bool _rewardEarned = false;
@@ -55,15 +55,16 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     _birthYearCtrl = TextEditingController(
       text: profile?.birthYear != null ? '${profile!.birthYear}' : '',
     );
+    _locationCtrl = TextEditingController(text: profile?.location ?? '');
     _gender = profile?.gender;
     _motherTongue = profile?.motherTongue;
-    _relation = profile?.relation;
   }
 
   @override
   void dispose() {
     _nameCtrl.dispose();
     _birthYearCtrl.dispose();
+    _locationCtrl.dispose();
     super.dispose();
   }
 
@@ -84,12 +85,13 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       final name = _nameCtrl.text.trim();
       final birthYear = int.tryParse(_birthYearCtrl.text.trim());
 
+      final location = _locationCtrl.text.trim();
       final updated = profile.copyWith(
         name: name,
-        relation: _relation,
         gender: _gender,
         birthYear: birthYear,
         motherTongue: _motherTongue,
+        location: location.isNotEmpty ? location : null,
       );
 
       await ref.read(profileRepositoryProvider).update(updated);
@@ -168,27 +170,26 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
             ),
             const SizedBox(height: KvlSpacing.md),
 
-            // Relation
-            _buildLabel('Relation'),
-            const SizedBox(height: 4),
-            _EnumDropdown<FamilyRelation>(
-              options: FamilyRelation.values,
-              selected: _relation,
-              hint: 'Select relation',
-              label: (r) => r.label,
-              onSelected: (r) => setState(() => _relation = r),
-            ),
-            const SizedBox(height: KvlSpacing.md),
-
             // Gender
             _buildLabel('Gender'),
             const SizedBox(height: 4),
             _EnumDropdown<Gender>(
-              options: Gender.values.where((g) => g != Gender.other).toList(),
+              options: Gender.values.toList(),
               selected: _gender,
               hint: 'Select gender',
               label: (g) => g.label,
               onSelected: (g) => setState(() => _gender = g),
+            ),
+            const SizedBox(height: KvlSpacing.md),
+
+            // Location
+            _buildLabel('Location'),
+            const SizedBox(height: 4),
+            TextFormField(
+              controller: _locationCtrl,
+              decoration: _inputDecoration('e.g. Hyderabad, Telangana'),
+              textCapitalization: TextCapitalization.words,
+              textInputAction: TextInputAction.next,
             ),
             const SizedBox(height: KvlSpacing.md),
 

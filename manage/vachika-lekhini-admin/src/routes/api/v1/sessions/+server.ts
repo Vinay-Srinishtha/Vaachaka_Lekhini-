@@ -101,6 +101,81 @@ export const POST: RequestHandler = async (event) => {
 
 	if (inserted.count > 0) emitChange('session');
 
+	// ── Global Sadhana attribution — auto-credit enrolled members ─────────────
+	// For each new session, check if the member is enrolled in an active
+	// GlobalSadhana for the session's program mantra. If so, atomically
+	// increment the global count (capped at targetCount) and record a
+	// contribution row. Auto-closes the sadhana when target is reached.
+	if (newSessions.length > 0) {
+		try {
+			// Fetch programs to get mantraIds for new sessions.
+			const programRows = await prisma.program.findMany({
+				where: { id: { in: newSessions.map((s) => s.program_id) } },
+				select: { id: true, mantraId: true }
+			});
+			const programMantraMap = new Map(programRows.map((p) => [p.id, p.mantraId]));
+
+			for (const s of newSessions) {
+				const mantraId = programMantraMap.get(s.program_id);
+				if (!mantraId) continue;
+
+				// Find active sadhana for this mantra where member is enrolled.
+				const enrollment = await prisma.globalSadhanaEnrollment.findFirst({
+					where: {
+						memberId: s.member_id,
+						globalSadhana: { mantraId, status: 'active' }
+					},
+					select: {
+						globalSadhanaId: true,
+						globalSadhana: { select: { targetCount: true, currentCount: true } }
+					}
+				});
+				if (!enrollment) continue;
+
+				const { globalSadhanaId, globalSadhana: gs } = enrollment;
+				const remaining = gs.targetCount - gs.currentCount;
+				if (remaining <= 0) continue;
+
+				const credited = Math.min(s.count_added, remaining);
+
+				// Atomic increment + potential auto-close in a transaction.
+				await prisma.$transaction(async (tx) => {
+					const updated = await tx.globalSadhana.update({
+						where: { id: globalSadhanaId, status: 'active' },
+						data: {
+							currentCount: { increment: credited },
+							...(gs.currentCount + credited >= gs.targetCount
+								? { status: 'completed', completedAt: new Date() }
+								: {})
+						},
+						select: { currentCount: true, targetCount: true }
+					});
+
+					await tx.globalSadhanaContribution.create({
+						data: {
+							globalSadhanaId,
+							memberId: s.member_id,
+							countAdded: credited,
+							modality: s.modality as never,
+							sessionId: s.id
+						}
+					});
+
+					// If this push tipped it over, ensure completed status is set.
+					if (updated.currentCount >= updated.targetCount) {
+						await tx.globalSadhana.updateMany({
+							where: { id: globalSadhanaId, status: 'active' },
+							data: { status: 'completed', completedAt: new Date() }
+						});
+					}
+				});
+			}
+		} catch (e) {
+			// Attribution is best-effort — never fail the primary session write.
+			console.error('[global-sadhana] attribution error:', e);
+		}
+	}
+
 	// ── Streak recomputation + streak rewards ──────────────────────────────
 	if (inserted.count > 0) {
 		await Promise.all(uniqueProgramIds.map((id) => recomputeProgramStreaks(id)));

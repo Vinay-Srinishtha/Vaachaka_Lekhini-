@@ -18,7 +18,9 @@ import {
 	Flag,
 	MessageCircleHeart,
 	Gift,
-	KeyRound
+	KeyRound,
+	Quote,
+	Globe
 } from '@lucide/svelte';
 export interface NavItem {
 	href: string;
@@ -38,6 +40,8 @@ export const NAV_ITEMS: NavItem[] = [
 
 	// ── Content — what the app shows ─────────────────────────────────────────
 	{ href: '/mantras', label: 'Mantras', icon: BookOpen, section: 'mantras', group: 'Content' },
+	{ href: '/quotes', label: 'Quotes', icon: Quote, section: 'quotes', group: 'Content' },
+	{ href: '/global-sadhana', label: 'Global Sadhana', icon: Globe, section: 'global-sadhana', group: 'Content' },
 	{ href: '/store', label: 'Store', icon: ShoppingBag, section: 'store', group: 'Content' },
 	{ href: '/faqs', label: 'FAQs', icon: HelpCircle, section: 'faqs', group: 'Content' },
 	{ href: '/app-settings', label: 'App Settings', icon: Sliders, section: 'app-settings', group: 'Content' },
@@ -62,4 +66,5 @@ export const NAV_ITEMS: NavItem[] = [
 	{ href: '/devices', label: 'Devices', icon: Smartphone, section: 'devices', group: 'Audit' },
 	{ href: '/admins', label: 'Admins', icon: ShieldCheck, section: 'admins', group: 'Audit' },
 	{ href: '/roles', label: 'Roles', icon: KeyRound, section: 'roles', group: 'Audit' },
+
 ];

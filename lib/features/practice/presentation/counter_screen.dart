@@ -1,11 +1,14 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../app/providers.dart';
+import '../../../core/audio/reward_sound_service.dart';
 import '../../../l10n/l10n.dart';
 import '../../../app/router.dart';
 import '../../../core/i18n/language_options.dart';
@@ -15,6 +18,7 @@ import '../../../core/utils/indian_number_format.dart';
 import '../../../core/widgets/kvl_profile_avatar.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../programs/domain/session.dart';
+import '../../programs/presentation/book_preview_sheet.dart';
 import '../../programs/presentation/daily_progress_screen.dart';
 import '../../settings/domain/settings_repository.dart';
 import '../application/practice_controller.dart';
@@ -87,6 +91,34 @@ class _BodyState extends ConsumerState<_Body> {
           _showRestoreDraftDialog(context);
         }
       });
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_maybeShowChantingTip());
+    });
+  }
+
+  Future<void> _maybeShowChantingTip() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool('tip_chanting_v1') == true) return;
+    if (!mounted) return;
+    var dontShowAgain = true;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) => _TipSheet(
+        title: 'Chanting Tips',
+        bullets: const [
+          '• Press Start and chant along with the count',
+          '• Tap Pause any time and resume when ready',
+          '• Tap Finish to record your session',
+        ],
+        initialDontShowAgain: dontShowAgain,
+        onChanged: (v) => dontShowAgain = v,
+      ),
+    );
+    if (dontShowAgain) {
+      await prefs.setBool('tip_chanting_v1', true);
     }
   }
 
@@ -334,6 +366,13 @@ class _BodyState extends ConsumerState<_Body> {
                     SizedBox(height: compact ? 6 : 8),
                     _ProgressCard(state: state, compact: compact),
                   ],
+                  SizedBox(height: compact ? 6 : 8),
+                  _PointsBadge(compact: compact),
+                  SizedBox(height: compact ? 4 : 6),
+                  BookPreviewButton(
+                    compact: compact,
+                    mantraId: state.program.mantraId,
+                  ),
                   SizedBox(height: bottomPad),
                 ],
               ),
@@ -1083,6 +1122,106 @@ class _Counts extends StatelessWidget {
   }
 }
 
+class _PointsBadge extends ConsumerStatefulWidget {
+  const _PointsBadge({required this.compact});
+  final bool compact;
+
+  @override
+  ConsumerState<_PointsBadge> createState() => _PointsBadgeState();
+}
+
+class _PointsBadgeState extends ConsumerState<_PointsBadge>
+    with SingleTickerProviderStateMixin {
+  int? _prev;
+  int _delta = 0;
+  late final AnimationController _anim;
+  late final Animation<double> _offsetAnim;
+  late final Animation<double> _fadeAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _anim = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+    _offsetAnim = Tween<double>(begin: 0, end: -28).animate(
+      CurvedAnimation(parent: _anim, curve: Curves.easeOut),
+    );
+    _fadeAnim = TweenSequence([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.0), weight: 15),
+      TweenSequenceItem(tween: ConstantTween(1.0), weight: 55),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 30),
+    ]).animate(_anim);
+  }
+
+  @override
+  void dispose() {
+    _anim.dispose();
+    super.dispose();
+  }
+
+  void _onPoints(int points) {
+    if (_prev != null && points > _prev!) {
+      setState(() => _delta = points - _prev!);
+      _anim.forward(from: 0);
+      unawaited(RewardSoundService.instance.playBell());
+    }
+    _prev = points;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final points = ref.watch(rewardTotalProvider).value;
+    if (points == null) return const SizedBox.shrink();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _onPoints(points);
+    });
+    final compact = widget.compact;
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.topCenter,
+      children: [
+        Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 10 : 13,
+            vertical: compact ? 4 : 5,
+          ),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFBF3D8),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFE8C04A), width: 1.1),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.star_rounded, size: compact ? 13 : 15, color: KvlColors.gold),
+              const SizedBox(width: 4),
+              Text(
+                '${IndianNumberFormat.format(points)} pts',
+                style: KvlText.ui(compact ? 12 : 13, FontWeight.w700)
+                    .copyWith(color: const Color(0xFF5a4400)),
+              ),
+            ],
+          ),
+        ),
+        AnimatedBuilder(
+          animation: _anim,
+          builder: (_, child) {
+            if (_anim.isDismissed) return const SizedBox.shrink();
+            return Positioned(
+              top: _offsetAnim.value,
+              child: Opacity(opacity: _fadeAnim.value, child: child),
+            );
+          },
+          child: Text(
+            '+${IndianNumberFormat.format(_delta)} pts',
+            style: KvlText.ui(compact ? 12 : 13, FontWeight.w800)
+                .copyWith(color: const Color(0xFF16A34A)),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Action row (PAUSE / Finish buttons)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1493,6 +1632,94 @@ class _DedicationDialog extends StatelessWidget {
             ),
             const SizedBox(height: KvlSpacing.lg),
             KvlButton(label: 'Dedicate & Complete', onPressed: onDedicate),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One-time tip bottom sheet with a "Don't show again" checkbox.
+class _TipSheet extends StatefulWidget {
+  const _TipSheet({
+    required this.title,
+    required this.bullets,
+    required this.initialDontShowAgain,
+    required this.onChanged,
+  });
+
+  final String title;
+  final List<String> bullets;
+  final bool initialDontShowAgain;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  State<_TipSheet> createState() => _TipSheetState();
+}
+
+class _TipSheetState extends State<_TipSheet> {
+  late bool _dontShowAgain = widget.initialDontShowAgain;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Container(
+        margin: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+        decoration: BoxDecoration(
+          color: KvlColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: KvlColors.border),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.lightbulb_rounded,
+                    color: KvlColors.primaryDeep, size: 22),
+                const SizedBox(width: 8),
+                Text(widget.title, style: KvlText.ui(16, FontWeight.w800)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...widget.bullets.map((b) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    b,
+                    style: KvlText.body(13.5)
+                        .copyWith(height: 1.4, color: KvlColors.inkSoft),
+                  ),
+                )),
+            const SizedBox(height: 6),
+            InkWell(
+              onTap: () {
+                setState(() => _dontShowAgain = !_dontShowAgain);
+                widget.onChanged(_dontShowAgain);
+              },
+              child: Row(
+                children: [
+                  Checkbox(
+                    value: _dontShowAgain,
+                    onChanged: (v) {
+                      setState(() => _dontShowAgain = v ?? false);
+                      widget.onChanged(_dontShowAgain);
+                    },
+                  ),
+                  Text("Don't show again",
+                      style: KvlText.body(13).copyWith(color: KvlColors.ink)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: KvlButton(
+                label: 'Got it!',
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
           ],
         ),
       ),

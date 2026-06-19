@@ -32,6 +32,6 @@
 	}
 </script>
 
-<Modal open title="New store item" size="xl" onClose={close}>
-	<StoreItemForm {value} fieldErrors={form?.fieldErrors ?? {}} submitLabel="Create item" onSuccess={handleSuccess} />
+<Modal open title="New store item" size="xl" formId="store-item-form" saveLabel="Create item" onClose={close}>
+	<StoreItemForm {value} fieldErrors={form?.fieldErrors ?? {}} submitLabel="Create item" onSuccess={handleSuccess} inModal />
 </Modal>

@@ -144,8 +144,9 @@
 	{/snippet}
 </DataTable>
 
-<Modal open={newOpen} title="New admin" subtitle="Grant dashboard access to a team member" size="lg" onClose={closeNew}>
+<Modal open={newOpen} title="New admin" subtitle="Grant dashboard access to a team member" size="lg" formId="admin-form" saveLabel="Create admin" onClose={closeNew}>
 	<form
+		id="admin-form"
 		method="POST"
 		action="?/create"
 		use:enhance={() => {
@@ -187,11 +188,5 @@
 				</select>
 			</FormField>
 		</section>
-		<div class="flex justify-end gap-2 pt-1">
-			<button type="button" class="btn-secondary" onclick={closeNew}>Cancel</button>
-			<button type="submit" class="btn-primary" disabled={submitting}>
-				{submitting ? 'Creating…' : 'Create admin'}
-			</button>
-		</div>
 	</form>
 </Modal>

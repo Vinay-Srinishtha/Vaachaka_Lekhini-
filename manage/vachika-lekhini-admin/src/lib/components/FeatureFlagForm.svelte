@@ -18,6 +18,7 @@
 		submitLabel?: string;
 		isEdit?: boolean;
 		onSuccess?: () => void;
+		inModal?: boolean;
 	}
 
 	let {
@@ -26,7 +27,8 @@
 		generalError = null,
 		submitLabel = 'Save',
 		isEdit = false,
-		onSuccess
+		onSuccess,
+		inModal = false
 	}: Props = $props();
 
 	// Track type + raw value locally so the input control swaps as type changes.
@@ -46,6 +48,7 @@
 </script>
 
 <form
+	id="flag-form"
 	method="POST"
 	use:enhance={() => {
 		submitting = true;
@@ -138,6 +141,7 @@
 		</FormField>
 	</section>
 
+	{#if !inModal}
 	<div class="flex justify-end gap-2">
 		<a href="/config" class="btn-secondary">Cancel</a>
 		<button type="submit" class="btn-primary" disabled={submitting}>
@@ -145,4 +149,5 @@
 			{submitting ? 'Saving…' : submitLabel}
 		</button>
 	</div>
+	{/if}
 </form>

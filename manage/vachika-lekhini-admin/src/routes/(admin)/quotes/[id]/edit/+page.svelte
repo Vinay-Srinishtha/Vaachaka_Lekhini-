@@ -89,11 +89,16 @@
 	}}
 />
 
-<Modal open title="Edit Quote" subtitle="Update quote · image saved to S3 quarantine" size="lg" onClose={close}>
+<Modal open title="Edit Quote" subtitle="Update quote · image saved to S3 quarantine" size="lg" formId="quote-form" saveLabel="Save Changes" onClose={close}>
+	{#snippet headerLeft()}
+		<button type="button" onclick={() => showDelete = true} class="inline-flex items-center gap-1.5 text-sm text-red-400 hover:text-red-300 font-medium transition-colors">
+			<Trash2 size={14} /> Delete
+		</button>
+	{/snippet}
 	{#if form?.error}
 		<p class="mb-4 text-sm text-red-600 bg-red-50 rounded-lg px-4 py-2">{form.error}</p>
 	{/if}
-	<form method="POST" action="?/save" onsubmit={() => handleSuccess()} class="space-y-5">
+	<form id="quote-form" method="POST" action="?/save" onsubmit={() => handleSuccess()} class="space-y-5">
 		<!-- Quote content — tabbed language editor -->
 		<section class="card p-5 space-y-4">
 			<p class="section-label">Quote Content <span class="text-xs font-normal text-slate-400 ml-1">(fill at least one language)</span></p>
@@ -205,14 +210,5 @@
 			</div>
 		</section>
 
-		<div class="flex justify-between gap-3">
-			<button type="button" onclick={() => showDelete = true} class="inline-flex items-center gap-2 text-sm text-red-600 hover:text-red-700 font-medium">
-				<Trash2 size={15} /> Delete Quote
-			</button>
-			<div class="flex gap-3">
-				<button type="button" onclick={close} class="btn-secondary">Cancel</button>
-				<button type="submit" class="btn-primary">Save Changes</button>
-			</div>
-		</div>
 	</form>
 </Modal>

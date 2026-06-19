@@ -35,6 +35,6 @@
 	}
 </script>
 
-<Modal open title={`Edit · ${f.key}`} size="lg" onClose={close}>
-	<FeatureFlagForm {value} fieldErrors={form?.fieldErrors ?? {}} submitLabel="Save changes" isEdit onSuccess={handleSuccess} />
+<Modal open title={`Edit · ${f.key}`} size="lg" formId="flag-form" saveLabel="Save changes" onClose={close}>
+	<FeatureFlagForm {value} fieldErrors={form?.fieldErrors ?? {}} submitLabel="Save changes" isEdit onSuccess={handleSuccess} inModal />
 </Modal>

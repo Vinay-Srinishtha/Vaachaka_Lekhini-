@@ -34,6 +34,6 @@
 	}
 </script>
 
-<Modal open title={`Edit · ${it.name}`} subtitle={`Slug · ${it.slug}`} size="xl" onClose={close}>
-	<StoreItemForm {value} fieldErrors={form?.fieldErrors ?? {}} submitLabel="Save changes" isEdit onSuccess={handleSuccess} />
+<Modal open title={`Edit · ${it.name}`} subtitle={`Slug · ${it.slug}`} size="xl" formId="store-item-form" saveLabel="Save changes" onClose={close}>
+	<StoreItemForm {value} fieldErrors={form?.fieldErrors ?? {}} submitLabel="Save changes" isEdit onSuccess={handleSuccess} inModal />
 </Modal>

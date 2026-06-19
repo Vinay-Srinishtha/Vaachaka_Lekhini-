@@ -45,11 +45,11 @@
 	function clearImage() { imageKey = null; imagePreview = null; }
 </script>
 
-<Modal open title="New Quote" subtitle="Add an inspirational quote shown on the Flutter home screen" size="lg" onClose={close}>
+<Modal open title="New Quote" subtitle="Add an inspirational quote shown on the Flutter home screen" size="lg" formId="quote-form" saveLabel="Create Quote" onClose={close}>
 	{#if form?.error}
 		<p class="mb-4 text-sm text-red-600 bg-red-50 rounded-lg px-4 py-2">{form.error}</p>
 	{/if}
-	<form method="POST" onsubmit={() => handleSuccess()} class="space-y-5">
+	<form id="quote-form" method="POST" onsubmit={() => handleSuccess()} class="space-y-5">
 		<!-- Quote content -->
 		<section class="card p-5 space-y-4">
 			<p class="section-label">Quote Content</p>
@@ -124,9 +124,5 @@
 			</div>
 		</section>
 
-		<div class="flex justify-end gap-3">
-			<button type="button" onclick={close} class="btn-secondary">Cancel</button>
-			<button type="submit" class="btn-primary">Create Quote</button>
-		</div>
 	</form>
 </Modal>

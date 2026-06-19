@@ -10,17 +10,25 @@
 		onClose: () => void;
 		children: Snippet;
 		footer?: Snippet;
+		/** If set, the header renders Cancel + Save buttons that submit this form id. */
+		formId?: string;
+		saveLabel?: string;
+		/** Snippet rendered left of Cancel in the header (e.g. a Delete button). */
+		headerLeft?: Snippet;
 	}
 
-	let { open, title, subtitle, size = 'lg', onClose, children, footer }: Props = $props();
+	let {
+		open, title, subtitle, size = 'xl', onClose,
+		children, footer, formId, saveLabel = 'Save Changes', headerLeft
+	}: Props = $props();
 
 	const sizes: Record<NonNullable<Props['size']>, string> = {
-		sm: 'max-w-md',
-		md: 'max-w-lg',
-		lg: 'max-w-2xl',
-		xl: 'max-w-4xl',
+		sm: 'max-w-lg',
+		md: 'max-w-2xl',
+		lg: 'max-w-4xl',
+		xl: 'max-w-5xl',
 		'2xl': 'max-w-6xl',
-		'3xl': 'max-w-[86vw]'
+		'3xl': 'max-w-[90vw]'
 	};
 
 	$effect(() => {
@@ -58,24 +66,52 @@
 			aria-labelledby="modal-title"
 			class="bg-white w-full {sizes[size]} rounded-2xl shadow-2xl ring-1 ring-black/5 my-auto flex flex-col max-h-[calc(100svh-2rem)] transition-all duration-200"
 		>
-			<!-- Header -->
-			<div class="flex items-start justify-between gap-3 px-5 py-4 bg-gradient-to-r from-slate-900 to-slate-800 rounded-t-2xl shrink-0">
-				<div class="min-w-0">
+			<!-- Header — title left, actions right -->
+			<div class="flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-slate-900 to-slate-800 rounded-t-2xl shrink-0">
+				<div class="min-w-0 flex-1">
 					<h2 id="modal-title" class="text-base font-bold text-white tracking-tight truncate">{title}</h2>
 					{#if subtitle}<p class="text-xs text-slate-400 mt-0.5 truncate">{subtitle}</p>{/if}
 				</div>
-				<button
-					type="button"
-					class="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0"
-					onclick={onClose}
-					aria-label="Close"
-				>
-					<X size={18} />
-				</button>
+
+				<!-- Header action row -->
+				<div class="flex items-center gap-2 shrink-0">
+					{#if headerLeft}
+						{@render headerLeft()}
+					{/if}
+
+					{#if formId}
+						<!-- Cancel -->
+						<button
+							type="button"
+							onclick={onClose}
+							class="px-3 py-1.5 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+						>
+							Cancel
+						</button>
+						<!-- Save -->
+						<button
+							type="submit"
+							form={formId}
+							class="px-4 py-1.5 rounded-lg text-sm font-semibold bg-brand-500 hover:bg-brand-600 text-white transition-colors shadow-sm"
+						>
+							{saveLabel}
+						</button>
+					{:else}
+						<!-- No form — just close X -->
+						<button
+							type="button"
+							class="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+							onclick={onClose}
+							aria-label="Close"
+						>
+							<X size={18} />
+						</button>
+					{/if}
+				</div>
 			</div>
 
 			<!-- Content -->
-			<div class="px-6 py-5 overflow-hidden flex-1 flex flex-col min-h-0 bg-slate-50/50">
+			<div class="px-6 py-5 overflow-y-auto flex-1 flex flex-col min-h-0 bg-slate-50/50">
 				{@render children()}
 			</div>
 

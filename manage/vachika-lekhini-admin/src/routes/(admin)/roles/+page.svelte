@@ -157,10 +157,13 @@
 	title="Edit Role — {editingLabel}"
 	subtitle="Toggle permissions for this role. Changes take effect immediately on save."
 	size="xl"
+	formId="role-form"
+	saveLabel="Save Changes"
 	onClose={closeEdit}
 >
 	{#if editingRole}
 		<form
+			id="role-form"
 			method="POST"
 			action="?/save"
 			use:enhance={() => {
@@ -264,20 +267,10 @@
 			</div>
 
 			<!-- Footer -->
-			<div class="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between gap-4">
+			<div class="mt-4 pt-4 border-t border-gray-100">
 				<p class="text-sm text-gray-400">
 					<span class="font-semibold text-gray-700">{editPerms.size}</span> of {data.allPermissions.length} permissions selected
 				</p>
-				<div class="flex items-center gap-2">
-					<button type="button" class="btn-secondary" onclick={closeEdit}>Cancel</button>
-					<button type="submit" class="btn-primary" disabled={submitting}>
-						{#if submitting}
-							Saving…
-						{:else}
-							<ShieldCheck size={14} /> Save Changes
-						{/if}
-					</button>
-				</div>
 			</div>
 		</form>
 	{/if}

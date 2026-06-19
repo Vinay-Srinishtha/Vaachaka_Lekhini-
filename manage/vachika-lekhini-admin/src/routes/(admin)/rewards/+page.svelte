@@ -93,8 +93,9 @@
 </PageHeader>
 
 <!-- Grant Points Modal -->
-<Modal open={grantOpen} title="Grant Points" subtitle="Manually credit reward points to a member" size="lg" onClose={closeGrant}>
+<Modal open={grantOpen} title="Grant Points" subtitle="Manually credit reward points to a member" size="lg" formId="grant-form" saveLabel="Grant Points" onClose={closeGrant}>
 	<form
+		id="grant-form"
 		method="POST"
 		action="?/grantPoints"
 		use:enhance={() => {
@@ -152,13 +153,6 @@
 		{#if grantSuccess}
 			<p class="text-sm text-green-700 font-medium bg-green-50 rounded-lg px-4 py-2">✓ Points granted successfully</p>
 		{/if}
-		<div class="flex justify-end gap-3">
-			<button type="button" onclick={closeGrant} class="btn-secondary">Cancel</button>
-			<button type="submit" disabled={grantSaving || grantSuccess} class="btn-primary">
-				<Gift size={16} />
-				{grantSaving ? 'Granting…' : 'Grant Points'}
-			</button>
-		</div>
 	</form>
 </Modal>
 

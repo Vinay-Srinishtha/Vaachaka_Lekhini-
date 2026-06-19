@@ -23,6 +23,7 @@
 		submitLabel?: string;
 		isEdit?: boolean;
 		onSuccess?: () => void;
+		inModal?: boolean;
 	}
 
 	let {
@@ -31,13 +32,15 @@
 		generalError = null,
 		submitLabel = 'Save',
 		isEdit = false,
-		onSuccess
+		onSuccess,
+		inModal = false
 	}: Props = $props();
 
 	let submitting = $state(false);
 </script>
 
 <form
+	id="store-item-form"
 	method="POST"
 	use:enhance={() => {
 		submitting = true;
@@ -119,6 +122,7 @@
 		</label>
 	</section>
 
+	{#if !inModal}
 	<div class="flex justify-end gap-2">
 		<a href="/store" class="btn-secondary">Cancel</a>
 		<button type="submit" class="btn-primary" disabled={submitting}>
@@ -126,4 +130,5 @@
 			{submitting ? 'Saving…' : submitLabel}
 		</button>
 	</div>
+	{/if}
 </form>

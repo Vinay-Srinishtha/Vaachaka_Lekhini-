@@ -29,6 +29,6 @@
 	}
 </script>
 
-<Modal open title="New flag" size="lg" onClose={close}>
-	<FeatureFlagForm {value} fieldErrors={form?.fieldErrors ?? {}} submitLabel="Create flag" onSuccess={handleSuccess} />
+<Modal open title="New flag" size="lg" formId="flag-form" saveLabel="Create flag" onClose={close}>
+	<FeatureFlagForm {value} fieldErrors={form?.fieldErrors ?? {}} submitLabel="Create flag" onSuccess={handleSuccess} inModal />
 </Modal>

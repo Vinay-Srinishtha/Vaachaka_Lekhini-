@@ -53,7 +53,12 @@
 	}}
 />
 
-<Modal open title="Edit Global Sadhana" subtitle={s.title} size="xl" onClose={close}>
+<Modal open title="Edit Global Sadhana" subtitle={s.title} size="xl" formId="sadhana-form" saveLabel="Save Changes" onClose={close}>
+	{#snippet headerLeft()}
+		<button type="button" onclick={() => showDelete = true} class="inline-flex items-center gap-1.5 text-sm text-red-400 hover:text-red-300 font-medium transition-colors">
+			<Trash2 size={14} /> Delete
+		</button>
+	{/snippet}
 	{#if form?.error}
 		<p class="mb-4 text-sm text-red-600 bg-red-50 rounded-lg px-4 py-2">{form.error}</p>
 	{/if}
@@ -111,7 +116,7 @@
 		</details>
 	{/if}
 
-	<form method="POST" action="?/save" enctype="multipart/form-data" onsubmit={() => handleSuccess()} class="space-y-5">
+	<form id="sadhana-form" method="POST" action="?/save" enctype="multipart/form-data" onsubmit={() => handleSuccess()} class="space-y-5">
 		<section class="card p-5 space-y-4">
 			<p class="section-label">Program Details</p>
 			<div>
@@ -218,14 +223,5 @@
 			</div>
 		</section>
 
-		<div class="flex justify-between gap-3">
-			<button type="button" onclick={() => showDelete = true} class="inline-flex items-center gap-2 text-sm text-red-600 hover:text-red-700 font-medium">
-				<Trash2 size={15} /> Delete
-			</button>
-			<div class="flex gap-3">
-				<button type="button" onclick={close} class="btn-secondary">Cancel</button>
-				<button type="submit" class="btn-primary">Save Changes</button>
-			</div>
-		</div>
 	</form>
 </Modal>

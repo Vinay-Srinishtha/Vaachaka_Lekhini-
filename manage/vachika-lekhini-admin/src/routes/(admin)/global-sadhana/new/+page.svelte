@@ -20,11 +20,11 @@
 	}
 </script>
 
-<Modal open title="New Global Sadhana" subtitle="Create a community spiritual initiative" size="lg" onClose={close}>
+<Modal open title="New Global Sadhana" subtitle="Create a community spiritual initiative" size="lg" formId="sadhana-form" saveLabel="Create Global Sadhana" onClose={close}>
 	{#if form?.error}
 		<p class="mb-4 text-sm text-red-600 bg-red-50 rounded-lg px-4 py-2">{form.error}</p>
 	{/if}
-	<form method="POST" enctype="multipart/form-data" class="space-y-5">
+	<form id="sadhana-form" method="POST" enctype="multipart/form-data" class="space-y-5">
 		<!-- Basics -->
 		<section class="card p-5 space-y-4">
 			<p class="section-label">Program Details</p>
@@ -133,9 +133,5 @@
 			</div>
 		</section>
 
-		<div class="flex justify-end gap-3">
-			<button type="button" onclick={close} class="btn-secondary">Cancel</button>
-			<button type="submit" class="btn-primary">Create Global Sadhana</button>
-		</div>
 	</form>
 </Modal>

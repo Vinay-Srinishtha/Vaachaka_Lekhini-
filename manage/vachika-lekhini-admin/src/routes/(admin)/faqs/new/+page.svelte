@@ -10,11 +10,11 @@
 	function handleSuccess() { toasts.show('FAQ created'); close(); }
 </script>
 
-<Modal open title="New FAQ" subtitle="Add a question and answer shown in the Flutter app" size="lg" onClose={close}>
+<Modal open title="New FAQ" subtitle="Add a question and answer shown in the Flutter app" size="lg" formId="faq-form" saveLabel="Create FAQ" onClose={close}>
 	{#if form?.error}
 		<p class="mb-4 text-sm text-red-600 bg-red-50 rounded-lg px-4 py-2">{form.error}</p>
 	{/if}
-	<form method="POST" onsubmit={() => handleSuccess()} class="space-y-5">
+	<form id="faq-form" method="POST" onsubmit={() => handleSuccess()} class="space-y-5">
 		<section class="card p-5 space-y-4">
 			<p class="section-label">Content</p>
 			<div>
@@ -45,9 +45,5 @@
 				</label>
 			</div>
 		</section>
-		<div class="flex justify-end gap-3">
-			<button type="button" onclick={close} class="btn-secondary">Cancel</button>
-			<button type="submit" class="btn-primary">Create FAQ</button>
-		</div>
 	</form>
 </Modal>

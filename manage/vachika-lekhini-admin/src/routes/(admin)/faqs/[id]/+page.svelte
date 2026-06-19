@@ -12,11 +12,11 @@
 	function handleSuccess() { toasts.show('FAQ saved'); close(); }
 </script>
 
-<Modal open title="Edit FAQ" subtitle={`ID · ${faq.id}`} size="lg" onClose={close}>
+<Modal open title="Edit FAQ" subtitle={`ID · ${faq.id}`} size="lg" formId="faq-form" saveLabel="Save changes" onClose={close}>
 	{#if form?.error}
 		<p class="mb-4 text-sm text-red-600 bg-red-50 rounded-lg px-4 py-2">{form.error}</p>
 	{/if}
-	<form method="POST" onsubmit={() => handleSuccess()} class="space-y-5">
+	<form id="faq-form" method="POST" onsubmit={() => handleSuccess()} class="space-y-5">
 		<section class="card p-5 space-y-4">
 			<p class="section-label">Content</p>
 			<div>
@@ -48,9 +48,5 @@
 				</label>
 			</div>
 		</section>
-		<div class="flex justify-end gap-3">
-			<button type="button" onclick={close} class="btn-secondary">Cancel</button>
-			<button type="submit" class="btn-primary">Save changes</button>
-		</div>
 	</form>
 </Modal>

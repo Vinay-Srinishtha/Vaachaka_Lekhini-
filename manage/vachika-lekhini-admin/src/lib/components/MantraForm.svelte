@@ -47,6 +47,8 @@
 		submitLabel?: string;
 		isEdit?: boolean;
 		onSuccess?: () => void;
+		/** When true, the built-in bottom action bar is hidden (Modal topbar handles it). */
+		inModal?: boolean;
 	}
 
 	let {
@@ -55,7 +57,8 @@
 		generalError = null,
 		submitLabel = 'Save',
 		isEdit = false,
-		onSuccess
+		onSuccess,
+		inModal = false
 	}: Props = $props();
 
 	let tags = $state<string[]>([]);
@@ -100,6 +103,7 @@
 </script>
 
 <form
+	id="mantra-form"
 	method="POST"
 	class="flex flex-col h-full gap-3"
 	use:enhance={() => {
@@ -406,6 +410,7 @@
 	</div><!-- /4-col -->
 
 	<!-- ══ ACTIONS ═══════════════════════════════════════════════════════════ -->
+	{#if !inModal}
 	<div class="shrink-0 flex items-center justify-between">
 		<a href="/mantras" class="btn-secondary">Cancel</a>
 		<button type="submit"
@@ -418,5 +423,6 @@
 			{submitting ? 'Saving…' : submitLabel}
 		</button>
 	</div>
+	{/if}
 
 </form>

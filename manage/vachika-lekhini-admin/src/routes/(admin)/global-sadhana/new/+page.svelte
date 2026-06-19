@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import Modal from '$lib/components/Modal.svelte';
+	import { toasts } from '$lib/stores/toast';
 
 	let { data, form } = $props();
 	const v = $derived(form?.values ?? {});
@@ -9,6 +10,7 @@
 	let imageFileName = $state<string | null>(null);
 
 	function close() { goto('/global-sadhana', { keepFocus: true, noScroll: true }); }
+	function handleSuccess() { toasts.show('Global Sadhana created'); close(); }
 
 	function onImageChange(e: Event) {
 		const file = (e.target as HTMLInputElement).files?.[0];
@@ -24,7 +26,7 @@
 	{#if form?.error}
 		<p class="mb-4 text-sm text-red-600 bg-red-50 rounded-lg px-4 py-2">{form.error}</p>
 	{/if}
-	<form id="sadhana-form" method="POST" enctype="multipart/form-data" class="space-y-5">
+	<form id="sadhana-form" method="POST" enctype="multipart/form-data" onsubmit={() => handleSuccess()} class="space-y-5">
 		<!-- Basics -->
 		<section class="card p-5 space-y-4">
 			<p class="section-label">Program Details</p>

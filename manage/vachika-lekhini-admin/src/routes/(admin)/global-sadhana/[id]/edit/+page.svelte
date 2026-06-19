@@ -15,7 +15,7 @@
 	let imageFileName = $state<string | null>(null);
 
 	function close() { goto('/global-sadhana', { keepFocus: true, noScroll: true }); }
-	function handleSuccess() { toasts.show('Global Sadhana updated'); }
+	function handleSuccess() { toasts.show('Global Sadhana updated'); close(); }
 
 	function onImageChange(e: Event) {
 		const file = (e.target as HTMLInputElement).files?.[0];

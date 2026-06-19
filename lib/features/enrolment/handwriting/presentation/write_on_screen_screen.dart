@@ -96,14 +96,26 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
     );
   }
 
+  static const _kWritingLangSet = 'writing_lang_set';
+
   @override
   void initState() {
     super.initState();
     _setScreenOrientation();
     _controller.addListener(_onCanvasChanged);
     if (widget.programId == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _showLanguagePicker();
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        if (widget.isRetrain) {
+          // Retrain flow: always offer language change at the start.
+          unawaited(_showLanguagePicker());
+        } else {
+          final prefs = await SharedPreferences.getInstance();
+          final alreadySet = prefs.getBool(_kWritingLangSet) == true;
+          if (!alreadySet && mounted) {
+            unawaited(_showLanguagePicker(isFirstTime: true));
+          }
+        }
       });
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -136,7 +148,7 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
     }
   }
 
-  Future<void> _showLanguagePicker() async {
+  Future<void> _showLanguagePicker({bool isFirstTime = false}) async {
     final mantra = ref.read(mantraByIdProvider(widget.mantraId));
     final langs = mantra != null
         ? KvlLanguage.availableFor([mantra])
@@ -145,8 +157,8 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
     final current = _writingLangCode ?? settings.mantraLanguageCode;
     final result = await showModalBottomSheet<String>(
       context: context,
-      isDismissible: _writingLangCode != null,
-      enableDrag: _writingLangCode != null,
+      isDismissible: !isFirstTime,
+      enableDrag: !isFirstTime,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -154,11 +166,16 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
       builder: (_) => _LanguagePickerSheet(
         languages: langs,
         selectedCode: current,
+        isFirstTime: isFirstTime,
       ),
     );
     if (result != null && mounted) {
       setState(() => _writingLangCode = result);
       await ref.read(settingsRepositoryProvider).setMantraLanguage(result);
+      if (isFirstTime) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool(_kWritingLangSet, true);
+      }
     }
   }
 
@@ -591,7 +608,7 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
       guideScript: guideScript,
       saving: _saving,
       selectedLangLabel: selectedLang.label,
-      onPickLanguage: _showLanguagePicker,
+      onPickLanguage: () => unawaited(_showLanguagePicker()),
       onBack: () => context.canPop() ? context.pop() : context.go('/'),
       onSave: _saving ? null : _save,
       onClear: _controller.clear,
@@ -1897,10 +1914,12 @@ class _LanguagePickerSheet extends StatelessWidget {
   const _LanguagePickerSheet({
     required this.languages,
     required this.selectedCode,
+    this.isFirstTime = false,
   });
 
   final List<KvlLanguage> languages;
   final String selectedCode;
+  final bool isFirstTime;
 
   @override
   Widget build(BuildContext context) {
@@ -1923,16 +1942,53 @@ class _LanguagePickerSheet extends StatelessWidget {
                       Icon(Icons.language_rounded,
                           size: 20, color: KvlColors.primaryDeep),
                       const SizedBox(width: 8),
-                      Text('Writing language',
-                          style: KvlText.ui(15, FontWeight.w700)),
+                      Expanded(
+                        child: Text(
+                          isFirstTime
+                              ? 'Choose your writing script'
+                              : 'Writing language',
+                          style: KvlText.ui(15, FontWeight.w700),
+                        ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Pick the script for the tracing guide.',
-                    style: KvlText.caption(11.5)
-                        .copyWith(color: KvlColors.inkSoft),
-                  ),
+                  const SizedBox(height: 6),
+                  if (isFirstTime) ...[
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 4),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: KvlColors.primaryGhost,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: KvlColors.primary.withValues(alpha: .3)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'This will be your default writing script for all mantras.',
+                            style: KvlText.body(12.5).copyWith(
+                              color: KvlColors.primaryDeep,
+                              fontWeight: FontWeight.w600,
+                              height: 1.45,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'To change your script later, go to Profile → Retrain Writing and submit 3 new samples.',
+                            style: KvlText.caption(11.5)
+                                .copyWith(color: KvlColors.inkSoft, height: 1.4),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else
+                    Text(
+                      'Pick the script for the tracing guide.',
+                      style: KvlText.caption(11.5)
+                          .copyWith(color: KvlColors.inkSoft),
+                    ),
                   const SizedBox(height: 12),
                 ],
               ),

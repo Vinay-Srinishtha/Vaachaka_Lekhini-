@@ -5,7 +5,7 @@ import '../../../app/providers.dart';
 import '../theme/colors.dart';
 import '../theme/shadows.dart';
 import '../theme/spacing.dart';
-import '../theme/text.dart';
+import '../theme/theme.dart';
 
 class KvlNavItem {
   const KvlNavItem({required this.label, required this.icon});

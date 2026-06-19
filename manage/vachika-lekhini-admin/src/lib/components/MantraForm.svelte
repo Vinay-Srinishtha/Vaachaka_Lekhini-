@@ -111,7 +111,7 @@
 <form
 	id="mantra-form"
 	method="POST"
-	class="flex flex-col h-full gap-3"
+	class="flex flex-col h-full gap-2"
 	use:enhance={() => {
 		submitting = true;
 		return async ({ result, update }) => {
@@ -138,17 +138,20 @@
 		Col 3:          Preview Image (flex-1) + Main Image (flex-1)
 		Col 4:          Tags + Defaults + Audio (flex-1) + Published
 	-->
-	<div class="flex-1 min-h-0 grid gap-2" style="grid-template-columns: 1fr 1.4fr 1fr 1fr">
+	<div
+		class="flex-1 min-h-0 grid gap-2"
+		style="grid-template-columns: minmax(210px, 0.95fr) minmax(260px, 1.18fr) minmax(220px, 0.95fr) minmax(240px, 1fr)"
+	>
 
 		<!-- ╔══ COL 1: Identity + Names ════════════════════════════════════╗ -->
 		<div class="flex flex-col gap-2 min-h-0">
 
 			<!-- Identity -->
 			<div class="rounded-xl border border-indigo-100 bg-white shadow-sm overflow-hidden shrink-0">
-				<div class="px-3 pt-3 pb-2 border-b border-indigo-50 bg-indigo-50/40">
+				<div class="px-2.5 py-2 border-b border-indigo-50 bg-indigo-50/40">
 					<span class="section-label text-indigo-800">Identity</span>
 				</div>
-				<div class="p-3 flex flex-col gap-2">
+				<div class="p-2 flex flex-col gap-2">
 					<FormField label="Slug *" name="slug" error={fieldErrors.slug}
 						hint={isEdit ? 'Cannot change after release.' : 'Lowercase + underscores'}>
 						<input id="slug" name="slug" class="input py-1.5 text-sm" value={value.slug}
@@ -163,10 +166,10 @@
 
 			<!-- Names -->
 			<div class="rounded-xl border border-violet-100 bg-white shadow-sm overflow-hidden shrink-0">
-				<div class="px-3 pt-3 pb-2 border-b border-violet-50 bg-violet-50/40">
+				<div class="px-2.5 py-2 border-b border-violet-50 bg-violet-50/40">
 					<span class="section-label text-violet-800">Names</span>
 				</div>
-				<div class="p-3 grid grid-cols-2 gap-2">
+				<div class="p-2 grid grid-cols-2 gap-2">
 					<FormField label="Devanagari *" name="nameDevanagari" error={fieldErrors.nameDevanagari}>
 						<input id="nameDevanagari" name="nameDevanagari" class="input py-1.5 text-sm font-devanagari"
 							value={value.nameDevanagari} required />
@@ -185,7 +188,7 @@
 
 			<!-- Milestones (moved here — compact 2×2 grid in col 1 bottom) -->
 			<div class="flex-1 min-h-0 rounded-xl border border-amber-100 bg-white shadow-sm overflow-hidden flex flex-col">
-				<div class="px-3 pt-3 pb-2 border-b border-amber-50 bg-amber-50/40 flex items-center gap-2 shrink-0">
+				<div class="px-2.5 py-2 border-b border-amber-50 bg-amber-50/40 flex items-center gap-2 shrink-0">
 					<span class="flex-1 section-label text-amber-800">Preset Goals</span>
 					<button type="button" onclick={addMilestone}
 						class="flex items-center gap-1 rounded-lg border border-dashed border-slate-200 bg-slate-50
@@ -193,7 +196,7 @@
 						<Plus size={11} /> Add
 					</button>
 				</div>
-				<div class="flex-1 min-h-0 overflow-y-auto p-2">
+				<div class="flex-1 min-h-0 overflow-hidden p-2">
 					<div class="grid grid-cols-2 gap-2">
 						{#each milestones as milestone, i (i)}
 							<div class="relative rounded-xl border border-slate-100 bg-slate-50 p-2.5 space-y-2
@@ -239,10 +242,10 @@
 		<!-- ╔══ COL 2: Content (fills height) ═════════════════════════════╗ -->
 		<div class="flex flex-col gap-2 min-h-0">
 			<div class="flex-1 min-h-0 rounded-xl border border-emerald-100 bg-white shadow-sm overflow-hidden flex flex-col">
-				<div class="px-3 pt-3 pb-2 border-b border-emerald-50 bg-emerald-50/40 shrink-0">
+				<div class="px-2.5 py-2 border-b border-emerald-50 bg-emerald-50/40 shrink-0">
 					<span class="section-label text-emerald-800">Content</span>
 				</div>
-				<div class="flex-1 p-3 flex flex-col gap-2 min-h-0">
+				<div class="flex-1 p-2 flex flex-col gap-2 min-h-0">
 					<div class="flex-1 min-h-0 flex flex-col">
 						<label class="mb-1 block text-xs font-medium text-slate-600" for="description">Description *</label>
 						<textarea id="description" name="description"
@@ -263,12 +266,12 @@
 
 			<!-- Preview Image -->
 			<div class="flex-1 min-h-0 rounded-xl border border-amber-100 bg-white shadow-sm overflow-hidden flex flex-col">
-				<div class="px-3 pt-3 pb-2 border-b border-amber-50 bg-amber-50/40 flex items-center gap-1.5 shrink-0">
+				<div class="px-2.5 py-2 border-b border-amber-50 bg-amber-50/40 flex items-center gap-1.5 shrink-0">
 					<Image size={12} class="text-amber-500" />
 					<span class="section-label text-amber-800">Preview Image</span>
 					<span class="ml-auto text-[10px] text-slate-400 normal-case tracking-normal">List &amp; reminders</span>
 				</div>
-				<div class="flex-1 min-h-0 p-3 overflow-y-auto">
+				<div class="flex-1 min-h-0 p-2 overflow-hidden">
 					<MediaUploadField
 						category="mantra-preview"
 						targetId="previewImageUrl"
@@ -283,12 +286,12 @@
 
 			<!-- Main Image -->
 			<div class="flex-1 min-h-0 rounded-xl border border-sky-100 bg-white shadow-sm overflow-hidden flex flex-col">
-				<div class="px-3 pt-3 pb-2 border-b border-sky-50 bg-sky-50/40 flex items-center gap-1.5 shrink-0">
+				<div class="px-2.5 py-2 border-b border-sky-50 bg-sky-50/40 flex items-center gap-1.5 shrink-0">
 					<Image size={12} class="text-sky-500" />
 					<span class="section-label text-sky-800">Main Image</span>
 					<span class="ml-auto text-[10px] text-slate-400 normal-case tracking-normal">Detail view</span>
 				</div>
-				<div class="flex-1 min-h-0 p-3 overflow-y-auto">
+				<div class="flex-1 min-h-0 p-2 overflow-hidden">
 					<MediaUploadField
 						category="mantra-image"
 						targetId="imageUrl"
@@ -308,21 +311,21 @@
 
 			<!-- Tags -->
 			<div class="rounded-xl border border-rose-100 bg-white shadow-sm overflow-hidden shrink-0">
-				<div class="px-3 pt-3 pb-2 border-b border-rose-50 bg-rose-50/40">
+				<div class="px-2.5 py-2 border-b border-rose-50 bg-rose-50/40">
 					<span class="section-label text-rose-800">Tags</span>
 					<span class="ml-1.5 text-[10px] text-slate-400 normal-case tracking-normal">Mantra-by-Need</span>
 				</div>
-				<div class="p-3">
+				<div class="p-2">
 					<TagMultiSelect name="tags" options={MANTRA_TAGS} bind:value={tags} />
 				</div>
 			</div>
 
 			<!-- Practice Defaults -->
 			<div class="rounded-xl border border-teal-100 bg-white shadow-sm overflow-hidden shrink-0">
-				<div class="px-3 pt-3 pb-2 border-b border-teal-50 bg-teal-50/40">
+				<div class="px-2.5 py-2 border-b border-teal-50 bg-teal-50/40">
 					<span class="section-label text-teal-800">Practice Defaults</span>
 				</div>
-				<div class="p-3 grid grid-cols-2 gap-2">
+				<div class="p-2 grid grid-cols-2 gap-2">
 					<FormField label="Rec. count" name="recommendedCount" hint="Per-day." error={fieldErrors.recommendedCount}>
 						<input id="recommendedCount" name="recommendedCount" type="number" min="1"
 							class="input py-1.5 text-sm" value={value.recommendedCount ?? ''} />
@@ -336,11 +339,11 @@
 
 			<!-- Pronunciation Audio -->
 			<div class="flex-1 min-h-0 rounded-xl border border-purple-100 bg-white shadow-sm overflow-hidden flex flex-col">
-				<div class="px-3 pt-3 pb-2 border-b border-purple-50 bg-purple-50/40 flex items-center gap-1.5 shrink-0">
+				<div class="px-2.5 py-2 border-b border-purple-50 bg-purple-50/40 flex items-center gap-1.5 shrink-0">
 					<Music size={12} class="text-purple-500" />
 					<span class="section-label text-purple-800">Pronunciation Audio</span>
 				</div>
-				<div class="flex-1 min-h-0 p-3 overflow-y-auto">
+				<div class="flex-1 min-h-0 p-2 overflow-hidden">
 					<MediaUploadField
 						category="mantra-audio"
 						targetId="pronunciationUrl"
@@ -355,11 +358,11 @@
 
 			<!-- Share / WhatsApp -->
 			<div class="flex-1 min-h-0 rounded-xl border border-green-100 bg-white shadow-sm overflow-hidden flex flex-col">
-				<div class="px-3 pt-3 pb-2 border-b border-green-50 bg-green-50/40 flex items-center gap-1.5 shrink-0">
+				<div class="px-2.5 py-2 border-b border-green-50 bg-green-50/40 flex items-center gap-1.5 shrink-0">
 					<Share2 size={12} class="text-green-600" />
 					<span class="section-label text-green-800">Share / WhatsApp</span>
 				</div>
-				<div class="flex-1 min-h-0 p-3 overflow-y-auto space-y-3">
+				<div class="flex-1 min-h-0 p-2 overflow-hidden space-y-2">
 					<!-- Share image -->
 					<div>
 						<p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Share Image</p>
@@ -393,7 +396,7 @@
 
 			<!-- Published -->
 			<div class="shrink-0 rounded-xl border border-slate-100 bg-white shadow-sm overflow-hidden">
-				<label class="flex items-center gap-3 px-3 py-3 cursor-pointer select-none">
+				<label class="flex items-center gap-3 px-3 py-2 cursor-pointer select-none">
 					<input type="checkbox" name="isActive" bind:checked={isActive} class="sr-only" />
 					<div class="relative shrink-0 w-10 h-[22px] rounded-full transition-all duration-300 cursor-pointer
 						{isActive ? 'bg-emerald-500 shadow-emerald-200 shadow-md' : 'bg-slate-200'}">

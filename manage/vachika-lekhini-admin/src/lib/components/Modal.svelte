@@ -24,11 +24,11 @@
 
 	const sizes: Record<NonNullable<Props['size']>, string> = {
 		sm: 'max-w-lg',
-		md: 'max-w-2xl',
-		lg: 'max-w-4xl',
-		xl: 'max-w-5xl',
-		'2xl': 'max-w-6xl',
-		'3xl': 'max-w-[90vw]'
+		md: 'max-w-3xl',
+		lg: 'max-w-5xl',
+		xl: 'max-w-6xl',
+		'2xl': 'max-w-[92vw]',
+		'3xl': 'max-w-[98vw]'
 	};
 
 	$effect(() => {
@@ -53,7 +53,7 @@
 </script>
 
 {#if open}
-	<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
+	<div class="fixed inset-0 z-50 flex items-center justify-center p-2 bg-black/40 backdrop-blur-sm overflow-hidden">
 		<button
 			type="button"
 			class="absolute inset-0 -z-10"
@@ -64,59 +64,59 @@
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="modal-title"
-			class="bg-white w-full {sizes[size]} rounded-2xl shadow-2xl ring-1 ring-black/5 my-auto flex flex-col max-h-[calc(100svh-2rem)] transition-all duration-200"
+			class="bg-white w-full {sizes[size]} max-w-[calc(100vw-1rem)] rounded-xl shadow-2xl ring-1 ring-black/5 flex flex-col max-h-[calc(100svh-1rem)] {size === '3xl' ? 'h-[calc(100svh-1rem)]' : ''} transition-all duration-200"
 		>
 			<!-- Header — title left, actions right -->
-			<div class="flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-slate-900 to-slate-800 rounded-t-2xl shrink-0">
+			<div class="flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-slate-900 to-slate-800 rounded-t-xl shrink-0">
 				<div class="min-w-0 flex-1">
 					<h2 id="modal-title" class="text-base font-bold text-white tracking-tight truncate">{title}</h2>
 					{#if subtitle}<p class="text-xs text-slate-400 mt-0.5 truncate">{subtitle}</p>{/if}
 				</div>
 
 				<!-- Header action row -->
-				<div class="flex items-center gap-2 shrink-0">
-					{#if headerLeft}
-						{@render headerLeft()}
-					{/if}
+					<div class="flex items-center gap-2 shrink-0">
+						{#if headerLeft}
+							{@render headerLeft()}
+						{/if}
 
-					{#if formId}
-						<!-- Cancel -->
-						<button
-							type="button"
-							onclick={onClose}
-							class="px-3 py-1.5 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors"
-						>
-							Cancel
-						</button>
-						<!-- Save -->
-						<button
-							type="submit"
-							form={formId}
-							class="px-4 py-1.5 rounded-lg text-sm font-semibold bg-brand-500 hover:bg-brand-600 text-white transition-colors shadow-sm"
-						>
-							{saveLabel}
-						</button>
-					{:else}
-						<!-- No form — just close X -->
-						<button
+						{#if formId}
+							<!-- Cancel -->
+							<button
+								type="button"
+								onclick={onClose}
+								class="px-2.5 py-1 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+							>
+								Cancel
+							</button>
+							<!-- Save -->
+							<button
+								type="submit"
+								form={formId}
+								class="px-3 py-1 rounded-lg text-sm font-semibold bg-brand-500 hover:bg-brand-600 text-white transition-colors shadow-sm"
+							>
+								{saveLabel}
+							</button>
+						{:else}
+							<!-- No form — just close X -->
+							<button
 							type="button"
 							class="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
 							onclick={onClose}
 							aria-label="Close"
-						>
-							<X size={18} />
-						</button>
-					{/if}
+							>
+								<X size={18} />
+							</button>
+						{/if}
+					</div>
 				</div>
-			</div>
 
-			<!-- Content -->
-			<div class="px-6 py-5 overflow-y-auto flex-1 flex flex-col min-h-0 bg-slate-50/50">
+				<!-- Content -->
+			<div class="px-3 py-3 overflow-hidden flex-1 flex flex-col min-h-0 bg-slate-50/50">
 				{@render children()}
 			</div>
 
 			{#if footer}
-				<div class="px-5 py-3 border-t border-gray-100 flex justify-end gap-2 shrink-0 bg-white rounded-b-2xl">
+				<div class="px-4 py-2 border-t border-gray-100 flex justify-end gap-2 shrink-0 bg-white rounded-b-xl">
 					{@render footer()}
 				</div>
 			{/if}

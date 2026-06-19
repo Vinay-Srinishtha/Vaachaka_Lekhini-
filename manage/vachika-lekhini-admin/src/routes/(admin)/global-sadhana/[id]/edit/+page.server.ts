@@ -1,6 +1,5 @@
 import type { PageServerLoad, Actions } from './$types';
-import { fail, error, redirect } from '@sveltejs/kit';
-import { GlobalSadhanaStatus } from '@prisma/client';
+import { fail, error, redirect, isRedirect } from '@sveltejs/kit';
 import { z } from 'zod';
 import { prisma } from '$lib/server/prisma';
 import { requireRole } from '$lib/server/auth';
@@ -110,7 +109,7 @@ export const actions: Actions = {
 					endAt: d.end_at ? new Date(d.end_at) : null,
 					...(imageUrl !== undefined ? { imageUrl } : {}),
 					isSponsored: d.is_sponsored,
-					status: d.status as GlobalSadhanaStatus,
+					status: d.status as never,
 					participationMode: d.participation_mode,
 					instructions: d.instructions || null,
 					...(d.status === 'completed' ? { completedAt: new Date() } : {})
@@ -118,6 +117,7 @@ export const actions: Actions = {
 			});
 			return { ok: true };
 		} catch (e) {
+			if (isRedirect(e)) throw e;
 			console.error(e);
 			return fail(500, { message: 'Internal error' });
 		}
@@ -130,6 +130,7 @@ export const actions: Actions = {
 			await prisma.globalSadhana.delete({ where: { id } }).catch(() => undefined);
 			throw redirect(303, '/global-sadhana');
 		} catch (e) {
+			if (isRedirect(e)) throw e;
 			console.error(e);
 			return fail(500, { message: 'Internal error' });
 		}

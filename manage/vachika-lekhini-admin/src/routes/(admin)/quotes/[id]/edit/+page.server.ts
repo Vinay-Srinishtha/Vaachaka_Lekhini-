@@ -1,4 +1,4 @@
-import { error, fail, redirect } from '@sveltejs/kit';
+import { error, fail, redirect, isRedirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { prisma } from '$lib/server/prisma';
 import { requireRole } from '$lib/server/auth';
@@ -61,6 +61,7 @@ export const actions: Actions = {
 			});
 			throw redirect(303, '/quotes');
 		} catch (e) {
+			if (isRedirect(e)) throw e;
 			console.error(e);
 			return fail(500, { message: 'Internal error' });
 		}
@@ -73,6 +74,7 @@ export const actions: Actions = {
 			await prisma.quote.delete({ where: { id } }).catch(() => undefined);
 			throw redirect(303, '/quotes');
 		} catch (e) {
+			if (isRedirect(e)) throw e;
 			console.error(e);
 			return fail(500, { message: 'Internal error' });
 		}

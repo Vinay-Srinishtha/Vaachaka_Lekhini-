@@ -1,4 +1,4 @@
-import { fail, redirect } from '@sveltejs/kit';
+import { fail, redirect, isRedirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { prisma } from '$lib/server/prisma';
 import { requireRole } from '$lib/server/auth';
@@ -37,6 +37,7 @@ export const actions: Actions = {
 			});
 			throw redirect(303, '/quotes');
 		} catch (e) {
+			if (isRedirect(e)) throw e;
 			console.error(e);
 			return fail(500, { message: 'Internal error' });
 		}

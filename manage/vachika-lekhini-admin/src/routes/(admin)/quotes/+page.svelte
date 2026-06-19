@@ -15,15 +15,28 @@
 
 	const q = $derived((page.url.searchParams.get('q') ?? '').toLowerCase().trim());
 	const visibleQuotes = $derived(
-		q
-			? data.quotes.filter(
-					(quote: { text: string; source: string | null; mantra: { nameRoman: string } | null }) =>
-						quote.text.toLowerCase().includes(q) ||
-						(quote.source ?? '').toLowerCase().includes(q) ||
-						(quote.mantra?.nameRoman ?? '').toLowerCase().includes(q)
-				)
-			: data.quotes
+		q ? data.quotes.filter((quote: any) =>
+			[quote.text, quote.textRoman, quote.textTelugu, quote.textDevanagari, quote.textKannada,
+			 quote.source, quote.sourceRoman, quote.sourceTelugu,
+			 quote.mantra?.nameRoman, quote.slug]
+			.some(f => (f ?? '').toLowerCase().includes(q))
+		) : data.quotes
 	);
+
+	function displayText(quote: any): string {
+		return quote.textRoman || quote.textTelugu || quote.textDevanagari || quote.textKannada || quote.text || '—';
+	}
+	function displaySource(quote: any): string {
+		return quote.sourceRoman || quote.sourceTelugu || quote.sourceDevanagari || quote.sourceKannada || quote.source || '';
+	}
+	function langBadges(quote: any): string[] {
+		const badges: string[] = [];
+		if (quote.textRoman) badges.push('ROM');
+		if (quote.textTelugu) badges.push('TEL');
+		if (quote.textDevanagari) badges.push('DEV');
+		if (quote.textKannada) badges.push('KAN');
+		return badges;
+	}
 
 	let submitting = $state(false);
 	let uploading = $state(false);
@@ -38,14 +51,15 @@
 		// Build a CSV template with all active mantra slugs listed in a reference sheet comment
 		const mantraSlugs = data.mantras.map((m: { slug: string }) => m.slug).join(' | ');
 		const rows = [
-			['text', 'source', 'mantra_slug', 'image_url'],
-			['"ధర్మో రక్షతి రక్షితః"', '— మహాభారతం', 'rama-ashtakam', ''],
-			['"Be the change you wish to see"', '— Mahatma Gandhi', '', ''],
+			['text_roman', 'source_roman', 'text_telugu', 'source_telugu', 'text_devanagari', 'source_devanagari', 'text_kannada', 'source_kannada', 'mantra_slug', 'image_url'],
+			['"Be the change you wish to see"', '— Mahatma Gandhi', '', '', '', '', '', '', '', ''],
+			['', '', '"ధర్మో రక్షతి రక్షితః"', '— మహాభారతం', '', '', '', '', 'rama-ashtakam', ''],
 		];
 		const csvContent = [
 			`# mantra_slug must match one of: ${mantraSlugs}`,
 			`# Leave mantra_slug blank for a universal quote shown to all users.`,
 			`# image_url is optional — add images later via the edit screen.`,
+			`# At least one language column (text_roman/text_telugu/text_devanagari/text_kannada) must be filled.`,
 			...rows.map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
 		].join('\n');
 		const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -88,7 +102,7 @@
 
 <form id="quote-delete-form" method="POST" action="?/delete" use:enhance={() => {
 	submitting = true;
-	const txt = target?.text ?? 'Quote';
+	const txt = target ? displayText(target) : 'Quote';
 	return async ({ result, update }) => {
 		await update();
 		submitting = false;
@@ -101,7 +115,7 @@
 <ConfirmDialog
 	open={!!target}
 	title="Delete Quote?"
-	message={`This permanently removes "${(target?.text ?? '').slice(0, 60)}${(target?.text?.length ?? 0) > 60 ? '…' : ''}".`}
+	message={`This permanently removes "${target ? displayText(target).slice(0, 60) : ''}…".`}
 	confirmLabel="Delete"
 	{submitting}
 	onCancel={close}
@@ -117,26 +131,45 @@
 			shown on the Flutter home screen · images saved to S3 quarantine
 		</p>
 	</div>
-	<div class="flex items-center gap-2 flex-wrap">
-		<!-- Download template -->
-		<button onclick={downloadTemplate} class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
-			<Download size={15} />
-			Template
-		</button>
+</div>
 
-		<!-- Bulk upload -->
-		<label class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer {uploading ? 'opacity-60 pointer-events-none' : ''}">
-			<Upload size={15} />
-			{uploading ? 'Uploading…' : 'Bulk Upload'}
-			<input type="file" accept=".csv,.xlsx,.xls" class="sr-only" onchange={handleBulkUpload} />
-		</label>
+<!-- Stats bar -->
+{@const totalActive = data.quotes.filter((qt: any) => qt.isActive).length}
+{@const withImages = data.quotes.filter((qt: any) => qt.imageUrl).length}
+{@const universal = data.quotes.filter((qt: any) => !qt.mantra).length}
+<div class="mb-6 flex flex-wrap gap-3">
+	{#each [
+		{ label: 'Total', value: data.quotes.length, color: 'bg-slate-100 text-slate-700' },
+		{ label: 'Active', value: totalActive, color: 'bg-green-50 text-green-700 border border-green-200' },
+		{ label: 'With Images', value: withImages, color: 'bg-sky-50 text-sky-700 border border-sky-200' },
+		{ label: 'Universal', value: universal, color: 'bg-indigo-50 text-indigo-700 border border-indigo-200' },
+	] as stat}
+		<div class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold {stat.color}">
+			<span class="text-base font-bold">{stat.value}</span>
+			<span class="font-normal">{stat.label}</span>
+		</div>
+	{/each}
+</div>
 
-		<!-- New quote -->
-		<a href="/quotes/new" class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 transition-colors">
-			<PlusCircle size={16} />
-			New Quote
-		</a>
-	</div>
+<div class="mb-6 flex flex-wrap items-center justify-end gap-2">
+	<!-- Download template -->
+	<button onclick={downloadTemplate} class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+		<Download size={15} />
+		Template
+	</button>
+
+	<!-- Bulk upload -->
+	<label class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer {uploading ? 'opacity-60 pointer-events-none' : ''}">
+		<Upload size={15} />
+		{uploading ? 'Uploading…' : 'Bulk Upload'}
+		<input type="file" accept=".csv,.xlsx,.xls" class="sr-only" onchange={handleBulkUpload} />
+	</label>
+
+	<!-- New quote -->
+	<a href="/quotes/new" class="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 transition-colors">
+		<PlusCircle size={16} />
+		New Quote
+	</a>
 </div>
 
 <!-- Bulk upload feedback -->
@@ -169,8 +202,14 @@
 			</thead>
 			<tbody>
 				{#each [
-					['text', 'Yes', 'The quote body. Supports Unicode (Telugu, Devanagari, etc.)'],
-					['source', 'No', 'Attribution, e.g. "— మహాభారతం" or "Bhagavad Gita 2.47"'],
+					['text_roman', 'At least one*', 'Quote in Roman/English script'],
+					['source_roman', 'No', 'Attribution in Roman/English'],
+					['text_telugu', 'At least one*', 'Quote in Telugu script'],
+					['source_telugu', 'No', 'Attribution in Telugu'],
+					['text_devanagari', 'At least one*', 'Quote in Devanagari/Sanskrit script'],
+					['source_devanagari', 'No', 'Attribution in Devanagari'],
+					['text_kannada', 'At least one*', 'Quote in Kannada script'],
+					['source_kannada', 'No', 'Attribution in Kannada'],
 					['mantra_slug', 'No', 'Slug of the target mantra (e.g. rama-ashtakam). Leave blank = show to all.'],
 					['image_url', 'No', 'Public image URL. Quarantine images can be added later via Edit.'],
 				] as [col, req, note]}
@@ -210,11 +249,19 @@
 						<tr class="hover:bg-slate-50 transition-colors">
 							<!-- Quote text -->
 							<td class="px-4 py-3 max-w-xs">
-								<p class="line-clamp-2 text-slate-900 font-medium">{quote.text}</p>
+								<p class="line-clamp-2 text-slate-900 font-medium">{displayText(quote)}</p>
+								{@const badges = langBadges(quote)}
+								{#if badges.length > 0}
+									<div class="mt-1 flex gap-1 flex-wrap">
+										{#each badges as badge}
+											<span class="inline-block rounded px-1 py-0.5 text-[10px] font-semibold bg-slate-100 text-slate-500">{badge}</span>
+										{/each}
+									</div>
+								{/if}
 							</td>
 							<!-- Source -->
 							<td class="px-4 py-3 text-slate-500 whitespace-nowrap max-w-[140px] truncate">
-								{quote.source ?? '—'}
+								{displaySource(quote) || '—'}
 							</td>
 							<!-- Mantra -->
 							<td class="px-4 py-3">

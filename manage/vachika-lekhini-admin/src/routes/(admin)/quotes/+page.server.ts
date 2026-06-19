@@ -13,9 +13,18 @@ export const load: PageServerLoad = async (event) => {
 				id: true,
 				text: true,
 				source: true,
+				textRoman: true,
+				sourceRoman: true,
+				textTelugu: true,
+				sourceTelugu: true,
+				textDevanagari: true,
+				sourceDevanagari: true,
+				textKannada: true,
+				sourceKannada: true,
 				imageUrl: true,
 				isActive: true,
 				sortOrder: true,
+				slug: true,
 				createdAt: true,
 				mantra: { select: { id: true, nameRoman: true, nameTelugu: true, slug: true } }
 			}

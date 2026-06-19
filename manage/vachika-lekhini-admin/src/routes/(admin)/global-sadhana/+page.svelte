@@ -49,6 +49,46 @@
 	</a>
 </div>
 
+<!-- Dashboard stats -->
+{@const totalActive = data.sadhanas.filter((s: any) => s.status === 'active').length}
+{@const totalEnrolled = data.sadhanas.reduce((sum: number, s: any) => sum + s._count.enrollments, 0)}
+{@const totalContribs = data.sadhanas.reduce((sum: number, s: any) => sum + s._count.contributions, 0)}
+{@const totalProgress = data.sadhanas.length > 0 ? Math.round(data.sadhanas.reduce((sum: number, s: any) => sum + Math.min(100, s.targetCount > 0 ? (s.currentCount / s.targetCount) * 100 : 0), 0) / data.sadhanas.length) : 0}
+
+<div class="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
+	{#each [
+		{ label: 'Programs', value: data.sadhanas.length, sub: 'total', color: 'border-slate-200 bg-white' },
+		{ label: 'Active Now', value: totalActive, sub: 'running', color: 'border-green-200 bg-green-50' },
+		{ label: 'Members Enrolled', value: totalEnrolled.toLocaleString('en-IN'), sub: 'across all', color: 'border-blue-200 bg-blue-50' },
+		{ label: 'Contributions', value: totalContribs.toLocaleString('en-IN'), sub: `avg ${totalProgress}% progress`, color: 'border-purple-200 bg-purple-50' },
+	] as card}
+		<div class="rounded-xl border {card.color} p-4">
+			<div class="text-2xl font-bold text-slate-900">{card.value}</div>
+			<div class="text-sm font-medium text-slate-700 mt-0.5">{card.label}</div>
+			<div class="text-xs text-slate-400 mt-0.5">{card.sub}</div>
+		</div>
+	{/each}
+</div>
+
+<!-- Status breakdown -->
+{@const statusCounts = Object.fromEntries(['draft','published','active','paused','completed','archived'].map(st => [st, data.sadhanas.filter((s: any) => s.status === st).length]))}
+<div class="mb-6 flex flex-wrap gap-2">
+	{#each [
+		['draft', 'Draft', 'bg-slate-100 text-slate-600'],
+		['published', 'Published', 'bg-blue-50 text-blue-700 border border-blue-200'],
+		['active', 'Active', 'bg-green-50 text-green-700 border border-green-200'],
+		['paused', 'Paused', 'bg-amber-50 text-amber-700 border border-amber-200'],
+		['completed', 'Completed', 'bg-purple-50 text-purple-700 border border-purple-200'],
+		['archived', 'Archived', 'bg-slate-50 text-slate-500 border border-slate-200'],
+	] as [key, label, cls]}
+		{#if statusCounts[key] > 0}
+			<span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold {cls}">
+				<span class="font-bold text-sm">{statusCounts[key]}</span> {label}
+			</span>
+		{/if}
+	{/each}
+</div>
+
 <!-- List -->
 <div class="space-y-3">
 	{#if data.sadhanas.length === 0}
@@ -144,6 +184,11 @@
 							</button>
 						</form>
 					{/if}
+
+					<button type="button" onclick={() => confirmDeleteId = s.id}
+						class="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs text-red-600 hover:bg-red-100 transition-colors">
+						<Trash2 size={13} /> Delete
+					</button>
 				</div>
 			</div>
 		</div>

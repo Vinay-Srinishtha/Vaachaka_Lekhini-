@@ -12,6 +12,29 @@
 	let showDelete = $state(false);
 	let deleting = $state(false);
 
+	// Tabbed language editor
+	type LangTab = 'roman' | 'telugu' | 'devanagari' | 'kannada';
+	const langTabs: { key: LangTab; label: string; textField: string; srcField: string }[] = [
+		{ key: 'roman', label: 'Roman / English', textField: 'text_roman', srcField: 'source_roman' },
+		{ key: 'telugu', label: 'Telugu', textField: 'text_telugu', srcField: 'source_telugu' },
+		{ key: 'devanagari', label: 'Devanagari', textField: 'text_devanagari', srcField: 'source_devanagari' },
+		{ key: 'kannada', label: 'Kannada', textField: 'text_kannada', srcField: 'source_kannada' },
+	];
+	const defaultTab: LangTab = q.textRoman ? 'roman' : q.textTelugu ? 'telugu' : q.textDevanagari ? 'devanagari' : q.textKannada ? 'kannada' : 'roman';
+	let activeTab = $state<LangTab>(defaultTab);
+
+	// Track textarea/input values for inactive tabs so they are sent as hidden inputs
+	let vals = $state({
+		text_roman: String(v.text_roman ?? q.textRoman ?? ''),
+		source_roman: String(v.source_roman ?? q.sourceRoman ?? ''),
+		text_telugu: String(v.text_telugu ?? q.textTelugu ?? ''),
+		source_telugu: String(v.source_telugu ?? q.sourceTelugu ?? ''),
+		text_devanagari: String(v.text_devanagari ?? q.textDevanagari ?? ''),
+		source_devanagari: String(v.source_devanagari ?? q.sourceDevanagari ?? ''),
+		text_kannada: String(v.text_kannada ?? q.textKannada ?? ''),
+		source_kannada: String(v.source_kannada ?? q.sourceKannada ?? ''),
+	});
+
 	let imagePreview = $state<string | null>(null);
 	let imageKey = $state<string | null>(q.imageUrl ?? null);
 	let uploading = $state(false);
@@ -53,7 +76,7 @@
 <ConfirmDialog
 	open={showDelete}
 	title="Delete Quote?"
-	message={`Permanently remove "${q.text.slice(0, 60)}${q.text.length > 60 ? '…' : ''}"?`}
+	message={`Permanently remove "${(q.textRoman || q.textTelugu || q.textDevanagari || q.textKannada || q.text || '').slice(0, 60)}…"?`}
 	confirmLabel="Delete"
 	{deleting}
 	onCancel={() => showDelete = false}
@@ -71,18 +94,49 @@
 		<p class="mb-4 text-sm text-red-600 bg-red-50 rounded-lg px-4 py-2">{form.error}</p>
 	{/if}
 	<form method="POST" action="?/save" onsubmit={() => handleSuccess()} class="space-y-5">
-		<!-- Quote content -->
+		<!-- Quote content — tabbed language editor -->
 		<section class="card p-5 space-y-4">
-			<p class="section-label">Quote Content</p>
-			<div>
-				<label class="block text-sm font-medium text-slate-700 mb-1.5" for="text">Quote Text <span class="text-red-500">*</span></label>
-				<textarea id="text" name="text" rows="4" required class="input resize-y">{String(v.text ?? q.text)}</textarea>
-				<p class="mt-1 text-xs text-slate-400">Supports Unicode — Telugu, Devanagari, Sanskrit, etc.</p>
+			<p class="section-label">Quote Content <span class="text-xs font-normal text-slate-400 ml-1">(fill at least one language)</span></p>
+			<!-- Tab bar -->
+			<div class="flex gap-1 border-b border-slate-200 -mx-1">
+				{#each langTabs as tab}
+					<button type="button"
+						onclick={() => activeTab = tab.key}
+						class="px-3 py-2 text-sm font-medium rounded-t transition-colors {activeTab === tab.key ? 'text-brand-700 border-b-2 border-brand-600 -mb-px bg-white' : 'text-slate-500 hover:text-slate-700'}">
+						{tab.label}
+						{#if vals[tab.textField as keyof typeof vals]}
+							<span class="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-green-500 align-middle"></span>
+						{/if}
+					</button>
+				{/each}
 			</div>
-			<div>
-				<label class="block text-sm font-medium text-slate-700 mb-1.5" for="source">Source / Attribution</label>
-				<input id="source" name="source" type="text" value={String(v.source ?? q.source ?? '')} class="input" placeholder="— మహాభారతం" />
-			</div>
+			<!-- Active tab fields -->
+			{#each langTabs as tab}
+				{#if activeTab === tab.key}
+					<div class="space-y-3">
+						<div>
+							<label class="block text-sm font-medium text-slate-700 mb-1.5">Quote Text — {tab.label}</label>
+							<textarea name={tab.textField} rows="4" class="input resize-y"
+								bind:value={vals[tab.textField as keyof typeof vals]}></textarea>
+						</div>
+						<div>
+							<label class="block text-sm font-medium text-slate-700 mb-1.5">Source / Attribution — {tab.label}</label>
+							<input name={tab.srcField} type="text" class="input" placeholder="— attribution"
+								bind:value={vals[tab.srcField as keyof typeof vals]} />
+						</div>
+					</div>
+				{/if}
+			{/each}
+			<!-- Hidden inputs for inactive tabs -->
+			{#each langTabs as tab}
+				{#if activeTab !== tab.key}
+					<input type="hidden" name={tab.textField} value={vals[tab.textField as keyof typeof vals]} />
+					<input type="hidden" name={tab.srcField} value={vals[tab.srcField as keyof typeof vals]} />
+				{/if}
+			{/each}
+			<!-- Legacy text field (keep for backward compat) -->
+			<input type="hidden" name="text" value={vals.text_roman || vals.text_telugu || vals.text_devanagari || vals.text_kannada || String(v.text ?? q.text ?? '')} />
+			<input type="hidden" name="source" value={vals.source_roman || vals.source_telugu || vals.source_devanagari || vals.source_kannada || String(v.source ?? q.source ?? '')} />
 		</section>
 
 		<!-- Image -->
@@ -130,17 +184,24 @@
 		<!-- Settings -->
 		<section class="card p-5">
 			<p class="section-label mb-3">Settings</p>
-			<div class="flex items-center gap-6">
+			<div class="space-y-4">
 				<div>
-					<label class="block text-sm font-medium text-slate-700 mb-1.5" for="sort_order">Sort Order</label>
-					<input id="sort_order" name="sort_order" type="number" value={String(v.sort_order ?? q.sortOrder)} min="0" class="input w-28" />
+					<label class="block text-sm font-medium text-slate-700 mb-1.5" for="slug">Slug</label>
+					<input id="slug" name="slug" type="text" value={String(v.slug ?? q.slug ?? '')} class="input" placeholder="e.g. dharma-raksha" />
+					<p class="mt-1 text-xs text-slate-400">Optional URL-friendly identifier.</p>
 				</div>
-				<label class="flex items-center gap-2.5 cursor-pointer pt-6">
-					<input id="is_active" name="is_active" type="checkbox"
-						checked={(v.is_active !== undefined ? v.is_active !== 'false' : q.isActive)}
-						class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
-					<span class="text-sm font-medium text-slate-700">Active (show in app)</span>
-				</label>
+				<div class="flex items-center gap-6">
+					<div>
+						<label class="block text-sm font-medium text-slate-700 mb-1.5" for="sort_order">Sort Order</label>
+						<input id="sort_order" name="sort_order" type="number" value={String(v.sort_order ?? q.sortOrder)} min="0" class="input w-28" />
+					</div>
+					<label class="flex items-center gap-2.5 cursor-pointer pt-6">
+						<input id="is_active" name="is_active" type="checkbox"
+							checked={(v.is_active !== undefined ? v.is_active !== 'false' : q.isActive)}
+							class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
+						<span class="text-sm font-medium text-slate-700">Active (show in app)</span>
+					</label>
+				</div>
 			</div>
 		</section>
 

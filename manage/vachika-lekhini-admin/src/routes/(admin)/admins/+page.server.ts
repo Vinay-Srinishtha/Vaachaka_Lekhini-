@@ -58,67 +58,82 @@ const createSchema = z.object({
 
 export const actions: Actions = {
 	create: async (event) => {
-		requireRole(event, 'super_admin');
-		const data = await event.request.formData();
-		const parsed = createSchema.safeParse({
-			username: String(data.get('username') ?? '').trim(),
-			email: String(data.get('email') ?? '').trim(),
-			password: String(data.get('password') ?? ''),
-			role: String(data.get('role') ?? 'main_admin')
-		});
-		if (!parsed.success) {
-			const fieldErrors: Record<string, string> = {};
-			for (const issue of parsed.error.issues) {
-				const k = issue.path.join('.') || '_';
-				if (!fieldErrors[k]) fieldErrors[k] = issue.message;
-			}
-			return fail(400, {
-				fieldErrors,
-				values: Object.fromEntries(data),
-				action: 'create'
+		try {
+			requireRole(event, 'super_admin');
+			const data = await event.request.formData();
+			const parsed = createSchema.safeParse({
+				username: String(data.get('username') ?? '').trim(),
+				email: String(data.get('email') ?? '').trim(),
+				password: String(data.get('password') ?? ''),
+				role: String(data.get('role') ?? 'main_admin')
 			});
-		}
-		const dup = await prisma.adminUser.findUnique({
-			where: { username: parsed.data.username },
-			select: { id: true }
-		});
-		if (dup) {
-			return fail(409, {
-				fieldErrors: { username: 'Username taken.' },
-				values: Object.fromEntries(data),
-				action: 'create'
-			});
-		}
-		await prisma.adminUser.create({
-			data: {
-				username: parsed.data.username,
-				email: parsed.data.email || null,
-				passwordHash: await bcrypt.hash(parsed.data.password, 10),
-				role: parsed.data.role
+			if (!parsed.success) {
+				const fieldErrors: Record<string, string> = {};
+				for (const issue of parsed.error.issues) {
+					const k = issue.path.join('.') || '_';
+					if (!fieldErrors[k]) fieldErrors[k] = issue.message;
+				}
+				return fail(400, {
+					fieldErrors,
+					values: Object.fromEntries(data),
+					action: 'create'
+				});
 			}
-		});
-		throw redirect(303, patchQuery(event.url, { new: null }));
+			const dup = await prisma.adminUser.findUnique({
+				where: { username: parsed.data.username },
+				select: { id: true }
+			});
+			if (dup) {
+				return fail(409, {
+					fieldErrors: { username: 'Username taken.' },
+					values: Object.fromEntries(data),
+					action: 'create'
+				});
+			}
+			await prisma.adminUser.create({
+				data: {
+					username: parsed.data.username,
+					email: parsed.data.email || null,
+					passwordHash: await bcrypt.hash(parsed.data.password, 10),
+					role: parsed.data.role
+				}
+			});
+			throw redirect(303, patchQuery(event.url, { new: null }));
+		} catch (e) {
+			console.error(e);
+			return fail(500, { message: 'Internal error' });
+		}
 	},
 
 	setRole: async (event) => {
-		const admin = requireRole(event, 'super_admin');
-		const data = await event.request.formData();
-		const id = String(data.get('id') ?? '');
-		const role = String(data.get('role') ?? '');
-		if (!ADMIN_ROLES.includes(role as any)) return fail(400, { error: 'Invalid role' });
-		if (id === admin.id) return fail(400, { error: "You can't change your own role." });
-		await prisma.adminUser.update({ where: { id }, data: { role: role as any } });
-		return { ok: true };
+		try {
+			const admin = requireRole(event, 'super_admin');
+			const data = await event.request.formData();
+			const id = String(data.get('id') ?? '');
+			const role = String(data.get('role') ?? '');
+			if (!ADMIN_ROLES.includes(role as any)) return fail(400, { error: 'Invalid role' });
+			if (id === admin.id) return fail(400, { error: "You can't change your own role." });
+			await prisma.adminUser.update({ where: { id }, data: { role: role as any } });
+			return { ok: true };
+		} catch (e) {
+			console.error(e);
+			return fail(500, { message: 'Internal error' });
+		}
 	},
 
 	toggleActive: async (event) => {
-		const admin = requireRole(event, 'super_admin');
-		const data = await event.request.formData();
-		const id = String(data.get('id') ?? '');
-		if (id === admin.id) return fail(400, { error: "You can't deactivate yourself." });
-		const cur = await prisma.adminUser.findUnique({ where: { id }, select: { isActive: true } });
-		if (!cur) return fail(404, { error: 'Admin not found' });
-		await prisma.adminUser.update({ where: { id }, data: { isActive: !cur.isActive } });
-		return { ok: true };
+		try {
+			const admin = requireRole(event, 'super_admin');
+			const data = await event.request.formData();
+			const id = String(data.get('id') ?? '');
+			if (id === admin.id) return fail(400, { error: "You can't deactivate yourself." });
+			const cur = await prisma.adminUser.findUnique({ where: { id }, select: { isActive: true } });
+			if (!cur) return fail(404, { error: 'Admin not found' });
+			await prisma.adminUser.update({ where: { id }, data: { isActive: !cur.isActive } });
+			return { ok: true };
+		} catch (e) {
+			console.error(e);
+			return fail(500, { message: 'Internal error' });
+		}
 	}
 };

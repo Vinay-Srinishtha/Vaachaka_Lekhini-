@@ -1,4 +1,4 @@
-import type { RequestHandler } from './$types';
+import { json, type RequestHandler } from '@sveltejs/kit';
 import { prisma } from '$lib/server/prisma';
 import { snakeJson } from '$lib/server/snake-case';
 import { readJsonBody } from '$lib/server/json-input';
@@ -9,29 +9,34 @@ import { emitChange } from '$lib/server/live';
 /// POST /api/v1/devices  (Bearer) — register or update this device.
 /// Client supplies a stable per-install UUID. Used for FCM push routing.
 export const POST: RequestHandler = async (event) => {
-	const account = await requireAccount(event);
-	const body = await readJsonBody(event, deviceUpsertSchema);
+	try {
+		const account = await requireAccount(event);
+		const body = await readJsonBody(event, deviceUpsertSchema);
 
-	const device = await prisma.device.upsert({
-		where: { id: body.id },
-		create: {
-			id: body.id,
-			accountId: account.id,
-			platform: body.platform,
-			appVersion: body.app_version ?? null,
-			pushToken: body.push_token ?? null,
-			lastMemberId: body.last_member_id ?? null
-		},
-		update: {
-			accountId: account.id,
-			platform: body.platform,
-			appVersion: body.app_version ?? null,
-			pushToken: body.push_token ?? null,
-			lastMemberId: body.last_member_id ?? null,
-			lastSeenAt: new Date()
-		}
-	});
+		const device = await prisma.device.upsert({
+			where: { id: body.id },
+			create: {
+				id: body.id,
+				accountId: account.id,
+				platform: body.platform,
+				appVersion: body.app_version ?? null,
+				pushToken: body.push_token ?? null,
+				lastMemberId: body.last_member_id ?? null
+			},
+			update: {
+				accountId: account.id,
+				platform: body.platform,
+				appVersion: body.app_version ?? null,
+				pushToken: body.push_token ?? null,
+				lastMemberId: body.last_member_id ?? null,
+				lastSeenAt: new Date()
+			}
+		});
 
-	emitChange('device');
-	return snakeJson({ device });
+		emitChange('device');
+		return snakeJson({ device });
+	} catch (e) {
+		console.error(e);
+		return json({ error: 'Internal error' }, { status: 500 });
+	}
 };

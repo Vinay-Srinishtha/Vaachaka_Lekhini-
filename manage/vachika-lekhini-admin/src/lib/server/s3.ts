@@ -132,6 +132,32 @@ export function isUploadCategory(value: string): value is UploadCategory {
 	return value === 'mantra-audio' || value === 'store-image' || value === 'mantra-image' || value === 'mantra-preview' || value === 'quote-image';
 }
 
+/** Upload a raw buffer directly to S3 (server-side, no presigning). Returns the public URL. */
+export async function uploadBufferToS3(args: {
+	category: UploadCategory;
+	slug: string;
+	fileName: string;
+	contentType: string;
+	buffer: Buffer;
+}): Promise<string> {
+	const bucket = requiredEnv('S3_BUCKET_NAME');
+	const baseUrl = env['S3_PUBLIC_BASE_URL']?.replace(/\/+$/, '')
+		?? `https://${bucket}.s3.${requiredEnv('AWS_REGION')}.amazonaws.com`;
+	const baseName = cleanSegment(args.fileName.replace(/\.[^.]+$/, ''), 'upload');
+	const ext = extensionFor(args.fileName, args.contentType);
+	const key = `${keyPrefix(args.category, args.slug)}/${Date.now()}-${baseName}.${ext}`;
+	await s3Client().send(
+		new PutObjectCommand({
+			Bucket: bucket,
+			Key: key,
+			Body: args.buffer,
+			ContentType: args.contentType,
+			CacheControl: 'public, max-age=31536000, immutable'
+		})
+	);
+	return `${baseUrl}/${key}`;
+}
+
 export async function deleteAdminMediaObject(url: string) {
 	// Extract key and bucket from the URL.
 	// S3 URL format: https://{bucket}.s3.{region}.amazonaws.com/{key}

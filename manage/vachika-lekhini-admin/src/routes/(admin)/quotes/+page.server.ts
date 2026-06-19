@@ -31,22 +31,32 @@ export const load: PageServerLoad = async (event) => {
 
 export const actions: Actions = {
 	toggleActive: async (event) => {
-		requireRole(event, 'editor');
-		const data = await event.request.formData();
-		const id = String(data.get('id') ?? '');
-		if (!id) return fail(400, { error: 'Missing id' });
-		const current = await prisma.quote.findUnique({ where: { id }, select: { isActive: true } });
-		if (!current) throw error(404, 'Quote not found');
-		await prisma.quote.update({ where: { id }, data: { isActive: !current.isActive } });
-		return { ok: true };
+		try {
+			requireRole(event, 'editor');
+			const data = await event.request.formData();
+			const id = String(data.get('id') ?? '');
+			if (!id) return fail(400, { error: 'Missing id' });
+			const current = await prisma.quote.findUnique({ where: { id }, select: { isActive: true } });
+			if (!current) throw error(404, 'Quote not found');
+			await prisma.quote.update({ where: { id }, data: { isActive: !current.isActive } });
+			return { ok: true };
+		} catch (e) {
+			console.error(e);
+			return fail(500, { message: 'Internal error' });
+		}
 	},
 
 	delete: async (event) => {
-		requireRole(event, 'editor');
-		const data = await event.request.formData();
-		const id = String(data.get('id') ?? '');
-		if (!id) return fail(400, { error: 'Missing id' });
-		await prisma.quote.delete({ where: { id } }).catch(() => undefined);
-		throw redirect(303, patchQuery(event.url, { delete: null }));
+		try {
+			requireRole(event, 'editor');
+			const data = await event.request.formData();
+			const id = String(data.get('id') ?? '');
+			if (!id) return fail(400, { error: 'Missing id' });
+			await prisma.quote.delete({ where: { id } }).catch(() => undefined);
+			throw redirect(303, patchQuery(event.url, { delete: null }));
+		} catch (e) {
+			console.error(e);
+			return fail(500, { message: 'Internal error' });
+		}
 	}
 };

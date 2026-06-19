@@ -464,11 +464,24 @@ model AppSetting {
 /// Images are uploaded to the S3 quarantine bucket for review.
 model Quote {
   id        String   @id @default(cuid())
-  /// Quote body text (supports Unicode / Telugu / Devanagari).
-  text      String   @db.Text
-  /// Attribution line, e.g. "— మహాభారతం" or "Bhagavad Gita 2.47"
+  /// Unique human-readable slug (from the CSV import "slug" column).
+  slug      String?  @unique
+  /// Legacy/fallback text field — populated from textRoman on import.
+  text      String?  @db.Text
+  /// Legacy/fallback source field.
   source    String?
-  /// S3 image URL (quarantine prefix). Nullable — text-only quotes are valid.
+
+  // Multilingual text + attribution
+  textRoman        String?  @db.Text
+  sourceRoman      String?
+  textTelugu       String?  @db.Text
+  sourceTelugu     String?
+  textDevanagari   String?  @db.Text
+  sourceDevanagari String?
+  textKannada      String?  @db.Text
+  sourceKannada    String?
+
+  /// S3 image URL. Nullable — text-only quotes are valid.
   imageUrl  String?
   /// When set, only members with a program for this mantra see this quote.
   mantraId  String?

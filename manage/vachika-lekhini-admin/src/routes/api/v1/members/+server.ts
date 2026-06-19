@@ -1,5 +1,5 @@
 import type { RequestHandler } from './$types';
-import { error } from '@sveltejs/kit';
+import { error, json } from '@sveltejs/kit';
 import { z } from 'zod';
 import { prisma } from '$lib/server/prisma';
 import { snakeJson } from '$lib/server/snake-case';
@@ -20,94 +20,99 @@ const DEFAULT_MAX_PROFILES = 4;
 /// doesn't belong to your account.
 /// Server enforces max_profiles_per_user from FeatureFlag (default 4).
 export const POST: RequestHandler = async (event) => {
-	const account = await requireAccount(event);
-	const body = await readJsonBody(event, bodySchema);
+	try {
+		const account = await requireAccount(event);
+		const body = await readJsonBody(event, bodySchema);
 
-	// Reject any update that targets a member belonging to a different account.
-	const ids = body.members.map((m) => m.id);
-	const existing = await prisma.member.findMany({
-		where: { id: { in: ids } },
-		select: { id: true, accountId: true }
-	});
-	for (const e of existing) {
-		if (e.accountId !== account.id) {
-			throw error(403, `Member ${e.id} belongs to a different account`);
+		// Reject any update that targets a member belonging to a different account.
+		const ids = body.members.map((m) => m.id);
+		const existing = await prisma.member.findMany({
+			where: { id: { in: ids } },
+			select: { id: true, accountId: true }
+		});
+		for (const e of existing) {
+			if (e.accountId !== account.id) {
+				throw error(403, `Member ${e.id} belongs to a different account`);
+			}
 		}
-	}
 
-	// Enforce max_profiles_per_user. New members = ids not already in DB.
-	const existingIds = new Set(existing.map((e) => e.id));
-	const newMemberCount = ids.filter((id) => !existingIds.has(id)).length;
-	if (newMemberCount > 0) {
-		const [currentCount, flag] = await Promise.all([
-			prisma.member.count({ where: { accountId: account.id } }),
-			prisma.featureFlag.findUnique({ where: { key: 'max_profiles_per_user' } })
-		]);
-		const rawLimit = flag?.value;
-		const limit =
-			typeof rawLimit === 'number'
-				? rawLimit
-				: typeof rawLimit === 'string' && !isNaN(Number(rawLimit))
-					? Number(rawLimit)
-					: DEFAULT_MAX_PROFILES;
-		if (currentCount + newMemberCount > limit) {
-			throw error(422, `Member limit reached (max ${limit} per account)`);
+		// Enforce max_profiles_per_user. New members = ids not already in DB.
+		const existingIds = new Set(existing.map((e) => e.id));
+		const newMemberCount = ids.filter((id) => !existingIds.has(id)).length;
+		if (newMemberCount > 0) {
+			const [currentCount, flag] = await Promise.all([
+				prisma.member.count({ where: { accountId: account.id } }),
+				prisma.featureFlag.findUnique({ where: { key: 'max_profiles_per_user' } })
+			]);
+			const rawLimit = flag?.value;
+			const limit =
+				typeof rawLimit === 'number'
+					? rawLimit
+					: typeof rawLimit === 'string' && !isNaN(Number(rawLimit))
+						? Number(rawLimit)
+						: DEFAULT_MAX_PROFILES;
+			if (currentCount + newMemberCount > limit) {
+				throw error(422, `Member limit reached (max ${limit} per account)`);
+			}
 		}
+
+		const results = await prisma.$transaction(
+			body.members.map((m) =>
+				prisma.member.upsert({
+					where: { id: m.id },
+					create: {
+						id: m.id,
+						accountId: account.id,
+						displayName: m.display_name,
+						relation: m.relation,
+						avatarKey: m.avatar_key ?? null,
+						language: m.language,
+						mantraLanguage: m.mantra_language,
+						birthYear: m.birth_year ?? null,
+						gender: m.gender ?? null,
+						motherTongue: m.mother_tongue ?? null,
+						preferences: (m.preferences ?? {}) as any,
+						isPrimary: m.is_primary ?? false
+					},
+					update: {
+						displayName: m.display_name,
+						relation: m.relation,
+						avatarKey: m.avatar_key ?? null,
+						language: m.language,
+						mantraLanguage: m.mantra_language,
+						birthYear: m.birth_year ?? null,
+						gender: m.gender ?? null,
+						motherTongue: m.mother_tongue ?? null,
+						preferences: (m.preferences ?? {}) as any,
+						...(m.is_primary !== undefined ? { isPrimary: m.is_primary } : {})
+					},
+					select: {
+						id: true,
+						displayName: true,
+						relation: true,
+						avatarKey: true,
+						language: true,
+						mantraLanguage: true,
+						birthYear: true,
+						gender: true,
+						motherTongue: true,
+						preferences: true,
+						isPrimary: true,
+						rewardPointsBalance: true,
+						profileCompletedAt: true,
+						createdAt: true,
+						updatedAt: true
+					}
+				})
+			)
+		);
+
+		emitChange('member');
+		return snakeJson({ members: results });
+	} catch (e) {
+		console.error(e);
+		return json({ error: 'Internal error' }, { status: 500 });
 	}
-
-	const results = await prisma.$transaction(
-		body.members.map((m) =>
-			prisma.member.upsert({
-				where: { id: m.id },
-				create: {
-					id: m.id,
-					accountId: account.id,
-					displayName: m.display_name,
-					relation: m.relation,
-					avatarKey: m.avatar_key ?? null,
-					language: m.language,
-					mantraLanguage: m.mantra_language,
-					birthYear: m.birth_year ?? null,
-					gender: m.gender ?? null,
-					motherTongue: m.mother_tongue ?? null,
-					preferences: (m.preferences ?? {}) as any,
-					isPrimary: m.is_primary ?? false
-				},
-				update: {
-					displayName: m.display_name,
-					relation: m.relation,
-					avatarKey: m.avatar_key ?? null,
-					language: m.language,
-					mantraLanguage: m.mantra_language,
-					birthYear: m.birth_year ?? null,
-					gender: m.gender ?? null,
-					motherTongue: m.mother_tongue ?? null,
-					preferences: (m.preferences ?? {}) as any,
-					...(m.is_primary !== undefined ? { isPrimary: m.is_primary } : {})
-				},
-				select: {
-					id: true,
-					displayName: true,
-					relation: true,
-					avatarKey: true,
-					language: true,
-					mantraLanguage: true,
-					birthYear: true,
-					gender: true,
-					motherTongue: true,
-					preferences: true,
-					isPrimary: true,
-					rewardPointsBalance: true,
-					profileCompletedAt: true,
-					createdAt: true,
-					updatedAt: true
-				}
-			})
-		)
-	);
-
-	emitChange('member');
-	return snakeJson({ members: results });
 };
 
 /// DELETE /api/v1/members/:id is handled by [id]/+server.ts.

@@ -24,26 +24,31 @@ const updateSchema = z.object({
 
 export const actions: Actions = {
 	update: async (event) => {
-		requireRole(event, 'editor');
-		const fd = await event.request.formData();
-		const raw = {
-			id: fd.get('id'),
-			name: fd.get('name'),
-			description: fd.get('description'),
-			points: fd.get('points'),
-			threshold: fd.get('threshold') || null,
-			isActive: fd.get('isActive') === 'true'
-		};
-		const parsed = updateSchema.safeParse(raw);
-		if (!parsed.success) {
-			return fail(400, { error: parsed.error.issues[0]?.message ?? 'Invalid input' });
+		try {
+			requireRole(event, 'editor');
+			const fd = await event.request.formData();
+			const raw = {
+				id: fd.get('id'),
+				name: fd.get('name'),
+				description: fd.get('description'),
+				points: fd.get('points'),
+				threshold: fd.get('threshold') || null,
+				isActive: fd.get('isActive') === 'true'
+			};
+			const parsed = updateSchema.safeParse(raw);
+			if (!parsed.success) {
+				return fail(400, { error: parsed.error.issues[0]?.message ?? 'Invalid input' });
+			}
+			const { id, ...data } = parsed.data;
+			await prisma.rewardRule.update({
+				where: { id },
+				data: { ...data, threshold: data.threshold ?? null }
+			});
+			emitChange('reward_event');
+			return { success: true };
+		} catch (e) {
+			console.error(e);
+			return fail(500, { message: 'Internal error' });
 		}
-		const { id, ...data } = parsed.data;
-		await prisma.rewardRule.update({
-			where: { id },
-			data: { ...data, threshold: data.threshold ?? null }
-		});
-		emitChange('reward_event');
-		return { success: true };
 	}
 };

@@ -1,4 +1,4 @@
-import type { RequestHandler } from './$types';
+import { json, type RequestHandler } from '@sveltejs/kit';
 import { z } from 'zod';
 import { readJsonBody } from '$lib/server/json-input';
 import { snakeJson } from '$lib/server/snake-case';
@@ -18,18 +18,23 @@ const schema = z.object({
 /// Silently skips OTP delivery for banned accounts — they will get the
 /// ban error on /otp/verify instead, which avoids wasting SMS credits.
 export const POST: RequestHandler = async (event) => {
-	const body = await readJsonBody(event, schema);
+	try {
+		const body = await readJsonBody(event, schema);
 
-	const account = await prisma.account.findUnique({
-		where: { mobile: body.mobile },
-		select: { isBanned: true }
-	});
+		const account = await prisma.account.findUnique({
+			where: { mobile: body.mobile },
+			select: { isBanned: true }
+		});
 
-	// Return a fake challengeId for banned accounts — same shape, no SMS sent.
-	if (account?.isBanned) {
-		return snakeJson({ challengeId: 'banned', expiresInSeconds: 300 });
+		// Return a fake challengeId for banned accounts — same shape, no SMS sent.
+		if (account?.isBanned) {
+			return snakeJson({ challengeId: 'banned', expiresInSeconds: 300 });
+		}
+
+		const { challengeId } = await otpService().start(body.mobile);
+		return snakeJson({ challengeId, expiresInSeconds: 300 });
+	} catch (e) {
+		console.error(e);
+		return json({ error: 'Internal error' }, { status: 500 });
 	}
-
-	const { challengeId } = await otpService().start(body.mobile);
-	return snakeJson({ challengeId, expiresInSeconds: 300 });
 };

@@ -1,5 +1,6 @@
 import type { PageServerLoad, Actions } from './$types';
 import { fail, error, redirect } from '@sveltejs/kit';
+import { GlobalSadhanaStatus } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '$lib/server/prisma';
 import { requireRole } from '$lib/server/auth';
@@ -75,40 +76,50 @@ export const load: PageServerLoad = async (event) => {
 
 export const actions: Actions = {
 	save: async (event) => {
-		requireRole(event, 'editor');
-		const { id } = event.params;
-		const raw = await event.request.formData();
-		const parse = schema.safeParse(Object.fromEntries(raw));
-		if (!parse.success) {
-			return fail(422, { error: 'Validation failed', values: Object.fromEntries(raw) });
-		}
-		const d = parse.data;
-		await prisma.globalSadhana.update({
-			where: { id },
-			data: {
-				title: d.title,
-				description: d.description,
-				mantraId: d.mantra_id,
-				mantraText: d.mantra_text || null,
-				mantraLanguage: d.mantra_language,
-				targetCount: d.target_count,
-				startAt: new Date(d.start_at),
-				endAt: d.end_at ? new Date(d.end_at) : null,
-				imageUrl: d.image_url || null,
-				isSponsored: d.is_sponsored,
-				status: d.status,
-				participationMode: d.participation_mode,
-				instructions: d.instructions || null,
-				...(d.status === 'completed' ? { completedAt: new Date() } : {})
+		try {
+			requireRole(event, 'editor');
+			const { id } = event.params;
+			const raw = await event.request.formData();
+			const parse = schema.safeParse(Object.fromEntries(raw));
+			if (!parse.success) {
+				return fail(422, { error: 'Validation failed', values: Object.fromEntries(raw) });
 			}
-		});
-		return { ok: true };
+			const d = parse.data;
+			await prisma.globalSadhana.update({
+				where: { id },
+				data: {
+					title: d.title,
+					description: d.description,
+					mantraId: d.mantra_id,
+					mantraText: d.mantra_text || null,
+					mantraLanguage: d.mantra_language,
+					targetCount: d.target_count,
+					startAt: new Date(d.start_at),
+					endAt: d.end_at ? new Date(d.end_at) : null,
+					imageUrl: d.image_url || null,
+					isSponsored: d.is_sponsored,
+					status: d.status as GlobalSadhanaStatus,
+					participationMode: d.participation_mode,
+					instructions: d.instructions || null,
+					...(d.status === 'completed' ? { completedAt: new Date() } : {})
+				}
+			});
+			return { ok: true };
+		} catch (e) {
+			console.error(e);
+			return fail(500, { message: 'Internal error' });
+		}
 	},
 
 	delete: async (event) => {
-		requireRole(event, 'editor');
-		const { id } = event.params;
-		await prisma.globalSadhana.delete({ where: { id } }).catch(() => undefined);
-		throw redirect(303, '/global-sadhana');
+		try {
+			requireRole(event, 'editor');
+			const { id } = event.params;
+			await prisma.globalSadhana.delete({ where: { id } }).catch(() => undefined);
+			throw redirect(303, '/global-sadhana');
+		} catch (e) {
+			console.error(e);
+			return fail(500, { message: 'Internal error' });
+		}
 	}
 };

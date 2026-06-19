@@ -128,7 +128,6 @@ class HomeScreen extends ConsumerWidget {
                   child: _HeroQuote(compact: compact, tight: tight),
                 ),
                 SizedBox(height: gap),
-                _SadhanaList(compact: compact),
                 _GlobalSadhanaSection(compact: compact),
               ],
             ),
@@ -1083,59 +1082,4 @@ class _GlobalSadhanaSection extends ConsumerWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Sadhana list — auto-scrolling carousel of active program cards
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _SadhanaList extends ConsumerStatefulWidget {
-  const _SadhanaList({required this.compact});
-  final bool compact;
-
-  @override
-  ConsumerState<_SadhanaList> createState() => _SadhanaListState();
-}
-
-class _SadhanaListState extends ConsumerState<_SadhanaList> {
-  late final PageController _ctrl;
-  Timer? _autoTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = PageController(initialPage: 500);
-    _autoTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (!_ctrl.hasClients) return;
-      _ctrl.nextPage(
-        duration: const Duration(milliseconds: 420),
-        curve: Curves.easeInOut,
-      );
-    });
-  }
-
-  @override
-  void dispose() {
-    _autoTimer?.cancel();
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final programs = ref.watch(programsForActiveProfileProvider).value ?? [];
-    final active = programs.where((p) => !p.isCompleted).toList();
-    if (active.isEmpty) return const SizedBox.shrink();
-
-    final cardH = widget.compact ? 84.0 : 100.0;
-    return SizedBox(
-      height: cardH,
-      child: PageView.builder(
-        controller: _ctrl,
-        itemBuilder: (context, i) {
-          final program = active[i % active.length];
-          return _ProgramCard(program: program, compact: widget.compact);
-        },
-      ),
-    );
-  }
-}
 

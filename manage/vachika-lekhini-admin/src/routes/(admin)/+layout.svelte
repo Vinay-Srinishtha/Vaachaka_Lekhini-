@@ -19,28 +19,47 @@
 		pendingPath = null;
 	});
 
-	// SSE subscription — each Flutter write triggers a change event that causes
-	// SvelteKit to re-run all load functions immediately (sub-second latency).
+	// SSE subscription: backend writes can refresh the current admin view, but
+	// invalidation is deliberately debounced so high-write periods do not make
+	// every page feel busy.
 	let es: EventSource | null = null;
+	let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+	let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+	function scheduleRefresh() {
+		if (document.visibilityState !== 'visible' || navigating.to !== null) return;
+		if (refreshTimer) clearTimeout(refreshTimer);
+		refreshTimer = setTimeout(() => {
+			refreshTimer = null;
+			void invalidateAll();
+		}, 2500);
+	}
+
+	function connectLiveStream() {
+		es?.close();
+		es = new EventSource('/api/admin/stream');
+		es.addEventListener('change', (event) => {
+			if ((event as MessageEvent).data === 'connected') return;
+			scheduleRefresh();
+		});
+		es.onerror = () => {
+			es?.close();
+			if (reconnectTimer) clearTimeout(reconnectTimer);
+			reconnectTimer = setTimeout(connectLiveStream, 5000);
+		};
+	}
 
 	onMount(() => {
 		const saved = localStorage.getItem('sidebar:collapsed');
 		if (saved === '1') collapsed = true;
 
-		es = new EventSource('/api/admin/stream');
-		es.addEventListener('change', () => invalidateAll());
-		es.onerror = () => {
-			// On error/disconnect, reconnect after 3 s.
-			es?.close();
-			setTimeout(() => {
-				es = new EventSource('/api/admin/stream');
-				es.addEventListener('change', () => invalidateAll());
-			}, 3000);
-		};
+		connectLiveStream();
 	});
 
 	onDestroy(() => {
 		es?.close();
+		if (reconnectTimer) clearTimeout(reconnectTimer);
+		if (refreshTimer) clearTimeout(refreshTimer);
 	});
 
 	function toggleCollapsed() {

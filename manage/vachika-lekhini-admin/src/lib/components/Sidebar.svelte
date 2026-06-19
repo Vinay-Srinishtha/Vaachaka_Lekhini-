@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { navigating, page } from '$app/state';
-	import { preloadData } from '$app/navigation';
 	import { NAV_ITEMS } from '$lib/nav';
 	import { canAccessSection, type AdminRole } from '$lib/roles';
 	import { ChevronsLeft, ChevronsRight, X } from '@lucide/svelte';
@@ -71,10 +70,6 @@
 		return path === href || path.startsWith(href + '/');
 	}
 
-	function preload(href: string) {
-		void preloadData(href);
-	}
-
 	function startNavigation(event: MouseEvent, href: string) {
 		if (
 			event.button !== 0 ||
@@ -135,8 +130,8 @@
 	<nav
 		class="flex-1 overflow-y-auto py-3 space-y-0.5 scrollbar-thin"
 		style="scrollbar-color: #334155 transparent;"
-		data-sveltekit-preload-code="eager"
-		data-sveltekit-preload-data="hover"
+		data-sveltekit-preload-code="hover"
+		data-sveltekit-preload-data="tap"
 	>
 		{#each grouped as g, gi}
 			{#if g.label}
@@ -164,8 +159,6 @@
 							startNavigation(event, item.href);
 							onCloseMobile();
 						}}
-						onpointerenter={() => preload(item.href)}
-						onfocus={() => preload(item.href)}
 						title={collapsed && !mobileOpen ? item.label : undefined}
 						aria-busy={loading}
 						class="group relative flex items-center rounded-xl px-2.5 py-2 text-sm font-medium transition-all duration-150

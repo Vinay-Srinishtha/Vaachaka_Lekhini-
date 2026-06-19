@@ -53,6 +53,10 @@ class HandwritingComparator {
   /// Reject if user ink exceeds this fraction of total pixels (blackout).
   static const double _maxInkFraction = 0.70;
 
+  /// Dense input is only treated as blackout when it greatly exceeds the
+  /// reference ink. This keeps valid dense reference shapes comparable.
+  static const double _maxInkRatio = 2.50;
+
   /// Minimum number of distinct rows with ink in the 48-px grid.
   /// A horizontal line or dash typically spans ≤ 3 rows.
   static const int _minRowSpread = 5;
@@ -108,7 +112,11 @@ class HandwritingComparator {
     if (userInk < totalPixels * _minAbsoluteInkFraction) return 0.0;
 
     // ── Gate 2: blackout ──────────────────────────────────────────────────
-    if (userInk > totalPixels * _maxInkFraction) return 0.0;
+    final userInkFraction = userInk / totalPixels;
+    if (userInkFraction > _maxInkFraction &&
+        (refInk == 0 || userInk > refInk * _maxInkRatio)) {
+      return 0.0;
+    }
 
     // ── Gate 3: straight line / comma / dot ───────────────────────────────
     final spread = _inkSpread(userFine, _gridSize);

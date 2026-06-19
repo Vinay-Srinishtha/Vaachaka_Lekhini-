@@ -8,7 +8,7 @@ export const load: PageServerLoad = async (event) => {
 	const reports = await prisma.supportReport.findMany({
 		where: { kind: 'feedback' },
 		orderBy: { createdAt: 'desc' },
-		take: 200
+		take: 50
 	});
 	return { reports };
 };

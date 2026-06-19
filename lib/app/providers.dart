@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -831,3 +832,22 @@ final sessionCompletedProvider =
     NotifierProvider<_SessionCompletedNotifier, int>(
       _SessionCompletedNotifier.new,
     );
+
+/// Sum of chants recorded across all sessions that started today (local time).
+/// Rebuilds whenever [sessionCompletedProvider] increments.
+final todayChantTotalProvider = FutureProvider.autoDispose<int>((ref) async {
+  ref.watch(sessionCompletedProvider); // rebuild on session finish
+  final db = ref.watch(appDatabaseProvider);
+  final profile = ref.watch(activeProfileProvider).value;
+  if (profile == null) return 0;
+  final now = DateTime.now();
+  final startOfDay = DateTime(now.year, now.month, now.day);
+  final rows = await (db.select(db.sessions)
+        ..where(
+          (t) =>
+              t.memberId.equals(profile.id) &
+              t.startedAt.isBiggerOrEqualValue(startOfDay),
+        ))
+      .get();
+  return rows.fold<int>(0, (sum, r) => sum + r.countAdded);
+});

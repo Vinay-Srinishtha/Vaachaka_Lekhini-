@@ -42,14 +42,17 @@ class HomeScreen extends ConsumerWidget {
     final activePrograms = programs.where((p) => !p.isCompleted).toList();
 
     final isLoadingPrograms = programsAsync.isLoading && programsAsync.value == null;
+    final todayTotal = ref.watch(todayChantTotalProvider).value ?? 0;
     final greeting = (profile == null || profile.name.trim().isEmpty)
         ? context.l10n.welcomeGreeting
         : context.l10n.welcomeGreetingUser(profile.name.trim());
     final subline = isLoadingPrograms
         ? context.l10n.homeSublineEmpty
-        : activePrograms.isEmpty
-            ? context.l10n.homeSublineEmpty
-            : context.l10n.homeSublineActive(activePrograms.length);
+        : todayTotal > 0
+            ? 'Today you chanted ${IndianNumberFormat.format(todayTotal)} times'
+            : activePrograms.isEmpty
+                ? context.l10n.homeSublineEmpty
+                : '${activePrograms.length} Sadhana${activePrograms.length == 1 ? '' : 's'} Active';
     final points = ref.watch(rewardTotalProvider).value ?? 0;
 
     return SafeArea(

@@ -104,8 +104,9 @@ class TwoFactorOtpService implements OtpService {
 			return { challengeId: recent.id };
 		}
 
-		// Append template name if set — forces SMS delivery.
-		// Use TWO_FACTOR_TEMPLATE=OTPONLY for the 2factor built-in SMS-only template.
+		// Template must be registered in 2factor.in dashboard with this exact text:
+		//   "Namaste. Your OTP is {#var#}. May your sadhana stay uninterrupted."
+		// Then set TWO_FACTOR_TEMPLATE=<your-template-name> in .env.
 		const template = this.templateName ? `/${this.templateName}` : '';
 		const res = await fetch(
 			`https://2factor.in/API/V1/${this.apiKey}/SMS/${digits}/AUTOGEN${template}`

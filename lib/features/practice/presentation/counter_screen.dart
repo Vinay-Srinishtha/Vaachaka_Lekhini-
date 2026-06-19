@@ -1295,34 +1295,22 @@ class _ActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final disabled = onTap == null;
-    // Build a soft 3-stop gradient + matching glow from the base colour so
-    // every action button reads as a premium pill, not a flat block.
-    final hsl = HSLColor.fromColor(color);
-    final lighter = hsl
-        .withLightness((hsl.lightness + 0.09).clamp(0.0, 1.0))
-        .toColor();
-    final darker = hsl
-        .withLightness((hsl.lightness - 0.13).clamp(0.0, 1.0))
-        .toColor();
     final radius = BorderRadius.circular(compact ? 16 : 20);
 
     return Opacity(
-      opacity: disabled ? 0.5 : 1,
+      opacity: disabled ? 0.45 : 1,
       child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: radius,
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [lighter, color, darker],
-          ),
+          color: Colors.white,
+          border: Border.all(color: color, width: 1.8),
           boxShadow: disabled
               ? null
               : [
                   BoxShadow(
-                    color: color.withValues(alpha: 0.40),
-                    blurRadius: 18,
-                    offset: const Offset(0, 8),
+                    color: color.withValues(alpha: 0.18),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
                 ],
         ),
@@ -1331,22 +1319,20 @@ class _ActionButton extends StatelessWidget {
           child: InkWell(
             onTap: onTap,
             borderRadius: radius,
-            splashColor: Colors.white.withValues(alpha: 0.18),
-            highlightColor: Colors.white.withValues(alpha: 0.06),
+            splashColor: color.withValues(alpha: 0.10),
+            highlightColor: color.withValues(alpha: 0.06),
             child: SizedBox(
               height: compact ? 48 : 54,
               width: double.infinity,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                // FittedBox keeps icon + label on one line and scales them down
-                // to fit narrow buttons (e.g. the 1/4-width Pause/Resume).
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       if (icon != null) ...[
-                        Icon(icon, color: Colors.white, size: 21),
+                        Icon(icon, color: color, size: 21),
                         const SizedBox(width: 8),
                       ],
                       Text(
@@ -1354,7 +1340,7 @@ class _ActionButton extends StatelessWidget {
                         style: KvlText.ui(
                           compact ? 15 : 18,
                           FontWeight.w800,
-                        ).copyWith(color: Colors.white, letterSpacing: 0.4),
+                        ).copyWith(color: color, letterSpacing: 0.4),
                       ),
                     ],
                   ),

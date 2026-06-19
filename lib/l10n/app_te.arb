@@ -423,14 +423,25 @@
   "currentStreakLabel": "ప్రస్తుత స్ట్రీక్",
   "streakDaysCount": "{days} రోజులు",
   "@streakDaysCount": {
-    "placeholders": { "days": { "type": "int" } }
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
   },
   "continueSadhana": "మీ సాధనను కొనసాగించండి",
   "programDayOf": "రోజు {current} / {total}",
   "@programDayOf": {
     "placeholders": {
-      "current": { "type": "int" },
-      "total": { "type": "int" }
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
-  }
+  },
+  "allSadhanasComplete": "All Sadhanas complete. Begin a new one!",
+  "keepChanting": "Every chant is a step closer to the divine. Keep going!",
+  "browseGlobalSadhanas": "Browse Global Sadhanas"
 }

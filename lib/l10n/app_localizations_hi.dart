@@ -363,6 +363,16 @@ class AppLocalizationsHi extends AppLocalizations {
   String get everyJourneyBegins => 'हर यात्रा एक कदम से शुरू होती है।';
 
   @override
+  String get allSadhanasComplete => 'All Sadhanas complete. Begin a new one!';
+
+  @override
+  String get keepChanting =>
+      'Every chant is a step closer to the divine. Keep going!';
+
+  @override
+  String get browseGlobalSadhanas => 'Browse Global Sadhanas';
+
+  @override
   String get totalChants => 'कुल जप';
 
   @override

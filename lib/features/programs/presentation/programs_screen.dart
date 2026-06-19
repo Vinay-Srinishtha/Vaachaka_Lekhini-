@@ -86,10 +86,10 @@ class _BodyState extends ConsumerState<_Body> {
             children: [
               Text(
                 active.isEmpty && completed.isNotEmpty
-                    ? '"All Sadhanas complete. Begin a new one!"'
+                    ? context.l10n.allSadhanasComplete
                     : active.isEmpty
                         ? context.l10n.everyJourneyBegins
-                        : '"Every chant is a step closer to the divine. Keep going!"',
+                        : context.l10n.keepChanting,
                 style: KvlText.body(13).copyWith(
                   color: Colors.white,
                   fontStyle: FontStyle.italic,
@@ -138,7 +138,7 @@ class _BodyState extends ConsumerState<_Body> {
         OutlinedButton.icon(
           onPressed: () => context.push(KvlRoute.globalSadhanaList),
           icon: const Icon(Icons.public_rounded, size: 18),
-          label: const Text('Browse Global Sadhanas'),
+          label: Text(context.l10n.browseGlobalSadhanas),
           style: OutlinedButton.styleFrom(
             minimumSize: const Size(double.infinity, 48),
             foregroundColor: KvlColors.primary,

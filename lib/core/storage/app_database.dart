@@ -136,6 +136,14 @@ class AppDatabase extends _$AppDatabase {
         },
       );
 
+  /// Wipes all personal program data from the local DB.
+  Future<void> clearProgramData() async {
+    await delete(practiceSessionDrafts).go();
+    await delete(sessions).go();
+    await delete(programs).go();
+    await delete(rewardEvents).go();
+  }
+
   Future<void> saveDraft({
     required String programId,
     required int count,

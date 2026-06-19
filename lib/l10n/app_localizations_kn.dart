@@ -364,6 +364,16 @@ class AppLocalizationsKn extends AppLocalizations {
       'ಪ್ರತಿ ಯಾತ್ರೆ ಒಂದು ಹೆಜ್ಜೆಯಿಂದ ಪ್ರಾರಂಭವಾಗುತ್ತದೆ.';
 
   @override
+  String get allSadhanasComplete => 'All Sadhanas complete. Begin a new one!';
+
+  @override
+  String get keepChanting =>
+      'Every chant is a step closer to the divine. Keep going!';
+
+  @override
+  String get browseGlobalSadhanas => 'Browse Global Sadhanas';
+
+  @override
   String get totalChants => 'ಒಟ್ಟು ಜಪಗಳು';
 
   @override

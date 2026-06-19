@@ -693,7 +693,7 @@ class _ProgramCard extends ConsumerWidget {
                     const SizedBox(height: 4),
                     Text(
                       context.l10n.programDayOf(
-                          program.daysElapsed + 1, program.targetDays),
+                          (program.daysElapsed + 1).clamp(1, program.targetDays), program.targetDays),
                       maxLines: 1,
                       style: KvlText.caption(compact ? 10.5 : 11.5)
                           .copyWith(color: KvlColors.muted),

@@ -363,6 +363,16 @@ class AppLocalizationsTe extends AppLocalizations {
   String get everyJourneyBegins => 'ప్రతి యాత్ర ఒక్క అడుగుతో మొదలవుతుంది.';
 
   @override
+  String get allSadhanasComplete => 'All Sadhanas complete. Begin a new one!';
+
+  @override
+  String get keepChanting =>
+      'Every chant is a step closer to the divine. Keep going!';
+
+  @override
+  String get browseGlobalSadhanas => 'Browse Global Sadhanas';
+
+  @override
   String get totalChants => 'మొత్తం జపాలు';
 
   @override

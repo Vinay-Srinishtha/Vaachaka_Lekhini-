@@ -738,6 +738,24 @@ abstract class AppLocalizations {
   /// **'Every journey begins with a single step.'**
   String get everyJourneyBegins;
 
+  /// No description provided for @allSadhanasComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'All Sadhanas complete. Begin a new one!'**
+  String get allSadhanasComplete;
+
+  /// No description provided for @keepChanting.
+  ///
+  /// In en, this message translates to:
+  /// **'Every chant is a step closer to the divine. Keep going!'**
+  String get keepChanting;
+
+  /// No description provided for @browseGlobalSadhanas.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse Global Sadhanas'**
+  String get browseGlobalSadhanas;
+
   /// No description provided for @totalChants.
   ///
   /// In en, this message translates to:

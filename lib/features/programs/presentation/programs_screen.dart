@@ -373,7 +373,7 @@ class _ProgramCard extends ConsumerWidget {
     final glyph = mantra?.name.thumbGlyph() ?? '';
 
     return KvlCard(
-      onTap: () => context.push('${KvlRoute.dailyProgress}/${program.id}'),
+      onTap: () => context.push('${KvlRoute.practice}/${program.id}'),
       child: Row(
         children: [
           MilestoneRing.fraction(

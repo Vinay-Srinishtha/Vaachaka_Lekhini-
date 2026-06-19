@@ -950,13 +950,7 @@ class _DashboardHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profile = ref.watch(activeProfileProvider).value;
-    final programs = ref.watch(programsForActiveProfileProvider).value ?? const [];
-    final completed = ref.watch(
-      programsForActiveProfileProvider.select(
-        (v) => v.value?.where((p) => p.isGoalReached).length ?? 0,
-      ),
-    );
+    final pts = ref.watch(rewardTotalProvider).value ?? 0;
 
     return Row(
       children: [
@@ -975,29 +969,26 @@ class _DashboardHeader extends ConsumerWidget {
                 .copyWith(color: const Color(0xFF323232)),
           ),
         ),
-        InkWell(
+        GestureDetector(
           onTap: onProfileTap,
-          borderRadius: BorderRadius.circular(24),
-          child: MilestoneRing(
-            completed: completed,
-            total: programs.length,
-            strokeWidth: 2.5,
-            gap: 2.5,
-            child: Container(
-              width: 48,
-              height: 48,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [Color(0xFFFFB572), KvlColors.primary],
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: KvlColors.gold.withValues(alpha: .15),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: KvlColors.gold.withValues(alpha: .4)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.star_rounded, size: 16, color: KvlColors.gold),
+                const SizedBox(width: 4),
+                Text(
+                  '$pts pts',
+                  style: KvlText.ui(13, FontWeight.w700)
+                      .copyWith(color: KvlColors.gold),
                 ),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                profile?.initials ?? '?',
-                style: KvlText.ui(18, FontWeight.w700)
-                    .copyWith(color: Colors.white),
-              ),
+              ],
             ),
           ),
         ),

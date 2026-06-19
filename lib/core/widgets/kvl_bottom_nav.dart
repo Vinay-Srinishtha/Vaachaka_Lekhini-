@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/providers.dart';
 import '../theme/colors.dart';
 import '../theme/shadows.dart';
 import '../theme/spacing.dart';
+import '../theme/text.dart';
 
 class KvlNavItem {
   const KvlNavItem({required this.label, required this.icon});
@@ -19,8 +22,9 @@ const kvlNavItems = <KvlNavItem>[
 ];
 
 const _practiceIndex = 2;
+const _storeIndex = 4;
 
-class KvlBottomNav extends StatelessWidget {
+class KvlBottomNav extends ConsumerWidget {
   const KvlBottomNav({
     super.key,
     required this.currentIndex,
@@ -37,8 +41,9 @@ class KvlBottomNav extends StatelessWidget {
   final Set<int> hiddenIndices;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final practiceHidden = hiddenIndices.contains(_practiceIndex);
+    final pts = ref.watch(rewardTotalProvider).value ?? 0;
 
     return Material(
       color: Colors.transparent,
@@ -80,6 +85,7 @@ class KvlBottomNav extends StatelessWidget {
                                       item: kvlNavItems[i],
                                       active: i == currentIndex,
                                       onTap: () => onTap(i),
+                                      pts: i == _storeIndex ? pts : null,
                                     ),
                             ),
                       ],
@@ -211,10 +217,11 @@ class _PracticeTabState extends State<_PracticeTab> {
 }
 
 class _Tab extends StatelessWidget {
-  const _Tab({required this.item, required this.active, required this.onTap});
+  const _Tab({required this.item, required this.active, required this.onTap, this.pts});
   final KvlNavItem item;
   final bool active;
   final VoidCallback onTap;
+  final int? pts;
 
   @override
   Widget build(BuildContext context) {
@@ -227,7 +234,35 @@ class _Tab extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(item.icon, size: 18, color: color),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(item.icon, size: 18, color: color),
+                if (pts != null)
+                  Positioned(
+                    top: -6,
+                    right: -14,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: KvlColors.gold,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.star_rounded, size: 8, color: Colors.white),
+                          const SizedBox(width: 2),
+                          Text(
+                            '$pts',
+                            style: KvlText.ui(8, FontWeight.w700).copyWith(color: Colors.white),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             const SizedBox(height: 1),
             FittedBox(
               fit: BoxFit.scaleDown,

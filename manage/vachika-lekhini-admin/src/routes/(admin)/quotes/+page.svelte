@@ -39,6 +39,9 @@
 	}
 
 	let submitting = $state(false);
+	const totalActive = $derived(data.quotes.filter((qt: any) => qt.isActive).length);
+	const withImages = $derived(data.quotes.filter((qt: any) => qt.imageUrl).length);
+	const universal = $derived(data.quotes.filter((qt: any) => !qt.mantra).length);
 	let uploading = $state(false);
 	let uploadError = $state('');
 	let uploadResult = $state<{ created: number; skipped: number; errors: string[] } | null>(null);
@@ -134,9 +137,6 @@
 </div>
 
 <!-- Stats bar -->
-{@const totalActive = data.quotes.filter((qt: any) => qt.isActive).length}
-{@const withImages = data.quotes.filter((qt: any) => qt.imageUrl).length}
-{@const universal = data.quotes.filter((qt: any) => !qt.mantra).length}
 <div class="mb-6 flex flex-wrap gap-3">
 	{#each [
 		{ label: 'Total', value: data.quotes.length, color: 'bg-slate-100 text-slate-700' },
@@ -246,11 +246,11 @@
 				</thead>
 				<tbody class="divide-y divide-slate-100">
 					{#each visibleQuotes as quote (quote.id)}
+						{@const badges = langBadges(quote)}
 						<tr class="hover:bg-slate-50 transition-colors">
 							<!-- Quote text -->
 							<td class="px-4 py-3 max-w-xs">
 								<p class="line-clamp-2 text-slate-900 font-medium">{displayText(quote)}</p>
-								{@const badges = langBadges(quote)}
 								{#if badges.length > 0}
 									<div class="mt-1 flex gap-1 flex-wrap">
 										{#each badges as badge}

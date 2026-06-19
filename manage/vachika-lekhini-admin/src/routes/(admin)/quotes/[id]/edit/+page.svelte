@@ -76,9 +76,9 @@
 <ConfirmDialog
 	open={showDelete}
 	title="Delete Quote?"
-	message={`Permanently remove "${(q.textRoman || q.textTelugu || q.textDevanagari || q.textKannada || q.text || '').slice(0, 60)}…"?`}
+	message={`Permanently remove "${String(q.textRoman || q.textTelugu || q.textDevanagari || q.textKannada || (q as any).text || '').slice(0, 60)}…"?`}
 	confirmLabel="Delete"
-	{deleting}
+	submitting={deleting}
 	onCancel={() => showDelete = false}
 	onConfirm={async () => {
 		deleting = true;

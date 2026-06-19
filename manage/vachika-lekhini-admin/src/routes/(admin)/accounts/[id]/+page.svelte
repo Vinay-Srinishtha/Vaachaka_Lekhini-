@@ -48,6 +48,7 @@
 	<h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Family members</h2>
 	<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 		{#each a.members as m (m.id)}
+			{@const metrics = data.memberMetrics.find((x: { memberId: string }) => x.memberId === m.id)}
 			<div class="card p-4">
 				<div class="flex items-start gap-3">
 					<div class="w-10 h-10 rounded-full bg-brand-100 text-brand-700 grid place-items-center font-bold">
@@ -65,7 +66,6 @@
 						<div class="text-xs text-gray-500 mt-0.5">
 							{relationLabel[m.relation] ?? m.relation} · App: {m.language} · Mantra: {m.mantraLanguage}
 						</div>
-						{@const metrics = data.memberMetrics.find((x: { memberId: string }) => x.memberId === m.id)}
 						<div class="mt-3 grid grid-cols-3 gap-2 text-center">
 							<div>
 								<div class="text-base font-semibold text-gray-900">{m._count.programs}</div>

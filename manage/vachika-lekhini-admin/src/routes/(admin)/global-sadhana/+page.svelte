@@ -30,6 +30,12 @@
 	function fmt(n: number) {
 		return n.toLocaleString('en-IN');
 	}
+
+	const totalActive = $derived(data.sadhanas.filter((s: any) => s.status === 'active').length);
+	const totalEnrolled = $derived(data.sadhanas.reduce((sum: number, s: any) => sum + s._count.enrollments, 0));
+	const totalContribs = $derived(data.sadhanas.reduce((sum: number, s: any) => sum + s._count.contributions, 0));
+	const totalProgress = $derived(data.sadhanas.length > 0 ? Math.round(data.sadhanas.reduce((sum: number, s: any) => sum + Math.min(100, s.targetCount > 0 ? (s.currentCount / s.targetCount) * 100 : 0), 0) / data.sadhanas.length) : 0);
+	const statusCounts = $derived(Object.fromEntries(['draft','published','active','paused','completed','archived'].map(st => [st, data.sadhanas.filter((s: any) => s.status === st).length])));
 </script>
 
 {#if form?.error}
@@ -50,11 +56,6 @@
 </div>
 
 <!-- Dashboard stats -->
-{@const totalActive = data.sadhanas.filter((s: any) => s.status === 'active').length}
-{@const totalEnrolled = data.sadhanas.reduce((sum: number, s: any) => sum + s._count.enrollments, 0)}
-{@const totalContribs = data.sadhanas.reduce((sum: number, s: any) => sum + s._count.contributions, 0)}
-{@const totalProgress = data.sadhanas.length > 0 ? Math.round(data.sadhanas.reduce((sum: number, s: any) => sum + Math.min(100, s.targetCount > 0 ? (s.currentCount / s.targetCount) * 100 : 0), 0) / data.sadhanas.length) : 0}
-
 <div class="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
 	{#each [
 		{ label: 'Programs', value: data.sadhanas.length, sub: 'total', color: 'border-slate-200 bg-white' },
@@ -71,7 +72,6 @@
 </div>
 
 <!-- Status breakdown -->
-{@const statusCounts = Object.fromEntries(['draft','published','active','paused','completed','archived'].map(st => [st, data.sadhanas.filter((s: any) => s.status === st).length]))}
 <div class="mb-6 flex flex-wrap gap-2">
 	{#each [
 		['draft', 'Draft', 'bg-slate-100 text-slate-600'],

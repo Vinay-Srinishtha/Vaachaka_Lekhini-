@@ -25,7 +25,9 @@
 		imageUrl: v.imageUrl ? String(v.imageUrl) : null,
 		isActive: v.isActive !== undefined ? v.isActive === 'on' || v.isActive === 'true' : true,
 		sortOrder: v.sortOrder ? Number(v.sortOrder) : 0,
-		milestones: null
+		milestones: null,
+		shareImageUrl: null,
+		shareText: null
 	});
 
 	function close() {

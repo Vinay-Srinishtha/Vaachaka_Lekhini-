@@ -45,7 +45,9 @@
 				: (m as any).imageUrl ?? null,
 		isActive: v.isActive !== undefined ? v.isActive === 'on' || v.isActive === 'true' : m.isActive,
 		sortOrder: v.sortOrder ? Number(v.sortOrder) : m.sortOrder,
-		milestones: (m as any).milestones ?? null
+		milestones: (m as any).milestones ?? null,
+		shareImageUrl: (m as any).shareImageUrl ?? null,
+		shareText: (m as any).shareText ?? null
 	});
 
 	function close() {

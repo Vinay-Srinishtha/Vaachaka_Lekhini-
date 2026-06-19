@@ -42,7 +42,7 @@
 	title="Delete Global Sadhana?"
 	message={`Permanently remove "${s.title}" and all enrollments & contributions?`}
 	confirmLabel="Delete"
-	{deleting}
+	submitting={deleting}
 	onCancel={() => showDelete = false}
 	onConfirm={async () => {
 		deleting = true;
@@ -178,11 +178,11 @@
 			<div class="grid grid-cols-2 gap-4">
 				<div>
 					<label class="block text-sm font-medium text-slate-700 mb-1.5" for="start_at">Start</label>
-					<input id="start_at" name="start_at" type="datetime-local" required value={toDatetimeLocal(v.start_at ?? s.startAt)} class="input" />
+					<input id="start_at" name="start_at" type="datetime-local" required value={toDatetimeLocal(typeof v.start_at === 'string' ? v.start_at : s.startAt)} class="input" />
 				</div>
 				<div>
 					<label class="block text-sm font-medium text-slate-700 mb-1.5" for="end_at">End (optional)</label>
-					<input id="end_at" name="end_at" type="datetime-local" value={toDatetimeLocal(v.end_at ?? s.endAt)} class="input" />
+					<input id="end_at" name="end_at" type="datetime-local" value={toDatetimeLocal(typeof v.end_at === 'string' ? v.end_at : s.endAt)} class="input" />
 				</div>
 			</div>
 		</section>

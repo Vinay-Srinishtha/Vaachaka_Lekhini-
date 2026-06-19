@@ -35,11 +35,14 @@
 		submitting = true;
 		const name = target?.nameRoman ?? 'Mantra';
 		return async ({ result, update }) => {
-			await update();
-			submitting = false;
 			if (result.type === 'redirect' || result.type === 'success') {
 				toasts.show(`"${name}" deleted`);
+				close();
+				await update();
+			} else {
+				await update();
 			}
+			submitting = false;
 		};
 	}}
 >

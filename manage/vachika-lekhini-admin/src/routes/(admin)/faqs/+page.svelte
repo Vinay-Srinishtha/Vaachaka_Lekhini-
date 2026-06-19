@@ -39,9 +39,14 @@
 	submitting = true;
 	const q = target?.question ?? 'FAQ';
 	return async ({ result, update }) => {
-		await update();
+		if (result.type === 'redirect' || result.type === 'success') {
+			toasts.show(`"${q}" deleted`);
+			close();
+			await update();
+		} else {
+			await update();
+		}
 		submitting = false;
-		if (result.type === 'redirect' || result.type === 'success') toasts.show(`"${q}" deleted`);
 	};
 }}>
 	<input type="hidden" name="id" value={deleteId ?? ''} />

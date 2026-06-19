@@ -7,6 +7,7 @@
 	import { Coins, TrendingUp, TrendingDown, Settings2, Gift } from '@lucide/svelte';
 	import { page } from '$app/state';
 	import { enhance } from '$app/forms';
+	import { toasts } from '$lib/stores/toast';
 
 	let { data, form } = $props();
 
@@ -105,8 +106,8 @@
 				await update({ reset: false });
 				grantSaving = false;
 				if (result.type === 'success') {
-					grantSuccess = true;
-					setTimeout(closeGrant, 1200);
+					toasts.show('Points granted successfully');
+					closeGrant();
 				} else if (result.type === 'failure') {
 					grantError = (result.data as any)?.grantError ?? 'Something went wrong';
 				}

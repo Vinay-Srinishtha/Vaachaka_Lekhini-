@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
+	import { enhance } from '$app/forms';
 	import Modal from '$lib/components/Modal.svelte';
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 	import { toasts } from '$lib/stores/toast';
@@ -110,7 +111,14 @@
 	{#if form?.error}
 		<p class="mb-4 text-sm text-red-600 bg-red-50 rounded-lg px-4 py-2">{form.error}</p>
 	{/if}
-	<form id="quote-form" method="POST" action="?/save" onsubmit={() => handleSuccess()} class="space-y-5">
+	<form id="quote-form" method="POST" action="?/save" use:enhance={() => async ({ result, update }) => {
+		if (result.type === 'redirect' || result.type === 'success') {
+			handleSuccess();
+			await invalidateAll();
+		} else {
+			await update();
+		}
+	}} class="space-y-5">
 		<!-- Quote content — tabbed language editor -->
 		<section class="card p-5 space-y-4">
 			<p class="section-label">Quote Content <span class="text-xs font-normal text-slate-400 ml-1">(fill at least one language)</span></p>

@@ -32,8 +32,13 @@
 	action="?/delete"
 	use:enhance={() => {
 		submitting = true;
-		return async ({ update }) => {
-			await update();
+		return async ({ result, update }) => {
+			if (result.type === 'redirect' || result.type === 'success') {
+				await update();
+				close();
+			} else {
+				await update();
+			}
 			submitting = false;
 		};
 	}}

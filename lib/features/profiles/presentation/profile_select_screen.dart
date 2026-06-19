@@ -29,12 +29,13 @@ class _ProfileSelectScreenState extends ConsumerState<ProfileSelectScreen> {
     profilesAsync.whenData((profiles) {
       if (_handled || !mounted) return;
       final primary = profiles.firstWhere(
-        (p) => p.relation == null || p.relation == FamilyRelation.me,
+        (p) => p.relation == FamilyRelation.me,
         orElse: () => profiles.isNotEmpty ? profiles.first : throw StateError('no profiles'),
       );
       _handled = true;
       ref.read(profileRepositoryProvider).setActive(primary.id).then((_) {
         ref.read(programsForActiveProfileProvider);
+        // ignore: use_build_context_synchronously
         if (mounted) context.go(KvlRoute.home);
       });
     });

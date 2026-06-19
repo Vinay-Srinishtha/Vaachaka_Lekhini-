@@ -283,7 +283,7 @@ class _ShellPageState extends ConsumerState<_ShellPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(storeItemsProvider);
+      ref.read(redeemedItemIdsProvider);
       ref.read(leaderboardProvider(const LeaderboardFilter(sort: LeaderboardSort.streak)));
       ref.read(leaderboardProvider(const LeaderboardFilter(sort: LeaderboardSort.totalChants)));
       _checkLaunchNotification();
@@ -324,7 +324,6 @@ class _ShellPageState extends ConsumerState<_ShellPage> {
     final cfg = ref.watch(remoteConfigProvider).value ?? RemoteConfig.empty;
     final isCommunity = shell.currentIndex == _communityTab;
     final isStore = shell.currentIndex == _storeTab;
-    final points = ref.watch(rewardTotalProvider).value ?? 0;
     final hidden = <int>{
       if (!cfg.boolFlag(RemoteConfigKeys.communityTab, fallback: true))
         _communityTab,
@@ -376,8 +375,7 @@ class _ShellPageState extends ConsumerState<_ShellPage> {
                     : null,
                 topGapColor: isCommunity || isStore ? Colors.black : null,
                 leading: isStore
-                    ? _RewardHistoryChip(
-                        points: points,
+                    ? _RewardHistoryChipConnected(
                         onTap: () => context.push(KvlRoute.rewardHistory),
                       )
                     : null,
@@ -396,6 +394,19 @@ class _ShellPageState extends ConsumerState<_ShellPage> {
         ),
       ),
     );
+  }
+}
+
+/// Isolated ConsumerWidget so only the chip rebuilds on reward balance changes,
+/// not the entire shell scaffold.
+class _RewardHistoryChipConnected extends ConsumerWidget {
+  const _RewardHistoryChipConnected({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final points = ref.watch(rewardTotalProvider).value ?? 0;
+    return _RewardHistoryChip(points: points, onTap: onTap);
   }
 }
 

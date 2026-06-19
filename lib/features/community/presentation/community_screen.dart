@@ -332,10 +332,12 @@ class _Pod extends StatelessWidget {
           child: Text(
             friend.name,
             textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: KvlText.caption(10.5).copyWith(fontWeight: FontWeight.w600),
           ),
         ),
-        Text(metric, style: KvlText.muted(10)),
+        Text(metric, maxLines: 1, overflow: TextOverflow.ellipsis, style: KvlText.muted(10)),
       ],
     );
   }

@@ -310,11 +310,8 @@ class _BulletinState extends State<_Bulletin>
     duration: const Duration(seconds: 28),
   )..repeat();
 
-  Timer? _autoTimer;
-
   @override
   void dispose() {
-    _autoTimer?.cancel();
     _ctrl.dispose();
     super.dispose();
   }

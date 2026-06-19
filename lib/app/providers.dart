@@ -211,6 +211,7 @@ final accountHydrationProvider = Provider<void>((ref) {
     Future(() async {
       final account = snapshot['account'];
       if (account is! Map) return;
+
       final accountMap = Map<String, dynamic>.from(account);
       final accountId = accountMap['id'] as String?;
       if (accountId == null) return;
@@ -314,8 +315,7 @@ final accountHydrationProvider = Provider<void>((ref) {
               );
         }
       }
-
-    });
+    }).catchError((Object e) { debugPrint('[accountHydration] error: $e'); });
   });
 });
 
@@ -353,7 +353,7 @@ final rewardTotalProvider = StreamProvider<int>((ref) async* {
           () => ref
               .read(rewardRepositoryProvider)
               .reconcileFromServer(profile.id, serverBal),
-        );
+        ).catchError((Object e) { debugPrint('[rewardTotal] reconcile error: $e'); });
 
         // Program totals reconciliation — server is canonical for totalChants/totalWritings
         final programs = (map['programs'] as List<dynamic>?) ?? [];
@@ -370,7 +370,7 @@ final rewardTotalProvider = StreamProvider<int>((ref) async* {
             () => ref
                 .read(programRepositoryProvider)
                 .reconcileFromServer(programId, serverChants, serverWritings),
-          );
+          ).catchError((Object e) { debugPrint('[rewardTotal] program reconcile error: $e'); });
         }
         break;
       }
@@ -415,7 +415,7 @@ final profileLanguageSyncProvider = Provider<void>((ref) {
               mantraLanguage: settings.mantraLanguageCode,
             ),
           ),
-    );
+    ).catchError((Object e) { debugPrint('[profileLanguageSync] error: $e'); });
   });
 });
 

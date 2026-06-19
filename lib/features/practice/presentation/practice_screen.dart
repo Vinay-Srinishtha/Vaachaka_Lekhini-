@@ -952,7 +952,11 @@ class _DashboardHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(activeProfileProvider).value;
     final programs = ref.watch(programsForActiveProfileProvider).value ?? const [];
-    final completed = programs.where((p) => p.isGoalReached).length;
+    final completed = ref.watch(
+      programsForActiveProfileProvider.select(
+        (v) => v.value?.where((p) => p.isGoalReached).length ?? 0,
+      ),
+    );
 
     return Row(
       children: [

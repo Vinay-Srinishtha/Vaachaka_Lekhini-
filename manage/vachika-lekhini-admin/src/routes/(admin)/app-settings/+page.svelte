@@ -13,6 +13,14 @@
 
 	let shareQuoteImageUrl = $state<string>(s.share_quote_image_url ?? '');
 	$effect.pre(() => { shareQuoteImageUrl = s.share_quote_image_url ?? ''; });
+
+	const shareQuoteTextPlaceholder = [
+		'"{quote}"',
+		'— {attribution}',
+		'',
+		'Shared via Vachika Lekhini 🙏',
+		'{app_link}'
+	].join('\n');
 </script>
 
 <!-- Header + Save -->
@@ -224,7 +232,7 @@
 					id="share_quote_text"
 					name="share_quote_text"
 					rows="5"
-					placeholder="&quot;{quote}&quot;&#10;— {attribution}&#10;&#10;Shared via Vachika Lekhini 🙏&#10;{app_link}"
+					placeholder={shareQuoteTextPlaceholder}
 					class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 resize-none"
 				>{s.share_quote_text ?? ''}</textarea>
 				<p class="text-[10px] text-slate-400 leading-relaxed">

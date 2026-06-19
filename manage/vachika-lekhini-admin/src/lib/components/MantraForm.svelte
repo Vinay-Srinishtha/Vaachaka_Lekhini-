@@ -100,6 +100,12 @@
 	});
 
 	let submitting = $state(false);
+	const shareTextPlaceholder = [
+		'🙏 I am chanting {mantra_name}!',
+		'Count: {chant_count}',
+		'',
+		'Join me: {app_link}'
+	].join('\n');
 </script>
 
 <form
@@ -373,7 +379,7 @@
 						<textarea
 							name="shareText"
 							rows="4"
-							placeholder="🙏 I am chanting {mantra_name}!&#10;Count: {chant_count}&#10;&#10;Join me: {app_link}"
+							placeholder={shareTextPlaceholder}
 							class="w-full rounded-lg border border-slate-200 px-2.5 py-2 text-xs font-mono focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400 resize-none"
 						>{value.shareText ?? ''}</textarea>
 						<p class="mt-1 text-[10px] text-slate-400">

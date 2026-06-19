@@ -2,7 +2,14 @@
 	import { Upload, X, CheckCircle, Trash2, Music } from '@lucide/svelte';
 
 	interface Props {
-		category: 'mantra-audio' | 'store-image' | 'mantra-image' | 'mantra-preview';
+		category:
+			| 'mantra-audio'
+			| 'store-image'
+			| 'mantra-image'
+			| 'mantra-preview'
+			| 'mantra-share'
+			| 'quote-image'
+			| 'share-quote';
 		targetId: string;
 		accept: string;
 		buttonLabel: string;

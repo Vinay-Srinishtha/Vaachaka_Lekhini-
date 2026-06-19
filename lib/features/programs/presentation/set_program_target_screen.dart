@@ -131,7 +131,7 @@ class _SetProgramTargetScreenState
         return;
       }
 
-      await ref
+      final program = await ref
           .read(programRepositoryProvider)
           .create(
             memberId: profile.id,
@@ -139,6 +139,10 @@ class _SetProgramTargetScreenState
             targetWritings: _writings,
             targetDays: _days,
           );
+      if (!mounted) return;
+      // Go directly to the practice counter for this program.
+      context.go('${KvlRoute.practice}/${program.id}');
+      return;
     } catch (e, st) {
       debugPrint('[SetProgramTarget] create failed: $e\n$st');
       if (!mounted) return;
@@ -156,11 +160,6 @@ class _SetProgramTargetScreenState
       );
       return;
     }
-
-    // Navigate only after the local write succeeds — kept outside the try so
-    // a GoRouter exception doesn't masquerade as a program-creation failure.
-    if (!mounted) return;
-    context.go(KvlRoute.programs);
   }
 
   @override

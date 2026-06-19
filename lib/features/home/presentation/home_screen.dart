@@ -400,12 +400,22 @@ class _ProgramCarouselState extends State<_ProgramCarousel> {
   @override
   void initState() {
     super.initState();
-    // When there are programs, start mid-sequence so backward scroll feels
-    // natural. When empty (only the add card), start at 0.
-    final initial = widget.programs.isEmpty ? 0 : widget.programs.length * 500;
-    _ctrl = PageController(initialPage: initial);
-    _page = _totalItems == 1 ? 0 : initial % _totalItems;
-    // Only auto-scroll if there's more than one card.
+    _ctrl = PageController(initialPage: 0);
+    _page = 0;
+    _startTimer();
+  }
+
+  @override
+  void didUpdateWidget(_ProgramCarousel old) {
+    super.didUpdateWidget(old);
+    if (old.programs.length != widget.programs.length) {
+      _startTimer();
+    }
+  }
+
+  void _startTimer() {
+    _autoTimer?.cancel();
+    _autoTimer = null;
     if (_totalItems > 1) {
       _autoTimer = Timer.periodic(const Duration(seconds: 3), (_) {
         if (!_ctrl.hasClients) return;

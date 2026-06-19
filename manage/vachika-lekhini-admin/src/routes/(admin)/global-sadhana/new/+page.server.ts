@@ -4,6 +4,7 @@ import { GlobalSadhanaStatus } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '$lib/server/prisma';
 import { requireRole } from '$lib/server/auth';
+import { uploadBufferToS3 } from '$lib/server/s3';
 
 const schema = z.object({
 	title: z.string().min(1),
@@ -14,7 +15,6 @@ const schema = z.object({
 	target_count: z.coerce.number().int().positive(),
 	start_at: z.string().refine((s) => !isNaN(Date.parse(s)), 'Invalid date'),
 	end_at: z.string().optional(),
-	image_url: z.string().url().optional().or(z.literal('')),
 	is_sponsored: z.coerce.boolean().default(false),
 	status: z.enum(['draft', 'published', 'active']).default('draft'),
 	participation_mode: z.enum(['voice', 'handwriting', 'both']).default('both'),
@@ -36,11 +36,23 @@ export const actions: Actions = {
 		try {
 			requireRole(event, 'editor');
 			const raw = await event.request.formData();
+			// Extract the file before building the plain object for schema parsing
+			const imageFile = raw.get('image');
+			raw.delete('image');
 			const parse = schema.safeParse(Object.fromEntries(raw));
 			if (!parse.success) {
 				return fail(422, { error: 'Validation failed', values: Object.fromEntries(raw) });
 			}
 			const d = parse.data;
+
+			// Upload image before creating so we have the URL ready
+			let imageUrl: string | null = null;
+			if (imageFile instanceof File && imageFile.size > 0) {
+				const buffer = Buffer.from(await imageFile.arrayBuffer());
+				const key = `global-sadhana/${crypto.randomUUID()}`;
+				imageUrl = await uploadBufferToS3({ key, buffer, contentType: imageFile.type || 'image/jpeg' });
+			}
+
 			const sadhana = await prisma.globalSadhana.create({
 				data: {
 					title: d.title,
@@ -51,7 +63,7 @@ export const actions: Actions = {
 					targetCount: d.target_count,
 					startAt: new Date(d.start_at),
 					endAt: d.end_at ? new Date(d.end_at) : null,
-					imageUrl: d.image_url || null,
+					imageUrl,
 					isSponsored: d.is_sponsored,
 					status: d.status as GlobalSadhanaStatus,
 					participationMode: d.participation_mode,

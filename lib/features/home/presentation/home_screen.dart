@@ -972,128 +972,196 @@ class _GlobalSadhanaSection extends ConsumerWidget {
   const _GlobalSadhanaSection({required this.compact});
   final bool compact;
 
+  static const _accent = Color(0xFFE8650A);
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sadhanas = ref.watch(activeGlobalSadhanaProvider).value ?? [];
     if (sadhanas.isEmpty) return const SizedBox.shrink();
 
-    // Show the most prominent one (sponsored first, then most recent).
     final sadhana = sadhanas.first;
+    final hasImage = sadhana.imageUrl != null && sadhana.imageUrl!.isNotEmpty;
 
     return Padding(
       padding: EdgeInsets.only(bottom: compact ? KvlSpacing.xs : KvlSpacing.sm),
       child: GestureDetector(
         onTap: () => context.push('${KvlRoute.globalSadhana}/${sadhana.id}'),
         child: Container(
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFFFFF8E8), Color(0xFFFFEED0)],
-            ),
+            color: const Color(0xFFFFF8E8),
             borderRadius: KvlRadius.brLG,
             border: Border.all(
-              color: const Color(0xFFE8650A).withValues(alpha: 0.35),
+              color: _accent.withValues(alpha: 0.30),
               width: 1.4,
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFE8650A).withValues(alpha: 0.08),
+                color: _accent.withValues(alpha: 0.08),
                 blurRadius: 10,
                 offset: const Offset(0, 3),
               ),
             ],
           ),
-          padding: EdgeInsets.all(compact ? KvlSpacing.sm + 2 : KvlSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: compact ? 36 : 40,
-                    height: compact ? 36 : 40,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE8650A).withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.language_rounded,
-                      color: const Color(0xFFE8650A),
-                      size: compact ? 18 : 20,
-                    ),
-                  ),
-                  const SizedBox(width: KvlSpacing.sm),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '🕉  Global Sadhana',
-                          style: KvlText.caption(compact ? 10 : 11).copyWith(
-                            color: const Color(0xFFE8650A),
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.4,
+              // ── Banner image (if available) ─────────────────────────────
+              if (hasImage)
+                SizedBox(
+                  height: compact ? 100 : 120,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      CachedNetworkImage(
+                        imageUrl: sadhana.imageUrl!,
+                        fit: BoxFit.cover,
+                        placeholder: (ctx, url) => Container(
+                          color: _accent.withValues(alpha: 0.08),
+                        ),
+                        errorWidget: (ctx, url, err) => Container(
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Color(0xFFFFF0D4), Color(0xFFFFDBA8)],
+                            ),
+                          ),
+                          child: Icon(Icons.public_rounded,
+                              color: _accent.withValues(alpha: 0.35), size: 40),
+                        ),
+                      ),
+                      // Gradient scrim so text is legible on any image
+                      Positioned(
+                        left: 0, right: 0, bottom: 0,
+                        height: 52,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.black.withValues(alpha: 0),
+                                Colors.black.withValues(alpha: 0.45),
+                              ],
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 1),
+                      ),
+                      // Label over the image
+                      Positioned(
+                        left: compact ? 10 : 14,
+                        bottom: compact ? 8 : 10,
+                        right: compact ? 10 : 14,
+                        child: Row(
+                          children: [
+                            Text(
+                              '🕉  Global Sadhana',
+                              style: KvlText.caption(compact ? 10 : 11).copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.4,
+                                shadows: [Shadow(blurRadius: 4, color: Colors.black38)],
+                              ),
+                            ),
+                            const Spacer(),
+                            Container(
+                              width: compact ? 26 : 30,
+                              height: compact ? 26 : 30,
+                              decoration: const BoxDecoration(
+                                color: _accent,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(Icons.arrow_forward_rounded,
+                                  color: Colors.white, size: compact ? 13 : 15),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // ── Body (title + progress) ─────────────────────────────────
+              Padding(
+                padding: EdgeInsets.all(compact ? KvlSpacing.sm + 2 : KvlSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Header row (only when no image banner)
+                    if (!hasImage)
+                      Row(
+                        children: [
+                          Container(
+                            width: compact ? 36 : 40,
+                            height: compact ? 36 : 40,
+                            decoration: BoxDecoration(
+                              color: _accent.withValues(alpha: 0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.public_rounded,
+                                color: _accent, size: compact ? 18 : 20),
+                          ),
+                          const SizedBox(width: KvlSpacing.sm),
+                          Expanded(
+                            child: Text(
+                              '🕉  Global Sadhana',
+                              style: KvlText.caption(compact ? 10 : 11).copyWith(
+                                color: _accent,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            width: compact ? 28 : 32,
+                            height: compact ? 28 : 32,
+                            decoration: const BoxDecoration(
+                              color: _accent,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.arrow_forward_rounded,
+                                color: Colors.white, size: compact ? 14 : 16),
+                          ),
+                        ],
+                      ),
+                    if (!hasImage) const SizedBox(height: KvlSpacing.xs),
+                    Text(
+                      sadhana.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: KvlText.ui(compact ? 13 : 14, FontWeight.w700)
+                          .copyWith(color: KvlColors.ink),
+                    ),
+                    const SizedBox(height: KvlSpacing.sm),
+                    // Progress bar
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: sadhana.progress,
+                        minHeight: 6,
+                        backgroundColor: _accent.withValues(alpha: 0.12),
+                        valueColor: const AlwaysStoppedAnimation<Color>(_accent),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
                         Text(
-                          sadhana.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: KvlText.ui(compact ? 13 : 14, FontWeight.w700)
-                              .copyWith(color: KvlColors.ink),
+                          '${IndianNumberFormat.format(sadhana.currentCount)} / ${IndianNumberFormat.format(sadhana.targetCount)}',
+                          style: KvlText.caption(compact ? 10 : 11)
+                              .copyWith(color: KvlColors.inkSoft),
+                        ),
+                        Text(
+                          '${sadhana.participantCount} joined',
+                          style: KvlText.caption(compact ? 10 : 11)
+                              .copyWith(color: KvlColors.inkSoft),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(width: KvlSpacing.xs),
-                  Container(
-                    width: compact ? 28 : 32,
-                    height: compact ? 28 : 32,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFE8650A),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.arrow_forward_rounded,
-                      color: Colors.white,
-                      size: compact ? 14 : 16,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: KvlSpacing.sm),
-              // Progress bar
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: sadhana.progress,
-                  minHeight: 6,
-                  backgroundColor:
-                      const Color(0xFFE8650A).withValues(alpha: 0.12),
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                    Color(0xFFE8650A),
-                  ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 4),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '${IndianNumberFormat.format(sadhana.currentCount)} / ${IndianNumberFormat.format(sadhana.targetCount)}',
-                    style: KvlText.caption(compact ? 10 : 11).copyWith(
-                      color: KvlColors.inkSoft,
-                    ),
-                  ),
-                  Text(
-                    '${sadhana.participantCount} joined',
-                    style: KvlText.caption(compact ? 10 : 11).copyWith(
-                      color: KvlColors.inkSoft,
-                    ),
-                  ),
-                ],
               ),
             ],
           ),

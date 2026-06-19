@@ -61,6 +61,16 @@
 		{@const pct = progressPct(s.currentCount, s.targetCount)}
 		<div class="bg-white rounded-xl border border-slate-200 p-5">
 			<div class="flex flex-wrap items-start justify-between gap-3">
+				<!-- Thumbnail -->
+				<div class="shrink-0">
+					{#if s.imageUrl}
+						<img src={s.imageUrl} alt={s.title} class="w-14 h-14 rounded-lg object-cover" />
+					{:else}
+						<div class="w-14 h-14 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400">
+							<Globe size={24} />
+						</div>
+					{/if}
+				</div>
 				<!-- Left: info -->
 				<div class="flex-1 min-w-0">
 					<div class="flex items-center gap-2 flex-wrap">

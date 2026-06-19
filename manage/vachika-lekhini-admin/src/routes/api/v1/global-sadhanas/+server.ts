@@ -11,7 +11,7 @@ import { prisma } from '$lib/server/prisma';
 export const GET: RequestHandler = async ({ url }) => {
 	// Return both active and published sadhanas so Flutter sees newly-published programs
 	const sadhanas = await prisma.globalSadhana.findMany({
-		where: { status: { in: ['draft', 'active', 'published'] as never[] } },
+		where: { status: { in: ['active', 'published'] as never[] } },
 		orderBy: [{ isSponsored: 'desc' }, { startAt: 'desc' }],
 		select: {
 			id: true,

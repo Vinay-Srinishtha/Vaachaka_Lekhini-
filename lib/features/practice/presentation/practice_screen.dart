@@ -197,8 +197,6 @@ class _PracticeDashboardView extends ConsumerState<_PracticeDashboard> {
                     // ── Quick actions ─────────────────────────────────────────
                     _ActionsRow(
                       compact: compact,
-                      onChangeMantra: () =>
-                          setState(() => _showProgramPicker = !_showProgramPicker),
                       onSessionStats: () => context.push(
                         '${KvlRoute.dailyProgress}/${program.id}',
                       ),
@@ -578,43 +576,24 @@ class _StatChip extends StatelessWidget {
 class _ActionsRow extends StatelessWidget {
   const _ActionsRow({
     required this.compact,
-    required this.onChangeMantra,
     required this.onSessionStats,
   });
 
   final bool compact;
-  final VoidCallback onChangeMantra;
   final VoidCallback onSessionStats;
 
   @override
   Widget build(BuildContext context) {
     final h = compact ? 50.0 : 56.0;
-    return Row(
-      children: [
-        Expanded(
-          child: _ActionTile(
-            height: h,
-            icon: Icons.music_note_rounded,
-            iconBg: KvlColors.primarySoft,
-            iconColor: KvlColors.primaryDeep,
-            label: 'Change Mantra',
-            compact: compact,
-            onTap: onChangeMantra,
-          ),
-        ),
-        const SizedBox(width: KvlSpacing.md),
-        Expanded(
-          child: _ActionTile(
-            height: h,
-            icon: Icons.bar_chart_rounded,
-            iconBg: KvlColors.accentSoft,
-            iconColor: KvlColors.accent,
-            label: context.l10n.sessionStats,
-            compact: compact,
-            onTap: onSessionStats,
-          ),
-        ),
-      ],
+    // "Change Mantra" was removed — single-mantra launch. Session stats only.
+    return _ActionTile(
+      height: h,
+      icon: Icons.bar_chart_rounded,
+      iconBg: KvlColors.accentSoft,
+      iconColor: KvlColors.accent,
+      label: context.l10n.sessionStats,
+      compact: compact,
+      onTap: onSessionStats,
     );
   }
 }

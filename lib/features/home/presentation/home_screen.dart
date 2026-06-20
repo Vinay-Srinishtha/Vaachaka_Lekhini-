@@ -48,11 +48,9 @@ class HomeScreen extends ConsumerWidget {
         : context.l10n.welcomeGreetingUser(profile.name.trim());
     final subline = isLoadingPrograms
         ? context.l10n.homeSublineEmpty
-        : todayTotal > 0
-            ? 'Today you chanted ${IndianNumberFormat.format(todayTotal)} times'
-            : activePrograms.isEmpty
-                ? context.l10n.homeSublineEmpty
-                : '${activePrograms.length} Sadhana${activePrograms.length == 1 ? '' : 's'} Active';
+        : (activePrograms.isEmpty && todayTotal == 0)
+            ? context.l10n.homeSublineEmpty
+            : 'Today you chanted ${IndianNumberFormat.format(todayTotal)} times';
     final points = ref.watch(rewardTotalProvider).value ?? 0;
     return SafeArea(
       top: false,

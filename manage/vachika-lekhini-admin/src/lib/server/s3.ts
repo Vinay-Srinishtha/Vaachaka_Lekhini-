@@ -85,11 +85,25 @@ function validateMediaInput(args: {
 		args.category === 'global-sadhana-image';
 	const maxBytes = isImage ? MAX_IMAGE_BYTES : MAX_AUDIO_BYTES;
 
+	// The Flutter app renders these via Image.network / CachedNetworkImage,
+	// which only decode JPEG, PNG, WEBP and GIF. AVIF/HEIC upload fine to S3
+	// but show as broken images in-app — reject them at upload time.
+	const RENDERABLE_IMAGE_TYPES = new Set([
+		'image/jpeg',
+		'image/png',
+		'image/webp',
+		'image/gif'
+	]);
 	const typeOk = isImage
-		? args.contentType.startsWith(IMAGE_PREFIX)
+		? RENDERABLE_IMAGE_TYPES.has(args.contentType)
 		: AUDIO_TYPES.has(args.contentType);
 	if (!typeOk) {
-		throw error(400, isImage ? 'Upload any image file (JPG, PNG, WEBP, GIF, AVIF, etc.).' : 'Upload an MP3 or WAV audio file.');
+		throw error(
+			400,
+			isImage
+				? 'Unsupported image format. Please upload a JPG, PNG, WEBP or GIF (AVIF/HEIC are not supported).'
+				: 'Upload an MP3 or WAV audio file.'
+		);
 	}
 	if (!args.fileName.trim()) throw error(400, 'File name is required.');
 	if (!Number.isFinite(args.size) || args.size <= 0) throw error(400, 'Upload file is empty.');
@@ -104,9 +118,13 @@ function keyPrefix(category: UploadCategory, slug: string) {
 	if (category === 'mantra-image') return `mantras/images/main/${safeSlug}`;
 	if (category === 'mantra-preview') return `mantras/images/preview/${safeSlug}`;
 	if (category === 'mantra-share') return `mantras/images/share/${safeSlug}`;
-	if (category === 'quote-image') return `quotes/images/${safeSlug}`;
-	if (category === 'share-quote') return `quotes/share/${safeSlug}`;
-	if (category === 'global-sadhana-image') return `global-sadhana/images/${safeSlug}`;
+	// NOTE: keep every image under a prefix the bucket policy already exposes
+	// for public read (store/images/*, mantras/images/*, quotations/*).
+	// Quote + global-sadhana media live under those prefixes so they serve
+	// publicly without a bucket-policy change.
+	if (category === 'quote-image') return `quotations/images/${safeSlug}`;
+	if (category === 'share-quote') return `quotations/share/${safeSlug}`;
+	if (category === 'global-sadhana-image') return `mantras/images/global-sadhana/${safeSlug}`;
 	return `store/images/${safeSlug}`;
 }
 

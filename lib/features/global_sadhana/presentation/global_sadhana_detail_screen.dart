@@ -339,7 +339,6 @@ class _GlobalSadhanaDetailScreenState
             KvlButton(
               label: '🧘 Continue Practice',
               onPressed: () {
-                // Find a program for this mantra and navigate to practice.
                 final programs = ref
                     .read(programsForActiveProfileProvider)
                     .value
@@ -350,11 +349,10 @@ class _GlobalSadhanaDetailScreenState
                     .toList();
                 if (programs != null && programs.isNotEmpty) {
                   context.push('${KvlRoute.practice}/${programs.first.id}');
+                } else if (sadhana.voiceAllowed) {
+                  context.push('${KvlRoute.voiceTraining}/${sadhana.mantraId}');
                 } else {
-                  // No program — prompt to create one.
-                  context.push(
-                    '${KvlRoute.setTargetWritings}/${sadhana.mantraId}',
-                  );
+                  context.push('${KvlRoute.handwritingWrite}/${sadhana.mantraId}');
                 }
               },
             ),

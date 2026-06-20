@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { enhance } from '$app/forms';
 	import Modal from '$lib/components/Modal.svelte';
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 	import MediaUploadField from '$lib/components/MediaUploadField.svelte';
@@ -11,11 +12,11 @@
 	const v = $derived(form?.values ?? {});
 	let showDelete = $state(false);
 	let deleting = $state(false);
+	let saving = $state(false);
 	let selectedStatus = $state<string>(v.status ?? s.status);
 	let imageUrl = $state<string | null>(s.imageUrl ?? null);
 
 	function close() { goto('/global-sadhana', { keepFocus: true, noScroll: true }); }
-	function handleSuccess() { toasts.show('Global Sadhana updated'); close(); }
 
 	const pct = s.targetCount > 0 ? Math.min(100, Math.round((s.currentCount / s.targetCount) * 100)) : 0;
 	const fmt = (n: number) => n.toLocaleString('en-IN');
@@ -44,7 +45,7 @@
 	}}
 />
 
-<Modal open title="Edit Global Sadhana" subtitle={s.title} size="xl" formId="sadhana-form" saveLabel="Save Changes" onClose={close}>
+<Modal open title="Edit Global Sadhana" subtitle={s.title} size="xl" formId="sadhana-form" saveLabel={saving ? 'Saving…' : 'Save Changes'} onClose={close}>
 	{#snippet headerLeft()}
 		<button type="button" onclick={() => showDelete = true} class="inline-flex items-center gap-1.5 text-sm text-red-400 hover:text-red-300 font-medium transition-colors">
 			<Trash2 size={14} /> Delete
@@ -107,7 +108,20 @@
 		</details>
 	{/if}
 
-	<form id="sadhana-form" method="POST" action="?/save" enctype="multipart/form-data" onsubmit={() => handleSuccess()} class="space-y-5">
+	<form id="sadhana-form" method="POST" action="?/save" enctype="multipart/form-data"
+		use:enhance={() => {
+			saving = true;
+			return async ({ result, update }) => {
+				saving = false;
+				if (result.type === 'success' || (result.type === 'redirect')) {
+					toasts.show('Global Sadhana updated');
+					close();
+				} else {
+					await update();
+				}
+			};
+		}}
+		class="space-y-5">
 		<section class="card p-4 space-y-4">
 			<p class="section-label">Program Details</p>
 			<div>

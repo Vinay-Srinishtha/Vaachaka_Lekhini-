@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { enhance } from '$app/forms';
 	import Modal from '$lib/components/Modal.svelte';
 	import MediaUploadField from '$lib/components/MediaUploadField.svelte';
 	import { toasts } from '$lib/stores/toast';
@@ -9,6 +10,7 @@
 
 	let selectedStatus = $state<string>(v.status ?? 'active');
 	let imageUrl = $state<string | null>(null);
+	let saving = $state(false);
 
 	// Default start time = now (in datetime-local format: YYYY-MM-DDTHH:mm)
 	function nowLocal() {
@@ -18,14 +20,26 @@
 	}
 
 	function close() { goto('/global-sadhana', { keepFocus: true, noScroll: true }); }
-	function handleSuccess() { toasts.show('Global Sadhana created'); close(); }
 </script>
 
-<Modal open title="New Global Sadhana" subtitle="Create a community spiritual initiative" size="lg" formId="sadhana-form" saveLabel="Create Global Sadhana" onClose={close}>
+<Modal open title="New Global Sadhana" subtitle="Create a community spiritual initiative" size="lg" formId="sadhana-form" saveLabel={saving ? 'Creating…' : 'Create Global Sadhana'} onClose={close}>
 	{#if form?.error}
 		<p class="mb-4 text-sm text-red-600 bg-red-50 rounded-lg px-4 py-2">{form.error}</p>
 	{/if}
-	<form id="sadhana-form" method="POST" enctype="multipart/form-data" onsubmit={() => handleSuccess()} class="space-y-5">
+	<form id="sadhana-form" method="POST" enctype="multipart/form-data"
+		use:enhance={() => {
+			saving = true;
+			return async ({ result, update }) => {
+				saving = false;
+				if (result.type === 'redirect') {
+					toasts.show('Global Sadhana created');
+					close();
+				} else {
+					await update();
+				}
+			};
+		}}
+		class="space-y-5">
 		<!-- Basics -->
 		<section class="card p-4 space-y-4">
 			<p class="section-label">Program Details</p>

@@ -50,3 +50,4 @@ node_modules/
 # Claude Code memory
 memory/
 .vercel
+.claude/

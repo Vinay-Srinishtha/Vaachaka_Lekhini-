@@ -249,6 +249,7 @@ final accountHydrationProvider = Provider<void>((ref) {
         await ref.read(profileRepositoryProvider).upsertRemote(profile);
 
         final programs = member['programs'] as List<dynamic>? ?? const [];
+        final serverProgramIds = <String>{};
         for (final rawProgram in programs) {
           final program = Map<String, dynamic>.from(rawProgram as Map);
           final id = program['id'] as String?;
@@ -260,6 +261,7 @@ final accountHydrationProvider = Provider<void>((ref) {
               (program['target_writings'] as num?)?.toInt() ?? 1;
           final targetDays = (program['target_days'] as num?)?.toInt() ?? 1;
           if (id == null || mantraSlug == null) continue;
+          serverProgramIds.add(id);
           final startedAt =
               DateTime.tryParse(program['started_at'] as String? ?? '') ??
               DateTime.now();
@@ -297,6 +299,16 @@ final accountHydrationProvider = Provider<void>((ref) {
                       (program['total_writings'] as num?)?.toInt() ?? 0,
                 ),
               );
+        }
+
+        // Delete any local programs that no longer exist on the server.
+        final localPrograms = await ref
+            .read(programRepositoryProvider)
+            .listForProfile(memberId);
+        for (final local in localPrograms) {
+          if (!serverProgramIds.contains(local.id)) {
+            await ref.read(programRepositoryProvider).delete(local.id);
+          }
         }
 
         final redemptions =

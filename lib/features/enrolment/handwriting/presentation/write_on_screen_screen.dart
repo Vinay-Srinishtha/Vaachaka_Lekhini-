@@ -585,10 +585,22 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
       final progress = programs
           .where((p) => p.id == widget.programId)
           .fold<int>(0, (total, p) => total + p.totalProgress);
-      // Real global count: community DB total + unsaved session writings.
+      // If enrolled in an active Global Sadhana for this mantra, show that
+      // programme's live progress; otherwise fall back to the community total.
       final globalStats = ref.watch(globalStatsProvider(widget.mantraId)).value;
-      final globalCount =
-          (globalStats?.globalChantCount ?? 0) + _writingCount;
+      final sadhanas = ref.watch(activeGlobalSadhanaProvider).value ?? const [];
+      final gsRepo = ref.read(globalSadhanaRepositoryProvider);
+      int? enrolledGlobalCount;
+      for (final gs in sadhanas) {
+        if (gs.mantraId == widget.mantraId &&
+            gsRepo.cachedEnrollment(gs.id) != null) {
+          enrolledGlobalCount = gs.currentCount;
+          break;
+        }
+      }
+      final globalBase =
+          enrolledGlobalCount ?? (globalStats?.globalChantCount ?? 0);
+      final globalCount = globalBase + _writingCount;
       return _ProtoWriteScaffold(
         controller: _controller,
         guide: guide,

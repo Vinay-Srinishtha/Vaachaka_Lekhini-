@@ -189,8 +189,22 @@ class _BodyState extends ConsumerState<_Body> {
     final ringerMode =
         ref.watch(_ringerModeProvider).value ?? RingerMode.unknown;
     final statsAsync = ref.watch(globalStatsProvider(state.program.mantraId));
-    final globalCount =
-        (statsAsync.value?.globalChantCount ?? 0) + state.sessionCount;
+    // If the user is enrolled in an active Global Sadhana for this mantra, show
+    // that sadhana's live progress as the "Global" base instead of the broad
+    // community chant stat — this is the programme the user is contributing to.
+    final sadhanas = ref.watch(activeGlobalSadhanaProvider).value ?? const [];
+    final gsRepo = ref.read(globalSadhanaRepositoryProvider);
+    int? enrolledGlobalCount;
+    for (final gs in sadhanas) {
+      if (gs.mantraId == state.program.mantraId &&
+          gsRepo.cachedEnrollment(gs.id) != null) {
+        enrolledGlobalCount = gs.currentCount;
+        break;
+      }
+    }
+    final globalBase =
+        enrolledGlobalCount ?? (statsAsync.value?.globalChantCount ?? 0);
+    final globalCount = globalBase + state.sessionCount;
     final mantraLabel =
         mantra?.name.displayForLanguage(settings.languageCode) ??
         state.program.mantraId;

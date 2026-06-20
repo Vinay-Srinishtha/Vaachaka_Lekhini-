@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,7 +15,6 @@ import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'dart:math';
-import 'dart:typed_data';
 
 import '../../../app/providers.dart';
 import '../../../core/storage/repository.dart';
@@ -467,6 +467,19 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ],
           ),
+
+          if (kDebugMode) ...[
+            SettingsSection(
+              title: 'Developer',
+              children: [
+                SettingRow(
+                  icon: Icons.speed_rounded,
+                  label: 'Load Simulator',
+                  onTap: () => context.push(KvlRoute.simulator),
+                ),
+              ],
+            ),
+          ],
 
           const SizedBox(height: KvlSpacing.lg),
           KvlButton(

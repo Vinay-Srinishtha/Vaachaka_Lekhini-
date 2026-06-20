@@ -136,7 +136,7 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
         title: 'Writing Tips',
         bullets: const [
           '• Write clearly within the dotted guide area',
-          '• Tap ADD after each character to record it',
+          '• Each writing is accepted automatically — no need to tap ADD',
           '• Tap DONE / Complete Session when finished',
         ],
         initialDontShowAgain: dontShowAgain,
@@ -207,7 +207,7 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
   }
 
   // Minimum match score for any sample (reference or compare phase).
-  static const double _minMatchScore = 0.80;
+  static const double _minMatchScore = 0.30;
 
   Future<void> _validateAndSubmit() async {
     final png = await _controller.toPngBytes();

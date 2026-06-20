@@ -89,19 +89,18 @@ class HomeScreen extends ConsumerWidget {
                   profileCompletion: _profileCompletion(profile),
                 ),
                 SizedBox(height: headerGap),
-                // Bulletin — truly edge-to-edge regardless of SafeArea insets.
-                // We escape the column padding by measuring from MediaQuery so
-                // even devices with horizontal view-padding fill perfectly.
+                // Bulletin — truly edge-to-edge. OverflowBox lets the child
+                // exceed the Column's padded width so it spans the full screen
+                // width on BOTH edges (Transform alone left a gap on the right
+                // because layout constraints still clamped the child width).
                 Builder(
                   builder: (ctx) {
-                    final mq = MediaQuery.of(ctx);
-                    final leftOffset = mq.viewPadding.left + side;
-                    return Transform.translate(
-                      offset: Offset(-leftOffset, 0),
-                      child: SizedBox(
-                        width: mq.size.width * 1.5,
-                        child: const _Bulletin(),
-                      ),
+                    final w = MediaQuery.of(ctx).size.width;
+                    return OverflowBox(
+                      minWidth: w,
+                      maxWidth: w,
+                      alignment: Alignment.center,
+                      child: const _Bulletin(),
                     );
                   },
                 ),

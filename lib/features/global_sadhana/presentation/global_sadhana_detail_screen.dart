@@ -243,25 +243,65 @@ class _GlobalSadhanaDetailScreenState
           ),
 
           // Personal contribution (if enrolled)
-          if (isEnrolled && enrollment.myContribution > 0) ...[
+          if (isEnrolled) ...[
             const SizedBox(height: KvlSpacing.sm),
-            KvlCard(
-              child: Row(
-                children: [
-                  const Icon(Icons.person_rounded,
-                      color: KvlColors.primary, size: 20),
-                  const SizedBox(width: KvlSpacing.sm),
-                  Text('Your contribution:',
-                      style: KvlText.caption(13).copyWith(
-                          color: KvlColors.inkSoft)),
-                  const SizedBox(width: KvlSpacing.xs),
-                  Text(
-                    IndianNumberFormat.format(enrollment.myContribution),
-                    style: KvlText.ui(15, FontWeight.w700)
-                        .copyWith(color: KvlColors.primaryDeep),
-                  ),
-                ],
+            Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: KvlSpacing.md, vertical: KvlSpacing.sm),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    KvlColors.primaryDeep.withValues(alpha: 0.07),
+                    KvlColors.primary.withValues(alpha: 0.04),
+                  ],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+                borderRadius: KvlRadius.brMD,
+                border: Border.all(
+                    color: KvlColors.primary.withValues(alpha: 0.2)),
               ),
+              child: enrollment.myContribution > 0
+                  ? Row(
+                      children: [
+                        const Icon(Icons.volunteer_activism_rounded,
+                            color: KvlColors.primary, size: 20),
+                        const SizedBox(width: KvlSpacing.sm),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Your contribution',
+                                  style: KvlText.caption(11).copyWith(
+                                      color: KvlColors.inkSoft)),
+                              Text(
+                                IndianNumberFormat.format(
+                                    enrollment.myContribution),
+                                style: KvlText.ui(16, FontWeight.w800)
+                                    .copyWith(color: KvlColors.primaryDeep),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text('chants / writings',
+                            style: KvlText.caption(11)
+                                .copyWith(color: KvlColors.inkSoft)),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        const Icon(Icons.info_outline_rounded,
+                            color: KvlColors.primary, size: 18),
+                        const SizedBox(width: KvlSpacing.sm),
+                        Expanded(
+                          child: Text(
+                            'You\'re enrolled! Every chant and writing session automatically counts toward this goal.',
+                            style: KvlText.caption(12).copyWith(
+                                color: KvlColors.inkSoft, height: 1.4),
+                          ),
+                        ),
+                      ],
+                    ),
             ),
           ],
 

@@ -96,11 +96,19 @@ class HomeScreen extends ConsumerWidget {
                 Builder(
                   builder: (ctx) {
                     final w = MediaQuery.of(ctx).size.width;
-                    return OverflowBox(
-                      minWidth: w,
-                      maxWidth: w,
-                      alignment: Alignment.center,
-                      child: const _Bulletin(),
+                    // SizedBox bounds the vertical slot (bulletin is 34 tall);
+                    // OverflowBox widens the child to the full screen width so
+                    // it bleeds past the column padding on both edges.
+                    return SizedBox(
+                      height: 34,
+                      child: OverflowBox(
+                        minWidth: w,
+                        maxWidth: w,
+                        minHeight: 34,
+                        maxHeight: 34,
+                        alignment: Alignment.center,
+                        child: const _Bulletin(),
+                      ),
                     );
                   },
                 ),

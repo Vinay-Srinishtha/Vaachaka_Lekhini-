@@ -2,4 +2,28 @@ node_modules
 .svelte-kit
 build
 .output
+.netlify
+.wrangler
+
+# Prisma generated client (rebuilt on deploy)
+src/generated
+
+# Large local images not part of the app
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.gif
+
+# Lock files (Vercel uses its own install)
+package-lock.json
+bun.lock
+
+# Dev / OS
 .DS_Store
+Thumbs.db
+*.log
+*.timestamp-*
+
+# Scripts only used locally
+scripts

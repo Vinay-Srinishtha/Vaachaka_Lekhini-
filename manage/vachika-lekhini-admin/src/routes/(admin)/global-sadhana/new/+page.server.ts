@@ -3,8 +3,6 @@ import { fail, redirect, isRedirect } from '@sveltejs/kit';
 import { z } from 'zod';
 import { prisma } from '$lib/server/prisma';
 import { requireRole } from '$lib/server/auth';
-import { uploadBufferToS3 } from '$lib/server/s3';
-
 const schema = z.object({
 	title: z.string().min(1),
 	description: z.string().default(''),
@@ -17,7 +15,8 @@ const schema = z.object({
 	is_sponsored: z.coerce.boolean().default(false),
 	status: z.enum(['draft', 'published', 'active']).default('active'),
 	participation_mode: z.enum(['voice', 'handwriting', 'both']).default('both'),
-	instructions: z.string().optional()
+	instructions: z.string().optional(),
+	imageUrl: z.string().url().optional().or(z.literal(''))
 });
 
 export const load: PageServerLoad = async (event) => {
@@ -35,27 +34,13 @@ export const actions: Actions = {
 		try {
 			requireRole(event, 'editor');
 			const raw = await event.request.formData();
-			// Extract the file before building the plain object for schema parsing
-			const imageFile = raw.get('image');
-			raw.delete('image');
 			const parse = schema.safeParse(Object.fromEntries(raw));
 			if (!parse.success) {
 				return fail(422, { error: 'Validation failed', values: Object.fromEntries(raw) });
 			}
 			const d = parse.data;
 
-			// Upload image before creating so we have the URL ready
-			let imageUrl: string | null = null;
-			if (imageFile instanceof File && imageFile.size > 0) {
-				const buffer = Buffer.from(await imageFile.arrayBuffer());
-				imageUrl = await uploadBufferToS3({
-					category: 'global-sadhana-image',
-					slug: d.title,
-					fileName: imageFile.name || 'image.jpg',
-					contentType: imageFile.type || 'image/jpeg',
-					buffer
-				});
-			}
+			const imageUrl = d.imageUrl && d.imageUrl.length > 0 ? d.imageUrl : null;
 
 			const sadhana = await prisma.globalSadhana.create({
 				data: {

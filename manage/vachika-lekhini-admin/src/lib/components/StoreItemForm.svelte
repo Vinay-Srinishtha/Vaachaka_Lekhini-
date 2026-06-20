@@ -95,8 +95,9 @@
 				<input id="sortOrder" name="sortOrder" type="number" class="input" value={value.sortOrder} />
 			</FormField>
 		</div>
-		<FormField label="Image URL" name="imageUrl" error={fieldErrors.imageUrl}>
-			<input id="imageUrl" name="imageUrl" type="url" class="input" value={value.imageUrl ?? ''} placeholder="https://…" />
+		<div>
+			<p class="text-sm font-medium text-slate-700 mb-1.5">Image</p>
+			<input id="imageUrl" name="imageUrl" type="hidden" value={value.imageUrl ?? ''} />
 			<MediaUploadField
 				category="store-image"
 				targetId="imageUrl"
@@ -104,7 +105,8 @@
 				buttonLabel="Upload Image"
 				currentUrl={value.imageUrl}
 			/>
-		</FormField>
+			{#if fieldErrors.imageUrl}<p class="mt-1 text-xs text-red-600">{fieldErrors.imageUrl}</p>{/if}
+		</div>
 		<label class="flex items-center justify-between gap-4 mt-2 p-3 rounded-lg border cursor-pointer select-none
 			{value.isActive ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'}">
 			<div>

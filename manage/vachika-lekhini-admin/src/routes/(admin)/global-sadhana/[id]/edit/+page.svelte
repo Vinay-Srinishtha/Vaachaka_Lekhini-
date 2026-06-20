@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import Modal from '$lib/components/Modal.svelte';
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
+	import MediaUploadField from '$lib/components/MediaUploadField.svelte';
 	import { toasts } from '$lib/stores/toast';
 	import { Trash2, Users, Mic, PenLine, Trophy } from '@lucide/svelte';
 
@@ -10,22 +11,11 @@
 	const v = $derived(form?.values ?? {});
 	let showDelete = $state(false);
 	let deleting = $state(false);
-	let saving = $state(false);
-	let imagePreview = $state<string | null>(null);
-	let imageFileName = $state<string | null>(null);
 	let selectedStatus = $state<string>(v.status ?? s.status);
+	let imageUrl = $state<string | null>(s.imageUrl ?? null);
 
 	function close() { goto('/global-sadhana', { keepFocus: true, noScroll: true }); }
 	function handleSuccess() { toasts.show('Global Sadhana updated'); close(); }
-
-	function onImageChange(e: Event) {
-		const file = (e.target as HTMLInputElement).files?.[0];
-		if (!file) { imagePreview = null; imageFileName = null; return; }
-		imageFileName = file.name;
-		const reader = new FileReader();
-		reader.onload = (ev) => { imagePreview = ev.target?.result as string; };
-		reader.readAsDataURL(file);
-	}
 
 	const pct = s.targetCount > 0 ? Math.min(100, Math.round((s.currentCount / s.targetCount) * 100)) : 0;
 	const fmt = (n: number) => n.toLocaleString('en-IN');
@@ -191,22 +181,16 @@
 		<section class="card p-4 space-y-4">
 			<p class="section-label">Program Image</p>
 			<div>
-				<label class="block text-sm font-medium text-slate-700 mb-1.5" for="image">Banner Image</label>
-				<label for="image" class="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer p-6 text-center">
-					{#if imagePreview}
-						<img src={imagePreview} alt="Preview" class="max-h-48 rounded-lg object-contain" />
-						<span class="text-xs text-slate-500 mt-1">{imageFileName}</span>
-						<span class="text-xs text-brand-600 font-medium">Click to change</span>
-					{:else if s.imageUrl}
-						<img src={s.imageUrl} alt="Current image" class="max-h-48 rounded-lg object-contain" />
-						<span class="text-xs text-slate-500 mt-1">Current image · click to replace</span>
-					{:else}
-						<svg class="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-						<span class="text-sm text-slate-600 font-medium">Click or drag to upload an image</span>
-						<span class="text-xs text-slate-400">PNG, JPG, WebP up to 10MB</span>
-					{/if}
-				</label>
-				<input id="image" name="image" type="file" accept="image/*" class="sr-only" onchange={onImageChange} />
+				<label class="block text-sm font-medium text-slate-700 mb-1.5">Banner Image</label>
+				<input id="sadhana-image-url" name="imageUrl" type="hidden" value={imageUrl ?? ''} />
+				<MediaUploadField
+					category="global-sadhana-image"
+					targetId="sadhana-image-url"
+					accept="image/*"
+					buttonLabel="Upload Banner"
+					currentUrl={imageUrl}
+					onUrlChange={(url) => { imageUrl = url; }}
+				/>
 			</div>
 			<!-- Status radio cards -->
 			<div>

@@ -9,7 +9,8 @@
 			| 'mantra-preview'
 			| 'mantra-share'
 			| 'quote-image'
-			| 'share-quote';
+			| 'share-quote'
+			| 'global-sadhana-image';
 		targetId: string;
 		accept: string;
 		buttonLabel: string;
@@ -273,6 +274,20 @@
 					</div>
 					<p class="px-3 py-1.5 text-[10px] text-slate-400 border-t border-slate-100">Detail screen hero — 4:3 ratio, cover crop</p>
 
+				{:else if category === 'global-sadhana-image' || category === 'quote-image'}
+					<!-- Banner: 16:9 — mirrors app banner images -->
+					<div class="relative group" style="aspect-ratio: 16/9;">
+						<img src={existingUrl} alt="Banner image" class="w-full h-full object-cover" />
+						<div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100">
+							<button type="button" class="flex items-center gap-1.5 rounded-lg bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow hover:bg-white transition" onclick={() => fileInput?.click()}>
+								<Upload size={13} /> Replace
+							</button>
+							<button type="button" class="flex items-center gap-1.5 rounded-lg bg-red-600/90 px-3 py-1.5 text-xs font-semibold text-white shadow hover:bg-red-600 transition" onclick={removeExisting} disabled={removing}>
+								<Trash2 size={13} /> {removing ? 'Removing…' : 'Remove'}
+							</button>
+						</div>
+					</div>
+					<p class="px-3 py-1.5 text-[10px] text-slate-400 border-t border-slate-100">Banner image — 16:9, cover crop</p>
 				{:else}
 					<!-- store-image: 1:1 square — mirrors store grid thumbnails -->
 					<div class="relative group" style="aspect-ratio: 1/1;">
@@ -335,6 +350,11 @@
 						<img src={stagedPreviewUrl} alt="Staged" class="w-full h-full object-cover" />
 					</div>
 					<p class="px-3 py-1.5 text-[10px] text-green-600 font-medium border-t border-green-200">Preview — 4:3 hero crop</p>
+				{:else if category === 'global-sadhana-image' || category === 'quote-image'}
+					<div style="aspect-ratio: 16/9;">
+						<img src={stagedPreviewUrl} alt="Staged" class="w-full h-full object-cover" />
+					</div>
+					<p class="px-3 py-1.5 text-[10px] text-green-600 font-medium border-t border-green-200">Preview — 16:9 banner</p>
 				{:else}
 					<div style="aspect-ratio: 1/1;">
 						<img src={stagedPreviewUrl} alt="Staged" class="w-full h-full object-cover" />

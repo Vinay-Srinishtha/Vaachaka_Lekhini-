@@ -3,8 +3,6 @@ import { fail, error, redirect, isRedirect } from '@sveltejs/kit';
 import { z } from 'zod';
 import { prisma } from '$lib/server/prisma';
 import { requireRole } from '$lib/server/auth';
-import { uploadBufferToS3 } from '$lib/server/s3';
-
 const schema = z.object({
 	title: z.string().min(1),
 	description: z.string().default(''),
@@ -17,7 +15,8 @@ const schema = z.object({
 	is_sponsored: z.coerce.boolean().default(false),
 	status: z.enum(['draft', 'published', 'active', 'paused', 'completed', 'archived']),
 	participation_mode: z.enum(['voice', 'handwriting', 'both']).default('both'),
-	instructions: z.string().optional()
+	instructions: z.string().optional(),
+	imageUrl: z.string().url().optional().or(z.literal(''))
 });
 
 export const load: PageServerLoad = async (event) => {
@@ -79,27 +78,15 @@ export const actions: Actions = {
 			requireRole(event, 'editor');
 			const { id } = event.params;
 			const raw = await event.request.formData();
-			// Extract file before building plain object for schema parsing
-			const imageFile = raw.get('image');
-			raw.delete('image');
 			const parse = schema.safeParse(Object.fromEntries(raw));
 			if (!parse.success) {
 				return fail(422, { error: 'Validation failed', values: Object.fromEntries(raw) });
 			}
 			const d = parse.data;
 
-			// Upload new image if provided; otherwise keep existing
-			let imageUrl: string | null | undefined = undefined; // undefined = don't update
-			if (imageFile instanceof File && imageFile.size > 0) {
-				const buffer = Buffer.from(await imageFile.arrayBuffer());
-				imageUrl = await uploadBufferToS3({
-					category: 'global-sadhana-image',
-					slug: d.title,
-					fileName: imageFile.name || 'image.jpg',
-					contentType: imageFile.type || 'image/jpeg',
-					buffer
-				});
-			}
+			// imageUrl comes from the presigned upload (MediaUploadField writes the URL into the hidden input).
+			// Empty string means the user cleared the image → set to null.
+			const newImageUrl = d.imageUrl && d.imageUrl.length > 0 ? d.imageUrl : null;
 
 			await prisma.globalSadhana.update({
 				where: { id },
@@ -112,7 +99,7 @@ export const actions: Actions = {
 					targetCount: d.target_count,
 					startAt: new Date(d.start_at),
 					endAt: d.end_at ? new Date(d.end_at) : null,
-					...(imageUrl !== undefined ? { imageUrl } : {}),
+					imageUrl: newImageUrl,
 					isSponsored: d.is_sponsored,
 					status: d.status as never,
 					participationMode: d.participation_mode,

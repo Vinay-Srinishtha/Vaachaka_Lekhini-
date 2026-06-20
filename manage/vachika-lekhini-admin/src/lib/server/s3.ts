@@ -10,7 +10,8 @@ type UploadCategory =
 	| 'mantra-preview'
 	| 'mantra-share'
 	| 'quote-image'
-	| 'share-quote';
+	| 'share-quote'
+	| 'global-sadhana-image';
 
 // All common image formats — browser File API always reports a valid image/* MIME type.
 const IMAGE_PREFIX = 'image/';
@@ -80,7 +81,8 @@ function validateMediaInput(args: {
 		args.category === 'mantra-preview' ||
 		args.category === 'mantra-share' ||
 		args.category === 'quote-image' ||
-		args.category === 'share-quote';
+		args.category === 'share-quote' ||
+		args.category === 'global-sadhana-image';
 	const maxBytes = isImage ? MAX_IMAGE_BYTES : MAX_AUDIO_BYTES;
 
 	const typeOk = isImage
@@ -104,6 +106,7 @@ function keyPrefix(category: UploadCategory, slug: string) {
 	if (category === 'mantra-share') return `mantras/images/share/${safeSlug}`;
 	if (category === 'quote-image') return `quotes/images/${safeSlug}`;
 	if (category === 'share-quote') return `quotes/share/${safeSlug}`;
+	if (category === 'global-sadhana-image') return `global-sadhana/images/${safeSlug}`;
 	return `store/images/${safeSlug}`;
 }
 
@@ -151,7 +154,8 @@ export function isUploadCategory(value: string): value is UploadCategory {
 		value === 'mantra-preview' ||
 		value === 'mantra-share' ||
 		value === 'quote-image' ||
-		value === 'share-quote'
+		value === 'share-quote' ||
+		value === 'global-sadhana-image'
 	);
 }
 

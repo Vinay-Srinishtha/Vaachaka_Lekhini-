@@ -48,8 +48,13 @@ export const actions: Actions = {
 			let imageUrl: string | null = null;
 			if (imageFile instanceof File && imageFile.size > 0) {
 				const buffer = Buffer.from(await imageFile.arrayBuffer());
-				const key = `global-sadhana/${crypto.randomUUID()}`;
-				imageUrl = await uploadBufferToS3({ key, buffer, contentType: imageFile.type || 'image/jpeg' });
+				imageUrl = await uploadBufferToS3({
+					category: 'global-sadhana-image',
+					slug: d.title,
+					fileName: imageFile.name || 'image.jpg',
+					contentType: imageFile.type || 'image/jpeg',
+					buffer
+				});
 			}
 
 			const sadhana = await prisma.globalSadhana.create({

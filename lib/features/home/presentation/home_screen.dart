@@ -51,7 +51,6 @@ class HomeScreen extends ConsumerWidget {
         : (activePrograms.isEmpty && todayTotal == 0)
             ? context.l10n.homeSublineEmpty
             : 'Today you chanted ${IndianNumberFormat.format(todayTotal)} times';
-    final points = ref.watch(rewardTotalProvider).value ?? 0;
     return SafeArea(
       top: false,
       bottom: false,
@@ -90,8 +89,6 @@ class HomeScreen extends ConsumerWidget {
                   profileCompletion: _profileCompletion(profile),
                 ),
                 SizedBox(height: headerGap),
-                _RewardPointsTile(points: points, compact: compact),
-                SizedBox(height: gap),
                 // Bulletin — truly edge-to-edge regardless of SafeArea insets.
                 // We escape the column padding by measuring from MediaQuery so
                 // even devices with horizontal view-padding fill perfectly.
@@ -217,79 +214,6 @@ class _HomeHeader extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Reward points tile
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _RewardPointsTile extends StatelessWidget {
-  const _RewardPointsTile({required this.points, required this.compact});
-  final int points;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () => GoRouter.of(context).go(KvlRoute.store),
-      borderRadius: KvlRadius.brLG,
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: KvlSpacing.md,
-          vertical: compact ? KvlSpacing.xs : KvlSpacing.sm,
-        ),
-        decoration: BoxDecoration(
-          color: KvlColors.surfaceAlt,
-          borderRadius: KvlRadius.brLG,
-          border: Border.all(color: KvlColors.rule),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.workspace_premium_outlined,
-                color: KvlColors.primary, size: 22),
-            const SizedBox(width: KvlSpacing.sm),
-            Text(context.l10n.rewardPoints,
-                style: KvlText.caption(12).copyWith(color: KvlColors.inkSoft)),
-            const SizedBox(width: KvlSpacing.xs),
-            Text(
-              IndianNumberFormat.format(points),
-              style: KvlText.ui(14, FontWeight.w700).copyWith(color: KvlColors.ink),
-            ),
-            const SizedBox(width: KvlSpacing.md),
-            // Store CTA expands to fill the remaining width so the tile reads
-            // as a full-width action rather than a small floating pill.
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: KvlSpacing.md, vertical: KvlSpacing.xs),
-                decoration: BoxDecoration(
-                  borderRadius: KvlRadius.brPill,
-                  border: Border.all(color: KvlColors.primary, width: 1.4),
-                  color: KvlColors.surface,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.max,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      context.l10n.storeButton,
-                      style: KvlText.caption(12.5).copyWith(
-                        color: KvlColors.primaryDeep,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(width: KvlSpacing.xs),
-                    const Icon(Icons.arrow_forward_rounded,
-                        color: KvlColors.primaryDeep, size: 16),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

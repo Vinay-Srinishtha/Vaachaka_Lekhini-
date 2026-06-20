@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,7 +12,7 @@ import '../../profiles/domain/profile.dart';
 import 'auth_shared_widgets.dart';
 
 // ─────────────────────────────────────────────
-// Screen
+// Password-only signup — name + mobile + password (no OTP).
 // ─────────────────────────────────────────────
 
 class CreateAccountScreen extends ConsumerStatefulWidget {
@@ -27,30 +25,31 @@ class CreateAccountScreen extends ConsumerStatefulWidget {
 class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
   final _username = TextEditingController();
   final _mobile = TextEditingController();
+  final _password = TextEditingController();
+  final _confirm = TextEditingController();
   final _referral = TextEditingController();
-  // Language is chosen later in Settings; default new accounts to English.
   final String _language = 'en';
 
-  String _otp = '';
-  bool _otpSent = false;
   bool _busy = false;
+  bool _obscure = true;
   String? _error;
   String? _errorCode;
-  int _resendSeconds = 0;
-  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     _username.addListener(() => setState(() {}));
     _mobile.addListener(() => setState(() {}));
+    _password.addListener(() => setState(() {}));
+    _confirm.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
     _username.dispose();
     _mobile.dispose();
+    _password.dispose();
+    _confirm.dispose();
     _referral.dispose();
     super.dispose();
   }
@@ -59,24 +58,14 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
   String get _e164Mobile => '+91$_rawDigits';
   bool get _mobileValid => _rawDigits.length == 10;
   bool get _nameValid => _username.text.trim().isNotEmpty;
-  bool get _formValid => _nameValid && _mobileValid;
+  bool get _passwordValid => _password.text.length >= 8;
+  bool get _confirmValid => _confirm.text == _password.text;
+  bool get _formValid => _nameValid && _mobileValid && _passwordValid && _confirmValid;
   bool get _accountExists => _errorCode == 'account_exists';
-  bool get _accountBanned => _errorCode == 'account_banned' || _errorCode == 'account_suspended';
-  bool get _otpLocked => _errorCode == 'otp_max_attempts';
+  bool get _accountBanned =>
+      _errorCode == 'account_banned' || _errorCode == 'account_suspended';
 
-  void _startResendCountdown() {
-    _resendSeconds = 30;
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (!mounted) { t.cancel(); return; }
-      setState(() {
-        _resendSeconds--;
-        if (_resendSeconds <= 0) t.cancel();
-      });
-    });
-  }
-
-  Future<void> _sendOtp() async {
+  Future<void> _register() async {
     if (!_nameValid) {
       setState(() => _error = context.l10n.authErrorEnterName);
       return;
@@ -85,65 +74,26 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
       setState(() => _error = context.l10n.authErrorEnterMobileValid);
       return;
     }
-    setState(() { _busy = true; _error = null; _errorCode = null; });
-
-    // Block duplicate accounts: if this number is already registered, tell the user to log in.
-    final check = await ref.read(authRepositoryProvider).checkMobileRegistered(_e164Mobile);
-    if (!mounted) return;
-    if (check case Err(:final failure)) {
-      setState(() {
-        _busy = false;
-        _error = isAccountLevelError(failure.code)
-            ? null
-            : localizeAuthError(context, code: failure.code, fallback: failure.message);
-        _errorCode = failure.code;
-      });
+    if (!_passwordValid) {
+      setState(() => _error = 'Password must be at least 8 characters.');
       return;
     }
-    if (check case Ok(:final value) when value) {
-      setState(() { _busy = false; _error = context.l10n.authErrorAccountExists; _errorCode = 'account_exists'; });
-      return;
-    }
-
-    final result = await ref.read(authRepositoryProvider).sendOtp(_e164Mobile);
-    if (!mounted) return;
-    setState(() {
-      _busy = false;
-      switch (result) {
-        case Ok():
-          _otpSent = true;
-          _otp = '';
-          _startResendCountdown();
-        case Err(:final failure):
-          _error = localizeAuthError(context, code: failure.code, fallback: failure.message);
-          _errorCode = failure.code;
-      }
-    });
-  }
-
-  Future<void> _resendOtp() async {
-    setState(() { _otp = ''; _error = null; _errorCode = null; });
-    await _sendOtp();
-  }
-
-  Future<void> _register() async {
-    if (_otp.length != 6) {
-      setState(() => _error = context.l10n.authErrorEnterOtpDigits);
+    if (!_confirmValid) {
+      setState(() => _error = 'Passwords do not match.');
       return;
     }
     setState(() { _busy = true; _error = null; _errorCode = null; });
-    final result = await ref.read(authRepositoryProvider).verifyOtp(
-      mobile: _e164Mobile,
-      otp: _otp,
-      username: _username.text.trim(),
-      referralCode: _referral.text.trim().isEmpty ? null : _referral.text.trim(),
-      language: _language,
-    );
+
+    final result = await ref.read(authRepositoryProvider).register(
+          mobile: _e164Mobile,
+          username: _username.text.trim(),
+          password: _password.text,
+          referralCode: _referral.text.trim().isEmpty ? null : _referral.text.trim(),
+          language: _language,
+        );
     if (!mounted) return;
     switch (result) {
       case Ok(:final value):
-        // Seed the primary member with the server UUID so local ID matches.
-        // Do NOT setActive — user picks who is practicing on profile-select.
         final profileRepo = ref.read(profileRepositoryProvider);
         final serverId = value.primaryMemberId;
         if (serverId != null) {
@@ -175,8 +125,6 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
     }
   }
 
-  // ── Build ──────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     return KvlScaffold(
@@ -186,17 +134,11 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: KvlSpacing.md),
-          Text(
-            context.l10n.beginSpiritualJourney,
-            textAlign: TextAlign.center,
-            style: KvlText.title(18),
-          ),
+          Text(context.l10n.beginSpiritualJourney,
+              textAlign: TextAlign.center, style: KvlText.title(18)),
           const SizedBox(height: 4),
-          Text(
-            context.l10n.quickSetup,
-            textAlign: TextAlign.center,
-            style: KvlText.caption(11.5),
-          ),
+          Text(context.l10n.quickSetup,
+              textAlign: TextAlign.center, style: KvlText.caption(11.5)),
           const SizedBox(height: KvlSpacing.lg),
 
           KvlCard(
@@ -231,13 +173,42 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                   ),
                 ]),
 
-                // Inline account-level errors shown right under phone input
-                if (_accountExists && !_otpSent) ...[
+                if (_accountExists) ...[
                   const SizedBox(height: KvlSpacing.sm),
                   _AccountExistsCard(onLogin: () => context.go(KvlRoute.otpLogin)),
                 ] else if (_accountBanned) ...[
                   const SizedBox(height: KvlSpacing.sm),
                   AuthBannedCard(suspended: _errorCode == 'account_suspended'),
+                ],
+                const SizedBox(height: KvlSpacing.md),
+
+                // Password
+                KvlInput(
+                  label: 'Password',
+                  hint: 'At least 8 characters',
+                  controller: _password,
+                  obscureText: _obscure,
+                  textInputAction: TextInputAction.next,
+                  suffix: IconButton(
+                    icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility,
+                        size: 18, color: KvlColors.inkSoft),
+                    onPressed: () => setState(() => _obscure = !_obscure),
+                  ),
+                ),
+                const SizedBox(height: KvlSpacing.md),
+
+                // Confirm password
+                KvlInput(
+                  label: 'Confirm password',
+                  hint: 'Re-enter your password',
+                  controller: _confirm,
+                  obscureText: _obscure,
+                  textInputAction: TextInputAction.next,
+                ),
+                if (_confirm.text.isNotEmpty && !_confirmValid) ...[
+                  const SizedBox(height: 4),
+                  Text('Passwords do not match.',
+                      style: KvlText.caption(11).copyWith(color: KvlColors.danger)),
                 ],
                 const SizedBox(height: KvlSpacing.md),
 
@@ -250,70 +221,20 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                 ),
                 const SizedBox(height: KvlSpacing.lg),
 
-                // ── Step 1: Send OTP ──
-                if (!_otpSent && !_accountExists && !_accountBanned) ...[
+                if (!_accountExists && !_accountBanned) ...[
                   if (_error != null) ...[
                     AuthErrorBar(_error!, onDismiss: () => setState(() { _error = null; _errorCode = null; })),
                     const SizedBox(height: KvlSpacing.sm),
                   ],
                   KvlButton(
-                    label: _busy ? context.l10n.sendingButton : context.l10n.sendOtpButton,
-                    onPressed: (_busy || !_formValid) ? null : _sendOtp,
+                    label: _busy ? 'Creating account…' : context.l10n.registerConfirmButton,
+                    onPressed: (_busy || !_formValid) ? null : _register,
                   ),
-                ],
-
-                // ── Step 2: OTP entry ──
-                if (_otpSent) ...[
-                  if (_otpLocked) ...[
-                    AuthOtpLockedCard(onRequestNew: _resendOtp),
-                  ] else ...[
-                    Text(
-                      context.l10n.enterSixDigitCodeSent,
-                      style: KvlText.caption(11.5),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: KvlSpacing.sm),
-                    PinCodeInput(
-                      onChanged: (v) => setState(() => _otp = v),
-                      onCompleted: (_) => _register(),
-                    ),
-                    const SizedBox(height: KvlSpacing.sm),
-                    Center(
-                      child: _resendSeconds > 0
-                          ? Text(
-                              context.l10n.resendOtpCountdown(_resendSeconds),
-                              style: KvlText.caption(11)
-                                  .copyWith(color: KvlColors.inkSoft),
-                            )
-                          : GestureDetector(
-                              onTap: _busy ? null : _resendOtp,
-                              child: Text(
-                                context.l10n.resendOtp,
-                                style: KvlText.caption(11.5).copyWith(
-                                  color: KvlColors.primaryDeep,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                    ),
-                    if (_error != null) ...[
-                      const SizedBox(height: KvlSpacing.sm),
-                      AuthErrorBar(_error!, onDismiss: () => setState(() { _error = null; _errorCode = null; })),
-                    ],
-                    const SizedBox(height: KvlSpacing.lg),
-                    KvlButton(
-                      label: _busy
-                          ? context.l10n.verifyingButton
-                          : context.l10n.registerConfirmButton,
-                      onPressed: (_busy || _otp.length != 6) ? null : _register,
-                    ),
-                  ],
                 ],
               ],
             ),
           ),
 
-          // Bottom "Already have an account?" — hidden when account_exists card shows
           if (!_accountExists) ...[
             const SizedBox(height: KvlSpacing.lg),
             Center(
@@ -327,9 +248,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                       TextSpan(
                         text: context.l10n.loginLink,
                         style: TextStyle(
-                          color: KvlColors.primaryDeep,
-                          fontWeight: FontWeight.w600,
-                        ),
+                            color: KvlColors.primaryDeep, fontWeight: FontWeight.w600),
                       ),
                     ],
                   ),
@@ -343,11 +262,6 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
   }
 }
 
-// ─────────────────────────────────────────────
-// Private sub-widgets (create account screen only)
-// ─────────────────────────────────────────────
-
-/// Shown when verifyOtp returns account_exists.
 class _AccountExistsCard extends StatelessWidget {
   const _AccountExistsCard({required this.onLogin});
   final VoidCallback onLogin;
@@ -369,10 +283,8 @@ class _AccountExistsCard extends StatelessWidget {
               style: KvlText.ui(13).copyWith(fontWeight: FontWeight.w600)),
         ]),
         const SizedBox(height: 5),
-        Text(
-          context.l10n.accountAlreadyExistsForNumber,
-          style: KvlText.caption(11.5).copyWith(color: KvlColors.inkSoft),
-        ),
+        Text(context.l10n.accountAlreadyExistsForNumber,
+            style: KvlText.caption(11.5).copyWith(color: KvlColors.inkSoft)),
         const SizedBox(height: 13),
         KvlButton(
           label: context.l10n.logInInstead,

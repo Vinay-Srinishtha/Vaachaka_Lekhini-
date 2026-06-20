@@ -80,6 +80,62 @@ class AuthService {
     return _persistFrom(res.data!);
   }
 
+  /// Password-only signup. Creates the account + sets the password, no OTP.
+  Future<AuthAccount> register({
+    required String mobile,
+    required String username,
+    required String password,
+    String countryCode = '+91',
+    String? referralCode,
+  }) async {
+    final res = await _api.dio.post<Map<String, Object?>>(
+      '/api/v1/auth/register',
+      data: {
+        'mobile': mobile,
+        'username': username.trim(),
+        'password': password,
+        'country_code': countryCode,
+        if (referralCode != null && referralCode.trim().isNotEmpty)
+          'referral_code': referralCode.trim(),
+      },
+    );
+    return _persistFrom(res.data!);
+  }
+
+  /// Password login — the only standard sign-in path.
+  Future<AuthAccount> loginWithPassword({
+    required String mobile,
+    required String password,
+  }) async {
+    final res = await _api.dio.post<Map<String, Object?>>(
+      '/api/v1/auth/password/login',
+      data: {'mobile': mobile, 'password': password},
+    );
+    return _persistFrom(res.data!);
+  }
+
+  /// Request a password-reset OTP. Code is valid 9 minutes; a new one can only
+  /// be requested 2 hours after the previous code expires / is used.
+  Future<void> startPasswordReset(String mobile, {String countryCode = '+91'}) async {
+    await _api.dio.post<Map<String, Object?>>(
+      '/api/v1/auth/password/forgot',
+      data: {'mobile': mobile, 'country_code': countryCode},
+    );
+  }
+
+  /// Verify the reset OTP, set the new password, and sign in.
+  Future<AuthAccount> resetPassword({
+    required String mobile,
+    required String code,
+    required String newPassword,
+  }) async {
+    final res = await _api.dio.post<Map<String, Object?>>(
+      '/api/v1/auth/password/reset',
+      data: {'mobile': mobile, 'code': code, 'new_password': newPassword},
+    );
+    return _persistFrom(res.data!);
+  }
+
   /// Best-effort refresh. Returns the new tokens on success or null on
   /// failure (caller should treat the session as expired).
   Future<AuthTokens?> refresh() async {

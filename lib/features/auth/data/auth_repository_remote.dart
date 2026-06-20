@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:hive_ce/hive.dart';
 
 import '../../../core/auth/auth_service.dart';
+import '../../../core/auth/auth_tokens.dart';
 import '../../../core/storage/repository.dart';
 import '../../../core/storage/storage_keys.dart';
 import '../domain/auth_repository.dart';
@@ -82,6 +83,123 @@ class AuthRepositoryRemote implements AuthRepository {
       final digits = mobile.replaceAll(RegExp(r'^\+91'), '');
       final exists = await _auth.checkMobileExists(digits);
       return Ok(exists);
+    } on DioException catch (e) {
+      return Err(_mapDioException(e));
+    } catch (e) {
+      return Err(AuthFailure.unknown(e));
+    }
+  }
+
+  /// Builds and persists a Session from an [AuthAccount] returned by the
+  /// backend after register / login / reset.
+  Future<Session> _sessionFromAccount(
+    AuthAccount account, {
+    required String mobile,
+    String? username,
+    String? referralCode,
+    String? language,
+  }) async {
+    final existing = _readSession();
+    final session = Session(
+      userId: account.id,
+      username: (username?.trim().isNotEmpty == true)
+          ? username!.trim()
+          : (existing?.username ?? ''),
+      mobile: mobile,
+      language: language ?? existing?.language ?? 'en',
+      referralCode: (referralCode?.trim().isEmpty ?? true) ? null : referralCode!.trim(),
+      createdAt: existing?.createdAt ?? DateTime.now(),
+      primaryMemberId: account.primaryMemberId ?? existing?.primaryMemberId,
+    );
+    await _writeSession(session);
+    return session;
+  }
+
+  @override
+  Future<Result<Session>> register({
+    required String mobile,
+    required String username,
+    required String password,
+    String? referralCode,
+    String? language,
+  }) async {
+    if (!_isValidMobile(mobile)) return Err(AuthFailure.invalidMobile());
+    if (password.length < 8) return Err(AuthFailure.weakPassword());
+    try {
+      final digits = mobile.replaceAll(RegExp(r'^\+91'), '');
+      final account = await _auth.register(
+        mobile: digits,
+        username: username,
+        password: password,
+        referralCode: referralCode,
+      );
+      final session = await _sessionFromAccount(
+        account,
+        mobile: mobile,
+        username: username,
+        referralCode: referralCode,
+        language: language,
+      );
+      return Ok(session);
+    } on DioException catch (e) {
+      return Err(_mapDioException(e, isRegistration: true));
+    } catch (e) {
+      return Err(AuthFailure.unknown(e));
+    }
+  }
+
+  @override
+  Future<Result<Session>> loginWithPassword({
+    required String mobile,
+    required String password,
+  }) async {
+    if (!_isValidMobile(mobile)) return Err(AuthFailure.invalidMobile());
+    if (password.isEmpty) return Err(AuthFailure.invalidPassword());
+    try {
+      final digits = mobile.replaceAll(RegExp(r'^\+91'), '');
+      final account =
+          await _auth.loginWithPassword(mobile: digits, password: password);
+      final session = await _sessionFromAccount(account, mobile: mobile);
+      return Ok(session);
+    } on DioException catch (e) {
+      return Err(_mapDioException(e));
+    } catch (e) {
+      return Err(AuthFailure.unknown(e));
+    }
+  }
+
+  @override
+  Future<Result<void>> requestPasswordReset(String mobile) async {
+    if (!_isValidMobile(mobile)) return Err(AuthFailure.invalidMobile());
+    try {
+      final digits = mobile.replaceAll(RegExp(r'^\+91'), '');
+      await _auth.startPasswordReset(digits);
+      return const Ok(null);
+    } on DioException catch (e) {
+      return Err(_mapDioException(e, isOtpStart: true));
+    } catch (e) {
+      return Err(AuthFailure.unknown(e));
+    }
+  }
+
+  @override
+  Future<Result<Session>> resetPassword({
+    required String mobile,
+    required String otp,
+    required String newPassword,
+  }) async {
+    if (!_isValidMobile(mobile)) return Err(AuthFailure.invalidMobile());
+    if (!RegExp(r'^\d{4,8}$').hasMatch(otp)) return Err(AuthFailure.invalidOtp());
+    if (newPassword.length < 8) return Err(AuthFailure.weakPassword());
+    try {
+      final digits = mobile.replaceAll(RegExp(r'^\+91'), '');
+      final account = await _auth.resetPassword(
+        mobile: digits,
+        code: otp,
+        newPassword: newPassword,
+      );
+      final session = await _sessionFromAccount(account, mobile: mobile);
+      return Ok(session);
     } on DioException catch (e) {
       return Err(_mapDioException(e));
     } catch (e) {
@@ -201,6 +319,22 @@ class AuthRepositoryRemote implements AuthRepository {
       if (status == 429 || serverCode.contains('rate') || serverMsg.contains('too many')) {
         return AuthFailure.tooManyAttempts();
       }
+    }
+
+    // --- password / reset codes (checked before generic 401 handling) ---
+    if (serverCode == 'invalid_password' || serverMsg.contains('incorrect password')) {
+      return AuthFailure.invalidPassword();
+    }
+    if (serverCode == 'password_not_set' || serverMsg.contains('no password set')) {
+      return AuthFailure.passwordNotSet();
+    }
+    if (serverCode == 'reset_cooldown' || serverMsg.contains('2 hours')) {
+      return AuthFailure.resetCooldown();
+    }
+    if (serverCode == 'account_not_found' || serverCode == 'account_exists') {
+      return serverCode == 'account_exists'
+          ? AuthFailure.accountAlreadyExists()
+          : AuthFailure.accountNotFound();
     }
 
     // --- verifyOtp-specific codes ---

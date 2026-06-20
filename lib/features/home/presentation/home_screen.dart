@@ -104,7 +104,7 @@ class HomeScreen extends ConsumerWidget {
                     return Transform.translate(
                       offset: Offset(-leftOffset, 0),
                       child: SizedBox(
-                        width: mq.size.width,
+                        width: mq.size.width * 1.5,
                         child: const _Bulletin(),
                       ),
                     );

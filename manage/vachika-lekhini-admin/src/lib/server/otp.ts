@@ -19,7 +19,7 @@ export interface OtpService {
 	verify(mobile: string, code: string): Promise<{ ok: true } | { ok: false; error: string }>;
 }
 
-const OTP_TTL_SECONDS = 5 * 60; // 5 min
+const OTP_TTL_SECONDS = 9 * 60; // 9 min — reset code is valid for under 10 minutes
 const MAX_ATTEMPTS = 5;
 const RESEND_COOLDOWN_SECONDS = 30;
 

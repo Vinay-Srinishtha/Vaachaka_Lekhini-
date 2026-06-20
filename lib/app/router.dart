@@ -13,6 +13,7 @@ import '../core/widgets/kvl_profile_avatar.dart';
 import '../features/profiles/domain/profile.dart';
 import '../core/widgets/widgets.dart';
 import '../features/auth/presentation/create_account_screen.dart';
+import '../features/auth/presentation/forgot_password_screen.dart';
 import '../features/auth/presentation/otp_login_screen.dart';
 import '../features/auth/presentation/welcome_screen.dart';
 import '../features/community/domain/friend.dart';
@@ -58,6 +59,7 @@ abstract final class KvlRoute {
   static const profileSelect = '/profile-select';
   static const createAccount = '/create-account';
   static const otpLogin = '/otp-login';
+  static const forgotPassword = '/forgot-password';
 
   // Mantra & enrolment (Phase 2)
   static const quickStart = '/quick-start';
@@ -79,7 +81,7 @@ abstract final class KvlRoute {
   static const globalSadhana = '/global-sadhana'; // + /:id
   static const globalSadhanaList = '/global-sadhana-list';
 
-  static const _authPaths = {welcome, profileSelect, createAccount, otpLogin};
+  static const _authPaths = {welcome, profileSelect, createAccount, otpLogin, forgotPassword};
   static bool isAuthRoute(String path) => _authPaths.contains(path);
 }
 
@@ -102,6 +104,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           KvlRoute.profileSelect,
           KvlRoute.createAccount,
           KvlRoute.otpLogin,
+          KvlRoute.forgotPassword,
         };
         return allowed.contains(loc) ? null : KvlRoute.profileSelect;
       }
@@ -121,6 +124,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: KvlRoute.otpLogin,
         builder: (_, _) => const OtpLoginScreen(),
+      ),
+      GoRoute(
+        path: KvlRoute.forgotPassword,
+        builder: (_, _) => const ForgotPasswordScreen(),
       ),
 
       // Mantra + enrolment — outside the shell so they get the back arrow chrome.

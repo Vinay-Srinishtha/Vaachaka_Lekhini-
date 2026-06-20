@@ -17,6 +17,31 @@ abstract class AuthRepository {
   /// Returns true if an account already exists for [mobile].
   Future<Result<bool>> checkMobileRegistered(String mobile);
 
+  /// Password-only signup. Creates the account and sets [password] (no OTP).
+  Future<Result<Session>> register({
+    required String mobile,
+    required String username,
+    required String password,
+    String? referralCode,
+    String? language,
+  });
+
+  /// Password login — the standard sign-in path.
+  Future<Result<Session>> loginWithPassword({
+    required String mobile,
+    required String password,
+  });
+
+  /// Request a password-reset OTP for [mobile] (forgot-password flow).
+  Future<Result<void>> requestPasswordReset(String mobile);
+
+  /// Verify the reset [otp] and set [newPassword], then sign in.
+  Future<Result<Session>> resetPassword({
+    required String mobile,
+    required String otp,
+    required String newPassword,
+  });
+
   /// Trigger an OTP send for [mobile]. In Phase 1 this is a no-op that
   /// returns immediately; in Phase 9 it calls the backend SMS service.
   Future<Result<void>> sendOtp(String mobile);
@@ -127,6 +152,26 @@ class AuthFailure extends Failure {
   factory AuthFailure.deliveryFailure() => const AuthFailure(
         'We could not deliver the SMS to this number. Please try again.',
         code: 'delivery_failure',
+      );
+
+  factory AuthFailure.invalidPassword() => const AuthFailure(
+        'Incorrect password. Please try again.',
+        code: 'invalid_password',
+      );
+
+  factory AuthFailure.passwordNotSet() => const AuthFailure(
+        'No password set for this account. Use "Forgot password" to set one.',
+        code: 'password_not_set',
+      );
+
+  factory AuthFailure.weakPassword() => const AuthFailure(
+        'Password must be at least 8 characters.',
+        code: 'weak_password',
+      );
+
+  factory AuthFailure.resetCooldown() => const AuthFailure(
+        'For your security, you can request a new reset code only 2 hours after the last one. Please try again later.',
+        code: 'reset_cooldown',
       );
 
   factory AuthFailure.unknown(Object? cause) =>

@@ -1,10 +1,10 @@
 import { error, isHttpError } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { z } from 'zod';
-import bcrypt from 'bcryptjs';
 import { readJsonBody } from '$lib/server/json-input';
 import { snakeJson } from '$lib/server/snake-case';
-import { issueTokensFor } from '$lib/server/user-auth';
+import { otpService } from '$lib/server/otp';
+import { issueTokensFor, setAccountPassword } from '$lib/server/user-auth';
 import { prisma } from '$lib/server/prisma';
 
 const schema = z.object({
@@ -12,35 +12,26 @@ const schema = z.object({
 		.string()
 		.regex(/^(\+91)?[6-9]\d{9}$/, 'Invalid Indian mobile number')
 		.transform((m) => m.replace(/^\+91/, '')),
-	password: z.string().min(1, 'Enter your password')
+	code: z.string().regex(/^\d{4,8}$/, 'Enter the code from your SMS'),
+	new_password: z.string().min(8, 'Password must be at least 8 characters').max(200)
 });
 
-/// POST /api/v1/auth/password/login  { mobile, password }
-/// → 200 { access_token, refresh_token, account, primary_member }
-/// Distinct errors so the app can guide the user:
-///   404 account_not_found  — no account for this number
-///   401 invalid_password   — number exists but password is wrong
-///   403 account_banned     — account suspended
-///   409 password_not_set   — account exists but has no password yet
+/// POST /api/v1/auth/password/reset  { mobile, code, new_password }
+/// Verifies the reset OTP, sets the new password, and signs the user in.
+///   404 account_not_found — no account for this number
+///   401 invalid_otp        — wrong / expired / used code
 export const POST: RequestHandler = async (event) => {
 	try {
 		const body = await readJsonBody(event, schema);
 
 		const account = await prisma.account.findUnique({
 			where: { mobile: body.mobile },
-			select: {
-				id: true,
-				mobile: true,
-				countryCode: true,
-				passwordHash: true,
-				isBanned: true
-			}
+			select: { id: true, mobile: true, countryCode: true, isBanned: true }
 		});
-
 		if (!account) {
 			throw error(404, {
 				code: 'account_not_found',
-				message: 'No account found for this number. Please create an account first.'
+				message: 'No account found for this number.'
 			});
 		}
 		if (account.isBanned) {
@@ -49,29 +40,18 @@ export const POST: RequestHandler = async (event) => {
 				message: 'Your account has been suspended. Please contact support.'
 			});
 		}
-		if (!account.passwordHash) {
-			throw error(409, {
-				code: 'password_not_set',
-				message: 'No password set for this account. Use "Forgot password" to set one.'
-			});
+
+		const result = await otpService().verify(body.mobile, body.code);
+		if (!result.ok) {
+			throw error(401, { code: 'invalid_otp', message: result.error });
 		}
 
-		const ok = await bcrypt.compare(body.password, account.passwordHash);
-		if (!ok) {
-			throw error(401, {
-				code: 'invalid_password',
-				message: 'Incorrect password. Please try again.'
-			});
-		}
+		await setAccountPassword(account.id, body.new_password);
 
 		const primary = await prisma.member.findFirst({
 			where: { accountId: account.id, isPrimary: true },
 			select: { id: true, displayName: true }
 		});
-
-		void prisma.account
-			.update({ where: { id: account.id }, data: { lastSeenAt: new Date() } })
-			.catch(() => undefined);
 
 		const tokens = await issueTokensFor(account.id, account.mobile);
 		return snakeJson({
@@ -85,7 +65,7 @@ export const POST: RequestHandler = async (event) => {
 		});
 	} catch (e) {
 		if (isHttpError(e)) throw e;
-		console.error('[auth/password/login]', e);
+		console.error('[auth/password/reset]', e);
 		throw error(500, { code: 'server_error', message: 'Internal error' });
 	}
 };

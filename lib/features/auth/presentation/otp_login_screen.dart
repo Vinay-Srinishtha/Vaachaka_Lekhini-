@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,7 +12,8 @@ import '../../profiles/domain/profile.dart';
 import 'auth_shared_widgets.dart';
 
 // ─────────────────────────────────────────────
-// Screen
+// Password login screen — phone number + password.
+// OTP is no longer used to sign in (only for password reset).
 // ─────────────────────────────────────────────
 
 class OtpLoginScreen extends ConsumerStatefulWidget {
@@ -25,25 +24,24 @@ class OtpLoginScreen extends ConsumerStatefulWidget {
 
 class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
   final _mobile = TextEditingController();
+  final _password = TextEditingController();
   final _mobileFocus = FocusNode();
-  String _otp = '';
-  bool _otpSent = false;
   bool _busy = false;
+  bool _obscure = true;
   String? _error;
   String? _errorCode;
-  int _resendSeconds = 0;
-  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     _mobile.addListener(() => setState(() {}));
+    _password.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
     _mobile.dispose();
+    _password.dispose();
     _mobileFocus.dispose();
     super.dispose();
   }
@@ -51,76 +49,24 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
   String get _digits => _mobile.text.replaceAll(RegExp(r'\D'), '');
   String get _e164 => '+91$_digits';
   bool get _mobileOk => _digits.length == 10;
+  bool get _canSubmit => _mobileOk && _password.text.isNotEmpty;
   bool get _noAccount => _errorCode == 'account_not_found';
-  bool get _accountBanned => _errorCode == 'account_banned' || _errorCode == 'account_suspended';
-  bool get _otpLocked => _errorCode == 'otp_max_attempts';
+  bool get _accountBanned =>
+      _errorCode == 'account_banned' || _errorCode == 'account_suspended';
 
-  void _startCountdown() {
-    _resendSeconds = 30;
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (!mounted) { t.cancel(); return; }
-      setState(() { if (--_resendSeconds <= 0) t.cancel(); });
-    });
-  }
-
-  Future<void> _sendOtp() async {
-    if (!_mobileOk) return;
+  Future<void> _login() async {
+    if (!_canSubmit) return;
     setState(() { _busy = true; _error = null; _errorCode = null; });
 
-    // Pre-check: is this number registered?
-    final check =
-        await ref.read(authRepositoryProvider).checkMobileRegistered(_e164);
-    if (!mounted) return;
-    if (check case Err(:final failure)) {
-      setState(() {
-        _busy = false;
-        _error = isAccountLevelError(failure.code)
-            ? null
-            : localizeAuthError(context, code: failure.code, fallback: failure.message);
-        _errorCode = failure.code;
-      });
-      return;
-    }
-    if (check case Ok(:final value) when !value) {
-      setState(() { _busy = false; _errorCode = 'account_not_found'; });
-      return;
-    }
-
-    // Number exists — request OTP.
-    final res = await ref.read(authRepositoryProvider).sendOtp(_e164);
-    if (!mounted) return;
-    setState(() {
-      _busy = false;
-      switch (res) {
-        case Ok():
-          _otpSent = true;
-          _otp = '';
-          _startCountdown();
-        case Err(:final failure):
-          _error = localizeAuthError(context, code: failure.code, fallback: failure.message);
-          _errorCode = failure.code;
-      }
-    });
-  }
-
-  Future<void> _resend() async {
-    setState(() { _otp = ''; _error = null; _errorCode = null; });
-    await _sendOtp();
-  }
-
-  Future<void> _verify() async {
-    if (_otp.length != 6) { setState(() => _error = context.l10n.enterSixDigitCode); return; }
-    setState(() { _busy = true; _error = null; _errorCode = null; });
-    final res = await ref.read(authRepositoryProvider)
-        .verifyOtp(mobile: _e164, otp: _otp);
+    final res = await ref.read(authRepositoryProvider).loginWithPassword(
+          mobile: _e164,
+          password: _password.text,
+        );
     if (!mounted) return;
     switch (res) {
       case Ok(:final value):
-        // On a fresh device, seed the primary member using the server UUID
-        // so the local profile ID matches the server from the start.
-        // Do NOT setActive here — the user picks who is practicing on
-        // the profile-select screen shown immediately after.
+        // Seed the primary member with the server UUID on a fresh device so the
+        // local profile ID matches the server. User picks who practices next.
         final pr = ref.read(profileRepositoryProvider);
         final list = await pr.listForUser(value.userId);
         if (list.isEmpty) {
@@ -154,8 +100,6 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
     }
   }
 
-  // ── Build ──────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     return KvlScaffold(
@@ -165,72 +109,69 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: 8),
-
-          // Header
           Text(context.l10n.welcomeBack,
               textAlign: TextAlign.center, style: KvlText.title(17)),
           const SizedBox(height: 4),
           Text(context.l10n.enterMobileAssociated,
               textAlign: TextAlign.center,
               style: KvlText.caption(12).copyWith(color: KvlColors.inkSoft)),
-
           const SizedBox(height: KvlSpacing.xl),
 
-          // Mobile row
+          // Mobile
           _MobileRow(
             controller: _mobile,
             focusNode: _mobileFocus,
-            onSubmit: () { if (_mobileOk && !_otpSent) _sendOtp(); },
+            onSubmit: () => FocusScope.of(context).nextFocus(),
           ),
+          const SizedBox(height: KvlSpacing.md),
 
-          const SizedBox(height: KvlSpacing.lg),
+          // Password
+          KvlInput(
+            label: 'Password',
+            hint: 'Enter your password',
+            controller: _password,
+            obscureText: _obscure,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) { if (_canSubmit) _login(); },
+            suffix: IconButton(
+              icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility,
+                  size: 18, color: KvlColors.inkSoft),
+              onPressed: () => setState(() => _obscure = !_obscure),
+            ),
+          ),
+          const SizedBox(height: KvlSpacing.sm),
 
-          // ── Step 1: not-found / banned card OR send-OTP ──
-          if (!_otpSent) ...[
-            if (_noAccount) ...[
-              _NoAccountCard(
-                  onCreateAccount: () => context.push(KvlRoute.createAccount)),
-            ] else if (_accountBanned) ...[
-              AuthBannedCard(suspended: _errorCode == 'account_suspended'),
-            ] else ...[
-              if (_error != null) ...[
-                AuthErrorBar(_error!, onDismiss: () => setState(() { _error = null; _errorCode = null; })),
-                const SizedBox(height: KvlSpacing.sm),
-              ],
-              KvlButton(
-                label: _busy ? context.l10n.sendingButton : context.l10n.sendOtpButton,
-                onPressed: (_busy || !_mobileOk) ? null : _sendOtp,
-              ),
-              const SizedBox(height: KvlSpacing.xl),
-              _BottomLink(
-                prefix: context.l10n.dontHaveAccount,
-                link: context.l10n.createOneLink,
-                onTap: () => context.push(KvlRoute.createAccount),
-              ),
+          // Forgot password
+          Align(
+            alignment: Alignment.centerRight,
+            child: GestureDetector(
+              onTap: () => context.push(KvlRoute.forgotPassword),
+              child: Text('Forgot password?',
+                  style: KvlText.caption(12).copyWith(
+                      color: KvlColors.primaryDeep, fontWeight: FontWeight.w600)),
+            ),
+          ),
+          const SizedBox(height: KvlSpacing.md),
+
+          if (_noAccount) ...[
+            _NoAccountCard(onCreateAccount: () => context.push(KvlRoute.createAccount)),
+          ] else if (_accountBanned) ...[
+            AuthBannedCard(suspended: _errorCode == 'account_suspended'),
+          ] else ...[
+            if (_error != null) ...[
+              AuthErrorBar(_error!, onDismiss: () => setState(() { _error = null; _errorCode = null; })),
+              const SizedBox(height: KvlSpacing.sm),
             ],
-          ],
-
-          // ── Step 2: OTP entry ──
-          if (_otpSent) ...[
-            if (_otpLocked) ...[
-              AuthOtpLockedCard(onRequestNew: _resend),
-            ] else if (_accountBanned) ...[
-              AuthBannedCard(suspended: _errorCode == 'account_suspended'),
-            ] else ...[
-              _OtpSection(
-                busy: _busy,
-                resendSeconds: _resendSeconds,
-                otp: _otp,
-                error: _error,
-                onChanged: (v) => setState(() => _otp = v),
-                onCompleted: (_) => _verify(),
-                onResend: _resend,
-                onVerify: _verify,
-                onDismissError: () => setState(() { _error = null; _errorCode = null; }),
-                verifyLabel:
-                    _busy ? context.l10n.verifyingButton : context.l10n.loginConfirmButton,
-              ),
-            ],
+            KvlButton(
+              label: _busy ? 'Logging in…' : context.l10n.loginConfirmButton,
+              onPressed: (_busy || !_canSubmit) ? null : _login,
+            ),
+            const SizedBox(height: KvlSpacing.xl),
+            _BottomLink(
+              prefix: context.l10n.dontHaveAccount,
+              link: context.l10n.createOneLink,
+              onTap: () => context.push(KvlRoute.createAccount),
+            ),
           ],
         ],
       ),
@@ -239,7 +180,7 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
 }
 
 // ─────────────────────────────────────────────
-// Private sub-widgets (login screen only)
+// Private sub-widgets
 // ─────────────────────────────────────────────
 
 class _NoAccountCard extends StatelessWidget {
@@ -301,71 +242,9 @@ class _MobileRow extends StatelessWidget {
           keyboardType: TextInputType.phone,
           autofocus: true,
           inputFormatters: [AuthMobileFormatter()],
-          textInputAction: TextInputAction.done,
+          textInputAction: TextInputAction.next,
           onSubmitted: (_) => onSubmit?.call(),
         ),
-      ),
-    ]);
-  }
-}
-
-class _OtpSection extends StatelessWidget {
-  const _OtpSection({
-    required this.busy,
-    required this.resendSeconds,
-    required this.otp,
-    required this.error,
-    required this.onChanged,
-    required this.onCompleted,
-    required this.onResend,
-    required this.onVerify,
-    required this.verifyLabel,
-    this.onDismissError,
-  });
-
-  final bool busy;
-  final int resendSeconds;
-  final String otp;
-  final String? error;
-  final ValueChanged<String> onChanged;
-  final ValueChanged<String> onCompleted;
-  final VoidCallback onResend;
-  final VoidCallback onVerify;
-  final String verifyLabel;
-  final VoidCallback? onDismissError;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(Icons.sms_outlined, size: 14, color: KvlColors.inkSoft),
-        const SizedBox(width: 5),
-        Text(context.l10n.enterSixDigitCodeSent,
-            style: KvlText.caption(11.5).copyWith(color: KvlColors.inkSoft)),
-      ]),
-      const SizedBox(height: KvlSpacing.md),
-      PinCodeInput(onChanged: onChanged, onCompleted: onCompleted),
-      const SizedBox(height: KvlSpacing.sm),
-      Center(
-        child: resendSeconds > 0
-            ? Text(context.l10n.resendCodeIn(resendSeconds),
-                style: KvlText.caption(11).copyWith(color: KvlColors.inkSoft))
-            : GestureDetector(
-                onTap: busy ? null : onResend,
-                child: Text(context.l10n.resendCode,
-                    style: KvlText.caption(11.5).copyWith(
-                        color: KvlColors.primaryDeep,
-                        fontWeight: FontWeight.w600)),
-              ),
-      ),
-      if (error != null) ...[
-        const SizedBox(height: KvlSpacing.sm),
-        AuthErrorBar(error!, onDismiss: onDismissError),
-      ],
-      const SizedBox(height: KvlSpacing.lg),
-      KvlButton(
-        label: verifyLabel,
-        onPressed: (busy || otp.length != 6) ? null : onVerify,
       ),
     ]);
   }

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,6 +28,26 @@ import '../application/practice_controller.dart';
 /// Live device ringer mode (silent / vibrate / ring), synced from the OS.
 final _ringerModeProvider = StreamProvider.autoDispose<RingerMode>((ref) {
   return RingerModeService().watch();
+});
+
+/// Background Sruthi / ambient music toggle for the chant screen.
+final _ambientOnProvider =
+    NotifierProvider.autoDispose<_AmbientNotifier, bool>(_AmbientNotifier.new);
+
+class _AmbientNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+  void toggle() => state = !state;
+}
+
+final _ambientPlayerProvider = Provider.autoDispose<AudioPlayer>((ref) {
+  final player = AudioPlayer();
+  player.setReleaseMode(ReleaseMode.loop);
+  ref.onDispose(() {
+    player.stop();
+    player.dispose();
+  });
+  return player;
 });
 
 class CounterScreen extends ConsumerWidget {
@@ -616,6 +637,23 @@ class _TopBar extends ConsumerWidget {
         ),
         Expanded(
           child: slot(
+            circle: iconCircle(ref.watch(_ambientOnProvider)
+                ? Icons.music_note_rounded
+                : Icons.music_off_rounded),
+            label: 'Sruthi',
+            onTap: () async {
+              ref.read(_ambientOnProvider.notifier).toggle();
+              final player = ref.read(_ambientPlayerProvider);
+              if (ref.read(_ambientOnProvider)) {
+                await player.play(AssetSource('audio/ambient_loop.mp3'));
+              } else {
+                await player.stop();
+              }
+            },
+          ),
+        ),
+        Expanded(
+          child: slot(
             onTap: onProfileTap,
             circle: MilestoneRing(
               completed: completed,
@@ -871,9 +909,11 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
                           textAlign: TextAlign.center,
                           maxLines: 1,
                           style: TextStyle(
-                            fontSize: (constraints.maxWidth * 0.40).clamp(
-                              32.0,
-                              90.0,
+                            // Reduced from 0.40 / 90 cap per design — smaller
+                            // Sri Rama heading on the practice screen.
+                            fontSize: (constraints.maxWidth * 0.28).clamp(
+                              26.0,
+                              60.0,
                             ),
                             fontWeight: FontWeight.w800,
                             letterSpacing: 0,

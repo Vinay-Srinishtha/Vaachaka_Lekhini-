@@ -17,7 +17,7 @@ class CommunityScreen extends ConsumerStatefulWidget {
 }
 
 class _CommunityScreenState extends ConsumerState<CommunityScreen> {
-  LeaderboardSort _sort = LeaderboardSort.streak;
+  LeaderboardSort _sort = LeaderboardSort.totalChants;
   String? _mantraId;
 
   @override
@@ -195,16 +195,17 @@ class _SortToggle extends StatelessWidget {
         borderRadius: KvlRadius.brSM,
       ),
       child: Row(
+        // Chants first, Streaks second (per design).
         children: [
-          _Pill(
-            label: context.l10n.streakChallenge,
-            selected: sort == LeaderboardSort.streak,
-            onTap: () => onChanged(LeaderboardSort.streak),
-          ),
           _Pill(
             label: context.l10n.totalChantsSort,
             selected: sort == LeaderboardSort.totalChants,
             onTap: () => onChanged(LeaderboardSort.totalChants),
+          ),
+          _Pill(
+            label: context.l10n.streakChallenge,
+            selected: sort == LeaderboardSort.streak,
+            onTap: () => onChanged(LeaderboardSort.streak),
           ),
         ],
       ),

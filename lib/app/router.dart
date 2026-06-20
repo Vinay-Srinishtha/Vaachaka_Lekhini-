@@ -29,7 +29,6 @@ import '../features/mantras/presentation/mantra_selection_screen.dart';
 import '../features/mantras/presentation/quick_start_screen.dart';
 import '../features/practice/presentation/counter_screen.dart';
 import '../features/practice/presentation/practice_screen.dart';
-import '../features/profiles/presentation/add_family_screen.dart';
 import '../features/profiles/presentation/profile_edit_screen.dart';
 import '../features/profiles/presentation/profile_select_screen.dart';
 import '../features/settings/presentation/info_screen.dart';
@@ -75,7 +74,6 @@ abstract final class KvlRoute {
   static const dailyProgress = '/daily-progress';
   static const profile = '/profile';
   static const profileEdit = '/profile-edit';
-  static const addFamily = '/add-family';
   static const rewardHistory = '/reward-history';
   static const inviteFriends = '/invite-friends';
   static const globalSadhana = '/global-sadhana'; // + /:id
@@ -208,10 +206,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: KvlRoute.profile, builder: (_, _) => const ProfileScreen()),
       GoRoute(path: KvlRoute.profileEdit, builder: (_, _) => const ProfileEditScreen()),
-      GoRoute(
-        path: KvlRoute.addFamily,
-        builder: (_, _) => const AddFamilyScreen(),
-      ),
       GoRoute(
         path: '/info/:topic',
         builder: (_, state) =>

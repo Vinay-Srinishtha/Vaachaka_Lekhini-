@@ -431,6 +431,18 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
       await ref.read(practiceControllerProvider(programId).notifier).reloadProgram();
       if (!mounted) return;
       ref.invalidate(globalStatsProvider(widget.mantraId));
+      // Optimistically credit any enrolled global sadhana for this mantra so
+      // the count/percentage/contribution update instantly.
+      if (total > 0) {
+        final bumped = await ref
+            .read(globalSadhanaRepositoryProvider)
+            .applyLocalContribution(mantraId: widget.mantraId, count: total);
+        if (bumped && mounted) {
+          ref.invalidate(activeGlobalSadhanaProvider);
+          ref.invalidate(globalSadhanaEnrollmentProvider);
+        }
+      }
+      if (!mounted) return;
       ref.read(sessionCompletedProvider.notifier).increment();
       // Rebuild writing book PDF in the background.
       final pdfProfile = ref.read(activeProfileProvider).value;

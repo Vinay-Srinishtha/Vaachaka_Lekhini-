@@ -211,6 +211,12 @@ final accountHydrationProvider = Provider<void>((ref) {
   ref.listen(meSnapshotProvider, (_, next) {
     final snapshot = next.value;
     if (snapshot == null) return;
+    // Every sync pull happens AFTER the outbox drains, by which point the
+    // server has credited any new practice sessions toward the global
+    // sadhanas. Refresh the global providers so the count/percentage and the
+    // user's contribution update live across home + detail screens.
+    ref.invalidate(activeGlobalSadhanaProvider);
+    ref.invalidate(globalSadhanaEnrollmentProvider);
     Future(() async {
       final account = snapshot['account'];
       if (account is! Map) return;

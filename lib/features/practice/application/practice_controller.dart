@@ -411,6 +411,21 @@ class PracticeController extends AsyncNotifier<PracticeState> {
       ),
     );
 
+    // Optimistically credit any enrolled global sadhana for this mantra so the
+    // count/percentage/contribution update instantly, before the server pull.
+    final added = after - before;
+    if (added > 0) {
+      final gsRepo = ref.read(globalSadhanaRepositoryProvider);
+      final bumped = await gsRepo.applyLocalContribution(
+        mantraId: s.program.mantraId,
+        count: added,
+      );
+      if (bumped) {
+        ref.invalidate(activeGlobalSadhanaProvider);
+        ref.invalidate(globalSadhanaEnrollmentProvider);
+      }
+    }
+
     // Drain outbox → server computes reward points → pull /api/v1/me →
     // reconcileFromServer writes local earn event → rewardTotalProvider updates live.
     unawaited(ref.read(syncEngineProvider).syncNow());

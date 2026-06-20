@@ -13,6 +13,7 @@ import '../../../core/theme/theme.dart';
 import '../../../core/utils/indian_number_format.dart';
 import '../../../core/widgets/kvl_profile_avatar.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../global_sadhana/domain/global_sadhana.dart';
 import '../../profiles/domain/profile.dart';
 import '../../programs/domain/program.dart';
 import '../../settings/domain/settings_repository.dart';
@@ -918,19 +919,135 @@ class _GlobalSadhanaSection extends ConsumerWidget {
   const _GlobalSadhanaSection({required this.compact});
   final bool compact;
 
-  static const _accent = Color(0xFFE8650A);
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sadhanas = ref.watch(activeGlobalSadhanaProvider).value ?? [];
     if (sadhanas.isEmpty) return const SizedBox.shrink();
 
-    final sadhana = sadhanas.first;
-    final hasImage = sadhana.imageUrl != null && sadhana.imageUrl!.isNotEmpty;
-
     return Padding(
       padding: EdgeInsets.only(bottom: compact ? KvlSpacing.xs : KvlSpacing.sm),
-      child: GestureDetector(
+      child: sadhanas.length == 1
+          ? _GlobalSadhanaCard(sadhana: sadhanas.first, compact: compact)
+          : _GlobalSadhanaCarousel(sadhanas: sadhanas, compact: compact),
+    );
+  }
+}
+
+/// Auto-advancing carousel shown when more than one active global sadhana
+/// exists. Cycles to the next card every 5 seconds; manual swipes reset the
+/// timer so the user isn't yanked away mid-look.
+class _GlobalSadhanaCarousel extends StatefulWidget {
+  const _GlobalSadhanaCarousel({required this.sadhanas, required this.compact});
+  final List<GlobalSadhana> sadhanas;
+  final bool compact;
+
+  @override
+  State<_GlobalSadhanaCarousel> createState() => _GlobalSadhanaCarouselState();
+}
+
+class _GlobalSadhanaCarouselState extends State<_GlobalSadhanaCarousel> {
+  late final PageController _ctrl;
+  Timer? _timer;
+  int _page = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = PageController();
+    _startAutoScroll();
+  }
+
+  void _startAutoScroll() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!mounted || !_ctrl.hasClients) return;
+      final count = widget.sadhanas.length;
+      if (count <= 1) return;
+      final next = (_page + 1) % count;
+      _ctrl.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 450),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final compact = widget.compact;
+    final hasAnyImage = widget.sadhanas
+        .any((s) => s.imageUrl != null && s.imageUrl!.isNotEmpty);
+    // PageView needs a bounded height; size for the tallest card layout so
+    // neither image nor text-only cards overflow.
+    final height = hasAnyImage
+        ? (compact ? 210.0 : 240.0)
+        : (compact ? 140.0 : 158.0);
+
+    return Column(
+      children: [
+        SizedBox(
+          height: height,
+          child: NotificationListener<ScrollNotification>(
+            // Any drag the user starts resets the 5s clock.
+            onNotification: (n) {
+              if (n is UserScrollNotification) _startAutoScroll();
+              return false;
+            },
+            child: PageView.builder(
+              controller: _ctrl,
+              itemCount: widget.sadhanas.length,
+              onPageChanged: (i) => setState(() => _page = i),
+              itemBuilder: (_, i) => _GlobalSadhanaCard(
+                sadhana: widget.sadhanas[i],
+                compact: compact,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(widget.sadhanas.length, (i) {
+            final active = i == _page;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: active ? 18 : 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: active
+                    ? _GlobalSadhanaCard.accent
+                    : _GlobalSadhanaCard.accent.withValues(alpha: 0.25),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            );
+          }),
+        ),
+      ],
+    );
+  }
+}
+
+class _GlobalSadhanaCard extends StatelessWidget {
+  const _GlobalSadhanaCard({required this.sadhana, required this.compact});
+  final GlobalSadhana sadhana;
+  final bool compact;
+
+  static const accent = Color(0xFFE8650A);
+  static const _accent = accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasImage = sadhana.imageUrl != null && sadhana.imageUrl!.isNotEmpty;
+
+    return GestureDetector(
         onTap: () => context.push('${KvlRoute.globalSadhana}/${sadhana.id}'),
         child: Container(
           clipBehavior: Clip.antiAlias,
@@ -1112,7 +1229,6 @@ class _GlobalSadhanaSection extends ConsumerWidget {
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 }

@@ -24,10 +24,36 @@ class ApiClient {
   static AuthStorage? _authStorage;
   static bool _refreshInFlight = false;
 
+  /// Invoked when a protected request fails and the session is unrecoverable
+  /// (no stored tokens to send, or refresh rejected). Wired in `providers.dart`
+  /// to `AuthRepository.logout()` so the Hive session is cleared and the router
+  /// redirects to the login screen — otherwise the app sits in a "zombie"
+  /// state where the Hive session survives but every authed call 401s with
+  /// "Missing bearer token" (happens when secure storage is wiped on an
+  /// Android update / reinstall while the Hive session persists).
+  static Future<void> Function()? onSessionExpired;
+  static bool _expiringSession = false;
+
   /// Inject the storage so the auth interceptor can read + rewrite tokens.
   /// Call once at bootstrap before any request goes out.
   static void useAuthStorage(AuthStorage storage) {
     _authStorage = storage;
+  }
+
+  /// Fire [onSessionExpired] at most once per zombie episode. Guarded so a
+  /// burst of concurrent 401s (enrollment GET + leaderboard + …) triggers a
+  /// single logout instead of a stampede.
+  static Future<void> _expireSession() async {
+    final handler = onSessionExpired;
+    if (handler == null || _expiringSession) return;
+    _expiringSession = true;
+    try {
+      await handler();
+    } catch (e) {
+      if (kDebugMode) debugPrint('[api] onSessionExpired failed: $e');
+    } finally {
+      _expiringSession = false;
+    }
   }
 
   factory ApiClient() {
@@ -79,6 +105,10 @@ class _AuthInterceptor extends Interceptor {
       final tokens = await storage.readTokens();
       if (tokens != null) {
         options.headers['authorization'] = 'Bearer ${tokens.accessToken}';
+      } else {
+        // Protected path but no tokens at all — mark so onError can tell this
+        // apart from a normal expired-access-token 401 (which can refresh).
+        options.extra['__noTokens'] = true;
       }
     }
     handler.next(options);
@@ -97,6 +127,19 @@ class _AuthInterceptor extends Interceptor {
         !_isUnauthed(err.requestOptions.path)) {
       await storage.clear();
       if (kDebugMode) debugPrint('[api] 403 received — tokens cleared (account banned)');
+      await ApiClient._expireSession(); // clear Hive session → redirect to login
+      return handler.next(err);
+    }
+
+    // Protected request sent without any token (secure storage wiped while the
+    // Hive session survived). No access token to refresh — the session is dead;
+    // log out so the router redirects to login instead of looping on 401s.
+    if (response?.statusCode == 401 &&
+        storage != null &&
+        !_isUnauthed(err.requestOptions.path) &&
+        err.requestOptions.extra['__noTokens'] == true) {
+      if (kDebugMode) debugPrint('[api] 401 with no stored tokens — session expired');
+      await ApiClient._expireSession();
       return handler.next(err);
     }
 
@@ -134,6 +177,7 @@ class _AuthInterceptor extends Interceptor {
       // Refresh token is expired or invalid — wipe storage so the router
       // redirects to the login screen cleanly instead of looping on 401.
       await storage.clear();
+      await ApiClient._expireSession(); // also clear Hive session
     } finally {
       ApiClient._refreshInFlight = false;
     }

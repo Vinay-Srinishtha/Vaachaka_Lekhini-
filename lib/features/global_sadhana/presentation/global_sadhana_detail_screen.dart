@@ -111,6 +111,12 @@ class _GlobalSadhanaDetailScreenState
   /// actionable instead of always reading "Could not join".
   String _enrollErrorMessage(Object e) {
     if (e is DioException) {
+      // 401 = session expired / tokens missing. The interceptor logs the user
+      // out and the router redirects to login; show a clear message instead of
+      // the raw backend "Missing bearer token".
+      if (e.response?.statusCode == 401) {
+        return 'Your session has expired. Please log in again to join.';
+      }
       final data = e.response?.data;
       if (data is Map && data['message'] is String) {
         return data['message'] as String;

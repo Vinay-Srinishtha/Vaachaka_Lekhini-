@@ -21,6 +21,50 @@ class GlobalSadhanaDetailScreen extends ConsumerStatefulWidget {
 class _GlobalSadhanaDetailScreenState
     extends ConsumerState<GlobalSadhanaDetailScreen> {
   bool _enrolling = false;
+  bool _startingPractice = false;
+
+  Future<void> _startPractice(GlobalSadhana sadhana) async {
+    final profile = ref.read(activeProfileProvider).value;
+    if (profile == null) return;
+
+    // Check for an existing personal program for this mantra.
+    final programs = ref
+        .read(programsForActiveProfileProvider)
+        .value
+        ?.where((p) => p.mantraId == sadhana.mantraId && !p.isCompleted)
+        .toList();
+
+    if (programs != null && programs.isNotEmpty) {
+      if (mounted) context.push('${KvlRoute.practice}/${programs.first.id}');
+      return;
+    }
+
+    // No personal program — auto-create with sensible defaults so the user
+    // can practice immediately without a goal-setting screen.
+    setState(() => _startingPractice = true);
+    try {
+      final repo = ref.read(programRepositoryProvider);
+      final program = await repo.create(
+        memberId: profile.id,
+        mantraId: sadhana.mantraId,
+        targetWritings: 1008,
+        targetDays: 108,
+      );
+      ref.invalidate(programsForActiveProfileProvider);
+      if (mounted) context.push('${KvlRoute.practice}/${program.id}');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: KvlColors.danger,
+          content: Text('Could not start practice. Please try again.',
+              style: KvlText.caption(12).copyWith(color: Colors.white)),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _startingPractice = false);
+    }
+  }
 
   Future<void> _enroll(GlobalSadhana sadhana) async {
     final profile = ref.read(activeProfileProvider).value;
@@ -337,24 +381,8 @@ class _GlobalSadhanaDetailScreenState
               ),
           ] else if (isEnrolled) ...[
             KvlButton(
-              label: '🧘 Continue Practice',
-              onPressed: () {
-                final programs = ref
-                    .read(programsForActiveProfileProvider)
-                    .value
-                    ?.where(
-                      (p) =>
-                          p.mantraId == sadhana.mantraId && !p.isCompleted,
-                    )
-                    .toList();
-                if (programs != null && programs.isNotEmpty) {
-                  context.push('${KvlRoute.practice}/${programs.first.id}');
-                } else if (sadhana.voiceAllowed) {
-                  context.push('${KvlRoute.voiceTraining}/${sadhana.mantraId}');
-                } else {
-                  context.push('${KvlRoute.handwritingWrite}/${sadhana.mantraId}');
-                }
-              },
+              label: _startingPractice ? 'Starting…' : '🧘 Continue Practice',
+              onPressed: _startingPractice ? null : () => _startPractice(sadhana),
             ),
           ] else ...[
             KvlButton(

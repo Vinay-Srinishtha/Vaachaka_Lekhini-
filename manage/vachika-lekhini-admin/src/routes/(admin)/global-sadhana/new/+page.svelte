@@ -28,7 +28,7 @@
 	{/if}
 	<form id="sadhana-form" method="POST" enctype="multipart/form-data" onsubmit={() => handleSuccess()} class="space-y-5">
 		<!-- Basics -->
-		<section class="card p-5 space-y-4">
+		<section class="card p-4 space-y-4">
 			<p class="section-label">Program Details</p>
 			<div>
 				<label class="block text-sm font-medium text-slate-700 mb-1.5" for="title">Title <span class="text-red-500">*</span></label>
@@ -45,7 +45,7 @@
 		</section>
 
 		<!-- Mantra -->
-		<section class="card p-5 space-y-4">
+		<section class="card p-4 space-y-4">
 			<p class="section-label">Mantra</p>
 			<div>
 				<label class="block text-sm font-medium text-slate-700 mb-1.5" for="mantra_id">Mantra <span class="text-red-500">*</span></label>
@@ -71,7 +71,7 @@
 		</section>
 
 		<!-- Target & Schedule -->
-		<section class="card p-5 space-y-4">
+		<section class="card p-4 space-y-4">
 			<p class="section-label">Target & Schedule</p>
 			<div class="grid grid-cols-2 gap-4">
 				<div>
@@ -102,7 +102,7 @@
 		</section>
 
 		<!-- Program Image & Settings -->
-		<section class="card p-5 space-y-4">
+		<section class="card p-4 space-y-4">
 			<p class="section-label">Program Image</p>
 			<div>
 				<label class="block text-sm font-medium text-slate-700 mb-1.5" for="image">Banner Image</label>

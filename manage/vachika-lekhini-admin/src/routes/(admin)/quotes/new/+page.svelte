@@ -71,7 +71,7 @@
 		}
 	}} class="space-y-5">
 		<!-- Quote content -->
-		<section class="card p-5 space-y-4">
+		<section class="card p-4 space-y-4">
 			<p class="section-label">Quote Content</p>
 			<div>
 				<label class="block text-sm font-medium text-slate-700 mb-1.5" for="text">Quote Text <span class="text-red-500">*</span></label>
@@ -89,7 +89,7 @@
 		</section>
 
 		<!-- Image upload -->
-		<section class="card p-5 space-y-3">
+		<section class="card p-4 space-y-3">
 			<p class="section-label">Image <span class="text-xs font-normal text-slate-400 ml-1">(optional · saved to S3)</span></p>
 			{#if imagePreview}
 				<div class="relative inline-block">
@@ -119,7 +119,7 @@
 		</section>
 
 		<!-- Mantra mapping -->
-		<section class="card p-5 space-y-4">
+		<section class="card p-4 space-y-4">
 			<p class="section-label">Mantra Mapping</p>
 			<div>
 				<label class="block text-sm font-medium text-slate-700 mb-1.5" for="mantra_id">Target Mantra</label>
@@ -134,7 +134,7 @@
 		</section>
 
 		<!-- Settings -->
-		<section class="card p-5">
+		<section class="card p-4">
 			<p class="section-label mb-3">Settings</p>
 			<div class="flex items-center gap-6">
 				<div>

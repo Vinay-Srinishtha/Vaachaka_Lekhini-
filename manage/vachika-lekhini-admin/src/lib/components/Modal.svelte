@@ -23,12 +23,12 @@
 	}: Props = $props();
 
 	const sizes: Record<NonNullable<Props['size']>, string> = {
-		sm: 'max-w-lg',
-		md: 'max-w-3xl',
-		lg: 'max-w-5xl',
-		xl: 'max-w-6xl',
-		'2xl': 'max-w-[92vw]',
-		'3xl': 'max-w-[98vw]'
+		sm: 'max-w-xl',
+		md: 'max-w-2xl',
+		lg: 'max-w-3xl',
+		xl: 'max-w-4xl',
+		'2xl': 'max-w-5xl',
+		'3xl': 'max-w-6xl'
 	};
 
 	$effect(() => {
@@ -53,70 +53,63 @@
 </script>
 
 {#if open}
-	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm overflow-hidden">
-		<button
-			type="button"
-			class="absolute inset-0 -z-10"
-			aria-label="Close"
-			onclick={onClose}
-		></button>
+	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+		<!-- backdrop click to close -->
+		<button type="button" class="absolute inset-0 -z-10" aria-label="Close" onclick={onClose}></button>
+
 		<div
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="modal-title"
-			class="bg-white w-[80vw] {sizes[size]} rounded-xl shadow-2xl ring-1 ring-black/5 flex flex-col max-h-[80vh] transition-all duration-200"
+			class="bg-white w-[80vw] {sizes[size]} rounded-2xl shadow-2xl ring-1 ring-black/8 flex flex-col max-h-[80vh] transition-all duration-200"
 		>
-			<!-- Header — title left, actions right -->
-			<div class="flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-slate-900 to-slate-800 rounded-t-xl shrink-0">
+			<!-- Header -->
+			<div class="flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-slate-900 to-slate-800 rounded-t-2xl shrink-0">
 				<div class="min-w-0 flex-1">
-					<h2 id="modal-title" class="text-base font-bold text-white tracking-tight truncate">{title}</h2>
-					{#if subtitle}<p class="text-xs text-slate-400 mt-0.5 truncate">{subtitle}</p>{/if}
+					<h2 id="modal-title" class="text-sm font-bold text-white tracking-tight truncate">{title}</h2>
+					{#if subtitle}<p class="text-[11px] text-slate-400 mt-0.5 truncate">{subtitle}</p>{/if}
 				</div>
 
-				<!-- Header action row -->
-					<div class="flex items-center gap-2 shrink-0">
-						{#if headerLeft}
-							{@render headerLeft()}
-						{/if}
+				<div class="flex items-center gap-2 shrink-0">
+					{#if headerLeft}
+						{@render headerLeft()}
+					{/if}
 
-						{#if formId}
-							<!-- Cancel -->
-							<button
-								type="button"
-								onclick={onClose}
-								class="px-2.5 py-1 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors"
-							>
-								Cancel
-							</button>
-							<!-- Save -->
-							<button
-								type="submit"
-								form={formId}
-								class="px-3 py-1 rounded-lg text-sm font-semibold bg-brand-500 hover:bg-brand-600 text-white transition-colors shadow-sm"
-							>
-								{saveLabel}
-							</button>
-						{:else}
-							<!-- No form — just close X -->
-							<button
+					{#if formId}
+						<button
 							type="button"
-							class="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+							onclick={onClose}
+							class="px-3 py-1.5 rounded-lg text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+						>
+							Cancel
+						</button>
+						<button
+							type="submit"
+							form={formId}
+							class="px-4 py-1.5 rounded-lg text-xs font-semibold bg-brand-500 hover:bg-brand-600 text-white transition-colors shadow-sm"
+						>
+							{saveLabel}
+						</button>
+					{:else}
+						<button
+							type="button"
+							class="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
 							onclick={onClose}
 							aria-label="Close"
-							>
-								<X size={18} />
-							</button>
-						{/if}
-					</div>
+						>
+							<X size={16} />
+						</button>
+					{/if}
 				</div>
+			</div>
 
-				<!-- Content -->
-			<div class="px-3 py-3 overflow-y-auto flex-1 flex flex-col min-h-0 bg-slate-50/50">
+			<!-- Scrollable content -->
+			<div class="px-5 py-4 overflow-y-auto flex-1 min-h-0 bg-slate-50/60">
 				{@render children()}
 			</div>
 
 			{#if footer}
-				<div class="px-4 py-2 border-t border-gray-100 flex justify-end gap-2 shrink-0 bg-white rounded-b-xl">
+				<div class="px-5 py-3 border-t border-slate-100 flex justify-end gap-2 shrink-0 bg-white rounded-b-2xl">
 					{@render footer()}
 				</div>
 			{/if}

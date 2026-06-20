@@ -120,7 +120,7 @@
 		}
 	}} class="space-y-5">
 		<!-- Quote content — tabbed language editor -->
-		<section class="card p-5 space-y-4">
+		<section class="card p-4 space-y-4">
 			<p class="section-label">Quote Content <span class="text-xs font-normal text-slate-400 ml-1">(fill at least one language)</span></p>
 			<!-- Tab bar -->
 			<div class="flex gap-1 border-b border-slate-200 -mx-1">
@@ -165,7 +165,7 @@
 		</section>
 
 		<!-- Image -->
-		<section class="card p-5 space-y-3">
+		<section class="card p-4 space-y-3">
 			<p class="section-label">Image <span class="text-xs font-normal text-slate-400 ml-1">(saved to S3)</span></p>
 			{#if imagePreview || imageKey}
 				<div class="relative inline-block">
@@ -195,7 +195,7 @@
 		</section>
 
 		<!-- Mantra mapping -->
-		<section class="card p-5">
+		<section class="card p-4">
 			<p class="section-label mb-3">Mantra Mapping</p>
 			<div>
 				<label class="block text-sm font-medium text-slate-700 mb-1.5" for="mantra_id">Target Mantra</label>
@@ -212,7 +212,7 @@
 		</section>
 
 		<!-- Settings -->
-		<section class="card p-5">
+		<section class="card p-4">
 			<p class="section-label mb-3">Settings</p>
 			<div class="space-y-4">
 				<div>

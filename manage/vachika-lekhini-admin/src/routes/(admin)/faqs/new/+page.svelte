@@ -23,7 +23,7 @@
 			await update();
 		}
 	}} class="space-y-5">
-		<section class="card p-5 space-y-4">
+		<section class="card p-4 space-y-4">
 			<p class="section-label">Content</p>
 			<div>
 				<label class="block text-sm font-medium text-slate-700 mb-1.5" for="question">Question</label>
@@ -38,7 +38,7 @@
 					placeholder="Go to Programs → tap Create New Program → ..." required>{String(v.answer ?? '')}</textarea>
 			</div>
 		</section>
-		<section class="card p-5">
+		<section class="card p-4">
 			<p class="section-label mb-3">Settings</p>
 			<div class="flex items-center gap-6">
 				<div>

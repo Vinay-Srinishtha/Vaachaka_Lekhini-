@@ -257,29 +257,34 @@ class _RewardPointsTile extends StatelessWidget {
               IndianNumberFormat.format(points),
               style: KvlText.ui(14, FontWeight.w700).copyWith(color: KvlColors.ink),
             ),
-            const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: KvlSpacing.md, vertical: KvlSpacing.xs),
-              decoration: BoxDecoration(
-                borderRadius: KvlRadius.brPill,
-                border: Border.all(color: KvlColors.primary, width: 1.4),
-                color: KvlColors.surface,
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    context.l10n.storeButton,
-                    style: KvlText.caption(12.5).copyWith(
-                      color: KvlColors.primaryDeep,
-                      fontWeight: FontWeight.w600,
+            const SizedBox(width: KvlSpacing.md),
+            // Store CTA expands to fill the remaining width so the tile reads
+            // as a full-width action rather than a small floating pill.
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: KvlSpacing.md, vertical: KvlSpacing.xs),
+                decoration: BoxDecoration(
+                  borderRadius: KvlRadius.brPill,
+                  border: Border.all(color: KvlColors.primary, width: 1.4),
+                  color: KvlColors.surface,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.max,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      context.l10n.storeButton,
+                      style: KvlText.caption(12.5).copyWith(
+                        color: KvlColors.primaryDeep,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: KvlSpacing.xs),
-                  const Icon(Icons.arrow_forward_rounded,
-                      color: KvlColors.primaryDeep, size: 16),
-                ],
+                    const SizedBox(width: KvlSpacing.xs),
+                    const Icon(Icons.arrow_forward_rounded,
+                        color: KvlColors.primaryDeep, size: 16),
+                  ],
+                ),
               ),
             ),
           ],

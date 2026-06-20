@@ -5,7 +5,9 @@ import { requireAccount } from '$lib/server/user-auth';
 import { readJsonBody } from '$lib/server/json-input';
 
 const bodySchema = z.object({
-	member_id: z.string().cuid(),
+	// Member IDs may be UUIDs (client-created profiles) or cuids (server-created
+	// primary members) — accept any non-empty id, matching the rest of the sync API.
+	member_id: z.string().min(1),
 	voice_training_complete: z.boolean().default(false),
 	handwriting_training_complete: z.boolean().default(false)
 });

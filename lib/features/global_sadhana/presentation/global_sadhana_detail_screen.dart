@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -97,13 +98,28 @@ class _GlobalSadhanaDetailScreenState
         behavior: SnackBarBehavior.floating,
         backgroundColor: KvlColors.danger,
         content: Text(
-          'Could not join. Please try again.',
+          _enrollErrorMessage(e),
           style: KvlText.caption(12).copyWith(color: Colors.white),
         ),
       ));
     } finally {
       if (mounted) setState(() => _enrolling = false);
     }
+  }
+
+  /// Surface the actual server message where possible so failures are
+  /// actionable instead of always reading "Could not join".
+  String _enrollErrorMessage(Object e) {
+    if (e is DioException) {
+      final data = e.response?.data;
+      if (data is Map && data['message'] is String) {
+        return data['message'] as String;
+      }
+      if (data is Map && data['error'] is String) {
+        return data['error'] as String;
+      }
+    }
+    return 'Could not join. Please try again.';
   }
 
   @override

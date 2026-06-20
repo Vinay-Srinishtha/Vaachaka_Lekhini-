@@ -17,7 +17,6 @@ export const GET: RequestHandler = async ({ url }) => {
 			id: true,
 			title: true,
 			description: true,
-			mantraId: true,
 			mantraText: true,
 			mantraLanguage: true,
 			imageUrl: true,
@@ -30,6 +29,7 @@ export const GET: RequestHandler = async ({ url }) => {
 			instructions: true,
 			isSponsored: true,
 			completedAt: true,
+			mantra: { select: { slug: true } },
 			_count: { select: { enrollments: true } }
 		}
 	});
@@ -39,7 +39,7 @@ export const GET: RequestHandler = async ({ url }) => {
 			id: s.id,
 			title: s.title,
 			description: s.description,
-			mantra_id: s.mantraId,
+			mantra_id: s.mantra.slug,
 			mantra_text: s.mantraText ?? null,
 			mantra_language: s.mantraLanguage,
 			image_url: s.imageUrl ?? null,

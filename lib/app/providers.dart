@@ -307,12 +307,23 @@ final accountHydrationProvider = Provider<void>((ref) {
               );
         }
 
-        // Delete any local programs that no longer exist on the server.
+        // Delete any local programs that no longer exist on the server — but
+        // NOT ones still queued in the outbox. The 60s poll calls pull()
+        // without draining first, so a freshly-created local program may be
+        // absent from this snapshot purely because it hasn't uploaded yet;
+        // deleting it here would lose the user's new program.
+        final pending = await ref.read(syncOutboxProvider).peekAll();
+        final pendingProgramIds = pending
+            .where((i) => i.kind.startsWith('programs.'))
+            .map((i) => i.payload['id'])
+            .whereType<String>()
+            .toSet();
         final localPrograms = await ref
             .read(programRepositoryProvider)
             .listForProfile(memberId);
         for (final local in localPrograms) {
-          if (!serverProgramIds.contains(local.id)) {
+          if (!serverProgramIds.contains(local.id) &&
+              !pendingProgramIds.contains(local.id)) {
             await ref.read(programRepositoryProvider).delete(local.id);
           }
         }

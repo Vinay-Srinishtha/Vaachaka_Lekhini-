@@ -8,6 +8,14 @@
 
 	let imagePreview = $state<string | null>(null);
 	let imageFileName = $state<string | null>(null);
+	let selectedStatus = $state<string>(v.status ?? 'active');
+
+	// Default start time = now (in datetime-local format: YYYY-MM-DDTHH:mm)
+	function nowLocal() {
+		const d = new Date();
+		d.setSeconds(0, 0);
+		return d.toISOString().slice(0, 16);
+	}
 
 	function close() { goto('/global-sadhana', { keepFocus: true, noScroll: true }); }
 	function handleSuccess() { toasts.show('Global Sadhana created'); close(); }
@@ -91,7 +99,8 @@
 			<div class="grid grid-cols-2 gap-4">
 				<div>
 					<label class="block text-sm font-medium text-slate-700 mb-1.5" for="start_at">Start Date & Time <span class="text-red-500">*</span></label>
-					<input id="start_at" name="start_at" type="datetime-local" required value={v.start_at ?? ''} class="input" />
+					<input id="start_at" name="start_at" type="datetime-local" required value={v.start_at ?? nowLocal()} class="input" />
+					<p class="mt-1 text-xs text-slate-400">Defaults to now — users can join immediately</p>
 				</div>
 				<div>
 					<label class="block text-sm font-medium text-slate-700 mb-1.5" for="end_at">End Date & Time (optional)</label>
@@ -119,20 +128,43 @@
 				</label>
 				<input id="image" name="image" type="file" accept="image/*" class="sr-only" onchange={onImageChange} />
 			</div>
-			<div class="flex items-center gap-6">
-				<div>
-					<label class="block text-sm font-medium text-slate-700 mb-1.5" for="status">Initial Status</label>
-					<select id="status" name="status" class="input w-40">
-						<option value="draft" selected={(v.status ?? 'draft') === 'draft'}>Draft</option>
-						<option value="published" selected={v.status === 'published'}>Published</option>
-						<option value="active" selected={v.status === 'active'}>Active (live)</option>
-					</select>
+			<!-- Status radio cards -->
+			<div>
+				<p class="block text-sm font-medium text-slate-700 mb-2">Visibility Status</p>
+				<div class="grid grid-cols-3 gap-2">
+					{#each [
+						{ value: 'active',    icon: '🟢', label: 'Active',    desc: 'Live now — users can see and join immediately' },
+						{ value: 'published', icon: '👁️', label: 'Published', desc: 'Visible in app but enrollment not yet open' },
+						{ value: 'draft',     icon: '📝', label: 'Draft',     desc: 'Hidden from app — save for later' },
+					] as opt}
+						<label class="relative flex flex-col gap-1 rounded-xl border-2 cursor-pointer p-3 transition-all
+							{selectedStatus === opt.value
+								? 'border-brand-500 bg-brand-50/60'
+								: 'border-slate-200 bg-white hover:border-slate-300'}">
+							<input type="radio" name="status" value={opt.value}
+								checked={selectedStatus === opt.value}
+								onchange={() => selectedStatus = opt.value}
+								class="sr-only" />
+							<span class="text-base leading-none">{opt.icon}</span>
+							<span class="text-sm font-semibold {selectedStatus === opt.value ? 'text-brand-700' : 'text-slate-700'}">{opt.label}</span>
+							<span class="text-[11px] text-slate-400 leading-snug">{opt.desc}</span>
+							{#if selectedStatus === opt.value}
+								<span class="absolute top-2 right-2 w-4 h-4 rounded-full bg-brand-500 flex items-center justify-center">
+									<svg class="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 12 12"><path d="M10 3L5 8.5 2 5.5l-1 1 4 4 6-7z"/></svg>
+								</span>
+							{/if}
+						</label>
+					{/each}
 				</div>
-				<label class="flex items-center gap-2.5 cursor-pointer pt-6">
-					<input name="is_sponsored" type="checkbox" checked={v.is_sponsored === 'true'} value="true" class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
-					<span class="text-sm font-medium text-slate-700">⭐ Sponsored / Featured</span>
-				</label>
+				{#if selectedStatus === 'active'}
+					<p class="mt-2 text-xs text-emerald-600 font-medium">✓ Sadhana will go live immediately after saving</p>
+				{/if}
 			</div>
+
+			<label class="flex items-center gap-2.5 cursor-pointer">
+				<input name="is_sponsored" type="checkbox" checked={v.is_sponsored === 'true'} value="true" class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
+				<span class="text-sm font-medium text-slate-700">⭐ Sponsored / Featured</span>
+			</label>
 		</section>
 
 	</form>

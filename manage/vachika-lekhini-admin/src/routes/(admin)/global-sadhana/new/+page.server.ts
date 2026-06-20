@@ -15,7 +15,7 @@ const schema = z.object({
 	start_at: z.string().refine((s) => !isNaN(Date.parse(s)), 'Invalid date'),
 	end_at: z.string().optional(),
 	is_sponsored: z.coerce.boolean().default(false),
-	status: z.enum(['draft', 'published', 'active']).default('draft'),
+	status: z.enum(['draft', 'published', 'active']).default('active'),
 	participation_mode: z.enum(['voice', 'handwriting', 'both']).default('both'),
 	instructions: z.string().optional()
 });

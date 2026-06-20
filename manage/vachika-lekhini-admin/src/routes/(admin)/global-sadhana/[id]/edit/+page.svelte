@@ -13,6 +13,7 @@
 	let saving = $state(false);
 	let imagePreview = $state<string | null>(null);
 	let imageFileName = $state<string | null>(null);
+	let selectedStatus = $state<string>(v.status ?? s.status);
 
 	function close() { goto('/global-sadhana', { keepFocus: true, noScroll: true }); }
 	function handleSuccess() { toasts.show('Global Sadhana updated'); close(); }
@@ -207,20 +208,48 @@
 				</label>
 				<input id="image" name="image" type="file" accept="image/*" class="sr-only" onchange={onImageChange} />
 			</div>
-			<div class="flex items-center gap-6 flex-wrap">
-				<div>
-					<label class="block text-sm font-medium text-slate-700 mb-1.5" for="status">Status</label>
-					<select id="status" name="status" class="input w-40">
-						{#each ['draft','published','active','paused','completed','archived'] as st}
-							<option value={st} selected={(v.status ?? s.status) === st}>{st.charAt(0).toUpperCase() + st.slice(1)}</option>
-						{/each}
-					</select>
+			<!-- Status radio cards -->
+			<div>
+				<p class="block text-sm font-medium text-slate-700 mb-2">Visibility Status</p>
+				<div class="grid grid-cols-3 gap-2">
+					{#each [
+						{ value: 'active',    icon: '🟢', label: 'Active',     desc: 'Live — users can join & contribute' },
+						{ value: 'published', icon: '👁️', label: 'Published',  desc: 'Visible but enrollment not yet open' },
+						{ value: 'draft',     icon: '📝', label: 'Draft',      desc: 'Hidden from users' },
+						{ value: 'paused',    icon: '⏸️', label: 'Paused',     desc: 'Temporarily suspended' },
+						{ value: 'completed', icon: '✅', label: 'Completed',  desc: 'Target reached or ended' },
+						{ value: 'archived',  icon: '📦', label: 'Archived',   desc: 'Hidden and closed permanently' },
+					] as opt}
+						<label class="relative flex flex-col gap-1 rounded-xl border-2 cursor-pointer p-3 transition-all
+							{selectedStatus === opt.value
+								? 'border-brand-500 bg-brand-50/60'
+								: 'border-slate-200 bg-white hover:border-slate-300'}">
+							<input type="radio" name="status" value={opt.value}
+								checked={selectedStatus === opt.value}
+								onchange={() => selectedStatus = opt.value}
+								class="sr-only" />
+							<span class="text-base leading-none">{opt.icon}</span>
+							<span class="text-xs font-semibold {selectedStatus === opt.value ? 'text-brand-700' : 'text-slate-700'}">{opt.label}</span>
+							<span class="text-[10px] text-slate-400 leading-snug">{opt.desc}</span>
+							{#if selectedStatus === opt.value}
+								<span class="absolute top-2 right-2 w-4 h-4 rounded-full bg-brand-500 flex items-center justify-center">
+									<svg class="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 12 12"><path d="M10 3L5 8.5 2 5.5l-1 1 4 4 6-7z"/></svg>
+								</span>
+							{/if}
+						</label>
+					{/each}
 				</div>
-				<label class="flex items-center gap-2.5 cursor-pointer pt-6">
-					<input name="is_sponsored" type="checkbox" value="true" checked={(v.is_sponsored !== undefined ? v.is_sponsored === 'true' : s.isSponsored)} class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
-					<span class="text-sm font-medium text-slate-700">⭐ Sponsored / Featured</span>
-				</label>
+				{#if selectedStatus === 'active'}
+					<p class="mt-2 text-xs text-emerald-600 font-medium">✓ Users can join and contribute right now</p>
+				{:else if selectedStatus === 'draft'}
+					<p class="mt-2 text-xs text-amber-600 font-medium">⚠ This sadhana is hidden — switch to Active to make it visible</p>
+				{/if}
 			</div>
+
+			<label class="flex items-center gap-2.5 cursor-pointer">
+				<input name="is_sponsored" type="checkbox" value="true" checked={(v.is_sponsored !== undefined ? v.is_sponsored === 'true' : s.isSponsored)} class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
+				<span class="text-sm font-medium text-slate-700">⭐ Sponsored / Featured</span>
+			</label>
 		</section>
 
 	</form>

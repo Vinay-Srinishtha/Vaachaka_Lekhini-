@@ -27,55 +27,16 @@ class _GlobalSadhanaDetailScreenState
     if (profile == null) return;
     setState(() => _enrolling = true);
     try {
-      // Check training status before enrolling.
-      final voiceRepo = ref.read(voiceEnrolmentRepositoryProvider);
-      final hwAssets = await ref
-          .read(handwritingRepositoryProvider)
-          .listForProfile(profile.id);
-
-      final voiceEnrolment =
-          await voiceRepo.get(profile.id, sadhana.mantraId);
-
-      final voiceDone =
-          voiceEnrolment != null && voiceEnrolment.isComplete;
-      final hwDone = hwAssets.any((a) => a.mantraId == sadhana.mantraId);
-
       final repo = ref.read(globalSadhanaRepositoryProvider);
       await repo.enroll(
         sadhanaId: sadhana.id,
         memberId: profile.id,
-        voiceTrainingComplete: voiceDone,
-        handwritingTrainingComplete: hwDone,
+        voiceTrainingComplete: true,
+        handwritingTrainingComplete: true,
       );
 
       if (!mounted) return;
       ref.invalidate(globalSadhanaEnrollmentProvider(sadhana.id));
-
-      // Route to required training if not done.
-      if (sadhana.voiceAllowed && !voiceDone) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: KvlColors.primaryDeep,
-          content: Text(
-            'Please complete voice training for this mantra first.',
-            style: KvlText.caption(12).copyWith(color: Colors.white),
-          ),
-        ));
-        context.push('${KvlRoute.voiceTraining}/${sadhana.mantraId}');
-        return;
-      }
-      if (sadhana.handwritingAllowed && !hwDone) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: KvlColors.primaryDeep,
-          content: Text(
-            'Please complete handwriting training for this mantra first.',
-            style: KvlText.caption(12).copyWith(color: Colors.white),
-          ),
-        ));
-        context.push('${KvlRoute.handwritingSubmit}/${sadhana.mantraId}');
-        return;
-      }
 
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         behavior: SnackBarBehavior.floating,
@@ -375,8 +336,6 @@ class _GlobalSadhanaDetailScreenState
                 ),
               ),
           ] else if (isEnrolled) ...[
-            _TrainingStatus(enrollment: enrollment, sadhana: sadhana),
-            const SizedBox(height: KvlSpacing.sm),
             KvlButton(
               label: '🧘 Continue Practice',
               onPressed: () {
@@ -548,91 +507,3 @@ class _ModeChip extends StatelessWidget {
   }
 }
 
-class _TrainingStatus extends StatelessWidget {
-  const _TrainingStatus({
-    required this.enrollment,
-    required this.sadhana,
-  });
-  final GlobalSadhanaEnrollment enrollment;
-  final GlobalSadhana sadhana;
-
-  @override
-  Widget build(BuildContext context) {
-    final voiceNeeded = sadhana.voiceAllowed && !enrollment.voiceTrainingComplete;
-    final hwNeeded =
-        sadhana.handwritingAllowed && !enrollment.handwritingTrainingComplete;
-
-    if (!voiceNeeded && !hwNeeded) {
-      return Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: KvlSpacing.md,
-          vertical: KvlSpacing.sm,
-        ),
-        decoration: BoxDecoration(
-          color: KvlColors.success.withValues(alpha: 0.08),
-          borderRadius: KvlRadius.brMD,
-          border: Border.all(color: KvlColors.success.withValues(alpha: 0.25)),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.check_circle_rounded,
-                color: KvlColors.success, size: 18),
-            const SizedBox(width: KvlSpacing.sm),
-            Text(
-              'You are enrolled · Training complete ✓',
-              style: KvlText.caption(12)
-                  .copyWith(color: KvlColors.success, fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: KvlSpacing.md,
-        vertical: KvlSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: const Color(0xFFD97706).withValues(alpha: 0.08),
-        borderRadius: KvlRadius.brMD,
-        border: Border.all(color: const Color(0xFFD97706).withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.warning_amber_rounded,
-                  color: const Color(0xFFD97706), size: 18),
-              const SizedBox(width: KvlSpacing.sm),
-              Text(
-                'Training required before contributing',
-                style: KvlText.caption(12).copyWith(
-                  color: const Color(0xFFD97706),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          if (voiceNeeded) ...[
-            const SizedBox(height: 4),
-            Text(
-              '• Please complete voice training for this mantra.',
-              style: KvlText.caption(11.5)
-                  .copyWith(color: KvlColors.inkSoft, height: 1.4),
-            ),
-          ],
-          if (hwNeeded) ...[
-            const SizedBox(height: 2),
-            Text(
-              '• Please complete handwriting training for this mantra.',
-              style: KvlText.caption(11.5)
-                  .copyWith(color: KvlColors.inkSoft, height: 1.4),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}

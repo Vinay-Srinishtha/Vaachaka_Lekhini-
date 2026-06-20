@@ -31,7 +31,8 @@
 	};
 </script>
 
-<header class="h-16 sticky top-0 z-20 bg-white/90 backdrop-blur-sm border-b border-gray-100 flex items-center px-4 md:px-6 gap-3 shadow-sm">
+<header class="h-16 sticky top-0 z-20 flex items-center px-4 md:px-6 gap-3"
+	style="background: rgba(255,255,255,0.75); backdrop-filter: blur(20px) saturate(180%); border-bottom: 1px solid rgba(255,255,255,0.6); box-shadow: 0 1px 0 rgba(0,0,0,.04), 0 4px 24px rgba(0,0,0,.05);">
 	<button
 		aria-label="Open menu"
 		class="md:hidden p-2 rounded-xl hover:bg-gray-100 text-gray-600 transition-colors"

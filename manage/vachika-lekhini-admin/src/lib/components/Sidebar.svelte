@@ -98,7 +98,7 @@
 	class="fixed inset-y-0 left-0 z-40 flex flex-col transition-all duration-300 ease-out
 		{collapsed ? 'md:w-[68px]' : 'md:w-64'}
 		{mobileOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full md:translate-x-0'}"
-	style="background: linear-gradient(180deg, #0f1623 0%, #111827 60%, #0d1520 100%);"
+	style="background: linear-gradient(180deg, #0c1220 0%, #101828 45%, #0e1622 75%, #0a1018 100%); box-shadow: 4px 0 32px rgba(0,0,0,.25);"
 >
 	<!-- Brand header -->
 	<div class="h-[68px] flex items-center px-3 shrink-0 border-b border-white/[0.06]">
@@ -163,10 +163,11 @@
 						aria-busy={loading}
 						class="group relative flex items-center rounded-xl px-2.5 py-2 text-sm font-medium transition-all duration-150
 							{active
-								? 'bg-brand-600/15 text-brand-300'
+								? 'text-white'
 								: loading
-								? 'bg-slate-800/60 text-slate-200'
-								: 'text-slate-400 hover:bg-white/[0.05] hover:text-slate-100'}"
+								? 'bg-white/[0.06] text-slate-200'
+								: 'text-slate-400 hover:bg-white/[0.06] hover:text-slate-100'}"
+						style={active ? 'background: linear-gradient(135deg, rgba(251,146,60,.22) 0%, rgba(234,88,12,.14) 100%); box-shadow: inset 0 1px 0 rgba(251,146,60,.12), 0 0 12px rgba(249,115,22,.08);' : ''}
 					>
 						<!-- Active left bar -->
 						{#if active}
@@ -176,10 +177,11 @@
 						<!-- Icon container -->
 						<span class="flex items-center justify-center w-7 h-7 rounded-lg shrink-0 transition-colors
 							{active
-								? 'bg-brand-500/20 text-brand-300'
+								? 'text-brand-300'
 								: loading
 								? 'text-slate-300'
-								: 'text-slate-500 group-hover:text-slate-300'}">
+								: 'text-slate-500 group-hover:text-slate-300'}"
+							style={active ? 'background: linear-gradient(135deg, rgba(251,146,60,.3) 0%, rgba(234,88,12,.2) 100%);' : ''}>
 							<item.icon size={16} />
 						</span>
 

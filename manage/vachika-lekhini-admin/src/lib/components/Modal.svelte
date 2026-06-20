@@ -61,10 +61,12 @@
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="modal-title"
-			class="bg-white w-[80vw] {sizes[size]} rounded-2xl shadow-2xl ring-1 ring-black/8 flex flex-col max-h-[80vh] transition-all duration-200"
+			class="w-[80vw] {sizes[size]} rounded-2xl flex flex-col max-h-[80vh] transition-all duration-200"
+			style="background: rgba(255,255,255,0.92); backdrop-filter: blur(24px); border: 1px solid rgba(255,255,255,0.7); box-shadow: 0 8px 40px rgba(0,0,0,.16), 0 2px 8px rgba(0,0,0,.08), inset 0 1px 0 rgba(255,255,255,.9);"
 		>
 			<!-- Header -->
-			<div class="flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-slate-900 to-slate-800 rounded-t-2xl shrink-0">
+			<div class="flex items-center gap-3 px-5 py-3 rounded-t-2xl shrink-0"
+				style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f1c2e 100%); border-bottom: 1px solid rgba(249,115,22,.15); box-shadow: 0 2px 12px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.06);">
 				<div class="min-w-0 flex-1">
 					<h2 id="modal-title" class="text-sm font-bold text-white tracking-tight truncate">{title}</h2>
 					{#if subtitle}<p class="text-[11px] text-slate-400 mt-0.5 truncate">{subtitle}</p>{/if}
@@ -86,7 +88,8 @@
 						<button
 							type="submit"
 							form={formId}
-							class="px-4 py-1.5 rounded-lg text-xs font-semibold bg-brand-500 hover:bg-brand-600 text-white transition-colors shadow-sm"
+							class="px-4 py-1.5 rounded-lg text-xs font-semibold text-white transition-all"
+						style="background: linear-gradient(135deg, #fb923c 0%, #ea580c 100%); box-shadow: 0 2px 8px rgba(234,88,12,.4), inset 0 1px 0 rgba(255,255,255,.2);"
 						>
 							{saveLabel}
 						</button>
@@ -104,7 +107,7 @@
 			</div>
 
 			<!-- Scrollable content -->
-			<div class="px-5 py-4 overflow-y-auto flex-1 min-h-0 bg-slate-50/60">
+			<div class="px-5 py-4 overflow-y-auto flex-1 min-h-0" style="background: rgba(248,250,255,0.55);">
 				{@render children()}
 			</div>
 

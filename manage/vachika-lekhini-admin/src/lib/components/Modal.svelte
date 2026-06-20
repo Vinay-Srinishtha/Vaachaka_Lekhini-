@@ -53,7 +53,7 @@
 </script>
 
 {#if open}
-	<div class="fixed inset-0 z-50 flex items-center justify-center p-2 bg-black/40 backdrop-blur-sm overflow-hidden">
+	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm overflow-hidden">
 		<button
 			type="button"
 			class="absolute inset-0 -z-10"
@@ -64,7 +64,7 @@
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="modal-title"
-			class="bg-white w-full {sizes[size]} max-w-[calc(100vw-1rem)] rounded-xl shadow-2xl ring-1 ring-black/5 flex flex-col max-h-[calc(100svh-1rem)] {size === '3xl' ? 'h-[calc(100svh-1rem)]' : ''} transition-all duration-200"
+			class="bg-white w-[80vw] {sizes[size]} rounded-xl shadow-2xl ring-1 ring-black/5 flex flex-col max-h-[80vh] transition-all duration-200"
 		>
 			<!-- Header — title left, actions right -->
 			<div class="flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-slate-900 to-slate-800 rounded-t-xl shrink-0">
@@ -111,7 +111,7 @@
 				</div>
 
 				<!-- Content -->
-			<div class="px-3 py-3 overflow-hidden flex-1 flex flex-col min-h-0 bg-slate-50/50">
+			<div class="px-3 py-3 overflow-y-auto flex-1 flex flex-col min-h-0 bg-slate-50/50">
 				{@render children()}
 			</div>
 

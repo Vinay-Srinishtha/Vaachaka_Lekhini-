@@ -11,18 +11,27 @@ import '../../../core/widgets/widgets.dart';
 import '../../../l10n/l10n.dart';
 import '../../enrolment/voice/domain/voice_enrolment.dart';
 import '../../mantras/domain/mantra.dart';
+import '../domain/program.dart';
 
 class SetProgramTargetScreen extends ConsumerStatefulWidget {
-  const SetProgramTargetScreen({super.key, required this.mantraId});
+  const SetProgramTargetScreen({
+    super.key,
+    required this.mantraId,
+    this.programId,
+  });
   final String mantraId;
+
+  /// When set, "attach mode": instead of creating a new program, set the goal
+  /// on this existing (open/bonus) program — used from the Finish flow.
+  final String? programId;
 
   @override
   ConsumerState<SetProgramTargetScreen> createState() =>
       _SetProgramTargetScreenState();
 }
 
-// Fallback milestones used when the mantra has none configured in the admin.
-const _defaultMilestones = [
+// Fallback default targets used when the mantra has none configured in the admin.
+const _defaultTargets = [
   MantraMilestone(count: 108, dayOptions: [1, 7, 21, 40]),
   MantraMilestone(count: 1008, dayOptions: [7, 21, 40, 108]),
   MantraMilestone(count: 5116, dayOptions: [21, 40, 108, 180]),
@@ -131,14 +140,24 @@ class _SetProgramTargetScreenState
         return;
       }
 
-      final program = await ref
-          .read(programRepositoryProvider)
-          .create(
-            memberId: profile.id,
-            mantraId: widget.mantraId,
-            targetWritings: _writings,
-            targetDays: _days,
-          );
+      final repo = ref.read(programRepositoryProvider);
+      final Program program;
+      if (widget.programId != null) {
+        // Attach mode: graduate an existing open/bonus program into a
+        // targeted one. Its already-recorded chants carry over.
+        program = await repo.setTarget(
+          programId: widget.programId!,
+          targetWritings: _writings,
+          targetDays: _days,
+        );
+      } else {
+        program = await repo.create(
+          memberId: profile.id,
+          mantraId: widget.mantraId,
+          targetWritings: _writings,
+          targetDays: _days,
+        );
+      }
       if (!mounted) return;
       // Go directly to the practice counter for this program.
       context.go('${KvlRoute.practice}/${program.id}');
@@ -165,11 +184,11 @@ class _SetProgramTargetScreenState
   @override
   Widget build(BuildContext context) {
     final mantra = ref.watch(mantraByIdProvider(widget.mantraId));
-    final milestones = (mantra?.milestones?.isNotEmpty == true)
+    final targets = (mantra?.milestones?.isNotEmpty == true)
         ? mantra!.milestones!
-        : _defaultMilestones;
+        : _defaultTargets;
 
-    final dayOptionsMap = {for (final m in milestones) m.count: m.dayOptions};
+    final dayOptionsMap = {for (final m in targets) m.count: m.dayOptions};
     final currentDayOptions =
         dayOptionsMap[_selectedCount] ?? _dayOptionsFallback;
 
@@ -192,17 +211,17 @@ class _SetProgramTargetScreenState
           _SectionHeader(label: 'Total writings goal'),
           const SizedBox(height: KvlSpacing.sm),
 
-          // Full-width radio cards for each milestone count
-          for (int i = 0; i < milestones.length; i++) ...[
+          // Full-width radio cards for each default target count
+          for (int i = 0; i < targets.length; i++) ...[
             _CountCard(
-              count: milestones[i].count,
+              count: targets[i].count,
               badge: i == 0 ? 'Most Popular' : null,
-              selected: _selectedCount == milestones[i].count,
+              selected: _selectedCount == targets[i].count,
               onTap: () => setState(() {
-                _selectedCount = milestones[i].count;
-                _customWritingsCtrl.text = '${milestones[i].count}';
+                _selectedCount = targets[i].count;
+                _customWritingsCtrl.text = '${targets[i].count}';
                 _days =
-                    milestones[i].dayOptions.firstOrNull ??
+                    targets[i].dayOptions.firstOrNull ??
                     _dayOptionsFallback.first;
               }),
             ),

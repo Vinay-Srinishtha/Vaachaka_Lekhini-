@@ -769,21 +769,25 @@ class _HeroQuote extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final appSettings = ref.watch(appSettingsProvider).value;
     final profile = ref.watch(activeProfileProvider).value;
-    final mantraLanguage = profile?.mantraLanguage;
+    // Show quotes in the app's selected UI language. Watching settingsProvider
+    // (a stream) rebuilds this card live when the user changes the language.
+    // Fall back to the profile's mantra language if settings aren't loaded yet.
+    final quoteLanguage =
+        ref.watch(settingsProvider).value?.languageCode ?? profile?.mantraLanguage;
     final quotes = ref.watch(quotesProvider).value ?? const [];
 
     // Pick the first displayable quote for this language; fall back to any.
     Quote? chosen;
     for (final q in quotes) {
-      if ((q.textFor(mantraLanguage) ?? '').isNotEmpty) {
+      if ((q.textFor(quoteLanguage) ?? '').isNotEmpty) {
         chosen = q;
         break;
       }
     }
     if (chosen == null) return const SizedBox.shrink();
 
-    final quoteText = chosen.textFor(mantraLanguage) ?? '';
-    final attribution = chosen.sourceFor(mantraLanguage) ?? '';
+    final quoteText = chosen.textFor(quoteLanguage) ?? '';
+    final attribution = chosen.sourceFor(quoteLanguage) ?? '';
     final hasImage = chosen.imageUrl != null && chosen.imageUrl!.isNotEmpty;
 
     return KvlCard(

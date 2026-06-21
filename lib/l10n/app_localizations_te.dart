@@ -45,7 +45,7 @@ class AppLocalizationsTe extends AppLocalizations {
   String get quickSetup => 'త్వరిత సెటప్ · 30 సెకన్లు పడుతుంది';
 
   @override
-  String get usernameLabel => 'వినియోగదారు పేరు';
+  String get usernameLabel => 'పేరు';
 
   @override
   String get usernameHint => 'మీ పేరు నమోదు చేయండి';

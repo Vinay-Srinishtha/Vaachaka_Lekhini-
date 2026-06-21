@@ -12,6 +12,7 @@
 		{ key: 'mobile', label: 'Mobile', sortable: true },
 		{ key: 'primary', label: 'Primary member' },
 		{ key: 'members', label: 'Members', align: 'right' },
+		{ key: 'registered', label: 'Registered' },
 		{ key: 'referralCode', label: 'Referral', hidden: 'md' },
 		{ key: 'isBanned', label: 'Status', sortable: true },
 		{ key: 'createdAt', label: 'Joined', sortable: true, hidden: 'lg' },
@@ -68,6 +69,17 @@
 			</td>
 			<td class="px-4 py-3 text-gray-700">{a.members[0]?.displayName ?? '—'}</td>
 			<td class="px-4 py-3 text-right tabular-nums text-gray-700">{a._count.members}</td>
+			<td class="px-4 py-3">
+				{#if a.hasVoice && a.hasHandwriting}
+					<span class="chip bg-purple-100 text-purple-700">Voice + Writing</span>
+				{:else if a.hasVoice}
+					<span class="chip bg-blue-100 text-blue-700">Voice</span>
+				{:else if a.hasHandwriting}
+					<span class="chip bg-amber-100 text-amber-700">Writing</span>
+				{:else}
+					<span class="text-gray-400">—</span>
+				{/if}
+			</td>
 			<td class="px-4 py-3 hidden md:table-cell">
 				{#if a.referralCode}<code class="text-xs text-gray-600">{a.referralCode}</code>{:else}—{/if}
 			</td>

@@ -45,7 +45,7 @@ class AppLocalizationsKn extends AppLocalizations {
   String get quickSetup => 'ತ್ವರಿತ ಸೆಟಪ್ · 30 ಸೆಕೆಂಡ್ ತೆಗೆದುಕೊಳ್ಳುತ್ತದೆ';
 
   @override
-  String get usernameLabel => 'ಬಳಕೆದಾರ ಹೆಸರು';
+  String get usernameLabel => 'ಹೆಸರು';
 
   @override
   String get usernameHint => 'ನಿಮ್ಮ ಹೆಸರು ನಮೂದಿಸಿ';

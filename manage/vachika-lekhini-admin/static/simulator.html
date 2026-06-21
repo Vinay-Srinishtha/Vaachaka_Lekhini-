@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Load Simulator · Vachika Lekhini</title>
+<style>
+  :root{
+    --bg:#f6f1e7; --surface:#fff; --border:#e3dccd; --ink:#2b2117; --soft:#6b6052;
+    --muted:#9a8f7d; --primary:#c0641f; --primary-deep:#9c4f15; --ghost:#f3e7d8;
+    --danger:#c0392b; --ok:#2e7d32;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    font-size:14px;line-height:1.45;padding:24px 16px;}
+  .wrap{max-width:680px;margin:0 auto;}
+  h1{font-size:20px;margin:0 0 4px;}
+  .sub{color:var(--soft);font-size:12px;margin-bottom:16px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:16px;margin-bottom:16px;}
+  .label{font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);
+    font-weight:600;margin-bottom:8px;}
+  .row{display:flex;align-items:center;gap:10px;padding:6px 0;}
+  .row label{flex:1;font-size:13px;}
+  input[type=number]{width:110px;text-align:right;padding:8px 10px;border:1px solid var(--border);
+    border-radius:8px;background:var(--bg);font-size:13px;font-weight:600;color:var(--ink);}
+  .pill{padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);
+    font-size:12px;font-weight:600;cursor:pointer;user-select:none;}
+  .pill.sel{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .banner{display:flex;gap:8px;align-items:center;background:var(--ghost);border:1px solid var(--border);
+    border-radius:8px;padding:10px;font-size:12px;margin-bottom:16px;}
+  .proj{background:var(--bg);border-radius:8px;padding:10px;font-size:12px;color:var(--soft);margin-top:10px;}
+  button.act{width:100%;padding:13px;border:none;border-radius:10px;font-size:14px;font-weight:700;
+    cursor:pointer;color:#fff;background:var(--primary);}
+  button.act.stop{background:var(--danger);}
+  button.act:disabled{opacity:.5;cursor:not-allowed;}
+  button.ghostbtn{width:100%;padding:11px;border:1px solid var(--danger);border-radius:10px;
+    background:transparent;color:var(--danger);font-weight:600;cursor:pointer;font-size:13px;}
+  .bar{height:6px;border-radius:4px;background:var(--border);overflow:hidden;margin:4px 0 2px;}
+  .bar > i{display:block;height:100%;background:var(--primary);width:0;transition:width .2s;}
+  .stats{display:flex;gap:24px;margin-top:12px;}
+  .stat b{display:block;font-size:18px;}
+  .stat span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+  .barlabel{display:flex;justify-content:space-between;font-size:11px;color:var(--soft);}
+  #log{height:170px;overflow:auto;background:#1d1a16;color:#d9cdbb;border-radius:8px;padding:8px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;}
+  #log div{padding:1px 0;white-space:pre-wrap;}
+  .err{color:var(--danger);font-size:12px;margin-top:8px;}
+  textarea{width:100%;height:220px;font-family:ui-monospace,Menlo,monospace;font-size:11px;
+    border:1px solid var(--border);border-radius:8px;padding:8px;background:var(--bg);}
+  dialog{border:none;border-radius:14px;max-width:600px;width:92%;padding:18px;}
+  .dlgrow{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;}
+  .dlgrow button{padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg);
+    cursor:pointer;font-weight:600;}
+  small.hint{color:var(--soft);font-size:11px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Load Simulator</h1>
+  <div class="sub">Drives N simulated accounts against this backend at a chosen chant rate.</div>
+
+  <div class="banner">🖥️ <span>Target: <b id="target"></b> (same origin — no CORS)</span></div>
+
+  <div class="card">
+    <div class="label">Configuration</div>
+    <div class="row"><label>Users</label><input id="users" type="number" value="1000" min="1"></div>
+    <div class="row"><label>Chants / minute (per user)</label><input id="rate" type="number" value="40" min="1"></div>
+    <div class="row"><label>Duration (minutes)</label><input id="dur" type="number" value="5" min="1"></div>
+    <div class="row"><label>Mode</label>
+      <span class="pill sel" data-mode="bulk">Bulk</span>
+      <span class="pill" data-mode="realtime">Real-time</span>
+    </div>
+    <div class="row"><label>Modality</label>
+      <span class="pill sel" data-mod="voice">voice</span>
+      <span class="pill" data-mod="manual">manual</span>
+      <span class="pill" data-mod="handwriting">handwriting</span>
+    </div>
+    <div class="row"><label>Join active Global Sadhana (so its count reflects)</label>
+      <input id="joinsadhana" type="checkbox" checked style="width:18px;height:18px">
+    </div>
+    <div class="row"><label>Diversify counts per user (varied activity + power users)</label>
+      <input id="diversify" type="checkbox" checked style="width:18px;height:18px">
+    </div>
+    <div class="proj" id="proj"></div>
+  </div>
+
+  <button class="act" id="start">Start simulation</button>
+
+  <div class="card" id="progress" style="display:none">
+    <div class="label" id="phase">Progress</div>
+    <div class="barlabel"><span>Provisioning</span><span id="provtxt">0/0</span></div>
+    <div class="bar"><i id="provbar"></i></div>
+    <div id="timewrap" style="display:none">
+      <div class="barlabel" style="margin-top:8px"><span>Time</span><span id="timetxt"></span></div>
+      <div class="bar"><i id="timebar"></i></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="s_sess">0</b><span>Sessions</span></div>
+      <div class="stat"><b id="s_chant">0</b><span>Chants</span></div>
+      <div class="stat"><b id="s_err">0</b><span>Errors</span></div>
+    </div>
+    <div class="err" id="errmsg" style="display:none"></div>
+  </div>
+
+  <div class="card">
+    <div class="label">Cleanup</div>
+    <small class="hint">Deletes every simulated account (mobiles 9900000000–9900999999) and all of
+      their programs, sessions and reward events directly from the database.</small>
+    <div style="height:10px"></div>
+    <button class="ghostbtn" id="clear">Delete all sim data</button>
+    <div style="height:8px"></div>
+    <small class="hint"><a href="#" id="showsql" style="color:var(--soft)">Show SQL instead</a></small>
+  </div>
+
+  <div class="card">
+    <div class="label">Log</div>
+    <div id="log"></div>
+  </div>
+</div>
+
+<dialog id="sqldlg">
+  <div class="label">Clear sim data — run this SQL</div>
+  <textarea id="sqltext" readonly></textarea>
+  <div class="dlgrow">
+    <button onclick="document.getElementById('sqldlg').close()">Close</button>
+    <button onclick="copySql()">Copy SQL</button>
+  </div>
+</dialog>
+
+<script>
+// Prefer same origin (no CORS). When opened as a file:// or in a sandboxed
+// preview, location.origin is "null" — fall back to the dev backend. Override
+// with ?api=http://host:port .
+const API = (() => {
+  const q = new URLSearchParams(location.search).get('api');
+  if (q) return q.replace(/\/$/, '');
+  if (location.origin && location.origin !== 'null') return location.origin;
+  return 'http://localhost:5173';
+})();
+const MOBILE_BASE = 9900000000n;
+const PASSWORD = 'SimLoad!2024';
+const CONCURRENCY = 20;
+const TICK = 15;                        // seconds, real-time mode
+
+document.getElementById('target').textContent = API;
+
+const $ = id => document.getElementById(id);
+let mode = 'bulk', modality = 'voice';
+let stopFlag = false, running = false;
+
+// pill toggles
+document.querySelectorAll('[data-mode]').forEach(p => p.onclick = () => {
+  if (running) return;
+  document.querySelectorAll('[data-mode]').forEach(x => x.classList.remove('sel'));
+  p.classList.add('sel'); mode = p.dataset.mode;
+});
+document.querySelectorAll('[data-mod]').forEach(p => p.onclick = () => {
+  if (running) return;
+  document.querySelectorAll('[data-mod]').forEach(x => x.classList.remove('sel'));
+  p.classList.add('sel'); modality = p.dataset.mod;
+});
+
+const fmt = n => n.toLocaleString('en-US');
+function proj(){
+  const u=+$('users').value||0, r=+$('rate').value||0, d=+$('dur').value||0;
+  const approx = $('diversify') && $('diversify').checked ? '≈' : '';
+  $('proj').textContent = `Projected: ${approx}${fmt(u*r*d)} chants across ${fmt(u)} users over ${d} min`
+    + (approx? ' (varied per user — leaderboard will spread).' : '.');
+}
+['users','rate','dur'].forEach(id => $(id).oninput = proj);
+$('diversify').onchange = proj; proj();
+
+// ---- state ----
+const st = {prov:0, total:0, sess:0, chant:0, err:0, elapsed:0, target:0};
+function render(){
+  $('progress').style.display='block';
+  $('provtxt').textContent = `${st.prov}/${st.total}`;
+  $('provbar').style.width = (st.total? st.prov/st.total*100:0)+'%';
+  $('timewrap').style.display = mode==='realtime'?'block':'none';
+  $('timetxt').textContent = `${st.elapsed}s / ${st.target}s`;
+  $('timebar').style.width = (st.target? Math.min(1,st.elapsed/st.target)*100:0)+'%';
+  $('s_sess').textContent = fmt(st.sess);
+  $('s_chant').textContent = fmt(st.chant);
+  $('s_err').textContent = fmt(st.err);
+}
+function log(m){
+  const el=$('log'); const d=document.createElement('div');
+  d.textContent = m; el.prepend(d);
+  while(el.childNodes.length>250) el.removeChild(el.lastChild);
+}
+function setPhase(p){ $('phase').textContent = 'Progress · '+p; }
+
+// ---- API helpers ----
+async function api(path, {method='GET', token, body}={}){
+  const headers = {'accept':'application/json'};
+  if(body) headers['content-type']='application/json';
+  if(token) headers['authorization']='Bearer '+token;
+  const res = await fetch(API+path, {method, headers, body: body?JSON.stringify(body):undefined});
+  const text = await res.text();
+  let json=null; try{ json = text?JSON.parse(text):null; }catch{}
+  if(!res.ok){ const e=new Error((json&&json.message)||res.status); e.status=res.status; throw e; }
+  return json;
+}
+function uuid(){
+  // crypto.randomUUID only exists in secure contexts (https/localhost top-level)
+  // — not in the sandboxed preview iframe. Fall back to getRandomValues, then
+  // Math.random, so the tool works everywhere.
+  try{ if(crypto && crypto.randomUUID) return crypto.randomUUID(); }catch{}
+  const b = new Uint8Array(16);
+  try{ crypto.getRandomValues(b); }
+  catch{ for(let i=0;i<16;i++) b[i]=Math.floor(Math.random()*256); }
+  b[6]=(b[6]&0x0f)|0x40; b[8]=(b[8]&0x3f)|0x80;
+  const h=[...b].map(x=>x.toString(16).padStart(2,'0'));
+  return `${h[0]}${h[1]}${h[2]}${h[3]}-${h[4]}${h[5]}-${h[6]}${h[7]}-${h[8]}${h[9]}-${h[10]}${h[11]}${h[12]}${h[13]}${h[14]}${h[15]}`;
+}
+const isoNow = () => new Date().toISOString();
+
+async function provisionUser(i){
+  const mobile = (MOBILE_BASE + BigInt(i)).toString();
+  let body;
+  try{
+    body = await api('/api/v1/auth/register', {method:'POST',
+      body:{mobile, username:'SIM_'+i, password:PASSWORD}});
+  }catch(e){
+    if(e.status===409){
+      body = await api('/api/v1/auth/password/login', {method:'POST',
+        body:{mobile, password:PASSWORD}});
+    } else throw e;
+  }
+  const token = body.access_token;
+  const member = body.primary_member || body.primaryMember;
+  if(!token || !member?.id) throw new Error('missing token/member for '+mobile);
+  // Per-user activity level for diversified counts: most users hover around the
+  // base rate; ~12% are "power users" who chant several times more.
+  const factor = Math.random() < 0.12 ? (2 + Math.random()*4) : (0.25 + Math.random()*1.1);
+  return {index:i, mobile, token, memberId:member.id, programId:null, carry:0, factor};
+}
+async function createProgram(u, mantraId){
+  const pid = uuid();
+  const r = await api('/api/v1/programs', {method:'POST', token:u.token, body:{programs:[{
+    id:pid, member_id:u.memberId, mantra_id:mantraId,
+    target_writings:1000000000, target_days:365, started_at:isoNow()
+  }]}});
+  u.programId = (r.programs && r.programs[0] && r.programs[0].id) || pid;
+}
+async function postSessions(u, sessions){
+  if(!sessions.length || !u.programId) return 0;
+  const payload = sessions.map(s=>({
+    id:uuid(), member_id:u.memberId, program_id:u.programId,
+    started_at:s.start.toISOString(), ended_at:s.end.toISOString(),
+    duration_sec:Math.abs(Math.round((s.end-s.start)/1000)),
+    count_added:s.count, modality
+  }));
+  const r = await api('/api/v1/sessions', {method:'POST', token:u.token, body:{sessions:payload}});
+  return (r && typeof r.created==='number') ? r.created : sessions.length;
+}
+
+// bounded concurrency
+async function forEachConc(items, fn){
+  let next=0;
+  async function worker(){
+    while(true){
+      if(stopFlag) return;
+      const i=next++; if(i>=items.length) return;
+      await fn(items[i], i);
+    }
+  }
+  await Promise.all(Array.from({length:Math.min(CONCURRENCY, items.length||1)}, worker));
+}
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+
+let users=[];
+async function run(){
+  const cfg = {
+    users: Math.max(1, +$('users').value||1000),
+    rate:  Math.max(1, +$('rate').value||40),
+    dur:   Math.max(1, +$('dur').value||5),
+  };
+  stopFlag=false; running=true; users=[];
+  Object.assign(st,{prov:0,total:cfg.users,sess:0,chant:0,err:0,elapsed:0,target:cfg.dur*60});
+  $('errmsg').style.display='none'; $('log').innerHTML='';
+  $('start').textContent='Stop'; $('start').classList.add('stop');
+  setPhase('provisioning'); render();
+  log(`Starting: ${cfg.users} users · ${cfg.rate}/min · ${cfg.dur} min · ${mode} · ${modality}`);
+
+  try{
+    const m = await api('/api/v1/mantras');
+    const list = m.mantras||[];
+    if(!list.length) throw new Error('No mantras from /api/v1/mantras');
+    const mantraId = list[0].slug || list[0].id;
+    log('Using mantra: '+(list[0].nameRoman||mantraId));
+
+    await forEachConc([...Array(cfg.users).keys()], async i=>{
+      try{ const u=await provisionUser(i); await createProgram(u, mantraId); users.push(u); }
+      catch(e){ st.err++; if(st.err<=10) log(`provision #${i} failed: ${e.message}`); }
+      finally{ st.prov++; if(st.prov%25===0||st.prov===st.total) render(); }
+    });
+    render();
+    if(stopFlag){ finish('Stopped during provisioning.'); return; }
+    if(!users.length) throw new Error('No users provisioned — check backend.');
+
+    // Optionally enroll every sim user into an active Global Sadhana for this
+    // mantra so the drive's count reflects their chants. (Only 'active' drives
+    // auto-credit on the backend.)
+    if($('joinsadhana').checked){
+      try{
+        const gs = await api('/api/v1/global-sadhanas');
+        const match = (gs.sadhanas||[]).find(s=>s.mantra_id===mantraId && s.status==='active');
+        if(match){
+          log('Joining Global Sadhana: '+match.title);
+          let ok=0;
+          await forEachConc(users, async u=>{
+            try{ await api('/api/v1/global-sadhanas/'+match.id+'/enroll',
+              {method:'POST', token:u.token, body:{member_id:u.memberId}}); ok++; }
+            catch(e){ st.err++; }
+          });
+          log(`Enrolled ${fmt(ok)} users in “${match.title}”.`);
+        } else {
+          log('No active Global Sadhana for this mantra — skipping enrollment.');
+        }
+      }catch(e){ log('Global Sadhana lookup failed: '+e.message); }
+    }
+
+    setPhase('running'); log(`Provisioned ${users.length} users. Generating chants…`); render();
+    if(mode==='bulk') await runBulk(cfg); else await runRealtime(cfg);
+    finish(stopFlag?'Stopped.':'Run complete.');
+  }catch(e){
+    setPhase('error'); $('errmsg').style.display='block'; $('errmsg').textContent=e.message;
+    log('ERROR: '+e.message);
+  }finally{
+    running=false; $('start').textContent='Start simulation'; $('start').classList.remove('stop');
+  }
+}
+
+async function runBulk(cfg){
+  const now=Date.now();
+  const diversify=$('diversify').checked;
+  await forEachConc(users, async u=>{
+    if(stopFlag) return;
+    const f = diversify ? u.factor : 1;
+    const sessions=[]; let userChants=0;
+    for(let mi=0; mi<cfg.dur; mi++){
+      // Per-minute jitter; diversified users occasionally sit a minute out.
+      const jit = diversify ? (0.5 + Math.random()) : 1;
+      if(diversify && Math.random()<0.1) continue;          // idle minute
+      const count=Math.max(1, Math.round(cfg.rate*f*jit));
+      sessions.push({
+        start:new Date(now-(cfg.dur-mi)*60000),
+        end:new Date(now-(cfg.dur-mi-1)*60000),
+        count });
+      userChants+=count;
+    }
+    try{ const c=await postSessions(u,sessions); st.sess+=c; st.chant+=userChants; }
+    catch(e){ st.err++; if(st.err<=10) log('bulk post failed: '+e.message); }
+    render();
+  });
+  st.elapsed=st.target; render();
+}
+
+async function runRealtime(cfg){
+  const diversify=$('diversify').checked;
+  while(st.elapsed<st.target && !stopFlag){
+    const t0=Date.now();
+    const remaining=st.target-st.elapsed;
+    const tick=Math.min(TICK, remaining);
+    await forEachConc(users, async u=>{
+      if(stopFlag) return;
+      const f = diversify ? u.factor : 1;
+      const jit = diversify ? (0.5 + Math.random()) : 1;
+      const exact=cfg.rate*f*jit*tick/60 + u.carry;
+      const count=Math.floor(exact); u.carry=exact-count;
+      if(count<=0) return;
+      const end=new Date();
+      try{
+        const c=await postSessions(u,[{start:new Date(end-tick*1000),end,count}]);
+        st.sess+=c; st.chant+=count;
+      }catch(e){ st.err++; if(st.err<=10) log('tick post failed: '+e.message); }
+    });
+    st.elapsed+=tick;
+    log(`t+${st.elapsed}s · ${fmt(st.sess)} sessions · ${fmt(st.chant)} chants`); render();
+    const sleepMs=tick*1000-(Date.now()-t0);
+    if(sleepMs>0 && !stopFlag) await sleep(sleepMs);
+  }
+}
+
+function finish(msg){ setPhase('done'); log(msg); render(); }
+
+$('start').onclick = ()=>{ if(running){ stopFlag=true; setPhase('stopping'); log('Stop requested…'); } else run(); };
+
+// ---- clear SQL ----
+// Only simulator accounts: reserved mobile range AND a SIM_ primary member.
+// Deleting the accounts cascades to all child rows (onDelete: Cascade).
+const CLEAR_SQL = `-- Delete ONLY simulator accounts: mobile range 9900000000..9900999999
+-- AND a primary member named 'SIM_%'. Cascade removes all their data.
+DELETE FROM "Account" a
+WHERE a.mobile BETWEEN '9900000000' AND '9900999999'
+  AND EXISTS (
+    SELECT 1 FROM "Member" m
+    WHERE m."accountId" = a.id AND m."displayName" LIKE 'SIM\\_%');`;
+$('showsql').onclick = (e)=>{ e.preventDefault(); $('sqltext').value=CLEAR_SQL; $('sqldlg').showModal(); };
+function copySql(){ navigator.clipboard.writeText(CLEAR_SQL); $('sqldlg').close(); }
+
+$('clear').onclick = async ()=>{
+  if(running){ alert('Stop the running simulation first.'); return; }
+  const btn=$('clear');
+  let count='?';
+  try{ const c=await api('/api/v1/sim/clear'); count=c.count; }catch{}
+  if(!confirm(`Delete ${fmt(Number(count)||0)} simulated account(s) and ALL their data from\n${API}?\n\nThis cannot be undone.`)) return;
+  btn.disabled=true; btn.textContent='Deleting…';
+  try{
+    const r=await api('/api/v1/sim/clear', {method:'POST'});
+    log(`Cleared ${fmt(r.deleted)} sim account(s) and their data.`);
+    alert(`Deleted ${fmt(r.deleted)} simulated account(s).`);
+  }catch(e){
+    log('Clear failed: '+e.message);
+    alert('Clear failed: '+e.message+'\n\nUse “Show SQL instead” as a fallback.');
+  }finally{ btn.disabled=false; btn.textContent='Delete all sim data'; }
+};
+</script>
+</body>
+</html>

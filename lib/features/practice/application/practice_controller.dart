@@ -474,6 +474,21 @@ class PracticeController extends AsyncNotifier<PracticeState> {
     }
   }
 
+  /// Fully release the mic + audio recorder when leaving the screen. The
+  /// `record` plugin's recorder is a shared native resource — `pause()`/
+  /// `finish()` only stop it, they don't dispose it, so a second program's
+  /// capture collides with the first still-allocated recorder and the app
+  /// crashes on the second session. This disposes it (the shared Vosk
+  /// recogniser is left intact — the voice service doesn't own it). Pending
+  /// counts are flushed first, so nothing is lost. Safe to call when idle.
+  Future<void> releaseVoice() async {
+    await _cleanup();
+    final s = state.value;
+    if (s != null && s.isRunning) {
+      state = AsyncData(s.copyWith(isRunning: false));
+    }
+  }
+
   Future<void> _cleanup() async {
     _flushTimer?.cancel();
     _flushTimer = null;

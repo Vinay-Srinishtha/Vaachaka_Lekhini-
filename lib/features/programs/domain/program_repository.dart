@@ -13,6 +13,22 @@ abstract class ProgramRepository {
     required int targetDays,
   });
 
+  /// Create a goal-less ("open") program so the user can start chanting
+  /// immediately. On finish they either set a target (→ becomes a real
+  /// program) or keep it as a Bonus Chants bucket. targetWritings/targetDays = 0.
+  Future<Program> createOpen({
+    required String memberId,
+    required String mantraId,
+  });
+
+  /// Set (or change) the goal on an existing program — used to graduate an
+  /// open/bonus program into a targeted one from the Finish flow.
+  Future<Program> setTarget({
+    required String programId,
+    required int targetWritings,
+    required int targetDays,
+  });
+
   Future<void> update(Program program);
   Future<void> upsertRemote(Program program);
   Future<void> delete(String id);

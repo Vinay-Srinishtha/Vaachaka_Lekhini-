@@ -45,7 +45,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get quickSetup => 'त्वरित सेटअप · 30 सेकंड लगते हैं';
 
   @override
-  String get usernameLabel => 'उपयोगकर्ता नाम';
+  String get usernameLabel => 'नाम';
 
   @override
   String get usernameHint => 'अपना नाम दर्ज करें';

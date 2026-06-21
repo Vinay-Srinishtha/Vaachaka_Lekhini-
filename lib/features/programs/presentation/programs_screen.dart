@@ -42,8 +42,18 @@ class _BodyState extends ConsumerState<_Body> {
   @override
   Widget build(BuildContext context) {
     final programs = widget.programs;
-    final active = programs.where((p) => !p.isGoalReached).toList();
-    final completed = programs.where((p) => p.isGoalReached).toList();
+    // Goal-less programs are split out into the Bonus Chants section below.
+    final active =
+        programs.where((p) => p.hasGoal && !p.isGoalReached).toList();
+    final completed =
+        programs.where((p) => p.hasGoal && p.isGoalReached).toList();
+
+    // Bonus chants: goal-less programs with recorded chants, grouped per mantra
+    // (most-recent program per mantra is the representative the card opens).
+    final bonusByMantra = <String, List<Program>>{};
+    for (final p in programs.where((p) => p.isBonus)) {
+      (bonusByMantra[p.mantraId] ??= []).add(p);
+    }
 
     // Overall progress is based on active programs only
     final activeTarget = active.fold<int>(0, (a, p) => a + p.targetWritings);
@@ -205,7 +215,76 @@ class _BodyState extends ConsumerState<_Body> {
             ],
           ],
         ],
+        if (bonusByMantra.isNotEmpty) ...[
+          const SizedBox(height: KvlSpacing.lg),
+          Row(
+            children: [
+              const Icon(Icons.star_rounded,
+                  size: 18, color: KvlColors.primary),
+              const SizedBox(width: 6),
+              Text('Bonus Chants', style: KvlText.title(16)),
+            ],
+          ),
+          const SizedBox(height: KvlSpacing.sm),
+          for (final entry in bonusByMantra.entries) ...[
+            _BonusCard(
+              programs: entry.value,
+              total:
+                  entry.value.fold<int>(0, (a, p) => a + p.totalProgress),
+            ),
+            const SizedBox(height: KvlSpacing.sm),
+          ],
+        ],
       ],
+    );
+  }
+}
+
+/// One card per mantra summarising chants done without a set goal.
+/// Tapping resumes the most-recent bonus program so further chants accumulate.
+class _BonusCard extends ConsumerWidget {
+  const _BonusCard({required this.programs, required this.total});
+  final List<Program> programs;
+  final int total;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final program = programs.first; // most-recent (list ordered desc updatedAt)
+    final mantra = ref.watch(mantraByIdProvider(program.mantraId));
+    final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
+    final script = mantra?.name.scriptForLanguage(settings.languageCode) ??
+        settings.languageCode.mantraScriptForLanguage;
+    final name = mantra?.name.displayForLanguage(settings.languageCode) ??
+        program.mantraId;
+    final imgUrl = mantra?.previewImageUrl ?? mantra?.imageUrl;
+    final glyph = mantra?.name.thumbGlyph() ?? '';
+
+    return KvlCard(
+      onTap: () => context.push('${KvlRoute.practice}/${program.id}'),
+      child: Row(
+        children: [
+          MantraThumb(glyph: glyph, imageUrl: imgUrl, size: 46),
+          const SizedBox(width: KvlSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: KvlText.bodyByScript(script, 15)
+                      .copyWith(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${IndianNumberFormat.format(total)} bonus chants · no goal',
+                  style: KvlText.muted(12),
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right, color: KvlColors.inkSoft),
+        ],
+      ),
     );
   }
 }

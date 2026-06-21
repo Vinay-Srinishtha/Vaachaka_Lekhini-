@@ -41,16 +41,34 @@ export async function listAccounts(args: ListAccountsArgs) {
 				lastSeenAt: true,
 				_count: { select: { members: true, devices: true } },
 				members: {
-					where: { isPrimary: true },
-					select: { displayName: true },
-					take: 1
+					orderBy: { isPrimary: 'desc' as const },
+					select: {
+						isPrimary: true,
+						displayName: true,
+						// Voice is registered when a VoiceEnrolment row exists.
+						_count: { select: { voiceEnrolments: true } },
+						// Handwriting is registered only via a personalised sample
+						// (the default-font mode isn't the user's own writing).
+						handwritingSamples: {
+							where: { mode: { not: 'useDefaultFont' as const } },
+							select: { id: true },
+							take: 1
+						}
+					}
 				}
 			}
 		}),
 		prisma.account.count({ where })
 	]);
 
-	return { rows, total };
+	// Roll per-member enrolment up to an account-level flag (any member counts).
+	const augmented = rows.map((a) => ({
+		...a,
+		hasVoice: a.members.some((m) => m._count.voiceEnrolments > 0),
+		hasHandwriting: a.members.some((m) => m.handwritingSamples.length > 0)
+	}));
+
+	return { rows: augmented, total };
 }
 
 export async function accountDetail(id: string) {

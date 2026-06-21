@@ -19,6 +19,7 @@ class MantraSelectionScreen extends ConsumerStatefulWidget {
 
 class _MantraSelectionScreenState extends ConsumerState<MantraSelectionScreen> {
   String? _selectedId;
+  bool _redirected = false;
 
   @override
   void initState() {
@@ -29,6 +30,23 @@ class _MantraSelectionScreenState extends ConsumerState<MantraSelectionScreen> {
   @override
   Widget build(BuildContext context) {
     final catalog = ref.watch(mantraCatalogProvider).value ?? const [];
+
+    // Only one mantra available — don't make the user "choose"; go straight
+    // to that mantra's details/start flow.
+    if (catalog.length == 1 && !_redirected) {
+      _redirected = true;
+      final onlyId = catalog.first.id;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          context.pushReplacement('${KvlRoute.mantraDetails}/$onlyId');
+        }
+      });
+      return KvlScaffold(
+        title: context.l10n.mantraSelectionTitle,
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     if (_selectedId != null && !catalog.any((m) => m.id == _selectedId)) {
       _selectedId = catalog.isNotEmpty ? catalog.first.id : null;
     }

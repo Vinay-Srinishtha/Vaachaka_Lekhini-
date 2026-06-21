@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
-import 'dart:math';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
@@ -14,11 +12,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../app/providers.dart';
 import '../../../../app/router.dart';
-import '../../../../core/handwriting/handwriting_comparator.dart';
+import '../../../../core/handwriting/handwriting_recognizer.dart';
 import '../../../../core/i18n/language_options.dart';
 import '../../../../core/phone/phone_mode_service.dart';
-import '../../../../core/remote_config/remote_config.dart';
-import '../../../../core/remote_config/remote_config_keys.dart';
 import '../../../../core/theme/theme.dart';
 import '../../../../core/utils/indian_number_format.dart';
 import '../../../practice/application/practice_controller.dart';
@@ -91,7 +87,7 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
     _idleTimer?.cancel();
     if (_controller.isEmpty || _checking || _saving) return;
     _idleTimer = Timer(
-      const Duration(milliseconds: 1500),
+      const Duration(milliseconds: 900),
       _submitOne,
     );
   }
@@ -206,8 +202,13 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
     unawaited(_validateAndSubmit());
   }
 
-  // Minimum match score for any sample (reference or compare phase).
-  static const double _minMatchScore = 0.30;
+  /// Tesseract language code for an app language code.
+  static String _tessLang(String code) => switch (code) {
+        'hi' => 'hin',
+        'te' => 'tel',
+        'kn' => 'kan',
+        _ => 'eng',
+      };
 
   Future<void> _validateAndSubmit() async {
     final png = await _controller.toPngBytes();
@@ -222,95 +223,74 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
         return;
       }
 
-      final cfg = ref.read(remoteConfigProvider).value ?? RemoteConfig.empty;
-      final sampleN = cfg.intFlag(RemoteConfigKeys.handwritingSampleCount, fallback: 3);
+      final mantra = ref.read(mantraByIdProvider(widget.mantraId));
+      if (mantra == null) {
+        setState(() => _checking = false);
+        return;
+      }
+      final settings =
+          ref.read(settingsProvider).value ?? KvlSettings.fallback;
+      final langCode = _writingLangCode ?? settings.mantraLanguageCode;
 
-      final assets = await ref
-          .read(handwritingRepositoryProvider)
-          .listForProfile(profile.id);
+      // Verify offline (bundled Tesseract): accept only if the writing reads as
+      // the expected mantra in its native script OR as the roman spelling.
+      final candidates = <ExpectedWriting>[
+        ExpectedWriting(
+          tessLang: _tessLang(langCode),
+          text: mantra.name.displayForLanguage(langCode),
+        ),
+        if (langCode != 'en')
+          ExpectedWriting(tessLang: 'eng', text: mantra.name.roman),
+      ];
+      final result = await HandwritingRecognizer.instance.check(
+        pngBytes: png,
+        candidates: candidates,
+      );
 
-      final candidates = assets
-          .where((a) =>
-              a.mantraId == widget.mantraId &&
-              a.filePath != null &&
-              a.mode != HandwritingMode.useDefaultFont)
-          .toList()
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-      final validCandidates = candidates
-          .where((a) => File(a.filePath!).existsSync())
-          .toList();
-
-      // ── Sampling phase: first N writings become reference samples ──────────
-      // The very first sample is accepted automatically (it becomes the reference).
-      // Every subsequent reference sample must score ≥ 80 % against the first one.
-      if (validCandidates.length < sampleN) {
-        if (validCandidates.isEmpty) {
-          // First sample — accept unconditionally as the reference baseline.
-          await ref.read(handwritingRepositoryProvider).savePng(
-            profileId: profile.id,
-            mantraId: widget.mantraId,
-            bytes: png,
-            mode: HandwritingMode.writeOnScreen,
-          );
-          await _creditHandwritingSample(profile.id);
-          final saved = 1;
-          setState(() => _checking = false);
-          _controller.clear();
-          if (mounted) _showSampleSavedFeedback(saved, sampleN);
-        } else {
-          // Subsequent reference samples — must match the first reference at ≥ 80 %.
-          final refBytes = await File(validCandidates.last.filePath!).readAsBytes();
-          final score = await HandwritingComparator.compare(png, refBytes);
-          if (score >= _minMatchScore) {
-            await ref.read(handwritingRepositoryProvider).savePng(
-              profileId: profile.id,
-              mantraId: widget.mantraId,
-              bytes: png,
-              mode: HandwritingMode.writeOnScreen,
-            );
-            await _creditHandwritingSample(profile.id);
-            final saved = validCandidates.length + 1;
-            setState(() => _checking = false);
-            _controller.clear();
-            if (mounted) _showSampleSavedFeedback(saved, sampleN);
-          } else {
-            setState(() => _checking = false);
-            if (mounted) _showRejectedFeedback(score, (_minMatchScore * 100).round());
-          }
-        }
+      if (!result.accepted) {
+        setState(() => _checking = false);
+        if (mounted) _showRejectedFeedback(result);
         return;
       }
 
-      // ── Compare phase: score against a random sample from the pool ─────────
-      final ref_ = validCandidates[Random().nextInt(validCandidates.length)];
-      final refBytes = await File(ref_.filePath!).readAsBytes();
-      final score = await HandwritingComparator.compare(png, refBytes);
-
-      if (score >= _minMatchScore) {
-        // ── Accept: save immediately into the rolling pool ────────────────────
-        await ref
-            .read(handwritingRepositoryProvider)
-            .savePngCapped(
-              profileId: profile.id,
-              mantraId: widget.mantraId,
-              bytes: png,
-            );
-        await _creditHandwritingSample(profile.id);
-        setState(() {
-          _writingCount++;
-          _checking = false;
-        });
-        _controller.clear();
-        if (mounted) _showAcceptedFeedback(score, _minMatchScore);
-      } else {
-        // ── Reject ───────────────────────────────────────────────────────────
-        setState(() => _checking = false);
-        if (mounted) _showRejectedFeedback(score, (_minMatchScore * 100).round());
-      }
+      // Accepted — save into the rolling pool (keeps the writing book/PDF
+      // working) and count it.
+      await ref.read(handwritingRepositoryProvider).savePngCapped(
+            profileId: profile.id,
+            mantraId: widget.mantraId,
+            bytes: png,
+          );
+      await _creditHandwritingSample(profile.id);
+      setState(() {
+        _writingCount++;
+        _checking = false;
+      });
+      _controller.clear();
     } catch (_) {
       setState(() => _checking = false);
     }
+  }
+
+  /// Shown when the writing doesn't read as the expected mantra.
+  void _showRejectedFeedback(HandwritingResult result) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(SnackBar(
+      duration: const Duration(seconds: 2),
+      backgroundColor: Colors.orange.shade700,
+      behavior: SnackBarBehavior.floating,
+      content: Text(
+        result.recognized.trim().isEmpty
+            ? "Couldn't read that — write the mantra clearly and try again."
+            : 'That looked like "${result.recognized.trim()}". Write the mantra and try again.',
+        style: const TextStyle(color: Colors.white, fontSize: 13),
+      ),
+      action: SnackBarAction(
+        label: '✕',
+        textColor: Colors.white,
+        onPressed: messenger.clearSnackBars,
+      ),
+    ));
   }
 
   /// Increments handwritingSamples on the VoiceEnrolment record so that
@@ -318,99 +298,36 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
   Future<void> _creditHandwritingSample(String profileId) async {
     final repo = ref.read(voiceEnrolmentRepositoryProvider);
     final existing = await repo.get(profileId, widget.mantraId);
-    final updated = (existing ?? VoiceEnrolment(
-      profileId: profileId,
-      mantraId: widget.mantraId,
-      samples: 0,
-      trainedAt: DateTime.now(),
-    )).copyWith(
+    final langCode = _writingLangCode ??
+        (ref.read(settingsProvider).value?.mantraLanguageCode ?? 'hi');
+    final updated = (existing ??
+            VoiceEnrolment(
+              profileId: profileId,
+              mantraId: widget.mantraId,
+              samples: 0,
+              trainedAt: DateTime.now(),
+            ))
+        .copyWith(
       handwritingSamples: (existing?.handwritingSamples ?? 0) + 1,
+      trainedLanguageCode: langCode,
     );
     await repo.save(updated);
   }
 
-  /// Dismiss any current snackbar then show [snackBar].
-  /// Prevents queueing — each new alert instantly replaces the previous one.
-  void _showSnack(SnackBar snackBar) {
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(snackBar);
-  }
-
-
-  void _showSampleSavedFeedback(int saved, int total) {
-    final isDone = saved >= total;
-    _showSnack(SnackBar(
-      duration: Duration(milliseconds: isDone ? 2500 : 1800),
-      backgroundColor: isDone ? const Color(0xFF15803D) : KvlColors.primary,
-      behavior: SnackBarBehavior.floating,
-      content: Row(
-        children: [
-          Icon(
-            isDone ? Icons.check_circle_rounded : Icons.edit_rounded,
-            color: Colors.white,
-            size: 18,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              isDone
-                  ? 'Samples collected! Auto-checking your writing now.'
-                  : 'Sample $saved/$total saved — keep writing to build your style.',
-              style: const TextStyle(color: Colors.white, fontSize: 13),
-            ),
-          ),
-        ],
-      ),
-    ));
-  }
-
-  /// Shown when the writing scores below the acceptance threshold.
-  void _showRejectedFeedback(double score, int thresholdPct) {
-    final got = (score * 100).toStringAsFixed(0);
-    _showSnack(SnackBar(
-      duration: const Duration(seconds: 2),
-      backgroundColor: Colors.orange.shade700,
-      behavior: SnackBarBehavior.floating,
-      content: Text(
-        'Writing matched $got% — needs $thresholdPct%. Try again.',
-        style: const TextStyle(color: Colors.white, fontSize: 13),
-      ),
-      action: SnackBarAction(
-        label: '✕',
-        textColor: Colors.white,
-        onPressed: () => ScaffoldMessenger.of(context).clearSnackBars(),
-      ),
-    ));
-  }
-
-  /// Brief green toast when a marginal-but-passing score is achieved.
-  void _showAcceptedFeedback(double score, double threshold) {
-    // No per-stroke snackbar — the session summary shows totals on finish.
-  }
-
   Future<void> _save() async {
-    // All accepted writings were already saved via savePngCapped on accept.
-    // Only count any drawing still on canvas that hasn't been submitted yet.
-    final total = _writingCount + (_controller.isEmpty ? 0 : 1);
+    // No manual ADD: if there's still ink on the canvas, run it through the
+    // same automatic recognition first — it only counts if it passes.
+    if (_controller.isNotEmpty && !_checking) {
+      await _validateAndSubmit();
+    }
+    if (!mounted) return;
+    // All counted writings were already saved via savePngCapped on accept.
+    final total = _writingCount;
     setState(() => _saving = true);
     final profile = ref.read(activeProfileProvider).value;
     if (profile == null) {
       setState(() => _saving = false);
       return;
-    }
-    // If there's an unsubmitted drawing on canvas, save it too.
-    if (_controller.isNotEmpty) {
-      final png = await _controller.toPngBytes();
-      if (png != null) {
-        await ref
-            .read(handwritingRepositoryProvider)
-            .savePngCapped(
-              profileId: profile.id,
-              mantraId: widget.mantraId,
-              bytes: png,
-            );
-      }
     }
     if (!mounted) return;
     final programId = widget.programId;
@@ -533,7 +450,33 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
       context.pop();
       if (mounted && context.canPop()) context.pop();
     } else {
-      context.push('${KvlRoute.setTargetWritings}/${widget.mantraId}');
+      // Skip the goal screen — start practising right away. The target (if
+      // any) is set on Finish; otherwise it stays a Bonus Chants bucket.
+      final repo = ref.read(programRepositoryProvider);
+      final program = await repo.createOpen(
+        memberId: profile.id,
+        mantraId: widget.mantraId,
+      );
+      // Roll the writings done during enrolment into this program so they
+      // count toward the program/bonus and the global tally.
+      if (total > 0) {
+        final session = await repo.startSession(
+          programId: program.id,
+          memberId: profile.id,
+          modality: SessionModality.handwriting,
+        );
+        await repo.incrementSession(session.id, by: total);
+        await repo.finishSession(session.id);
+        final bumped = await ref
+            .read(globalSadhanaRepositoryProvider)
+            .applyLocalContribution(mantraId: widget.mantraId, count: total);
+        if (bumped && mounted) {
+          ref.invalidate(activeGlobalSadhanaProvider);
+          ref.invalidate(globalSadhanaEnrollmentProvider);
+        }
+      }
+      if (!mounted) return;
+      context.go('${KvlRoute.practice}/${program.id}');
     }
   }
 
@@ -609,7 +552,6 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
         currentCount: progress,
         globalCount: globalCount,
         writingCount: _writingCount,
-        onAdd: _submitOne,
         onFinish: _save,
         onClear: _controller.clear,
         onUndo: _controller.undo,
@@ -1214,7 +1156,6 @@ class _ProtoWriteScaffold extends ConsumerStatefulWidget {
     required this.currentCount,
     required this.globalCount,
     required this.writingCount,
-    required this.onAdd,
     required this.onFinish,
     required this.onClear,
     required this.onUndo,
@@ -1233,7 +1174,6 @@ class _ProtoWriteScaffold extends ConsumerStatefulWidget {
   final int currentCount;
   final int globalCount;
   final int writingCount;
-  final VoidCallback onAdd;
   final VoidCallback? onFinish;
   final VoidCallback onClear;
   final VoidCallback onUndo;
@@ -1250,40 +1190,11 @@ class _ProtoWriteScaffold extends ConsumerStatefulWidget {
 
 class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
   double _guideScale = 1.0;
-  bool _canvasHasContent = false;
   bool _guideVisible = false;
 
   static const double _scaleMin = 0.5;
   static const double _scaleMax = 2.0;
   static const double _scaleStep = 0.25;
-
-  @override
-  void initState() {
-    super.initState();
-    widget.controller.addListener(_onCanvasChanged);
-  }
-
-  @override
-  void didUpdateWidget(_ProtoWriteScaffold old) {
-    super.didUpdateWidget(old);
-    if (old.controller != widget.controller) {
-      old.controller.removeListener(_onCanvasChanged);
-      widget.controller.addListener(_onCanvasChanged);
-    }
-  }
-
-  @override
-  void dispose() {
-    widget.controller.removeListener(_onCanvasChanged);
-    super.dispose();
-  }
-
-  void _onCanvasChanged() {
-    final hasContent = widget.controller.isNotEmpty;
-    if (hasContent != _canvasHasContent) {
-      setState(() => _canvasHasContent = hasContent);
-    }
-  }
 
   void _zoomIn() {
     setState(() {
@@ -1365,15 +1276,9 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
                 top: topInset,
                 child: _MergedActionButton(
                   saving: widget.saving,
-                  canvasHasContent: _canvasHasContent,
-                  onTap: _canvasHasContent
-                      ? () async {
-                          widget.onAdd();
-                          await Future.delayed(
-                              const Duration(milliseconds: 120));
-                          if (mounted) widget.onFinish?.call();
-                        }
-                      : widget.onFinish,
+                  // Always "Complete Session" — writings are counted only via
+                  // automatic recognition on idle; there is no manual ADD.
+                  onTap: widget.onFinish,
                   compact: compact,
                 ),
               ),
@@ -2139,22 +2044,19 @@ class _GuideToggleButton extends StatelessWidget {
 class _MergedActionButton extends StatelessWidget {
   const _MergedActionButton({
     required this.saving,
-    required this.canvasHasContent,
     required this.onTap,
     required this.compact,
   });
 
   final bool saving;
-  final bool canvasHasContent;
   final VoidCallback? onTap;
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
-    final label = canvasHasContent ? 'ADD' : 'Complete Session';
-    final icon = canvasHasContent ? Icons.add_rounded : Icons.check_rounded;
-    final bgColor =
-        canvasHasContent ? KvlColors.primary : const Color(0xFF16A34A);
+    const label = 'Complete Session';
+    const icon = Icons.check_rounded;
+    const bgColor = Color(0xFF16A34A);
     return GestureDetector(
       onTap: saving ? null : onTap,
       child: AnimatedContainer(

@@ -53,9 +53,18 @@ class AudioCapture {
   /// must be seen before a chunk is replaced with silence.  Defaults to 250 ms,
   /// which prevents the brief amplitude dip *between* rapid chants from being
   /// treated as silence by the ASR decoder.
+  /// [calibrateMs] — if > 0, the first [calibrateMs] of audio are used to
+  /// measure the room's ambient noise floor. The gate threshold is then raised
+  /// to `noiseFloor * noiseMultiplier` (never below [minAmplitude], capped at
+  /// 3× [minAmplitude]) so background noise is filtered while real chants —
+  /// which are louder than ambient — still pass. In a quiet room the floor is
+  /// low, so the threshold stays at [minAmplitude] (unchanged behaviour).
+  /// Audio during calibration is passed through so the first chant isn't lost.
   Future<Stream<Uint8List>> start({
     double minAmplitude = 0,
     int holdoverMs = 250,
+    int calibrateMs = 0,
+    double noiseMultiplier = 1.5,
   }) async {
     if (!await ensurePermission()) {
       throw StateError('Microphone permission denied');
@@ -74,18 +83,42 @@ class AudioCapture {
 
     // Holdover gate state: track how long the signal has been quiet.
     int quietMs = 0;
+    // Adaptive-gate state.
+    double effectiveMin = minAmplitude;
+    double noiseFloor = 0;
+    int calibAccrued = 0;
+    bool calibrating = calibrateMs > 0;
 
     _sub = stream.listen(
       (chunk) {
-        if (minAmplitude <= 0) {
-          _out!.add(chunk);
-          return;
-        }
         // Estimate chunk duration in ms (16-bit = 2 bytes/sample, mono).
         final chunkDurationMs =
             ((chunk.lengthInBytes / 2) / sampleRate * 1000).round();
+        final peak = peakAmplitude(chunk);
 
-        if (peakAmplitude(chunk) >= minAmplitude) {
+        // ── Calibration: learn the ambient noise floor, pass audio through ──
+        if (calibrating) {
+          if (peak > noiseFloor) noiseFloor = peak;
+          calibAccrued += chunkDurationMs;
+          if (calibAccrued >= calibrateMs) {
+            calibrating = false;
+            final adaptive = noiseFloor * noiseMultiplier;
+            // Raise the gate to clear the noise floor, but never below the
+            // configured minimum and never more than 3× it (so a stray loud
+            // sound during calibration can't deafen the gate).
+            final ceiling = minAmplitude > 0 ? minAmplitude * 3 : adaptive;
+            effectiveMin = adaptive.clamp(minAmplitude, ceiling).toDouble();
+          }
+          _out!.add(chunk);
+          return;
+        }
+
+        if (effectiveMin <= 0) {
+          _out!.add(chunk);
+          return;
+        }
+
+        if (peak >= effectiveMin) {
           quietMs = 0; // signal is loud enough — reset holdover
           _out!.add(chunk);
         } else {

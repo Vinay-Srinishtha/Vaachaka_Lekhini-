@@ -45,7 +45,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get quickSetup => 'Quick setup · takes 30 seconds';
 
   @override
-  String get usernameLabel => 'Username';
+  String get usernameLabel => 'Name';
 
   @override
   String get usernameHint => 'Enter your name';

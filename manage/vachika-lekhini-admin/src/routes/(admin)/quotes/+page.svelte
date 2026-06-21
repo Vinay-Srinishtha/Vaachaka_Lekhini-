@@ -51,20 +51,11 @@
 	}
 
 	function downloadTemplate() {
-		// Build a CSV template with all active mantra slugs listed in a reference sheet comment
-		const mantraSlugs = data.mantras.map((m: { slug: string }) => m.slug).join(' | ');
-		const rows = [
-			['text_roman', 'source_roman', 'text_telugu', 'source_telugu', 'text_devanagari', 'source_devanagari', 'text_kannada', 'source_kannada', 'mantra_slug', 'image_url'],
-			['"Be the change you wish to see"', '— Mahatma Gandhi', '', '', '', '', '', '', '', ''],
-			['', '', '"ధర్మో రక్షతి రక్షితః"', '— మహాభారతం', '', '', '', '', 'rama-ashtakam', ''],
-		];
-		const csvContent = [
-			`# mantra_slug must match one of: ${mantraSlugs}`,
-			`# Leave mantra_slug blank for a universal quote shown to all users.`,
-			`# image_url is optional — add images later via the edit screen.`,
-			`# At least one language column (text_roman/text_telugu/text_devanagari/text_kannada) must be filled.`,
-			...rows.map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-		].join('\n');
+		// Columns the bulk-upload parser expects (header names are case-/separator-
+		// insensitive). "Image" holds the picture filename when uploading a ZIP of
+		// images alongside this sheet; leave blank to add images later.
+		const header = ['Image', 'slug', 'Text_Roman', 'Source_Roman', 'Text_Telugu', 'Source_Telugu', 'Text_Devanagari', 'Source_Devanagari', 'Text_Kannada', 'Source_Kannada'];
+		const csvContent = header.join(',');
 		const blob = new Blob([csvContent], { type: 'text/csv' });
 		const url = URL.createObjectURL(blob);
 		const a = document.createElement('a');

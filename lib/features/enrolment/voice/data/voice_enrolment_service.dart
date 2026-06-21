@@ -114,7 +114,11 @@ class VoiceEnrolmentService {
     _speechThreshold = sensitivity.minAmplitudeThreshold;
 
     await warmUp();
-    await _recognizer!.setGrammar([mantra.name.devanagari]);
+    // Wider grammar = higher recall: the small model can land on the full
+    // phrase OR an individual word of it (e.g. "राम" when "श्री" was missed),
+    // instead of being forced to nail the whole phrase. [unk] still absorbs
+    // noise, so precision holds.
+    await _recognizer!.setGrammar(_grammarPhrases(mantra));
 
     final stream = await _audio.start(
       minAmplitude: sensitivity.minAmplitudeThreshold,
@@ -123,6 +127,10 @@ class VoiceEnrolmentService {
       // 10 ms) zeros out the soft attack of the first chant before the window
       // timer even starts, so the first chant never matches.
       holdoverMs: 450,
+      // Learn the room's noise floor for the first 300 ms and raise the gate
+      // above it — filters background noise while real chants pass (recall in
+      // noisy rooms). Quiet rooms keep the configured threshold unchanged.
+      calibrateMs: 300,
     );
 
     // ── PCM stream → Vosk ──────────────────────────────────────────────────
@@ -212,8 +220,45 @@ class VoiceEnrolmentService {
   }
 
   /// Count how many times [mantra]'s Devanagari form appears in [text].
-  int _countOccurrences(String text, Mantra mantra) =>
-      VoicePhraseMatcher.countOccurrences(text, mantra.name.devanagari);
+  /// Falls back to the distinctive core word for recall: if the full phrase
+  /// wasn't recognised cleanly but its core word was (the grammar now accepts
+  /// individual words), count those instead.
+  int _countOccurrences(String text, Mantra mantra) {
+    final full = VoicePhraseMatcher.countOccurrences(
+      text,
+      mantra.name.devanagari,
+    );
+    if (full > 0) return full;
+    final core = _coreWord(mantra);
+    if (core.isNotEmpty && core != mantra.name.devanagari.trim()) {
+      return VoicePhraseMatcher.countOccurrences(text, core);
+    }
+    return 0;
+  }
+
+  /// Grammar phrases for the mantra: the full Devanagari phrase plus each of
+  /// its words (≥2 chars). Lets Vosk recognise partial chants.
+  List<String> _grammarPhrases(Mantra mantra) {
+    final full = mantra.name.devanagari.trim();
+    final words = full
+        .split(RegExp(r'\s+'))
+        .where((w) => w.runes.length >= 2)
+        .toList();
+    return {if (full.isNotEmpty) full, ...words}.toList();
+  }
+
+  /// The most distinctive (longest) word of the mantra — used as the recall
+  /// fallback when the full phrase isn't matched.
+  String _coreWord(Mantra mantra) {
+    final words = mantra.name.devanagari
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((w) => w.runes.length >= 2)
+        .toList();
+    if (words.isEmpty) return mantra.name.devanagari.trim();
+    words.sort((a, b) => b.runes.length.compareTo(a.runes.length));
+    return words.first;
+  }
 
   Future<void> stop() async {
     if (!_running) return;

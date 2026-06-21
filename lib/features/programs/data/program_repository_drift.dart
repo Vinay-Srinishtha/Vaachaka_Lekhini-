@@ -136,6 +136,50 @@ class ProgramRepositoryDrift implements ProgramRepository {
   }
 
   @override
+  Future<Program> createOpen({
+    required String memberId,
+    required String mantraId,
+  }) => create(
+        memberId: memberId,
+        mantraId: mantraId,
+        targetWritings: 0,
+        targetDays: 0,
+      );
+
+  @override
+  Future<Program> setTarget({
+    required String programId,
+    required int targetWritings,
+    required int targetDays,
+  }) async {
+    final now = DateTime.now();
+    final dailyTarget = ProgramRepository.computeDailyTarget(
+      targetWritings,
+      targetDays,
+    );
+    await (_db.update(
+      _db.programs,
+    )..where((t) => t.id.equals(programId))).write(
+      ProgramsCompanion(
+        targetWritings: Value(targetWritings),
+        targetDays: Value(targetDays),
+        dailyTarget: Value(dailyTarget),
+        updatedAt: Value(now),
+      ),
+    );
+    final program = (await getById(programId))!;
+    unawaited(
+      _outbox
+          .enqueue('programs.upsert', _programPayload(program))
+          .timeout(const Duration(seconds: 3))
+          .catchError((Object e, StackTrace st) {
+        if (kDebugMode) debugPrint('[programs] enqueue setTarget failed: $e');
+      }),
+    );
+    return program;
+  }
+
+  @override
   Future<void> update(Program program) async {
     final now = DateTime.now();
     await (_db.update(
@@ -281,10 +325,11 @@ class ProgramRepositoryDrift implements ProgramRepository {
                 programRow.totalWritings + session.countAdded,
               ),
               completedAt: Value(
-                programRow.totalWritings +
-                            programRow.totalChants +
-                            session.countAdded >=
-                        programRow.targetWritings
+                programRow.targetWritings > 0 &&
+                        programRow.totalWritings +
+                                programRow.totalChants +
+                                session.countAdded >=
+                            programRow.targetWritings
                     ? (programRow.completedAt ?? now)
                     : null,
               ),
@@ -294,10 +339,11 @@ class ProgramRepositoryDrift implements ProgramRepository {
           : ProgramsCompanion(
               totalChants: Value(programRow.totalChants + session.countAdded),
               completedAt: Value(
-                programRow.totalWritings +
-                            programRow.totalChants +
-                            session.countAdded >=
-                        programRow.targetWritings
+                programRow.targetWritings > 0 &&
+                        programRow.totalWritings +
+                                programRow.totalChants +
+                                session.countAdded >=
+                            programRow.targetWritings
                     ? (programRow.completedAt ?? now)
                     : null,
               ),

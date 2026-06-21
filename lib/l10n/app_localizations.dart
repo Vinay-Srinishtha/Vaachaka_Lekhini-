@@ -177,7 +177,7 @@ abstract class AppLocalizations {
   /// No description provided for @usernameLabel.
   ///
   /// In en, this message translates to:
-  /// **'Username'**
+  /// **'Name'**
   String get usernameLabel;
 
   /// No description provided for @usernameHint.

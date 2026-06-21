@@ -103,10 +103,15 @@ class _BodyState extends ConsumerState<_Body> {
   bool _dedicationShown = false;
   bool _dailyGoalShown = false;
   bool _draftDialogShown = false;
+  late final PracticeController _controllerForDispose;
 
   @override
   void initState() {
     super.initState();
+    // Capture the notifier now — reading `ref` inside dispose() is unsafe in
+    // Riverpod 3 and was crashing on navigation away from this screen.
+    _controllerForDispose =
+        ref.read(practiceControllerProvider(widget.programId).notifier);
     if ((widget.state.draftCount ?? 0) > 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && !_draftDialogShown) {
@@ -118,6 +123,19 @@ class _BodyState extends ConsumerState<_Body> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) unawaited(_maybeShowChantingTip());
     });
+  }
+
+  @override
+  void dispose() {
+    // Stop this program's voice/mic when leaving the screen. The Vosk
+    // recogniser and the mic are single shared resources; leaving a session
+    // running and then starting voice in another program drives two captures
+    // into the one recogniser at once and crashes the app natively. Full
+    // release (not just pause) so the mic recorder is disposed — otherwise the
+    // next program's capture collides with this one and crashes on the second
+    // session. Uses the notifier captured in initState — `ref` is unsafe here.
+    Future.microtask(_controllerForDispose.releaseVoice);
+    super.dispose();
   }
 
   Future<void> _maybeShowChantingTip() async {
@@ -321,6 +339,24 @@ class _BodyState extends ConsumerState<_Body> {
                             ? (afterState.program.totalProgress - beforeTotal)
                                   .clamp(0, 999999)
                             : state.sessionCount;
+                        // Goal-less ("open") program: ask whether to build it
+                        // into a targeted program or keep it as bonus chants.
+                        if (!state.program.hasGoal) {
+                          final build = await _askBuildOrBonus(
+                            context,
+                            sessionTotal,
+                          );
+                          if (!context.mounted) return;
+                          if (build == true) {
+                            context.go(
+                              '${KvlRoute.setTargetWritings}/${state.program.mantraId}'
+                              '?programId=${state.program.id}',
+                            );
+                          } else {
+                            context.go(KvlRoute.home);
+                          }
+                          return;
+                        }
                         // Capture the messenger now — the close button below
                         // must NOT look it up via context, because by the time
                         // it's tapped we've navigated away and this widget is
@@ -423,6 +459,51 @@ class _BodyState extends ConsumerState<_Body> {
             );
           },
         ),
+      ),
+    );
+  }
+
+  /// Asked on Finish when the program has no goal yet. Returns true to build
+  /// it into a targeted program, false (or null) to keep it as bonus chants.
+  Future<bool?> _askBuildOrBonus(BuildContext context, int sessionTotal) {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: KvlRadius.brLG),
+        backgroundColor: Colors.white,
+        title: Text(
+          'Build this into a program?',
+          style: KvlText.title(16),
+        ),
+        content: Text(
+          'You completed ${IndianNumberFormat.format(sessionTotal)} chants. '
+          'Set a goal to make this a tracked program, or keep them as bonus chants.',
+          style: KvlText.body().copyWith(height: 1.4),
+        ),
+        actionsAlignment: MainAxisAlignment.spaceBetween,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dctx).pop(false),
+            child: Text(
+              'Keep as bonus',
+              style: KvlText.ui(13, FontWeight.w600)
+                  .copyWith(color: KvlColors.primaryDeep),
+            ),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: KvlColors.primary,
+              shape: RoundedRectangleBorder(borderRadius: KvlRadius.brMD),
+            ),
+            onPressed: () => Navigator.of(dctx).pop(true),
+            child: Text(
+              'Build a program',
+              style: KvlText.ui(13, FontWeight.w700)
+                  .copyWith(color: Colors.white),
+            ),
+          ),
+        ],
       ),
     );
   }

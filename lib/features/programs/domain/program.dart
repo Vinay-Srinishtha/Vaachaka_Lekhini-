@@ -49,11 +49,22 @@ class Program extends Equatable {
   /// Server has confirmed completion (completedAt timestamp set).
   bool get isCompleted => completedAt != null;
 
+  /// A goal-less "bonus" program: chants recorded without a set target.
+  /// Created when the user chants first and chooses not to build a program.
+  bool get hasGoal => targetWritings > 0;
+
+  /// True for a goal-less program that already has chants recorded — i.e.
+  /// a "Bonus Chants" bucket. An open program with no chants yet is neither
+  /// a real program nor a bonus bucket (it's hidden until used).
+  bool get isBonus => !hasGoal && totalProgress > 0;
+
   /// Goal reached locally — target met or server confirmed.
   /// Use this for all UI completion checks (milestones, ring, tabs) so
   /// the display stays consistent with the "✓ Goal Achieved" banner even
   /// before the next server sync stamps completedAt.
-  bool get isGoalReached => completedAt != null || totalProgress >= targetWritings;
+  /// Goal-less (bonus) programs are never "reached" — there is no goal.
+  bool get isGoalReached =>
+      hasGoal && (completedAt != null || totalProgress >= targetWritings);
 
   int get totalProgress => totalChants + totalWritings;
 
@@ -66,11 +77,15 @@ class Program extends Equatable {
     return today.difference(start).inDays + 1;
   }
 
-  int get daysRemaining => (targetDays - daysElapsed).clamp(0, targetDays);
+  int get daysRemaining =>
+      targetDays <= 0 ? 0 : (targetDays - daysElapsed).clamp(0, targetDays);
 
   /// Dynamic daily target: remaining chants spread over remaining days.
   /// Recalculates as the user progresses so the goal stays achievable.
+  /// Goal-less (bonus/open) programs have no daily target — return 0 instead
+  /// of running `clamp(1, 0)`, which would throw (lower limit > upper limit).
   int get effectiveDailyTarget {
+    if (targetDays <= 0 || targetWritings <= 0) return 0;
     final remaining = (targetWritings - totalProgress).clamp(0, targetWritings);
     final days = daysRemaining.clamp(1, targetDays);
     return (remaining / days).ceil();

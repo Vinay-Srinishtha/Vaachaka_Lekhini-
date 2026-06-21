@@ -40,6 +40,7 @@ import '../features/global_sadhana/presentation/global_sadhana_detail_screen.dar
 import '../features/global_sadhana/presentation/global_sadhana_list_screen.dart';
 import '../features/rewards/presentation/reward_history_screen.dart';
 import '../features/rewards/presentation/store_screen.dart';
+import '../features/simulator/presentation/simulator_screen.dart';
 import '../l10n/l10n.dart';
 import 'providers.dart';
 
@@ -78,6 +79,9 @@ abstract final class KvlRoute {
   static const inviteFriends = '/invite-friends';
   static const globalSadhana = '/global-sadhana'; // + /:id
   static const globalSadhanaList = '/global-sadhana-list';
+
+  // Dev tools
+  static const simulator = '/simulator';
 
   static const _authPaths = {welcome, profileSelect, createAccount, otpLogin, forgotPassword};
   static bool isAuthRoute(String path) => _authPaths.contains(path);
@@ -174,6 +178,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '${KvlRoute.setTargetWritings}/:mantraId',
         builder: (_, state) => SetProgramTargetScreen(
           mantraId: state.pathParameters['mantraId']!,
+          programId: state.uri.queryParameters['programId'],
         ),
       ),
       GoRoute(
@@ -203,6 +208,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: KvlRoute.rewardHistory,
         builder: (_, _) => const RewardHistoryScreen(),
+      ),
+      GoRoute(
+        path: KvlRoute.simulator,
+        builder: (_, _) => const SimulatorScreen(),
       ),
       GoRoute(path: KvlRoute.profile, builder: (_, _) => const ProfileScreen()),
       GoRoute(path: KvlRoute.profileEdit, builder: (_, _) => const ProfileEditScreen()),

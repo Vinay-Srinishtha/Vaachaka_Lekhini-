@@ -1,7 +1,7 @@
 name: vachika_lekhini
 description: "Vaachaka Lekhini — spiritual practice app: voice chant counter, handwriting practice, programs, rewards."
 publish_to: 'none'
-version: 0.1.0+1
+version: 8.0.0+17
 
 environment:
   sdk: ^3.11.0
@@ -42,6 +42,8 @@ dependencies:
 
   # --- Handwriting ---
   signature: ^6.3.0
+  flutter_tesseract_ocr: ^0.4.31   # offline OCR; traineddata bundled in assets
+  image: ^4.3.0                    # composite strokes onto white bg for OCR
 
   # --- Media ---
   image_picker: ^1.1.2
@@ -97,3 +99,5 @@ flutter:
     - assets/mantras/
     - assets/audio/
     - assets/app_icon.png
+    - assets/tessdata/
+    - assets/tessdata_config.json

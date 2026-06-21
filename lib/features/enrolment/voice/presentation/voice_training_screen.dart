@@ -140,6 +140,8 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen>
     final profile = ref.read(activeProfileProvider).value;
     if (profile == null) return;
 
+    final currentScript =
+        ref.read(settingsProvider).value?.mantraLanguageCode ?? 'hi';
     await ref.read(voiceEnrolmentRepositoryProvider).save(
       VoiceEnrolment(
         profileId: profile.id,
@@ -147,34 +149,64 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen>
         samples: _count,
         handwritingSamples: _existingHandwritingSamples,
         trainedAt: DateTime.now(),
+        trainedLanguageCode: currentScript,
       ),
     );
 
-    // Count the voice samples toward the program total.
-    if (_count > 0) {
-      final programs = ref.read(programsForActiveProfileProvider).value ?? [];
-      final program = programs
-          .where((p) => p.mantraId == widget.mantraId && !p.isGoalReached)
-          .firstOrNull;
-      if (program != null) {
-        final repo = ref.read(programRepositoryProvider);
-        final session = await repo.startSession(
-          programId: program.id,
-          memberId: profile.id,
-          modality: SessionModality.voice,
-        );
-        await repo.incrementSession(session.id, by: _count);
-        await repo.finishSession(session.id);
-        ref.invalidate(programsForActiveProfileProvider);
-      }
-    }
-
     if (!mounted) return;
     if (widget.isRetrain) {
+      // Retrain: roll the new samples into the existing active program, if any.
+      if (_count > 0) {
+        final programs = ref.read(programsForActiveProfileProvider).value ?? [];
+        final program = programs
+            .where((p) => p.mantraId == widget.mantraId && !p.isGoalReached)
+            .firstOrNull;
+        if (program != null) {
+          await _rollSamplesIntoProgram(program.id, profile.id, _count);
+        }
+      }
+      if (!mounted) return;
       context.pop();
-    } else {
-      context.push('${KvlRoute.setTargetWritings}/${widget.mantraId}');
+      return;
     }
+
+    // New flow: create the open program the user will chant in, and roll the
+    // voice-training samples into it so they count toward the program/bonus
+    // and the global tally (no goal screen first).
+    final program = await ref
+        .read(programRepositoryProvider)
+        .createOpen(memberId: profile.id, mantraId: widget.mantraId);
+    if (_count > 0) {
+      await _rollSamplesIntoProgram(program.id, profile.id, _count);
+    }
+    if (!mounted) return;
+    context.go('${KvlRoute.practice}/${program.id}');
+  }
+
+  /// Records [count] training samples as a finished voice session on
+  /// [programId] (so they count toward program totals) and optimistically
+  /// credits the global sadhana for this mantra.
+  Future<void> _rollSamplesIntoProgram(
+    String programId,
+    String memberId,
+    int count,
+  ) async {
+    final repo = ref.read(programRepositoryProvider);
+    final session = await repo.startSession(
+      programId: programId,
+      memberId: memberId,
+      modality: SessionModality.voice,
+    );
+    await repo.incrementSession(session.id, by: count);
+    await repo.finishSession(session.id);
+    final bumped = await ref
+        .read(globalSadhanaRepositoryProvider)
+        .applyLocalContribution(mantraId: widget.mantraId, count: count);
+    if (bumped) {
+      ref.invalidate(activeGlobalSadhanaProvider);
+      ref.invalidate(globalSadhanaEnrollmentProvider);
+    }
+    ref.invalidate(programsForActiveProfileProvider);
   }
 
   @override

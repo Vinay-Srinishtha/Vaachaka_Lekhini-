@@ -65,6 +65,7 @@ function extensionFor(fileName: string, contentType: string) {
 	if (contentType === 'image/jpeg') return 'jpg';
 	if (contentType === 'image/png') return 'png';
 	if (contentType === 'image/webp') return 'webp';
+	if (contentType === 'image/svg+xml') return 'svg';
 	if (contentType === 'audio/wav' || contentType === 'audio/x-wav') return 'wav';
 	return 'mp3';
 }
@@ -92,7 +93,8 @@ function validateMediaInput(args: {
 		'image/jpeg',
 		'image/png',
 		'image/webp',
-		'image/gif'
+		'image/gif',
+			'image/svg+xml'
 	]);
 	const typeOk = isImage
 		? RENDERABLE_IMAGE_TYPES.has(args.contentType)
@@ -101,7 +103,7 @@ function validateMediaInput(args: {
 		throw error(
 			400,
 			isImage
-				? 'Unsupported image format. Please upload a JPG, PNG, WEBP or GIF (AVIF/HEIC are not supported).'
+				? 'Unsupported image format. Please upload a JPG, PNG, WEBP, GIF or SVG (AVIF/HEIC are not supported).'
 				: 'Upload an MP3 or WAV audio file.'
 		);
 	}

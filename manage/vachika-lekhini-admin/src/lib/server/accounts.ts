@@ -75,18 +75,45 @@ export async function accountDetail(id: string) {
 	return prisma.account.findUnique({
 		where: { id },
 		include: {
-			_count: { select: { members: true, devices: true } },
+			_count: { select: { members: true, devices: true, referrals: true } },
+			invitedBy: { select: { mobile: true, countryCode: true } },
 			members: {
 				orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }],
 				include: {
 					_count: {
 						select: { programs: true, sessions: true, rewardEvents: true }
+					},
+					programs: {
+						orderBy: { createdAt: 'desc' },
+						select: {
+							id: true,
+							targetWritings: true,
+							targetDays: true,
+							totalChants: true,
+							totalWritings: true,
+							currentStreak: true,
+							longestStreak: true,
+							completedAt: true,
+							createdAt: true,
+							mantra: { select: { nameRoman: true } }
+						}
+					},
+					voiceEnrolments: {
+						select: {
+							sampleCount: true,
+							qualityScore: true,
+							enrolledAt: true,
+							mantra: { select: { nameRoman: true } }
+						}
+					},
+					handwritingSamples: {
+						select: { mode: true, mantra: { select: { nameRoman: true } } }
 					}
 				}
 			},
 			devices: {
 				orderBy: { lastSeenAt: 'desc' },
-				take: 5
+				take: 10
 			}
 		}
 	});

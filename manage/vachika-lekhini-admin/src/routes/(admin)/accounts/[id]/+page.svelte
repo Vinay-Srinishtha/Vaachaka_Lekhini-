@@ -19,6 +19,39 @@
 		friend: 'Friend',
 		other: 'Other'
 	};
+
+	const genderLabel: Record<string, string> = {
+		male: 'Male',
+		female: 'Female',
+		other: 'Other',
+		prefer_not_to_say: 'Prefer not to say'
+	};
+
+	// Aggregate a member's handwriting samples by mantra (count + modes used).
+	function hwByMantra(samples: { mode: string; mantra: { nameRoman: string } | null }[]) {
+		const map = new Map<string, { count: number; modes: Set<string> }>();
+		for (const s of samples) {
+			const k = s.mantra?.nameRoman ?? '—';
+			const e = map.get(k) ?? { count: 0, modes: new Set<string>() };
+			e.count++;
+			e.modes.add(s.mode);
+			map.set(k, e);
+		}
+		return [...map.entries()].map(([mantra, e]) => ({
+			mantra,
+			count: e.count,
+			modes: [...e.modes]
+		}));
+	}
+
+	// Flatten the preferences JSON blob into label/value rows for display.
+	function prefEntries(p: unknown): { k: string; v: string }[] {
+		if (!p || typeof p !== 'object') return [];
+		return Object.entries(p as Record<string, unknown>).map(([k, v]) => ({
+			k,
+			v: typeof v === 'object' ? JSON.stringify(v) : String(v)
+		}));
+	}
 </script>
 
 <a
@@ -44,11 +77,58 @@
 	{/if}
 </header>
 
+<section class="mb-8 space-y-3">
+	<h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Account</h2>
+	<div class="card p-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+		<div>
+			<div class="text-[10px] text-gray-500 uppercase tracking-wide">Mobile</div>
+			<div class="font-medium text-gray-900">{a.countryCode} {a.mobile}</div>
+		</div>
+		<div>
+			<div class="text-[10px] text-gray-500 uppercase tracking-wide">Auth</div>
+			<div class="font-medium text-gray-900">{a.passwordSetAt ? 'OTP + password' : 'OTP only'}</div>
+		</div>
+		<div>
+			<div class="text-[10px] text-gray-500 uppercase tracking-wide">Referral code</div>
+			<div class="font-medium text-gray-900">{a.referralCode ?? '—'}</div>
+		</div>
+		<div>
+			<div class="text-[10px] text-gray-500 uppercase tracking-wide">Invited by</div>
+			<div class="font-medium text-gray-900">
+				{a.invitedBy ? `${a.invitedBy.countryCode} ${a.invitedBy.mobile}` : 'Direct'}
+			</div>
+		</div>
+		<div>
+			<div class="text-[10px] text-gray-500 uppercase tracking-wide">Referrals made</div>
+			<div class="font-medium text-gray-900">{a._count.referrals}</div>
+		</div>
+		<div>
+			<div class="text-[10px] text-gray-500 uppercase tracking-wide">Members</div>
+			<div class="font-medium text-gray-900">{a._count.members}</div>
+		</div>
+		<div>
+			<div class="text-[10px] text-gray-500 uppercase tracking-wide">Joined</div>
+			<div class="font-medium text-gray-900">{fmt(a.createdAt)}</div>
+		</div>
+		<div>
+			<div class="text-[10px] text-gray-500 uppercase tracking-wide">Last seen</div>
+			<div class="font-medium text-gray-900">{fmt(a.lastSeenAt)}</div>
+		</div>
+		{#if a.isBanned}
+			<div class="col-span-2 md:col-span-4">
+				<div class="text-[10px] text-gray-500 uppercase tracking-wide">Banned reason</div>
+				<div class="font-medium text-red-700">{a.bannedReason ?? '—'}</div>
+			</div>
+		{/if}
+	</div>
+</section>
+
 <section class="space-y-4">
 	<h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Family members</h2>
 	<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 		{#each a.members as m (m.id)}
 			{@const metrics = data.memberMetrics.find((x: { memberId: string }) => x.memberId === m.id)}
+			{@const hw = hwByMantra(m.handwritingSamples)}
 			<div class="card p-4">
 				<div class="flex items-start gap-3">
 					<div class="w-10 h-10 rounded-full bg-brand-100 text-brand-700 grid place-items-center font-bold">
@@ -95,6 +175,64 @@
 								<div class="text-[10px] text-gray-500 uppercase tracking-wide">HW Samples</div>
 							</div>
 						</div>
+						{/if}
+
+						<!-- Full profile collected from the user -->
+						<div class="mt-3 border-t border-gray-100 pt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+							<div><span class="text-gray-500">Gender:</span> <span class="text-gray-800">{m.gender ? (genderLabel[m.gender] ?? m.gender) : '—'}</span></div>
+							<div><span class="text-gray-500">Birth year:</span> <span class="text-gray-800">{m.birthYear ?? '—'}</span></div>
+							<div><span class="text-gray-500">Mother tongue:</span> <span class="text-gray-800">{m.motherTongue ?? '—'}</span></div>
+							<div><span class="text-gray-500">Relation:</span> <span class="text-gray-800">{relationLabel[m.relation] ?? m.relation}</span></div>
+							<div><span class="text-gray-500">Profile done:</span> <span class="text-gray-800">{m.profileCompletedAt ? fmt(m.profileCompletedAt) : 'No'}</span></div>
+							<div><span class="text-gray-500">Joined:</span> <span class="text-gray-800">{fmt(m.createdAt)}</span></div>
+							<div><span class="text-gray-500">Last active:</span> <span class="text-gray-800">{fmt(m.lastActiveAt)}</span></div>
+							<div><span class="text-gray-500">Longest streak:</span> <span class="text-gray-800">{Math.max(0, ...m.programs.map((p: { longestStreak: number }) => p.longestStreak), 0)}</span></div>
+						</div>
+
+						<!-- Preferences blob -->
+						{#if prefEntries(m.preferences).length > 0}
+							<div class="mt-2 text-xs">
+								<div class="text-gray-500 mb-0.5">Preferences</div>
+								<div class="flex flex-wrap gap-1">
+									{#each prefEntries(m.preferences) as p (p.k)}
+										<span class="chip bg-gray-100 text-gray-700">{p.k}: {p.v}</span>
+									{/each}
+								</div>
+							</div>
+						{/if}
+
+						<!-- Voice training per mantra -->
+						{#if m.voiceEnrolments.length > 0}
+							<div class="mt-2 text-xs">
+								<div class="text-gray-500 mb-0.5">Voice trained</div>
+								{#each m.voiceEnrolments as v (v.mantra?.nameRoman)}
+									<div class="text-gray-800">
+										{v.mantra?.nameRoman ?? '—'} · {v.sampleCount} samples{v.qualityScore != null ? ` · q ${(v.qualityScore).toFixed(2)}` : ''}
+									</div>
+								{/each}
+							</div>
+						{/if}
+
+						<!-- Handwriting per mantra -->
+						{#if hw.length > 0}
+							<div class="mt-2 text-xs">
+								<div class="text-gray-500 mb-0.5">Handwriting</div>
+								{#each hw as h (h.mantra)}
+									<div class="text-gray-800">{h.mantra} · {h.count} samples · {h.modes.join(', ')}</div>
+								{/each}
+							</div>
+						{/if}
+
+						<!-- Programs -->
+						{#if m.programs.length > 0}
+							<div class="mt-2 text-xs">
+								<div class="text-gray-500 mb-0.5">Programs</div>
+								{#each m.programs as p (p.id)}
+									<div class="text-gray-800">
+										{p.mantra?.nameRoman ?? '—'} · {(p.totalChants + p.totalWritings).toLocaleString()}{p.targetWritings > 0 ? ` / ${p.targetWritings.toLocaleString()}` : ' (no goal)'} · streak {p.currentStreak}{p.completedAt ? ' · ✓ done' : ''}
+									</div>
+								{/each}
+							</div>
 						{/if}
 					</div>
 				</div>

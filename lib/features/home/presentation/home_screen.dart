@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../app/providers.dart';
@@ -871,28 +874,14 @@ class _HeroQuote extends ConsumerWidget {
                     ),
                   ),
                   InkWell(
-                    onTap: () {
-                      final appLink = appSettings?.appDownloadLink ?? '';
-                      String shareText;
-                      final template = appSettings?.shareQuoteText;
-                      if (template != null && template.isNotEmpty) {
-                        shareText = template
-                            .replaceAll('{quote}', quoteText)
-                            .replaceAll('{attribution}', attribution)
-                            .replaceAll('{app_link}', appLink);
-                      } else {
-                        shareText = attribution.isNotEmpty
-                            ? '"$quoteText"\n— $attribution\n\nShared via Vachika Lekhini 🙏'
-                            : '"$quoteText"\n\nShared via Vachika Lekhini 🙏';
-                        if (appLink.isNotEmpty) shareText += '\n$appLink';
-                      }
-                      SharePlus.instance.share(ShareParams(
-                        text: shareText,
-                        uri: chosen!.imageUrl != null
-                            ? Uri.tryParse(chosen.imageUrl!)
-                            : null,
-                      ));
-                    },
+                    onTap: () => _shareQuote(
+                      context,
+                      quoteText: quoteText,
+                      attribution: attribution,
+                      imageUrl: chosen!.imageUrl,
+                      appLink: appSettings?.appDownloadLink ?? '',
+                      template: appSettings?.shareQuoteText,
+                    ),
                     borderRadius: BorderRadius.circular(18),
                     child: Container(
                       width: 36,
@@ -913,6 +902,52 @@ class _HeroQuote extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Quote share helper — downloads image to a temp file then shares as XFile
+// ─────────────────────────────────────────────────────────────────────────────
+
+Future<void> _shareQuote(
+  BuildContext context, {
+  required String quoteText,
+  required String attribution,
+  required String? imageUrl,
+  required String appLink,
+  required String? template,
+}) async {
+  String shareText;
+  if (template != null && template.isNotEmpty) {
+    shareText = template
+        .replaceAll('{quote}', quoteText)
+        .replaceAll('{attribution}', attribution)
+        .replaceAll('{app_link}', appLink);
+  } else {
+    shareText = attribution.isNotEmpty
+        ? '"$quoteText"\n— $attribution'
+        : '"$quoteText"';
+    shareText += '\n\nShared via Vachika Lekhini 🙏';
+    if (appLink.isNotEmpty) shareText += '\n$appLink';
+  }
+
+  if (imageUrl == null || imageUrl.isEmpty) {
+    await SharePlus.instance.share(ShareParams(text: shareText));
+    return;
+  }
+
+  try {
+    final tmpDir = await getTemporaryDirectory();
+    final ext = imageUrl.contains('.png') ? 'png' : 'jpg';
+    final file = File('${tmpDir.path}/quote_share.$ext');
+    await Dio().download(imageUrl, file.path);
+    await SharePlus.instance.share(ShareParams(
+      text: shareText,
+      files: [XFile(file.path, mimeType: 'image/$ext')],
+    ));
+  } catch (_) {
+    // Fall back to text-only if image download fails.
+    await SharePlus.instance.share(ShareParams(text: shareText));
   }
 }
 

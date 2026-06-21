@@ -169,59 +169,62 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                       keyboardType: TextInputType.phone,
                       inputFormatters: [AuthMobileFormatter()],
                       textInputAction: TextInputAction.next,
+                      // Clear account-exists error when number changes.
+                      onChanged: (_) {
+                        if (_accountExists || _accountBanned) {
+                          setState(() { _error = null; _errorCode = null; });
+                        }
+                      },
                     ),
                   ),
                 ]),
 
+                // Inline error: number already registered → divert to login, block further fields.
                 if (_accountExists) ...[
                   const SizedBox(height: KvlSpacing.sm),
-                  _AccountExistsCard(onLogin: () => context.go(KvlRoute.otpLogin)),
+                  _NumberExistsInline(onLogin: () => context.go(KvlRoute.otpLogin)),
                 ] else if (_accountBanned) ...[
                   const SizedBox(height: KvlSpacing.sm),
                   AuthBannedCard(suspended: _errorCode == 'account_suspended'),
                 ],
-                const SizedBox(height: KvlSpacing.md),
 
-                // Password
-                KvlInput(
-                  label: 'Password',
-                  hint: 'At least 8 characters',
-                  controller: _password,
-                  obscureText: _obscure,
-                  textInputAction: TextInputAction.next,
-                  suffix: IconButton(
-                    icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility,
-                        size: 18, color: KvlColors.inkSoft),
-                    onPressed: () => setState(() => _obscure = !_obscure),
+                // Password, confirm, referral, submit — only after a valid 10-digit number
+                // and only when the number is not already taken.
+                if (_mobileValid && !_accountExists && !_accountBanned) ...[
+                  const SizedBox(height: KvlSpacing.md),
+                  KvlInput(
+                    label: 'Password',
+                    hint: 'At least 8 characters',
+                    controller: _password,
+                    obscureText: _obscure,
+                    textInputAction: TextInputAction.next,
+                    suffix: IconButton(
+                      icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility,
+                          size: 18, color: KvlColors.inkSoft),
+                      onPressed: () => setState(() => _obscure = !_obscure),
+                    ),
                   ),
-                ),
-                const SizedBox(height: KvlSpacing.md),
-
-                // Confirm password
-                KvlInput(
-                  label: 'Confirm password',
-                  hint: 'Re-enter your password',
-                  controller: _confirm,
-                  obscureText: _obscure,
-                  textInputAction: TextInputAction.next,
-                ),
-                if (_confirm.text.isNotEmpty && !_confirmValid) ...[
-                  const SizedBox(height: 4),
-                  Text('Passwords do not match.',
-                      style: KvlText.caption(11).copyWith(color: KvlColors.danger)),
-                ],
-                const SizedBox(height: KvlSpacing.md),
-
-                // Referral
-                KvlInput(
-                  label: context.l10n.referralCodeLabel,
-                  hint: context.l10n.referralCodeHint,
-                  controller: _referral,
-                  textInputAction: TextInputAction.done,
-                ),
-                const SizedBox(height: KvlSpacing.lg),
-
-                if (!_accountExists && !_accountBanned) ...[
+                  const SizedBox(height: KvlSpacing.md),
+                  KvlInput(
+                    label: 'Confirm password',
+                    hint: 'Re-enter your password',
+                    controller: _confirm,
+                    obscureText: _obscure,
+                    textInputAction: TextInputAction.next,
+                  ),
+                  if (_confirm.text.isNotEmpty && !_confirmValid) ...[
+                    const SizedBox(height: 4),
+                    Text('Passwords do not match.',
+                        style: KvlText.caption(11).copyWith(color: KvlColors.danger)),
+                  ],
+                  const SizedBox(height: KvlSpacing.md),
+                  KvlInput(
+                    label: context.l10n.referralCodeLabel,
+                    hint: context.l10n.referralCodeHint,
+                    controller: _referral,
+                    textInputAction: TextInputAction.done,
+                  ),
+                  const SizedBox(height: KvlSpacing.lg),
                   if (_error != null) ...[
                     AuthErrorBar(_error!, onDismiss: () => setState(() { _error = null; _errorCode = null; })),
                     const SizedBox(height: KvlSpacing.sm),
@@ -262,36 +265,48 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
   }
 }
 
-class _AccountExistsCard extends StatelessWidget {
-  const _AccountExistsCard({required this.onLogin});
+// Compact inline error shown directly under the phone field when the number
+// is already registered. Blocks the password fields entirely.
+class _NumberExistsInline extends StatelessWidget {
+  const _NumberExistsInline({required this.onLogin});
   final VoidCallback onLogin;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: KvlColors.surfaceWarm,
+        color: KvlColors.danger.withValues(alpha: .07),
         borderRadius: KvlRadius.brMD,
-        border: Border.all(color: KvlColors.border),
+        border: Border.all(color: KvlColors.danger.withValues(alpha: .35)),
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
-          Icon(Icons.person_outline_rounded, size: 17, color: KvlColors.inkSoft),
-          const SizedBox(width: 7),
-          Text(context.l10n.numberAlreadyRegistered,
-              style: KvlText.ui(13).copyWith(fontWeight: FontWeight.w600)),
-        ]),
-        const SizedBox(height: 5),
-        Text(context.l10n.accountAlreadyExistsForNumber,
-            style: KvlText.caption(11.5).copyWith(color: KvlColors.inkSoft)),
-        const SizedBox(height: 13),
-        KvlButton(
-          label: context.l10n.logInInstead,
-          icon: Icons.arrow_forward_rounded,
-          onPressed: onLogin,
-        ),
-      ]),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline_rounded, size: 16, color: KvlColors.danger),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              context.l10n.numberAlreadyRegistered,
+              style: KvlText.caption(12).copyWith(color: KvlColors.danger),
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: onLogin,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: KvlColors.primary,
+                borderRadius: KvlRadius.brSM,
+              ),
+              child: Text(
+                context.l10n.logInInstead,
+                style: KvlText.ui(11, FontWeight.w700).copyWith(color: Colors.white),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

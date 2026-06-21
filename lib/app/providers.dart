@@ -44,6 +44,7 @@ import '../features/rewards/domain/store_item.dart';
 import '../features/settings/data/settings_repository_local.dart';
 import '../features/settings/domain/settings_repository.dart';
 import '../features/profiles/data/profile_repository_local.dart';
+import '../features/profiles/domain/member_address.dart';
 import '../features/profiles/domain/profile.dart';
 import '../features/profiles/domain/profile_repository.dart';
 
@@ -232,6 +233,12 @@ final accountHydrationProvider = Provider<void>((ref) {
         if (memberId == null) continue;
         final isPrimary = member['is_primary'] == true;
         final genderRaw = member['gender'] as String?;
+        final prefs = member['preferences'];
+        final prefsMap = prefs is Map ? Map<String, dynamic>.from(prefs) : <String, dynamic>{};
+        final rawAddresses = prefsMap['addresses'] as List<dynamic>? ?? const [];
+        final addresses = rawAddresses
+            .map((e) => MemberAddress.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList();
         final profile = Profile(
           id: memberId,
           userId: accountId,
@@ -248,6 +255,7 @@ final accountHydrationProvider = Provider<void>((ref) {
           avatarSeed: member['avatar_key'] as String?,
           language: member['language'] as String? ?? 'en',
           mantraLanguage: member['mantra_language'] as String? ?? 'hi',
+          addresses: addresses,
           createdAt:
               DateTime.tryParse(member['created_at'] as String? ?? '') ??
               DateTime.now(),

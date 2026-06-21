@@ -1,5 +1,6 @@
 import 'package:characters/characters.dart';
 import 'package:equatable/equatable.dart';
+import 'member_address.dart';
 
 enum FamilyRelation {
   me,
@@ -66,6 +67,7 @@ class Profile extends Equatable {
     this.location,
     this.targetMantraId,
     this.profileCompletedAt,
+    this.addresses = const [],
   });
 
   final String id;
@@ -101,6 +103,9 @@ class Profile extends Equatable {
   /// Non-null once the 50-point profile-completion bonus has been awarded.
   final DateTime? profileCompletedAt;
 
+  /// Indian postal addresses saved by the user (home / work / other).
+  final List<MemberAddress> addresses;
+
   /// True when all required fields are filled (determines whether the reward
   /// has been / can be earned).
   bool get isProfileComplete =>
@@ -131,6 +136,7 @@ class Profile extends Equatable {
     String? location,
     String? targetMantraId,
     DateTime? profileCompletedAt,
+    List<MemberAddress>? addresses,
   }) => Profile(
         id: id,
         userId: userId,
@@ -145,6 +151,7 @@ class Profile extends Equatable {
         location: location ?? this.location,
         targetMantraId: targetMantraId ?? this.targetMantraId,
         profileCompletedAt: profileCompletedAt ?? this.profileCompletedAt,
+        addresses: addresses ?? this.addresses,
         createdAt: createdAt,
       );
 
@@ -163,6 +170,7 @@ class Profile extends Equatable {
         // targetMantraId is admin-only — never sent from the client
         'profileCompletedAt': profileCompletedAt?.toIso8601String(),
         'createdAt': createdAt.toIso8601String(),
+        'addresses': addresses.map((a) => a.toJson()).toList(),
       };
 
   factory Profile.fromJson(Map<String, dynamic> j) => Profile(
@@ -181,6 +189,10 @@ class Profile extends Equatable {
         profileCompletedAt: j['profileCompletedAt'] != null
             ? DateTime.tryParse(j['profileCompletedAt'] as String)
             : null,
+        addresses: (j['addresses'] as List<dynamic>?)
+                ?.map((e) => MemberAddress.fromJson(Map<String, dynamic>.from(e as Map)))
+                .toList() ??
+            const [],
         createdAt: DateTime.tryParse(j['createdAt'] as String? ?? '') ?? DateTime.now(),
       );
 
@@ -199,6 +211,7 @@ class Profile extends Equatable {
         location,
         targetMantraId,
         profileCompletedAt,
+        addresses,
         createdAt,
       ];
 }

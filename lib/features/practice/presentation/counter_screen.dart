@@ -120,7 +120,6 @@ class _Body extends ConsumerStatefulWidget {
 
 class _BodyState extends ConsumerState<_Body> {
   bool _dedicationShown = false;
-  bool _dailyGoalShown = false;
   bool _draftDialogShown = false;
   late final PracticeController _controllerForDispose;
   late final AudioPlayer _ambientPlayer;
@@ -234,13 +233,6 @@ class _BodyState extends ConsumerState<_Body> {
         _dedicationShown = true;
         _showDedicationDialog(context, ref, programId);
       }
-      if (next.value?.dailyGoalReached == true &&
-          !_dailyGoalShown &&
-          !_dedicationShown &&
-          context.mounted) {
-        _dailyGoalShown = true;
-        _showDailyGoalSheet(context, ref, programId);
-      }
     });
 
     final mantra = ref.watch(mantraByIdProvider(state.program.mantraId));
@@ -351,103 +343,57 @@ class _BodyState extends ConsumerState<_Body> {
                         ? controller.pause
                         : () => controller.start(mantra: mantra),
                     onFinish: () async {
-                      if (state.activeSessionId != null) {
+                      if (state.activeSessionId == null) return;
+
+                      // Goal-less ("open") program: finish then ask build/bonus.
+                      if (!state.program.hasGoal) {
                         final beforeTotal = state.program.totalProgress;
                         await controller.finish();
                         if (!context.mounted) return;
                         ref.read(sessionCompletedProvider.notifier).increment();
-                        ref.invalidate(
-                          globalStatsProvider(state.program.mantraId),
-                        );
-                        final afterState = ref
-                            .read(practiceControllerProvider(programId))
-                            .value;
+                        ref.invalidate(globalStatsProvider(state.program.mantraId));
+                        final afterState = ref.read(practiceControllerProvider(programId)).value;
                         final sessionTotal = (afterState != null)
-                            ? (afterState.program.totalProgress - beforeTotal)
-                                  .clamp(0, 999999)
+                            ? (afterState.program.totalProgress - beforeTotal).clamp(0, 999999)
                             : state.sessionCount;
-                        // Goal-less ("open") program: ask whether to build it
-                        // into a targeted program or keep it as bonus chants.
-                        if (!state.program.hasGoal) {
-                          final build = await _askBuildOrBonus(
-                            context,
-                            sessionTotal,
+                        final build = await _askBuildOrBonus(context, sessionTotal);
+                        if (!context.mounted) return;
+                        if (build == true) {
+                          context.go(
+                            '${KvlRoute.setTargetWritings}/${state.program.mantraId}'
+                            '?programId=${state.program.id}',
                           );
-                          if (!context.mounted) return;
-                          if (build == true) {
-                            context.go(
-                              '${KvlRoute.setTargetWritings}/${state.program.mantraId}'
-                              '?programId=${state.program.id}',
-                            );
-                          } else {
-                            context.go(KvlRoute.home);
-                          }
-                          return;
+                        } else {
+                          context.go(KvlRoute.home);
                         }
-                        // Capture the messenger now — the close button below
-                        // must NOT look it up via context, because by the time
-                        // it's tapped we've navigated away and this widget is
-                        // deactivated (context ancestor lookup would throw).
-                        final messenger = ScaffoldMessenger.of(context);
-                        messenger
-                          ..clearSnackBars()
-                          ..showSnackBar(
-                            SnackBar(
-                              duration: const Duration(milliseconds: 2500),
-                              behavior: SnackBarBehavior.floating,
-                              backgroundColor: const Color(0xFF15803D),
-                              elevation: 10,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: KvlRadius.brMD,
-                              ),
-                              content: Row(
-                                children: [
-                                  Container(
-                                    width: 30,
-                                    height: 30,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(
-                                        alpha: .16,
-                                      ),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: const Icon(
-                                      Icons.check_rounded,
-                                      color: Colors.white,
-                                      size: 19,
-                                    ),
-                                  ),
-                                  const SizedBox(width: KvlSpacing.sm),
-                                  Expanded(
-                                    child: Text(
-                                      '${IndianNumberFormat.format(sessionTotal)} chants completed this session',
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: KvlText.ui(
-                                        13,
-                                        FontWeight.w600,
-                                      ).copyWith(color: Colors.white),
-                                    ),
-                                  ),
-                                  GestureDetector(
-                                    behavior: HitTestBehavior.opaque,
-                                    onTap: messenger.clearSnackBars,
-                                    child: const Padding(
-                                      padding: EdgeInsets.all(6),
-                                      child: Icon(
-                                        Icons.close,
-                                        color: Colors.white,
-                                        size: 20,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
+                        return;
                       }
+
+                      // Program with goal: check if daily target is met BEFORE finishing.
+                      final dailyTarget = state.program.effectiveDailyTarget;
+                      final todaysTotal = ref.read(practiceControllerProvider(programId)).value?.todaysTotal ?? 0;
+                      final projected = todaysTotal + state.sessionCount;
+                      if (dailyTarget > 0 && projected < dailyTarget) {
+                        final remaining = dailyTarget - projected;
+                        final shouldContinue = await _showGoalIncompleteSheet(context, remaining);
+                        if (!context.mounted) return;
+                        if (shouldContinue == true) return; // user chose to continue chanting
+                        // User chose "Complete Session" — fall through to finish.
+                      }
+
+                      await controller.finish();
                       if (!context.mounted) return;
+                      ref.read(sessionCompletedProvider.notifier).increment();
+                      ref.invalidate(globalStatsProvider(state.program.mantraId));
+
+                      // Show goal-completed celebration if target was just hit.
+                      final afterState = ref.read(practiceControllerProvider(programId)).value;
+                      if (afterState != null && dailyTarget > 0 &&
+                          (afterState.todaysTotal >= dailyTarget)) {
+                        await _showDailyGoalSheet(context, ref, programId);
+                        if (!context.mounted) return;
+                      }
+
                       context.go(KvlRoute.home);
                     },
                   ),
@@ -582,14 +528,23 @@ class _BodyState extends ConsumerState<_Body> {
     );
   }
 
+  /// Shows the "daily goal incomplete" sheet. Returns true if user wants to
+  /// continue chanting, false/null if they chose "Complete Session".
+  Future<bool?> _showGoalIncompleteSheet(BuildContext context, int remaining) {
+    return showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _GoalIncompleteSheet(remaining: remaining),
+    );
+  }
+
+  /// Shows the "daily goal reached" celebration sheet on explicit Finish.
   Future<void> _showDailyGoalSheet(
     BuildContext context,
     WidgetRef ref,
     String programId,
   ) async {
-    final controller = ref.read(practiceControllerProvider(programId).notifier);
-    await controller.pause();
-    if (!context.mounted) return;
     final mantraId = ref
         .read(practiceControllerProvider(programId))
         .value
@@ -599,17 +554,8 @@ class _BodyState extends ConsumerState<_Body> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const _DailyGoalSheet(),
+      builder: (_) => _DailyGoalSheet(mantraId: mantraId),
     );
-    // Resume after dismissal if still mounted and session active.
-    if (context.mounted) {
-      final s = ref.read(practiceControllerProvider(programId)).value;
-      if (s != null && s.activeSessionId != null && !s.isRunning) {
-        controller.start(
-          mantra: mantraId != null ? ref.read(mantraByIdProvider(mantraId)) : null,
-        );
-      }
-    }
   }
 
   Future<void> _cycleRingerMode(WidgetRef ref) async {
@@ -1901,67 +1847,153 @@ class _TipSheetState extends State<_TipSheet> {
 // Daily Goal Celebration sheet
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _DailyGoalSheet extends StatefulWidget {
-  const _DailyGoalSheet();
+// ─────────────────────────────────────────────────────────────────────────────
+// Goal incomplete sheet — shown on Finish when daily target not yet met
+// ─────────────────────────────────────────────────────────────────────────────
 
-  @override
-  State<_DailyGoalSheet> createState() => _DailyGoalSheetState();
-}
+class _GoalIncompleteSheet extends StatelessWidget {
+  const _GoalIncompleteSheet({required this.remaining});
+  final int remaining;
 
-class _DailyGoalSheetState extends State<_DailyGoalSheet> {
   @override
   Widget build(BuildContext context) {
-    final bottom = MediaQuery.of(context).viewInsets.bottom;
-    return Padding(
-      padding: EdgeInsets.only(bottom: bottom),
-      child: Container(
-        decoration: const BoxDecoration(
-          color: KvlColors.bg,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        padding: const EdgeInsets.fromLTRB(
-          KvlSpacing.lg, KvlSpacing.lg, KvlSpacing.lg, KvlSpacing.xl,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 40, height: 4,
-                  margin: const EdgeInsets.only(bottom: KvlSpacing.md),
-                  decoration: BoxDecoration(
-                    color: KvlColors.muted.withValues(alpha: .3),
-                    borderRadius: KvlRadius.brPill,
-                  ),
-                ),
+    final bottom = MediaQuery.of(context).padding.bottom;
+    return Container(
+      decoration: const BoxDecoration(
+        color: KvlColors.bg,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: EdgeInsets.fromLTRB(
+        KvlSpacing.lg, KvlSpacing.lg, KvlSpacing.lg, KvlSpacing.lg + bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Container(
+              width: 40, height: 4,
+              margin: const EdgeInsets.only(bottom: KvlSpacing.md),
+              decoration: BoxDecoration(
+                color: KvlColors.muted.withValues(alpha: .3),
+                borderRadius: KvlRadius.brPill,
               ),
-              const Text('🎉', style: TextStyle(fontSize: 48), textAlign: TextAlign.center),
-              const SizedBox(height: KvlSpacing.sm),
-              Text(
-                'You reached your goal today 🙏',
-                textAlign: TextAlign.center,
-                style: KvlText.ui(20, FontWeight.w800),
-              ),
-              const SizedBox(height: KvlSpacing.xs),
-              Text(
-                'Your daily sadhana is complete. Keep the streak alive!',
-                textAlign: TextAlign.center,
-                style: KvlText.caption(13).copyWith(color: KvlColors.muted),
-              ),
-              const SizedBox(height: KvlSpacing.lg),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(
-                  'Continue Practice',
-                  style: KvlText.ui(14, FontWeight.w600)
-                      .copyWith(color: KvlColors.primary),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+          const Text('🙏', style: TextStyle(fontSize: 44), textAlign: TextAlign.center),
+          const SizedBox(height: KvlSpacing.sm),
+          Text(
+            '${IndianNumberFormat.format(remaining)} chants left',
+            textAlign: TextAlign.center,
+            style: KvlText.ui(20, FontWeight.w800),
+          ),
+          const SizedBox(height: KvlSpacing.xs),
+          Text(
+            'to complete your daily sadhana goal.\nDo you want to continue?',
+            textAlign: TextAlign.center,
+            style: KvlText.caption(13).copyWith(color: KvlColors.muted),
+          ),
+          const SizedBox(height: KvlSpacing.lg),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: KvlColors.primary,
+              shape: RoundedRectangleBorder(borderRadius: KvlRadius.brMD),
+              minimumSize: const Size.fromHeight(48),
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(
+              'Continue This Session',
+              style: KvlText.ui(14, FontWeight.w700).copyWith(color: Colors.white),
+            ),
+          ),
+          const SizedBox(height: KvlSpacing.sm),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(
+              'Complete Session',
+              style: KvlText.ui(14, FontWeight.w600).copyWith(color: KvlColors.muted),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Daily Goal Celebration sheet
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _DailyGoalSheet extends StatelessWidget {
+  const _DailyGoalSheet({this.mantraId});
+  final String? mantraId;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).padding.bottom;
+    return Container(
+      decoration: const BoxDecoration(
+        color: KvlColors.bg,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: EdgeInsets.fromLTRB(
+        KvlSpacing.lg, KvlSpacing.lg, KvlSpacing.lg, KvlSpacing.lg + bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Container(
+              width: 40, height: 4,
+              margin: const EdgeInsets.only(bottom: KvlSpacing.md),
+              decoration: BoxDecoration(
+                color: KvlColors.muted.withValues(alpha: .3),
+                borderRadius: KvlRadius.brPill,
+              ),
+            ),
+          ),
+          const Text('🎉', style: TextStyle(fontSize: 48), textAlign: TextAlign.center),
+          const SizedBox(height: KvlSpacing.sm),
+          Text(
+            'You reached your goal today 🙏',
+            textAlign: TextAlign.center,
+            style: KvlText.ui(20, FontWeight.w800),
+          ),
+          const SizedBox(height: KvlSpacing.xs),
+          Text(
+            'Your daily sadhana is complete. Keep the streak alive!',
+            textAlign: TextAlign.center,
+            style: KvlText.caption(13).copyWith(color: KvlColors.muted),
+          ),
+          if (mantraId != null) ...[
+            const SizedBox(height: KvlSpacing.md),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: KvlColors.primary.withValues(alpha: .5)),
+                shape: RoundedRectangleBorder(borderRadius: KvlRadius.brMD),
+                minimumSize: const Size.fromHeight(44),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+                BookPreviewButton.openSheet(context, mantraId!);
+              },
+              icon: const Icon(Icons.menu_book_rounded, size: 18),
+              label: Text(
+                'Preview My Book',
+                style: KvlText.ui(13, FontWeight.w600).copyWith(color: KvlColors.primary),
+              ),
+            ),
+          ],
+          const SizedBox(height: KvlSpacing.sm),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              'Continue Practice',
+              style: KvlText.ui(14, FontWeight.w600).copyWith(color: KvlColors.primary),
+            ),
+          ),
+        ],
       ),
     );
   }

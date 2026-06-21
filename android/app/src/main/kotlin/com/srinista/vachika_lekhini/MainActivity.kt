@@ -100,27 +100,35 @@ class MainActivity : FlutterActivity() {
             else -> "unknown"
         }
 
-    // Cycle normal → vibrate → silent → normal. Switching to silent/vibrate on
-    // Android M+ needs Do-Not-Disturb policy access; if missing, send the user
-    // to grant it and leave the mode unchanged for this tap.
+    // Cycle normal → vibrate → silent → normal. Switching to/from silent or
+    // vibrate on Android M+ needs Do-Not-Disturb policy access; if missing,
+    // send the user to grant it and leave the mode unchanged.
     private fun cycleRingerMode(): String {
         val manager = audioManager()
-        val next = when (manager.ringerMode) {
+        val current = manager.ringerMode
+        val next = when (current) {
             AudioManager.RINGER_MODE_NORMAL -> AudioManager.RINGER_MODE_VIBRATE
             AudioManager.RINGER_MODE_VIBRATE -> AudioManager.RINGER_MODE_SILENT
             else -> AudioManager.RINGER_MODE_NORMAL
         }
 
-        val quietsDevice = next == AudioManager.RINGER_MODE_SILENT ||
-            next == AudioManager.RINGER_MODE_VIBRATE
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
-            quietsDevice && !hasNotificationPolicyAccess()
-        ) {
+        // DND access is required to set silent OR vibrate on Android M+.
+        // Also required to escape from silent on some devices/OEMs.
+        val needsAccess = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
+            !hasNotificationPolicyAccess()
+        if (needsAccess) {
             openNotificationPolicySettings()
             return currentRingerMode()
         }
 
-        runCatching { manager.ringerMode = next }
+        try {
+            manager.ringerMode = next
+        } catch (e: SecurityException) {
+            // DND access revoked at runtime — prompt user and bail.
+            openNotificationPolicySettings()
+            return currentRingerMode()
+        }
+
         // Push the new state to the UI immediately so the app reflects the tap
         // even before the system RINGER_MODE_CHANGED broadcast arrives.
         val now = currentRingerMode()

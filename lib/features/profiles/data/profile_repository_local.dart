@@ -169,6 +169,10 @@ class ProfileRepositoryLocal implements ProfileRepository {
         'gender': p.gender?.serverValue,
         'birth_year': p.birthYear,
         'mother_tongue': p.motherTongue,
+        'preferences': {
+          if (p.addresses.isNotEmpty)
+            'addresses': p.addresses.map((a) => a.toJson()).toList(),
+        },
       };
 
   // Map Flutter FamilyRelation to the server's FAMILY_RELATIONS enum.

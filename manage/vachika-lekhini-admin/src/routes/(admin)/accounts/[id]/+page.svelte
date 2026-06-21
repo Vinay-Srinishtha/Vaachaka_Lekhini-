@@ -44,14 +44,27 @@
 		}));
 	}
 
-	// Flatten the preferences JSON blob into label/value rows for display.
-	function prefEntries(p: unknown): { k: string; v: string }[] {
+	type MemberAddress = {
+		id: string;
+		type: 'home' | 'work' | 'other';
+		line1: string;
+		line2?: string;
+		city: string;
+		state: string;
+		pincode: string;
+		country?: string;
+	};
+
+	function addresses(p: unknown): MemberAddress[] {
 		if (!p || typeof p !== 'object') return [];
-		return Object.entries(p as Record<string, unknown>).map(([k, v]) => ({
-			k,
-			v: typeof v === 'object' ? JSON.stringify(v) : String(v)
-		}));
+		const prefs = p as Record<string, unknown>;
+		const list = prefs['addresses'];
+		if (!Array.isArray(list)) return [];
+		return list as MemberAddress[];
 	}
+
+	const typeLabel: Record<string, string> = { home: 'Home', work: 'Work', other: 'Other' };
+	const typeIcon: Record<string, string> = { home: '🏠', work: '🏢', other: '📍' };
 </script>
 
 <a
@@ -189,13 +202,18 @@
 							<div><span class="text-gray-500">Longest streak:</span> <span class="text-gray-800">{Math.max(0, ...m.programs.map((p: { longestStreak: number }) => p.longestStreak), 0)}</span></div>
 						</div>
 
-						<!-- Preferences blob -->
-						{#if prefEntries(m.preferences).length > 0}
+						<!-- Addresses -->
+						{#if addresses(m.preferences).length > 0}
 							<div class="mt-2 text-xs">
-								<div class="text-gray-500 mb-0.5">Preferences</div>
-								<div class="flex flex-wrap gap-1">
-									{#each prefEntries(m.preferences) as p (p.k)}
-										<span class="chip bg-gray-100 text-gray-700">{p.k}: {p.v}</span>
+								<div class="text-gray-500 mb-1">Addresses</div>
+								<div class="space-y-1">
+									{#each addresses(m.preferences) as addr (addr.id)}
+										<div class="rounded-md border border-gray-100 bg-gray-50 px-3 py-2">
+											<span class="font-semibold text-gray-800">{typeIcon[addr.type] ?? '📍'} {typeLabel[addr.type] ?? addr.type}</span>
+											<div class="text-gray-600 mt-0.5">
+												{addr.line1}{addr.line2 ? ', ' + addr.line2 : ''}, {addr.city}, {addr.state} – {addr.pincode}
+											</div>
+										</div>
 									{/each}
 								</div>
 							</div>

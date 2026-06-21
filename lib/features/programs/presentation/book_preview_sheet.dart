@@ -49,7 +49,7 @@ class BookPreviewButton extends ConsumerWidget {
         ref.watch(_bookAssetsProvider(mantraId)).value?.length ?? 0;
 
     return GestureDetector(
-      onTap: () => _openSheet(context, mantraId),
+      onTap: () => openSheet(context, mantraId),
       child: Container(
         padding: EdgeInsets.symmetric(
           horizontal: compact ? 10 : 13,
@@ -103,7 +103,7 @@ class BookPreviewButton extends ConsumerWidget {
     );
   }
 
-  static void _openSheet(BuildContext context, String mantraId) {
+  static void openSheet(BuildContext context, String mantraId) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,

@@ -56,7 +56,9 @@ class _SetProgramTargetScreenState
   final _customWritingsCtrl = TextEditingController(text: '108');
 
   static const _maxSliderDays = 2000;
-  static const _chantsPerDay24h = 1440;
+  // 60 chants/min × 60 min/hr × 24 hr — the hard floor so no program requires
+  // more than a full day of continuous chanting per day.
+  static const _chantsPerDay24h = 86400;
 
   int _days = 1;
   bool _busy = false;

@@ -2,7 +2,7 @@ import type { PageServerLoad, Actions } from './$types';
 import { prisma } from '$lib/server/prisma';
 import { requireRole } from '$lib/server/auth';
 
-const KEYS = ['privacy_policy', 'about_app', 'app_logo_url', 'invite_host', 'app_download_link', 'share_quote_image_url', 'share_quote_text'] as const;
+const KEYS = ['privacy_policy', 'about_app', 'app_logo_url', 'invite_host', 'app_download_link', 'share_quote_image_url', 'share_quote_text', 'bulletin_mode', 'bulletin_text'] as const;
 
 async function loadSettings() {
 	const rows = await prisma.appSetting.findMany({ where: { key: { in: [...KEYS] } } });
@@ -13,7 +13,9 @@ async function loadSettings() {
 		invite_host: 'vaachakalekhini.com',
 		app_download_link: '',
 		share_quote_image_url: '',
-		share_quote_text: ''
+		share_quote_text: '',
+		bulletin_mode: 'custom_text',
+		bulletin_text: ''
 	};
 	for (const r of rows) map[r.key] = r.value;
 	return map;
@@ -35,6 +37,9 @@ export const actions: Actions = {
 		const appDownloadLink   = String(form.get('app_download_link') ?? '').trim();
 		const shareQuoteImgUrl  = String(form.get('share_quote_image_url') ?? '').trim();
 		const shareQuoteText    = String(form.get('share_quote_text') ?? '').trim();
+		const bulletinModeRaw   = String(form.get('bulletin_mode') ?? 'custom_text').trim();
+		const bulletinMode      = bulletinModeRaw === 'stats' ? 'stats' : 'custom_text';
+		const bulletinText      = String(form.get('bulletin_text') ?? '').trim();
 
 		const upsert = (key: string, value: string) =>
 			prisma.appSetting.upsert({
@@ -51,6 +56,8 @@ export const actions: Actions = {
 			upsert('app_download_link', appDownloadLink),
 			upsert('share_quote_image_url', shareQuoteImgUrl),
 			upsert('share_quote_text', shareQuoteText),
+			upsert('bulletin_mode', bulletinMode),
+			upsert('bulletin_text', bulletinText),
 		]);
 
 		const settings = await loadSettings();

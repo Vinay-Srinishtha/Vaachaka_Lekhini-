@@ -108,7 +108,10 @@ class HomeScreen extends ConsumerWidget {
                         minHeight: 34,
                         maxHeight: 34,
                         alignment: Alignment.center,
-                        child: const _Bulletin(),
+                        child: _Bulletin(
+                          text: ref.watch(appSettingsProvider).value?.bulletinText ??
+                              _kDefaultBulletinText,
+                        ),
                       ),
                     );
                   },
@@ -230,8 +233,14 @@ class _HomeHeader extends StatelessWidget {
 // Bulletin — edge-to-edge orange scrolling ticker
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Fallback banner text when the admin hasn't set a custom message and stats
+/// mode isn't active.
+const _kDefaultBulletinText =
+    '  🕉  Join Global Sadhanas   •   Chant Together, Grow Together   •   🙏  Thousands Practicing Now   •   Start Your Journey Today   •   ✨  Join Global Sadhanas   •   Chant Together, Grow Together   •   ';
+
 class _Bulletin extends StatefulWidget {
-  const _Bulletin();
+  const _Bulletin({required this.text});
+  final String text;
 
   @override
   State<_Bulletin> createState() => _BulletinState();
@@ -239,8 +248,8 @@ class _Bulletin extends StatefulWidget {
 
 class _BulletinState extends State<_Bulletin>
     with SingleTickerProviderStateMixin {
-  static const _text =
-      '  🕉  Join Global Sadhanas   •   Chant Together, Grow Together   •   🙏  Thousands Practicing Now   •   Start Your Journey Today   •   ✨  Join Global Sadhanas   •   Chant Together, Grow Together   •   ';
+  // Pad with spacing so the loop has a gap between repetitions.
+  String get _text => '   ${widget.text.trim()}   •   ';
 
   late final AnimationController _ctrl = AnimationController(
     vsync: this,

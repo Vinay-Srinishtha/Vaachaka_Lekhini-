@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/audio/reward_sound_service.dart';
@@ -17,7 +16,6 @@ import '../../../core/i18n/language_options.dart';
 import '../../../core/phone/phone_mode_service.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/utils/indian_number_format.dart';
-import '../../../core/widgets/kvl_profile_avatar.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../programs/domain/session.dart';
 import '../../programs/presentation/book_preview_sheet.dart';
@@ -41,8 +39,29 @@ class _AmbientNotifier extends Notifier<bool> {
 }
 
 final _ambientPlayerProvider = Provider.autoDispose<AudioPlayer>((ref) {
+  // Keep the player alive across reads — otherwise the autoDispose provider is
+  // torn down right after the Sruthi tap (it's only read, never watched),
+  // which stops playback instantly.
+  ref.keepAlive();
   final player = AudioPlayer();
   player.setReleaseMode(ReleaseMode.loop);
+  // Background Sruthi at 50% — present but never overpowering the chanting.
+  player.setVolume(0.5);
+  // Mix with the live mic capture instead of grabbing audio focus, so turning
+  // Sruthi on never interrupts voice recognition (same fix as the reward bell).
+  player.setAudioContext(AudioContext(
+    android: AudioContextAndroid(
+      isSpeakerphoneOn: false,
+      stayAwake: false,
+      contentType: AndroidContentType.music,
+      usageType: AndroidUsageType.media,
+      audioFocus: AndroidAudioFocus.none,
+    ),
+    iOS: AudioContextIOS(
+      category: AVAudioSessionCategory.playAndRecord,
+      options: const {AVAudioSessionOptions.mixWithOthers},
+    ),
+  ));
   ref.onDispose(() {
     player.stop();
     player.dispose();
@@ -104,6 +123,7 @@ class _BodyState extends ConsumerState<_Body> {
   bool _dailyGoalShown = false;
   bool _draftDialogShown = false;
   late final PracticeController _controllerForDispose;
+  late final AudioPlayer _ambientPlayer;
 
   @override
   void initState() {
@@ -112,6 +132,7 @@ class _BodyState extends ConsumerState<_Body> {
     // Riverpod 3 and was crashing on navigation away from this screen.
     _controllerForDispose =
         ref.read(practiceControllerProvider(widget.programId).notifier);
+    _ambientPlayer = ref.read(_ambientPlayerProvider);
     if ((widget.state.draftCount ?? 0) > 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && !_draftDialogShown) {
@@ -135,6 +156,7 @@ class _BodyState extends ConsumerState<_Body> {
     // next program's capture collides with this one and crashes on the second
     // session. Uses the notifier captured in initState — `ref` is unsafe here.
     Future.microtask(_controllerForDispose.releaseVoice);
+    _ambientPlayer.stop(); // don't let ambient bleed into other screens
     super.dispose();
   }
 
@@ -223,7 +245,6 @@ class _BodyState extends ConsumerState<_Body> {
 
     final mantra = ref.watch(mantraByIdProvider(state.program.mantraId));
     final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
-    final profile = ref.watch(activeProfileProvider).value;
     final controller = ref.read(practiceControllerProvider(programId).notifier);
     final ringerMode =
         ref.watch(_ringerModeProvider).value ?? RingerMode.unknown;
@@ -270,10 +291,8 @@ class _BodyState extends ConsumerState<_Body> {
               child: Column(
                 children: [
                   _TopBar(
-                    initial: profile?.initials ?? '?',
-                    profileId: profile?.id ?? '',
-                    onProfileTap: () => context.push(KvlRoute.profile),
                     compact: compact,
+                    sessionCount: state.sessionCount,
                     onBack: () {
                       if (context.canPop()) {
                         context.pop();
@@ -286,6 +305,14 @@ class _BodyState extends ConsumerState<_Body> {
                     ),
                     ringerMode: ringerMode,
                     onCycleRinger: () => _cycleRingerMode(ref),
+                  ),
+                  SizedBox(height: compact ? 8 : 12),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: BookPreviewButton(
+                      compact: compact,
+                      mantraId: state.program.mantraId,
+                    ),
                   ),
                   SizedBox(height: compact ? 10 : 16),
                   Expanded(
@@ -446,13 +473,6 @@ class _BodyState extends ConsumerState<_Body> {
                     SizedBox(height: compact ? 6 : 8),
                     _ProgressCard(state: state, compact: compact),
                   ],
-                  SizedBox(height: compact ? 6 : 8),
-                  _PointsBadge(compact: compact, sessionCount: state.sessionCount),
-                  SizedBox(height: compact ? 4 : 6),
-                  BookPreviewButton(
-                    compact: compact,
-                    mantraId: state.program.mantraId,
-                  ),
                   SizedBox(height: bottomPad),
                 ],
               ),
@@ -575,17 +595,11 @@ class _BodyState extends ConsumerState<_Body> {
         .value
         ?.program
         .mantraId;
-    final mantraName = mantraId != null
-        ? (ref.read(mantraByIdProvider(mantraId))?.name.devanagari ?? '')
-        : '';
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _DailyGoalSheet(
-        programId: programId,
-        mantraName: mantraName,
-      ),
+      builder: (_) => const _DailyGoalSheet(),
     );
     // Resume after dismissal if still mounted and session active.
     if (context.mounted) {
@@ -610,19 +624,15 @@ class _BodyState extends ConsumerState<_Body> {
 
 class _TopBar extends ConsumerWidget {
   const _TopBar({
-    required this.initial,
-    required this.profileId,
-    required this.onProfileTap,
     required this.compact,
+    required this.sessionCount,
     required this.onBack,
     required this.onWritingMode,
     required this.ringerMode,
     required this.onCycleRinger,
   });
-  final String initial;
-  final String profileId;
-  final VoidCallback onProfileTap;
   final bool compact;
+  final int sessionCount;
   final VoidCallback onBack;
   final VoidCallback onWritingMode;
   final RingerMode ringerMode;
@@ -630,12 +640,8 @@ class _TopBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final programs =
-        ref.watch(programsForActiveProfileProvider).value ?? const [];
-    final completed = programs.where((p) => p.isGoalReached).length;
-
     // Single diameter shared by every top-bar button so back / ringer /
-    // writing / profile all render at exactly the same size.
+    // writing all render at exactly the same size.
     final double btn = compact ? 44 : 50;
     final double labelH = compact ? 15 : 18;
 
@@ -689,10 +695,6 @@ class _TopBar extends ConsumerWidget {
     Widget iconCircle(IconData icon) =>
         Icon(icon, size: btn * 0.62, color: const Color(0xFF252525));
 
-    // Profile avatar sized so the milestone ring's OUTER edge equals [btn],
-    // matching the other circles. Ring adds 2×(stroke+gap) = 10px around it.
-    final double avatar = btn - 10;
-
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -713,7 +715,7 @@ class _TopBar extends ConsumerWidget {
           child: slot(
             circle: iconCircle(Icons.draw_outlined),
             onTap: onWritingMode,
-            label: context.l10n.ownWritingModeLabel,
+            label: 'Writing mode',
           ),
         ),
         Expanded(
@@ -721,7 +723,7 @@ class _TopBar extends ConsumerWidget {
             circle: iconCircle(ref.watch(_ambientOnProvider)
                 ? Icons.music_note_rounded
                 : Icons.music_off_rounded),
-            label: 'Sruthi',
+            label: 'Ambient sound',
             onTap: () async {
               ref.read(_ambientOnProvider.notifier).toggle();
               final player = ref.read(_ambientPlayerProvider);
@@ -733,19 +735,16 @@ class _TopBar extends ConsumerWidget {
             },
           ),
         ),
+        // Reward points — replaces the old profile button (top-right). The
+        // +pts milestone animation plays here.
         Expanded(
-          child: slot(
-            onTap: onProfileTap,
-            circle: MilestoneRing(
-              completed: completed,
-              total: programs.length,
-              strokeWidth: 2.5,
-              gap: 2.5,
-              child: KvlProfileAvatar(
-                profileId: profileId,
-                initials: initial,
-                size: avatar,
-                textSize: compact ? 14 : 16,
+          flex: 2,
+          child: Align(
+            alignment: Alignment.topRight,
+            child: SizedBox(
+              height: btn,
+              child: Center(
+                child: _PointsBadge(compact: compact, sessionCount: sessionCount),
               ),
             ),
           ),
@@ -1903,48 +1902,13 @@ class _TipSheetState extends State<_TipSheet> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _DailyGoalSheet extends StatefulWidget {
-  const _DailyGoalSheet({
-    required this.programId,
-    required this.mantraName,
-  });
-
-  final String programId;
-  final String mantraName;
+  const _DailyGoalSheet();
 
   @override
   State<_DailyGoalSheet> createState() => _DailyGoalSheetState();
 }
 
 class _DailyGoalSheetState extends State<_DailyGoalSheet> {
-  final _phoneCtrl = TextEditingController();
-  bool _sharing = false;
-
-  @override
-  void dispose() {
-    _phoneCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _shareWhatsApp() async {
-    final phone = _phoneCtrl.text.trim().replaceAll(RegExp(r'\D'), '');
-    final mantra = widget.mantraName.isEmpty ? 'my mantra' : widget.mantraName;
-    final msg = Uri.encodeComponent(
-      '🙏 I completed my daily $mantra goal today! '
-      'Join me in this sacred sadhana. May your practice stay uninterrupted.',
-    );
-    final uri = phone.isNotEmpty
-        ? Uri.parse('https://wa.me/$phone?text=$msg')
-        : Uri.parse('https://wa.me/?text=$msg');
-    setState(() => _sharing = true);
-    try {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      }
-    } finally {
-      if (mounted) setState(() => _sharing = false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.of(context).viewInsets.bottom;
@@ -1986,50 +1950,7 @@ class _DailyGoalSheetState extends State<_DailyGoalSheet> {
                 textAlign: TextAlign.center,
                 style: KvlText.caption(13).copyWith(color: KvlColors.muted),
               ),
-              const SizedBox(height: KvlSpacing.xl),
-              Text(
-                'Share with a devotee (optional)',
-                style: KvlText.ui(13, FontWeight.w600),
-              ),
-              const SizedBox(height: KvlSpacing.xs),
-              TextField(
-                controller: _phoneCtrl,
-                keyboardType: TextInputType.phone,
-                decoration: InputDecoration(
-                  hintText: 'Phone number with country code (e.g. 919876…)',
-                  hintStyle: KvlText.caption(13).copyWith(color: KvlColors.muted),
-                  filled: true,
-                  fillColor: KvlColors.surface,
-                  border: OutlineInputBorder(
-                    borderRadius: KvlRadius.brMD,
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: KvlSpacing.md,
-                    vertical: KvlSpacing.sm,
-                  ),
-                  prefixIcon: const Icon(Icons.phone_rounded, size: 18),
-                ),
-                style: KvlText.ui(14, FontWeight.w500),
-              ),
-              const SizedBox(height: KvlSpacing.md),
-              FilledButton.icon(
-                onPressed: _sharing ? null : _shareWhatsApp,
-                icon: _sharing
-                    ? const SizedBox(
-                        width: 16, height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Icon(Icons.share_rounded, size: 18),
-                label: Text(_sharing ? 'Opening WhatsApp…' : 'Share via WhatsApp'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF25D366),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  textStyle: KvlText.ui(15, FontWeight.w700),
-                ),
-              ),
-              const SizedBox(height: KvlSpacing.sm),
+              const SizedBox(height: KvlSpacing.lg),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
                 child: Text(

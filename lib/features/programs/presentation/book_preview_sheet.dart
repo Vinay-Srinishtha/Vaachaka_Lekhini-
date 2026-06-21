@@ -77,7 +77,7 @@ class BookPreviewButton extends ConsumerWidget {
             ),
             const SizedBox(width: 5),
             Text(
-              'Preview My Book',
+              'My Book',
               style: KvlText.ui(compact ? 11.5 : 12.5, FontWeight.w700)
                   .copyWith(color: KvlColors.primaryDeep),
             ),

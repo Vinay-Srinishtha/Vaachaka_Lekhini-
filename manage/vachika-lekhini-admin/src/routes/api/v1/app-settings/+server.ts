@@ -1,6 +1,7 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { prisma } from '$lib/server/prisma';
 import { snakeJson } from '$lib/server/snake-case';
+import { computeBulletinText } from '$lib/server/bulletin';
 
 const DEFAULTS: Record<string, string> = {
 	privacy_policy: '',
@@ -9,7 +10,9 @@ const DEFAULTS: Record<string, string> = {
 	invite_host: 'vaachakalekhini.com',
 	app_download_link: '',
 	share_quote_image_url: '',
-	share_quote_text: ''
+	share_quote_text: '',
+	bulletin_mode: 'custom_text', // 'custom_text' | 'stats'
+	bulletin_text: ''
 };
 
 export const GET: RequestHandler = async () => {
@@ -22,6 +25,13 @@ export const GET: RequestHandler = async () => {
 			if (r.updatedAt > latest) latest = r.updatedAt;
 		}
 
+		// Bulletin: in 'stats' mode the banner text is computed live from app
+		// totals; in 'custom_text' mode it's whatever the admin typed.
+		const bulletinText =
+			map['bulletin_mode'] === 'stats'
+				? await computeBulletinText()
+				: (map['bulletin_text'] || '');
+
 		return snakeJson(
 			{
 				privacy_policy:        map['privacy_policy'],
@@ -30,7 +40,9 @@ export const GET: RequestHandler = async () => {
 				invite_host:           map['invite_host'] || 'vaachakalekhini.com',
 				app_download_link:     map['app_download_link'] || null,
 				share_quote_image_url: map['share_quote_image_url'] || null,
-				share_quote_text:      map['share_quote_text'] || null
+				share_quote_text:      map['share_quote_text'] || null,
+				bulletin_mode:         map['bulletin_mode'] || 'custom_text',
+				bulletin_text:         bulletinText || null
 			},
 			{
 				headers: {

@@ -14,6 +14,9 @@
 	let shareQuoteImageUrl = $state<string>(s.share_quote_image_url ?? '');
 	$effect.pre(() => { shareQuoteImageUrl = s.share_quote_image_url ?? ''; });
 
+	let bulletinMode = $state<string>(s.bulletin_mode ?? 'custom_text');
+	$effect.pre(() => { bulletinMode = s.bulletin_mode ?? 'custom_text'; });
+
 	const shareQuoteTextPlaceholder = [
 		'"{quote}"',
 		'— {attribution}',
@@ -244,6 +247,48 @@
 			</div>
 
 		</div>
+	</div>
+
+	<!-- ── Home Bulletin (scrolling banner) ───────────────────────────────── -->
+	<div class="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+		<h2 class="text-sm font-semibold text-slate-800">Home Bulletin</h2>
+		<p class="mt-1 text-xs text-slate-500">The scrolling banner on the app's home screen.</p>
+
+		<div class="mt-4 flex flex-col gap-3">
+			<label class="flex items-start gap-3 rounded-xl border p-3 cursor-pointer {bulletinMode === 'custom_text' ? 'border-brand-500 bg-brand-50' : 'border-slate-200'}">
+				<input type="radio" name="bulletin_mode" value="custom_text" bind:group={bulletinMode} class="mt-0.5" />
+				<span>
+					<span class="block text-sm font-medium text-slate-800">Custom text</span>
+					<span class="block text-xs text-slate-500">Show the exact message you type below.</span>
+				</span>
+			</label>
+			<label class="flex items-start gap-3 rounded-xl border p-3 cursor-pointer {bulletinMode === 'stats' ? 'border-brand-500 bg-brand-50' : 'border-slate-200'}">
+				<input type="radio" name="bulletin_mode" value="stats" bind:group={bulletinMode} class="mt-0.5" />
+				<span>
+					<span class="block text-sm font-medium text-slate-800">App stats (auto)</span>
+					<span class="block text-xs text-slate-500">Live summary: total chants, programs, writings, rewards redeemed, devotees, and per-active-mantra global chants. Updates automatically.</span>
+				</span>
+			</label>
+		</div>
+
+		{#if bulletinMode === 'custom_text'}
+			<div class="mt-4 flex flex-col gap-1.5">
+				<label class="text-xs font-semibold text-slate-700" for="bulletin_text">Bulletin message</label>
+				<textarea
+					id="bulletin_text"
+					name="bulletin_text"
+					rows="2"
+					class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+					placeholder="🕉 Join Global Sadhanas • Chant Together, Grow Together"
+				>{s.bulletin_text ?? ''}</textarea>
+				<p class="text-[10px] text-slate-400">Separate items with • for a clean scrolling look.</p>
+			</div>
+		{:else}
+			<input type="hidden" name="bulletin_text" value={s.bulletin_text ?? ''} />
+			<p class="mt-4 rounded-lg bg-slate-50 border border-slate-200 px-3 py-2 text-xs text-slate-500">
+				Stats mode is on — the banner text is generated automatically from live app data. Inactive mantras are never shown.
+			</p>
+		{/if}
 	</div>
 
 </form>

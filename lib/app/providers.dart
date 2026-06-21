@@ -692,6 +692,9 @@ final appSettingsProvider = FutureProvider<AppSettings>((ref) async {
       shareQuoteText: (d['share_quote_text'] as String?)?.isNotEmpty == true
           ? d['share_quote_text'] as String
           : null,
+      bulletinText: (d['bulletin_text'] as String?)?.isNotEmpty == true
+          ? d['bulletin_text'] as String
+          : null,
     );
   } catch (_) {
     return const AppSettings(
@@ -702,6 +705,7 @@ final appSettingsProvider = FutureProvider<AppSettings>((ref) async {
       appDownloadLink: null,
       shareQuoteImageUrl: null,
       shareQuoteText: null,
+      bulletinText: null,
     );
   }
 });
@@ -715,6 +719,7 @@ class AppSettings {
     required this.appDownloadLink,
     required this.shareQuoteImageUrl,
     required this.shareQuoteText,
+    this.bulletinText,
   });
   final String privacyPolicy;
   final String? aboutApp;
@@ -723,6 +728,10 @@ class AppSettings {
   final String? appDownloadLink;
   final String? shareQuoteImageUrl;
   final String? shareQuoteText;
+
+  /// Resolved scrolling-banner text from the admin (custom text, or the
+  /// server-computed app-stats summary). Null/empty → use the in-app default.
+  final String? bulletinText;
 }
 
 /// Real leaderboard from /api/v1/leaderboard (Bearer required) — cache-first.

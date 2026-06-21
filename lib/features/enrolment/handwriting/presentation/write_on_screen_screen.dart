@@ -1138,8 +1138,26 @@ class _AmbientNotifier extends Notifier<bool> {
 }
 
 final _ambientPlayerProvider = Provider.autoDispose<AudioPlayer>((ref) {
+  // Keep alive across reads — otherwise the autoDispose provider tears down
+  // right after the tap (it's only read, never watched) and playback stops.
+  ref.keepAlive();
   final player = AudioPlayer();
   player.setReleaseMode(ReleaseMode.loop);
+  player.setVolume(0.5); // 50% background — never overpowers the practice
+  // Mix with any mic capture instead of grabbing audio focus.
+  player.setAudioContext(AudioContext(
+    android: AudioContextAndroid(
+      isSpeakerphoneOn: false,
+      stayAwake: false,
+      contentType: AndroidContentType.music,
+      usageType: AndroidUsageType.media,
+      audioFocus: AndroidAudioFocus.none,
+    ),
+    iOS: AudioContextIOS(
+      category: AVAudioSessionCategory.playAndRecord,
+      options: const {AVAudioSessionOptions.mixWithOthers},
+    ),
+  ));
   ref.onDispose(() {
     player.stop();
     player.dispose();
@@ -1191,10 +1209,23 @@ class _ProtoWriteScaffold extends ConsumerStatefulWidget {
 class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
   double _guideScale = 1.0;
   bool _guideVisible = false;
+  AudioPlayer? _ambientPlayer;
 
   static const double _scaleMin = 0.5;
   static const double _scaleMax = 2.0;
   static const double _scaleStep = 0.25;
+
+  @override
+  void initState() {
+    super.initState();
+    _ambientPlayer = ref.read(_ambientPlayerProvider);
+  }
+
+  @override
+  void dispose() {
+    _ambientPlayer?.stop(); // don't let ambient bleed into other screens
+    super.dispose();
+  }
 
   void _zoomIn() {
     setState(() {

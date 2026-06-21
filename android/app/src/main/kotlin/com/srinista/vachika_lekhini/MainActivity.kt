@@ -69,10 +69,16 @@ class MainActivity : FlutterActivity() {
                             }
                         }
                     }
-                    registerReceiver(
-                        ringerReceiver,
-                        IntentFilter(AudioManager.RINGER_MODE_CHANGED_ACTION),
-                    )
+                    val filter = IntentFilter(AudioManager.RINGER_MODE_CHANGED_ACTION)
+                    // Android 13+ (API 33+) requires an explicit export flag for
+                    // runtime receivers — without it the registration fails and
+                    // we never get live ringer updates from the OS.
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        registerReceiver(ringerReceiver, filter, Context.RECEIVER_EXPORTED)
+                    } else {
+                        @Suppress("UnspecifiedRegisterReceiverFlag")
+                        registerReceiver(ringerReceiver, filter)
+                    }
                 }
 
                 override fun onCancel(arguments: Any?) {
@@ -115,7 +121,11 @@ class MainActivity : FlutterActivity() {
         }
 
         runCatching { manager.ringerMode = next }
-        return currentRingerMode()
+        // Push the new state to the UI immediately so the app reflects the tap
+        // even before the system RINGER_MODE_CHANGED broadcast arrives.
+        val now = currentRingerMode()
+        ringerEvents?.success(now)
+        return now
     }
 
     override fun onResume() {

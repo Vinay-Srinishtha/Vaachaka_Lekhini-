@@ -783,16 +783,8 @@ class _HeroQuote extends ConsumerWidget {
     // Fall back to the profile's mantra language if settings aren't loaded yet.
     final quoteLanguage =
         ref.watch(settingsProvider).value?.languageCode ?? profile?.mantraLanguage;
-    final quotes = ref.watch(quotesProvider).value ?? const [];
-
-    // Pick the first displayable quote for this language; fall back to any.
-    Quote? chosen;
-    for (final q in quotes) {
-      if ((q.textFor(quoteLanguage) ?? '').isNotEmpty) {
-        chosen = q;
-        break;
-      }
-    }
+    // Daily quote: deterministic for today, targeted to user's primary mantra.
+    final chosen = ref.watch(dailyQuoteProvider);
     if (chosen == null) return const SizedBox.shrink();
 
     final quoteText = chosen.textFor(quoteLanguage) ?? '';

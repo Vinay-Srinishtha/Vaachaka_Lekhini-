@@ -1,7 +1,7 @@
 name: vachika_lekhini
 description: "Vaachaka Lekhini — spiritual practice app: voice chant counter, handwriting practice, programs, rewards."
 publish_to: 'none'
-version: 8.0.0+29
+version: 8.0.0+30
 
 environment:
   sdk: ^3.11.0

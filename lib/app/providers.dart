@@ -847,23 +847,63 @@ final quoteRepositoryProvider = Provider<QuoteRepository>((ref) {
 });
 
 /// Active quotes from the server. Seeds from Hive cache immediately, then
-/// fetches with mantra_ids filtered to the active member's programs.
+/// fetches filtered to the active member's mantra IDs.
 final quotesProvider = StreamProvider<List<Quote>>((ref) async* {
   final repo = ref.watch(quoteRepositoryProvider);
   final programs = ref.watch(programsForActiveProfileProvider).value ?? [];
-  final mantraIds = programs.map((p) => p.mantraId).toList();
+  final mantraIds = programs.map((p) => p.mantraId).toSet().toList();
 
-  // Instant from cache (no mantra filtering at cache layer)
   yield repo.cachedQuotes();
 
-  // Network fetch with mantra filter
   final fresh = await repo.fetchActive(mantraIds: mantraIds);
   yield fresh;
 
-  // Refresh every 5 minutes
-  await for (final _ in Stream<void>.periodic(const Duration(minutes: 5))) {
+  // Refresh once a day (quote changes at midnight).
+  await for (final _ in Stream<void>.periodic(const Duration(hours: 6))) {
     yield await repo.fetchActive(mantraIds: mantraIds);
   }
+});
+
+/// The mantra ID the active member is most engaged with (most active programs).
+/// Used to pick targeted daily quotes. Returns null when no programs exist.
+final primaryMantraIdProvider = Provider<String?>((ref) {
+  final programs = ref.watch(programsForActiveProfileProvider).value ?? [];
+  if (programs.isEmpty) return null;
+  // Count active (non-completed) programs per mantra.
+  final counts = <String, int>{};
+  for (final p in programs) {
+    if (!p.isGoalReached) counts[p.mantraId] = (counts[p.mantraId] ?? 0) + 1;
+  }
+  if (counts.isEmpty) {
+    // Fall back to any mantra if all programs are done.
+    return programs.first.mantraId;
+  }
+  return counts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+});
+
+/// The single quote to show today. Picks deterministically using today's date
+/// as a seed so every user sees the same quote all day and it rotates daily.
+/// Priority: quotes matching the primary mantra > universal quotes.
+final dailyQuoteProvider = Provider<Quote?>((ref) {
+  final quotes = ref.watch(quotesProvider).value ?? [];
+  if (quotes.isEmpty) return null;
+
+  final primaryMantraId = ref.watch(primaryMantraIdProvider);
+
+  // Seed: days since epoch so it changes each calendar day (local time).
+  final now = DateTime.now();
+  final daySeed = DateTime(now.year, now.month, now.day)
+      .difference(DateTime(2024, 1, 1))
+      .inDays;
+
+  // Prefer quotes targeting the primary mantra; fall back to universal.
+  final targeted = primaryMantraId != null
+      ? quotes.where((q) => q.mantraId == primaryMantraId).toList()
+      : <Quote>[];
+  final universal = quotes.where((q) => q.mantraId == null).toList();
+
+  final pool = targeted.isNotEmpty ? targeted : universal.isNotEmpty ? universal : quotes;
+  return pool[daySeed % pool.length];
 });
 
 /// Incremented each time a practice session is finished so that

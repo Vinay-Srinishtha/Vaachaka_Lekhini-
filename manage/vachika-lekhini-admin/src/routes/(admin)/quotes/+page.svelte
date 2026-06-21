@@ -54,8 +54,12 @@
 		// Columns the bulk-upload parser expects (header names are case-/separator-
 		// insensitive). "Image" holds the picture filename when uploading a ZIP of
 		// images alongside this sheet; leave blank to add images later.
-		const header = ['Image', 'slug', 'Text_Roman', 'Source_Roman', 'Text_Telugu', 'Source_Telugu', 'Text_Devanagari', 'Source_Devanagari', 'Text_Kannada', 'Source_Kannada'];
-		const csvContent = header.join(',');
+		// mantra_slug targets the quote to users whose primary mantra matches that slug.
+		// Leave blank to show the quote universally to all users.
+		const header = ['Image', 'slug', 'mantra_slug', 'Text_Roman', 'Source_Roman', 'Text_Telugu', 'Source_Telugu', 'Text_Devanagari', 'Source_Devanagari', 'Text_Kannada', 'Source_Kannada'];
+		// Include one example row so admins know the format.
+		const example = ['', 'my-quote-slug', 'sri-rama', 'He who walks in righteousness...', 'Valmiki Ramayana', '', '', 'धर्मो रक्षति रक्षितः', '', '', ''];
+		const csvContent = [header.join(','), example.join(',')].join('\n');
 		const blob = new Blob([csvContent], { type: 'text/csv' });
 		const url = URL.createObjectURL(blob);
 		const a = document.createElement('a');

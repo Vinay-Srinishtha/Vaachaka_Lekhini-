@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { toasts } from '$lib/stores/toast';
-	import { Globe, PlusCircle, Pencil, Trash2, Users, Target, Play, Pause, Archive, CheckCircle } from '@lucide/svelte';
+	import { Globe, PlusCircle, Pencil, Trash2, Users, Target, Play, Pause, Archive, CheckCircle, BarChart3 } from '@lucide/svelte';
 	import { IndianNumber } from '$lib/utils/format';
 
 	let { data, form } = $props();
@@ -151,6 +151,9 @@
 
 				<!-- Right: actions -->
 				<div class="flex flex-col items-end gap-2">
+					<a href="/global-sadhana/{s.id}" class="inline-flex items-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-3 py-1.5 text-sm font-medium text-brand-700 hover:bg-brand-100 transition-colors">
+						<BarChart3 size={13} /> Stats
+					</a>
 					<a href="/global-sadhana/{s.id}/edit" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
 						<Pencil size={13} /> Edit
 					</a>

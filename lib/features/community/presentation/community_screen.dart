@@ -98,7 +98,9 @@ class _Body extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _SortToggle(sort: sort, onChanged: onSortChanged),
-          if (mantras.isNotEmpty) ...[
+          // With a single mantra, "All" and that one chip are equivalent —
+          // hide the filter entirely; only show it when there's a real choice.
+          if (mantras.length > 1) ...[
             const SizedBox(height: KvlSpacing.sm),
             _MantraFilter(
               mantras: mantras,

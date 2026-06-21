@@ -18,10 +18,22 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 		const uploaded = await createAdminMediaUpload({ category, slug, fileName, contentType, size });
 		return json(uploaded);
 	} catch (e) {
-		console.error(e);
-		return json({ error: 'Internal error' }, { status: 500 });
+		return uploadErrorResponse(e);
 	}
 };
+
+/** Surface the real cause (missing S3 env, unsupported format, size, etc.)
+ *  instead of a generic 500 — both for the UI and the server log. */
+function uploadErrorResponse(e: unknown) {
+	console.error('[admin/upload]', e);
+	// SvelteKit error() throws an HttpError with { status, body: { message } }.
+	if (e && typeof e === 'object' && 'status' in e && 'body' in e) {
+		const he = e as { status: number; body?: { message?: string } };
+		return json({ error: he.body?.message ?? 'Upload failed' }, { status: he.status });
+	}
+	const msg = e instanceof Error ? e.message : 'Upload failed';
+	return json({ error: msg }, { status: 500 });
+}
 
 export const DELETE: RequestHandler = async ({ locals, request }) => {
 	try {
@@ -32,7 +44,6 @@ export const DELETE: RequestHandler = async ({ locals, request }) => {
 		await deleteAdminMediaObject(url);
 		return json({ ok: true });
 	} catch (e) {
-		console.error(e);
-		return json({ error: 'Internal error' }, { status: 500 });
+		return uploadErrorResponse(e);
 	}
 };

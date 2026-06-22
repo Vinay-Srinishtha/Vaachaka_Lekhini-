@@ -175,7 +175,7 @@ class _BodyState extends ConsumerState<_Body> {
 
   Future<void> _maybeShowChantingTip() async {
     final prefs = await SharedPreferences.getInstance();
-    if (prefs.getBool('tip_chanting_v1') == true) return;
+    if (prefs.getBool('tip_chanting_v2') == true) return;
     if (!mounted) return;
     var dontShowAgain = true;
     await showModalBottomSheet<void>(
@@ -188,13 +188,14 @@ class _BodyState extends ConsumerState<_Body> {
           '• Press Start and chant along with the count',
           '• Tap Pause any time and resume when ready',
           '• Tap Finish to record your session',
+          '• 📖 Tap the book badge (top-right) to preview your personal chanting book',
         ],
         initialDontShowAgain: dontShowAgain,
         onChanged: (v) => dontShowAgain = v,
       ),
     );
     if (dontShowAgain) {
-      await prefs.setBool('tip_chanting_v1', true);
+      await prefs.setBool('tip_chanting_v2', true);
     }
   }
 
@@ -716,8 +717,8 @@ class _TopBar extends ConsumerWidget {
             },
           ),
         ),
-        // Reward points + book count — mirrors the slot() vertical structure
-        // (btn-height circle area + labelH spacer) so everything stays aligned.
+        // Reward points + book count stacked in the top-right.
+        // Matches slot() height: btn circle area + 2px gap + labelH label area.
         Expanded(
           flex: 2,
           child: Padding(
@@ -733,12 +734,16 @@ class _TopBar extends ConsumerWidget {
                     child: _PointsBadge(compact: compact, sessionCount: sessionCount),
                   ),
                 ),
-                SizedBox(height: 2),
+                const SizedBox(height: 2),
                 SizedBox(
                   height: labelH,
                   child: Align(
-                    alignment: Alignment.centerRight,
-                    child: _BookCountBadge(compact: compact, mantraId: mantraId),
+                    alignment: Alignment.topRight,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: _BookCountBadge(compact: compact, mantraId: mantraId),
+                    ),
                   ),
                 ),
               ],
@@ -768,10 +773,7 @@ class _BookCountBadge extends ConsumerWidget {
     return GestureDetector(
       onTap: () => BookPreviewButton.openSheet(context, mantraId),
       child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: compact ? 9 : 11,
-          vertical: compact ? 4 : 5,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         decoration: BoxDecoration(
           color: KvlColors.surface,
           borderRadius: BorderRadius.circular(16),

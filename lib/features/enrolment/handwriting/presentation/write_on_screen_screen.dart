@@ -1287,29 +1287,18 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
                   onSwitchToVoice: widget.onSwitchToVoice,
                 ),
               ),
-              // Top-center: Global + pts + book — single compact row, floating centered
+              // Top-center: Global + pts + book — minimal icon+number pills, one line
               Positioned(
                 left: 0,
                 right: 0,
                 top: topInset,
                 child: Center(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _WritingCounts(
-                        globalCount: globalCount,
-                        yours: yours,
-                        increment: widget.writingCount,
-                        compact: compact,
-                      ),
-                      SizedBox(width: compact ? 8 : 10),
-                      _PointsBadge(compact: compact),
-                      SizedBox(width: compact ? 8 : 10),
-                      BookPreviewButton(
-                        compact: compact,
-                        mantraId: widget.mantraId,
-                      ),
-                    ],
+                  child: _CompactInfoRow(
+                    globalCount: globalCount,
+                    yours: yours,
+                    increment: widget.writingCount,
+                    compact: compact,
+                    mantraId: widget.mantraId,
                   ),
                 ),
               ),
@@ -1619,91 +1608,138 @@ class _LandscapeTopBar extends ConsumerWidget {
   }
 }
 
-class _WritingCounts extends StatelessWidget {
-  const _WritingCounts({
+// ─── Compact single-line info row ────────────────────────────────────────────
+// Shows Global count + pts + book as minimal icon+number pills in one row.
+
+class _CompactInfoRow extends ConsumerWidget {
+  const _CompactInfoRow({
     required this.globalCount,
     required this.yours,
     required this.increment,
     required this.compact,
+    required this.mantraId,
   });
 
   final int globalCount;
   final int yours;
   final int increment;
   final bool compact;
+  final String mantraId;
 
-  @override
-  Widget build(BuildContext context) {
-    final globalBase = (globalCount - yours).clamp(0, globalCount);
+  static Widget _pill({
+    required Widget child,
+    Color bg = Colors.white,
+    Color border = const Color(0xFFE0D4C8),
+  }) {
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: compact ? 10 : 14,
-        vertical: compact ? 7 : 9,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Colors.white, Color(0xFFFFF1E2)],
-        ),
-        border: Border.all(
-          color: KvlColors.primary.withValues(alpha: 0.35),
-          width: 1.2,
-        ),
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: border, width: 1.1),
         boxShadow: [
           BoxShadow(
-            color: KvlColors.primary.withValues(alpha: 0.12),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.public_rounded,
-              size: compact ? 16 : 19,
-              color: KvlColors.primaryDeep,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              'Global  ',
-              style: KvlText.ui(compact ? 13 : 14, FontWeight.w600)
-                  .copyWith(color: KvlColors.inkSoft),
-            ),
-            Text(
-              IndianNumberFormat.format(globalBase),
-              style: KvlText.ui(compact ? 17 : 20, FontWeight.w800)
-                  .copyWith(color: const Color(0xFFCC6A2B)),
-            ),
-            Text(
-              '  +  ',
-              style: KvlText.ui(compact ? 17 : 20, FontWeight.w600)
-                  .copyWith(color: const Color(0xFF9A8678)),
-            ),
-            TweenAnimationBuilder<double>(
-              key: ValueKey(increment),
-              tween: Tween(begin: increment > 0 ? 1.14 : 1.0, end: 1.0),
-              duration: const Duration(milliseconds: 260),
-              curve: Curves.easeOutCubic,
-              builder: (_, scale, child) =>
-                  Transform.scale(scale: scale, child: child),
-              child: Text(
-                IndianNumberFormat.format(increment),
-                style: KvlText.ui(compact ? 17 : 20, FontWeight.w800)
-                    .copyWith(color: const Color(0xFF16A34A)),
+      child: child,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final globalBase = (globalCount - yours).clamp(0, globalCount);
+    final points = ref.watch(rewardTotalProvider).value ?? 0;
+    final bookCount =
+        ref.watch(bookAssetsProvider(mantraId)).value?.length ?? 0;
+    final fs = compact ? 12.0 : 13.0;
+    final iconSz = compact ? 13.0 : 15.0;
+    final gap = compact ? 6.0 : 8.0;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Global: 🌐 base + session
+        _pill(
+          bg: const Color(0xFFFFF4EC),
+          border: KvlColors.primary.withValues(alpha: 0.3),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.public_rounded, size: iconSz, color: KvlColors.primaryDeep),
+              SizedBox(width: 5),
+              Text(
+                IndianNumberFormat.format(globalBase),
+                style: KvlText.ui(fs, FontWeight.w800)
+                    .copyWith(color: const Color(0xFFCC6A2B)),
+              ),
+              Text('  +  ',
+                  style: KvlText.ui(fs, FontWeight.w500)
+                      .copyWith(color: KvlColors.inkSoft)),
+              TweenAnimationBuilder<double>(
+                key: ValueKey(increment),
+                tween: Tween(begin: increment > 0 ? 1.15 : 1.0, end: 1.0),
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeOutCubic,
+                builder: (_, scale, child) =>
+                    Transform.scale(scale: scale, child: child),
+                child: Text(
+                  IndianNumberFormat.format(increment),
+                  style: KvlText.ui(fs, FontWeight.w800)
+                      .copyWith(color: const Color(0xFF16A34A)),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(width: gap),
+        // Points: ⭐ number
+        _pill(
+          bg: const Color(0xFFFBF3D8),
+          border: const Color(0xFFE8C04A),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.star_rounded, size: iconSz, color: KvlColors.gold),
+              const SizedBox(width: 4),
+              Text(
+                IndianNumberFormat.format(points),
+                style: KvlText.ui(fs, FontWeight.w800)
+                    .copyWith(color: const Color(0xFF5a4400)),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(width: gap),
+        // Book: 📖 number
+        if (bookCount > 0)
+          GestureDetector(
+            onTap: () => BookPreviewButton.openSheet(context, mantraId),
+            child: _pill(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.menu_book_rounded,
+                      size: iconSz, color: KvlColors.primaryDeep),
+                  const SizedBox(width: 4),
+                  Text(
+                    IndianNumberFormat.format(bookCount),
+                    style: KvlText.ui(fs, FontWeight.w800)
+                        .copyWith(color: KvlColors.primaryDeep),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
+          ),
+      ],
     );
   }
 }
+
+
 
 class _PointsBadge extends ConsumerStatefulWidget {
   const _PointsBadge({required this.compact});

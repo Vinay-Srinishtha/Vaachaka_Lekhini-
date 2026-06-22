@@ -1272,7 +1272,7 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
                   guideVisible: _guideVisible,
                 ),
               ),
-              // Top-left: Phone Mode + Own writing mode (2 items only)
+              // Top-left: Ring, Show/Hide Ref, Ambient, Language, Voice
               Positioned(
                 left: compact ? 18 : 28,
                 top: topInset,
@@ -1283,9 +1283,12 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
                   guideVisible: _guideVisible,
                   onGuideToggle: () =>
                       setState(() => _guideVisible = !_guideVisible),
+                  selectedLangLabel: widget.selectedLangLabel,
+                  onPickLanguage: widget.onPickLanguage,
+                  onSwitchToVoice: widget.onSwitchToVoice,
                 ),
               ),
-              // Top-center: Global + Yours counter
+              // Top-center: Global counter + pts + book preview
               Positioned(
                 left: 0,
                 right: 0,
@@ -1300,21 +1303,28 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
                         increment: widget.writingCount,
                         compact: compact,
                       ),
-                      const SizedBox(height: 6),
-                      _PointsBadge(compact: compact),
+                      const SizedBox(height: 5),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _PointsBadge(compact: compact),
+                          const SizedBox(width: 10),
+                          BookPreviewButton(
+                            compact: compact,
+                            mantraId: widget.mantraId,
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
               ),
-              // Bottom-left: progress bar above ADD button
-              // Top-right: merged SUBMIT / DONE button
+              // Top-right: compact Complete button
               Positioned(
                 right: compact ? 10 : 16,
                 top: topInset,
                 child: _MergedActionButton(
                   saving: widget.saving,
-                  // Always "Complete Session" — writings are counted only via
-                  // automatic recognition on idle; there is no manual ADD.
                   onTap: widget.onFinish,
                   compact: compact,
                 ),
@@ -1363,100 +1373,6 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
                     ),
                   ],
                 ),
-                ),
-              ),
-              if (widget.onSwitchToVoice != null)
-                Positioned(
-                  right: compact ? 10 : 16,
-                  bottom: bottomStripH + (compact ? 6 : 10),
-                  child: GestureDetector(
-                    onTap: widget.onSwitchToVoice,
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: compact ? 10 : 13,
-                          vertical: compact ? 5 : 7),
-                      decoration: BoxDecoration(
-                        color: KvlColors.surface,
-                        borderRadius: BorderRadius.circular(20),
-                        border:
-                            Border.all(color: KvlColors.border, width: 1.1),
-                        boxShadow: [
-                          BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.06),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2))
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.mic_rounded,
-                              size: compact ? 14 : 16,
-                              color: KvlColors.accent),
-                          const SizedBox(width: 5),
-                          Text('Switch to Voice',
-                              style: KvlText.ui(
-                                      compact ? 11.5 : 12.5, FontWeight.w700)
-                                  .copyWith(color: KvlColors.accent)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              // Bottom-left: Language chip + Preview My Book
-              Positioned(
-                left: compact ? 10 : 16,
-                bottom: bottomStripH + (compact ? 6 : 10),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    GestureDetector(
-                      onTap: widget.onPickLanguage,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: compact ? 10 : 13,
-                          vertical: compact ? 6 : 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: KvlColors.primaryGhost,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: KvlColors.primary.withValues(alpha: .35),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: .07),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.language_rounded,
-                                size: compact ? 13 : 15,
-                                color: KvlColors.primaryDeep),
-                            SizedBox(width: compact ? 4 : 5),
-                            Text(
-                              widget.selectedLangLabel,
-                              style: KvlText.ui(compact ? 11 : 12.5, FontWeight.w600)
-                                  .copyWith(color: KvlColors.primaryDeep),
-                            ),
-                            SizedBox(width: compact ? 3 : 4),
-                            Icon(Icons.expand_more_rounded,
-                                size: compact ? 13 : 15,
-                                color: KvlColors.primaryDeep),
-                          ],
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: compact ? 8 : 10),
-                    BookPreviewButton(
-                      compact: compact,
-                      mantraId: widget.mantraId,
-                    ),
-                  ],
                 ),
               ),
               // Bottom strip: Progress [bar] X/Y
@@ -1611,6 +1527,9 @@ class _LandscapeTopBar extends ConsumerWidget {
     required this.onCycleRinger,
     required this.guideVisible,
     required this.onGuideToggle,
+    required this.selectedLangLabel,
+    required this.onPickLanguage,
+    this.onSwitchToVoice,
   });
 
   final bool compact;
@@ -1618,6 +1537,9 @@ class _LandscapeTopBar extends ConsumerWidget {
   final VoidCallback onCycleRinger;
   final bool guideVisible;
   final VoidCallback onGuideToggle;
+  final String selectedLangLabel;
+  final VoidCallback onPickLanguage;
+  final VoidCallback? onSwitchToVoice;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1661,10 +1583,10 @@ class _LandscapeTopBar extends ConsumerWidget {
         item(icon: ringerIcon, label: ringerLabel, onTap: onCycleRinger),
         const SizedBox(width: 20),
         item(
-          icon: guideVisible ? Icons.edit_rounded : Icons.auto_stories_rounded,
-          label: guideVisible ? 'Own Writing' : 'Show Reference',
+          icon: guideVisible ? Icons.auto_stories_rounded : Icons.edit_rounded,
+          label: guideVisible ? 'Hide Ref' : 'Show Ref',
           onTap: onGuideToggle,
-          iconColor: guideVisible ? KvlColors.ink : KvlColors.primary,
+          iconColor: guideVisible ? KvlColors.primary : KvlColors.ink,
         ),
         const SizedBox(width: 20),
         item(
@@ -1682,6 +1604,22 @@ class _LandscapeTopBar extends ConsumerWidget {
           },
           iconColor: ambientOn ? KvlColors.primary : KvlColors.ink,
         ),
+        const SizedBox(width: 20),
+        item(
+          icon: Icons.language_rounded,
+          label: selectedLangLabel,
+          onTap: onPickLanguage,
+          iconColor: KvlColors.primaryDeep,
+        ),
+        if (onSwitchToVoice != null) ...[
+          const SizedBox(width: 20),
+          item(
+            icon: Icons.mic_rounded,
+            label: 'Voice',
+            onTap: onSwitchToVoice!,
+            iconColor: KvlColors.accent,
+          ),
+        ],
       ],
     );
   }
@@ -2145,8 +2083,6 @@ class _MergedActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const label = 'Complete Session';
-    const icon = Icons.check_rounded;
     const bgColor = Color(0xFF16A34A);
     return GestureDetector(
       onTap: saving ? null : onTap,
@@ -2154,8 +2090,8 @@ class _MergedActionButton extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOut,
         padding: EdgeInsets.symmetric(
-          horizontal: compact ? 14 : 18,
-          vertical: compact ? 8 : 11,
+          horizontal: compact ? 11 : 14,
+          vertical: compact ? 7 : 9,
         ),
         decoration: BoxDecoration(
           color: saving ? KvlColors.muted : bgColor,
@@ -2172,8 +2108,8 @@ class _MergedActionButton extends StatelessWidget {
         ),
         child: saving
             ? const SizedBox(
-                width: 20,
-                height: 20,
+                width: 16,
+                height: 16,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
                   color: Colors.white,
@@ -2182,11 +2118,11 @@ class _MergedActionButton extends StatelessWidget {
             : Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(icon, color: Colors.white, size: compact ? 16 : 18),
-                  SizedBox(width: compact ? 4 : 6),
+                  Icon(Icons.check_rounded, color: Colors.white, size: compact ? 14 : 16),
+                  SizedBox(width: compact ? 4 : 5),
                   Text(
-                    label,
-                    style: KvlText.ui(compact ? 12 : 14, FontWeight.w800)
+                    'Complete',
+                    style: KvlText.ui(compact ? 11 : 13, FontWeight.w800)
                         .copyWith(color: Colors.white),
                   ),
                 ],

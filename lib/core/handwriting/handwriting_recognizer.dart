@@ -46,7 +46,7 @@ class HandwritingRecognizer {
   /// Minimum normalised similarity (0..1) to accept. Tuned to tolerate minor
   /// recognition slips / spelling variation while still rejecting other words.
   /// (e.g. "श्री राम" misread as "श्री शम" ≈ 0.71 → accept; "Ravi" ≈ 0.15 → reject.)
-  static const double _minSimilarity = 0.30;
+  static const double _minSimilarity = 0.50;
 
   /// Recognise [pngBytes] (transparent background, dark ink) and decide whether
   /// it matches any of [candidates].

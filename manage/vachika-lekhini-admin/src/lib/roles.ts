@@ -28,6 +28,7 @@ const ROLE_SECTIONS: Record<AdminRole, readonly string[] | '*'> = {
 		'mantras',
 		'quotes',
 		'global-sadhana',
+		'global-sadhana-dashboard',
 		'store',
 		'faqs',
 		'app-settings',

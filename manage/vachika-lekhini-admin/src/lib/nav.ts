@@ -20,7 +20,8 @@ import {
 	Gift,
 	KeyRound,
 	Quote,
-	Globe
+	Globe,
+	GlobeLock
 } from '@lucide/svelte';
 export interface NavItem {
 	href: string;
@@ -42,6 +43,7 @@ export const NAV_ITEMS: NavItem[] = [
 	{ href: '/mantras', label: 'Mantras', icon: BookOpen, section: 'mantras', group: 'Content' },
 	{ href: '/quotes', label: 'Quotes', icon: Quote, section: 'quotes', group: 'Content' },
 	{ href: '/global-sadhana', label: 'Global Sadhana', icon: Globe, section: 'global-sadhana', group: 'Content' },
+	{ href: '/global-sadhana-dashboard', label: 'Sadhana Progress', icon: GlobeLock, section: 'global-sadhana-dashboard', group: 'Content' },
 	{ href: '/store', label: 'Store', icon: ShoppingBag, section: 'store', group: 'Content' },
 	{ href: '/faqs', label: 'FAQs', icon: HelpCircle, section: 'faqs', group: 'Content' },
 	{ href: '/app-settings', label: 'App Settings', icon: Sliders, section: 'app-settings', group: 'Content' },

@@ -1,155 +1,229 @@
 # Privacy Policy
 
-## Vaachaka Lekhini
+**Vachika Lekhini — Srinishtha Technologies Pvt. Ltd.**
 
-Vaachaka Lekhini respects your privacy and treats your spiritual practice data with care. This Privacy Policy explains what information the app may collect, how it is used, and how your data is protected.
+Effective: 22 June 2026 · Version 1.0
 
-By using Vaachaka Lekhini, you agree to the practices described in this policy.
+---
 
-## Information We Collect
+## 1. Who We Are
 
-### Account Information
+**Srinishtha Technologies Pvt. Ltd.** ("we", "our", "us") is the Data Fiduciary of the Vachika Lekhini app, incorporated under the Companies Act, 2013. This policy is issued in compliance with the **Digital Personal Data Protection Act, 2023 (DPDP Act)**.
 
-When you create or use an account, we may collect:
+---
 
-- Name or display name
-- Mobile number
-- Language preference
-- Referral code, if used
-- Family member profile names and relationships
+## 2. Scope & Your Consent
 
-This information is used to create your account, manage family profiles, support login, and personalize your app experience.
+This policy applies to all users ("Data Principal") of the Vachika Lekhini app on Android or iOS.
 
-### Practice Information
+By registering an account, you give **free, specific, informed, and unambiguous consent** for us to process your personal data as described here. You may withdraw consent at any time by deleting your account.
 
-The app may store practice-related information such as:
+---
 
-- Selected mantras
-- Practice programs and goals
-- Daily chant or writing counts
-- Session history
-- Streaks and milestones
-- Reward points and reward history
+## 3. Data We Collect
 
-This information is used to track your progress, show daily practice history, calculate rewards, and help you continue your spiritual discipline.
+### Account & Identity
 
-### Voice Data
+| Data | Purpose | Where Stored |
+|------|---------|-------------|
+| Mobile phone number | Account creation, OTP, password reset | Server |
+| Password (hashed) | Authentication | Server (hashed) |
+| OTP codes (transient) | Identity verification | Not stored |
+| JWT tokens | Authenticated access | Device secure storage |
+| Referral code (optional) | Community referrals | Server |
 
-Vaachaka Lekhini may use your microphone during voice training and chanting sessions to help count mantra repetitions.
+### Profile
 
-Voice data is used only for practice-related features such as chant recognition, voice training, and counting support. The app is designed to process voice practice data carefully and avoid unnecessary sharing of voice information.
+| Data | Purpose | Where Stored |
+|------|---------|-------------|
+| Full name | Personalisation, leaderboard | Server + local cache |
+| Gender | Profile completeness | Server |
+| Birth year | Age verification | Server |
+| Mother tongue / preferred language | Script & language preference | Server |
+| Location / city (optional) | Regional personalisation | Server |
+| Profile photo (JPG) | Avatar display | Device only |
 
-### Handwriting Data
+### Address (optional)
 
-If you choose to submit handwriting, the app may collect handwriting samples through:
+| Data | Where Stored |
+|------|-------------|
+| Address lines 1 & 2 | Server |
+| City, State | Server |
+| PIN code | Server |
+| Address type (Home / Work / Other) | Server |
 
-- On-screen writing
-- Camera capture
-- Gallery upload
-- Default-font selection
+### Biometric & Behavioural Data
 
-Handwriting data is used to support mantra writing practice and personalized writing-related features.
+> **Your voice recordings and handwriting images are processed entirely on your device. They are never transmitted to our servers.**
 
-### Device and Usage Information
+| Data | Purpose | Where Stored |
+|------|---------|-------------|
+| Voice chant samples (audio) | Offline speech recognition to count repetitions | Device only |
+| Voice enrolment metadata | Recognition training state | Device only |
+| Handwriting images (PNG, max 10) | Offline OCR to verify written mantras | Device only |
+| Handwriting metadata (mode, mantra, timestamp) | Sample management | Device only |
 
-The app may collect basic device or usage information needed to keep the service working, such as:
+### Practice & Activity
 
-- Device registration details
-- App version
-- Login status
-- Sync status
-- Error or support reports submitted by you
+| Data | Purpose | Where Stored |
+|------|---------|-------------|
+| Practice session records | Progress, streaks, stats | Local SQLite + Server |
+| Program / goal data | Goal management | Local SQLite + Server |
+| Reward event log | Incentive system | Local SQLite + Server |
+| Leaderboard position (aggregated, public) | Community ranking | Server |
 
-This helps improve reliability, troubleshoot issues, and support account security.
+### Device & Technical
 
-## How We Use Information
+| Data | Purpose | Where Stored |
+|------|---------|-------------|
+| Device ID (stable UUID, generated at install) | Device registration | Device + Server |
+| Platform (android / ios) & app version | Compatibility, support | Server |
+| UI & notification preferences | Personalisation | Device only |
 
-We use collected information to:
+---
 
-- Create and manage your account
-- Provide mantra selection and practice features
-- Track chanting, writing, programs, streaks, and progress
-- Manage family member profiles
-- Show community, invite, and leaderboard features
-- Calculate and display reward points
-- Process store redemptions
-- Improve app performance and reliability
-- Respond to support requests and feedback
-- Protect the app from misuse or unauthorized access
+## 4. Why We Process Your Data
 
-## Local Storage and Sync
+We process your data based on **your consent** (DPDP Act §6) and **legitimate use** for service delivery (§7).
 
-Vaachaka Lekhini is designed with a privacy-first approach. Practice data may be stored locally on your device so the app can work smoothly and preserve your progress.
+| Purpose | Legal Basis |
+|---------|-------------|
+| Account creation & authentication | Consent (contractual necessity) |
+| Profile personalisation | Consent |
+| Address management | Consent |
+| Voice mantra counting (on-device only) | Explicit consent — biometric data |
+| Handwriting OCR (on-device only) | Explicit consent |
+| Practice tracking | Consent / Legitimate use |
+| Rewards programme | Legitimate use (contracted benefit) |
+| Community features & leaderboard | Consent |
+| Social share / invite (user-initiated) | Consent |
+| Device management & notifications | Legitimate use |
+| Security & fraud prevention | Legitimate use |
+| Compliance with law | Legal obligation (§7(f)) |
 
-Some features may require backend sync, including account login, family profiles, community features, rewards, store items, support requests, and admin-managed app content.
+---
 
-Where sync is used, only the information required for that feature is shared with the backend.
+## 5. On-Device Processing — No Data Leaves Your Phone
 
-## Sharing of Information
+| Feature | Technology | What stays on device |
+|---------|------------|---------------------|
+| Voice recognition | Vosk ASR (offline, bundled model) | All audio — only sample count & timestamp synced |
+| Handwriting OCR | Tesseract (offline, bundled traineddata) | All images — none transmitted |
+| Avatar generation | Deterministic gradient from seed | All image data — only integer seed synced |
 
-We do not sell your personal information.
+---
 
-We may share limited information only when required to:
+## 6. Who We Share Data With
 
-- Provide app features you choose to use
-- Process authentication, rewards, store, or community features
-- Respond to your support or feedback requests
-- Comply with legal obligations
-- Protect the safety, security, or integrity of the app
+We **do not sell, rent, or trade** your personal data. We use no third-party analytics, advertising networks, or crash-reporting services.
 
-Invite and sharing features use your device's share sheet or selected apps. When you share content through another service, that service's own privacy policy applies.
+| Recipient | Data Shared | Reason |
+|-----------|-------------|--------|
+| Our backend API (Srinishtha servers) | Account, profile, address, session, reward, device data | Core service delivery |
+| SMS gateway | Phone number + OTP message only | Account verification |
+| Public leaderboard | Display name, aggregate chant count only | Community feature (opt-in) |
+| Government / law enforcement | As compelled by valid legal order | Legal obligation |
 
-## Data Security
+**No Firebase. No Google Analytics. No advertising platforms.**
 
-We use reasonable technical and organizational measures to protect your information from unauthorized access, loss, misuse, or alteration.
+Social share actions (WhatsApp, Instagram, etc.) are user-initiated and governed by those platforms' own policies.
 
-No digital system is completely secure, but we aim to collect only necessary information and protect it responsibly.
+---
 
-## Your Choices
+## 7. How Long We Keep Your Data
 
-You can control your data through the app settings where available. Depending on the feature, you may be able to:
+| Data | Retention |
+|------|-----------|
+| Active account data | Retained while account is active |
+| After account deletion | All server data deleted within **30 days** |
+| JWT tokens | Revoked immediately on logout or deletion |
+| Voice samples | Device only; deleted when you clear enrolment or uninstall |
+| Handwriting images | Device only; deleted with enrolment reset or uninstall |
+| Server backups | Purged within **90 days** after account deletion |
+| Legal hold | Retained only for the duration required by law |
 
-- Edit your profile
-- Manage family members
-- Change language and reminder settings
-- Download your data
-- Log out
-- Delete your account or local app data
-- Choose whether to use voice, handwriting, or manual counting
+---
 
-You may also choose not to grant microphone, camera, or gallery permissions. Some features may not work without those permissions.
+## 8. Your Rights Under the DPDP Act 2023
 
-## Children's Privacy
+**Right to Information (§11)**
+Know what personal data we hold and how it is processed.
 
-Vaachaka Lekhini may allow family profiles to be created under one account. Parents or guardians are responsible for creating and managing profiles for children or dependents.
+**Right to Correction (§12)**
+Correct inaccurate data via Settings → Edit Profile.
 
-The app should be used by children only with parent or guardian permission.
+**Right to Erasure (§12)**
+Delete your account and all data via Settings → Delete Account.
 
-## Permissions Used
+**Right to Withdraw Consent (§6)**
+Withdraw consent at any time; this may limit certain features.
 
-Vaachaka Lekhini may request the following permissions:
+**Right to Grievance Redressal (§13)**
+File a complaint with our Grievance Officer; we respond within 30 days.
 
-- Microphone: for voice training and chant counting
-- Camera: for capturing handwriting samples
-- Photos or gallery: for uploading handwriting images
-- Notifications: for practice reminders
+**Right to Nominate (§14)**
+Nominate someone to exercise your rights in case of death or incapacity.
 
-Permissions are used only for the features that require them.
+To exercise any right, email **privacy@srinishtha.com** or use the in-app support. Unresolved complaints may be escalated to the **Data Protection Board of India**.
 
-## Data Retention
+---
 
-We keep information only as long as needed to provide app features, maintain records, support account access, comply with legal requirements, or improve the service.
+## 9. Children's Privacy
 
-If you delete your account or app data, related information may be removed from the app, subject to backup, legal, security, or operational requirements.
+The App is not directed at children below **18 years**. Birth year is collected at sign-up to screen for underage users. If we discover a user is under 18, we will delete their account promptly.
 
-## Changes to This Policy
+Parents or guardians may contact **privacy@srinishtha.com** if they believe a minor has registered.
 
-We may update this Privacy Policy from time to time. Any changes will be reflected in the app or related service pages. Continued use of Vaachaka Lekhini after changes means you accept the updated policy.
+---
 
-## Contact
+## 10. Security Measures
 
-For privacy questions, support, or feedback, please contact the Vaachaka Lekhini support team through the app's Help, Report Issue, or Share Feedback options.
+| Layer | Measure |
+|-------|---------|
+| Transport | TLS 1.2+ for all API communication |
+| Token storage | iOS Keychain / Android EncryptedSharedPreferences |
+| Local database | Drift SQLite with app-level access control; Hive CE encrypted boxes |
+| Authentication | OTP verification + server-side hashed passwords |
+| Biometric data | Never transmitted; processed only by offline on-device models |
+| API access control | All endpoints require valid JWT |
 
-## Version
+In the event of a data breach, we will notify you and the Data Protection Board of India within prescribed timelines.
 
-Version 0.1.0
+---
+
+## 11. Cross-Border Data Transfers
+
+Our servers are located in India. Where any processing occurs outside India, we ensure compliance with DPDP Act provisions and applicable government notifications.
+
+---
+
+## 12. Changes to This Policy
+
+We may update this policy from time to time. We will notify you of material changes via an in-app notification and seek fresh consent where required. Continued use after a notified update constitutes acceptance.
+
+---
+
+## 13. Grievance Officer
+
+In accordance with §13 of the DPDP Act, 2023:
+
+**Grievance Officer**
+Srinishtha Technologies Pvt. Ltd.
+Email: grievance@srinishtha.com
+Response time: Within 30 days of receipt
+
+Unresolved complaints: **Data Protection Board of India**
+
+---
+
+## 14. Contact Us
+
+**Srinishtha Technologies Pvt. Ltd.**
+
+- Privacy queries: privacy@srinishtha.com
+- Data deletion: Settings → Delete Account, or email privacy@srinishtha.com
+- General support: Settings → Help & Support
+
+---
+
+*Vachika Lekhini v0.1.0 · Effective 22 June 2026*

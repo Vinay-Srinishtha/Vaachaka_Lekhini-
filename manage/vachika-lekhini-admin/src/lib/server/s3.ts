@@ -120,13 +120,9 @@ function keyPrefix(category: UploadCategory, slug: string) {
 	if (category === 'mantra-image') return `mantras/images/main/${safeSlug}`;
 	if (category === 'mantra-preview') return `mantras/images/preview/${safeSlug}`;
 	if (category === 'mantra-share') return `mantras/images/share/${safeSlug}`;
-	// NOTE: keep every image under a prefix the bucket policy already exposes
-	// for public read (store/images/*, mantras/images/*, quotations/*).
-	// Quote + global-sadhana media live under those prefixes so they serve
-	// publicly without a bucket-policy change.
 	if (category === 'quote-image') return `quotations/images/${safeSlug}`;
 	if (category === 'share-quote') return `quotations/share/${safeSlug}`;
-	if (category === 'global-sadhana-image') return `mantras/images/global-sadhana/${safeSlug}`;
+	if (category === 'global-sadhana-image') return `global-sadhana/images/${safeSlug}`;
 	return `store/images/${safeSlug}`;
 }
 

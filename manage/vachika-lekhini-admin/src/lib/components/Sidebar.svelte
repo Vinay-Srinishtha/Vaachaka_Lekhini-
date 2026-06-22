@@ -29,19 +29,23 @@
 
 	// Color accent per group for visual differentiation
 	const groupAccent: Record<string, string> = {
+		Users:    'text-sky-400',
 		Content:  'text-violet-400',
-		Practice: 'text-sky-400',
+		Activity: 'text-teal-400',
 		Rewards:  'text-amber-400',
+		Settings: 'text-indigo-400',
 		Support:  'text-rose-400',
-		Audit:    'text-slate-400',
+		System:   'text-slate-400',
 	};
 
 	const groupDot: Record<string, string> = {
+		Users:    'bg-sky-400',
 		Content:  'bg-violet-400',
-		Practice: 'bg-sky-400',
+		Activity: 'bg-teal-400',
 		Rewards:  'bg-amber-400',
+		Settings: 'bg-indigo-400',
 		Support:  'bg-rose-400',
-		Audit:    'bg-slate-400',
+		System:   'bg-slate-400',
 	};
 
 	function buildGroups(navItems: typeof items) {

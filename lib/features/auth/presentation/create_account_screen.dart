@@ -31,6 +31,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
   final String _language = 'en';
 
   bool _busy = false;
+  bool _checkingMobile = false;
   bool _obscure = true;
   String? _error;
   String? _errorCode;
@@ -65,6 +66,21 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
   bool get _accountBanned =>
       _errorCode == 'account_banned' || _errorCode == 'account_suspended';
 
+  // Called as soon as the user types a valid 10-digit number.
+  // Blocks the password section until we know the number is free.
+  Future<void> _checkMobile() async {
+    if (!_mobileValid) return;
+    setState(() { _checkingMobile = true; _error = null; _errorCode = null; });
+    final result = await ref.read(authRepositoryProvider).checkMobileRegistered(_e164Mobile);
+    if (!mounted) return;
+    setState(() {
+      _checkingMobile = false;
+      if (result case Ok(:final value) when value) {
+        _errorCode = 'account_exists';
+      }
+    });
+  }
+
   Future<void> _register() async {
     if (!_nameValid) {
       setState(() => _error = context.l10n.authErrorEnterName);
@@ -83,6 +99,14 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
       return;
     }
     setState(() { _busy = true; _error = null; _errorCode = null; });
+
+    // Guard: re-verify the number hasn't been registered between the check and submit.
+    final checkResult = await ref.read(authRepositoryProvider).checkMobileRegistered(_e164Mobile);
+    if (!mounted) return;
+    if (checkResult case Ok(:final value) when value) {
+      setState(() { _busy = false; _errorCode = 'account_exists'; });
+      return;
+    }
 
     final result = await ref.read(authRepositoryProvider).register(
           mobile: _e164Mobile,
@@ -169,28 +193,45 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                       keyboardType: TextInputType.phone,
                       inputFormatters: [AuthMobileFormatter()],
                       textInputAction: TextInputAction.next,
-                      // Clear account-exists error when number changes.
                       onChanged: (_) {
-                        if (_accountExists || _accountBanned) {
+                        // Always clear previous result when number changes.
+                        if (_errorCode != null) {
                           setState(() { _error = null; _errorCode = null; });
                         }
+                        // Check availability as soon as 10 digits are complete.
+                        if (_mobileValid) _checkMobile();
                       },
                     ),
                   ),
                 ]),
 
+                // Proactive check feedback — shown while verifying availability.
+                if (_checkingMobile) ...[
+                  const SizedBox(height: KvlSpacing.sm),
+                  Row(children: [
+                    SizedBox(
+                      width: 12, height: 12,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 1.5, color: KvlColors.primaryDeep),
+                    ),
+                    const SizedBox(width: 8),
+                    Text('Checking number…',
+                        style: KvlText.caption(12).copyWith(color: KvlColors.inkSoft)),
+                  ]),
+                ],
+
                 // Inline error: number already registered → divert to login, block further fields.
-                if (_accountExists) ...[
+                if (!_checkingMobile && _accountExists) ...[
                   const SizedBox(height: KvlSpacing.sm),
                   _NumberExistsInline(onLogin: () => context.go(KvlRoute.otpLogin)),
-                ] else if (_accountBanned) ...[
+                ] else if (!_checkingMobile && _accountBanned) ...[
                   const SizedBox(height: KvlSpacing.sm),
                   AuthBannedCard(suspended: _errorCode == 'account_suspended'),
                 ],
 
-                // Password, confirm, referral, submit — only after a valid 10-digit number
-                // and only when the number is not already taken.
-                if (_mobileValid && !_accountExists && !_accountBanned) ...[
+                // Password, confirm, referral, submit — only after a valid 10-digit number,
+                // availability confirmed, and not already taken.
+                if (_mobileValid && !_checkingMobile && !_accountExists && !_accountBanned) ...[
                   const SizedBox(height: KvlSpacing.md),
                   KvlInput(
                     label: 'Password',

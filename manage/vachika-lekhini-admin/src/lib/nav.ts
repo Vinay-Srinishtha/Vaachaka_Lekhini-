@@ -35,38 +35,41 @@ export interface NavItem {
 /// Sidebar nav. Items are hidden when the admin's role can't access the
 /// item's section (see roles.ts ROLE_SECTIONS).
 export const NAV_ITEMS: NavItem[] = [
-	// ── Overview ─────────────────────────────────────────────────────────────
-	{ href: '/',             label: 'Dashboard',   icon: LayoutDashboard, section: 'dashboard' },
-	{ href: '/leaderboard',  label: 'Leaderboard', icon: Medal, section: 'leaderboard' },
+	// ── Home ─────────────────────────────────────────────────────────────────
+	{ href: '/', label: 'Dashboard', icon: LayoutDashboard, section: 'dashboard' },
+
+	// ── Users — accounts, community, invites ─────────────────────────────────
+	{ href: '/accounts',    label: 'Accounts',    icon: Users,     section: 'accounts',    group: 'Users' },
+	{ href: '/leaderboard', label: 'Leaderboard', icon: Medal,     section: 'leaderboard', group: 'Users' },
+	{ href: '/invites',     label: 'Invites',     icon: UserPlus,  section: 'invites',     group: 'Users' },
 
 	// ── Content — what the app shows ─────────────────────────────────────────
-	{ href: '/mantras', label: 'Mantras', icon: BookOpen, section: 'mantras', group: 'Content' },
-	{ href: '/quotes', label: 'Quotes', icon: Quote, section: 'quotes', group: 'Content' },
-	{ href: '/global-sadhana', label: 'Global Sadhana', icon: Globe, section: 'global-sadhana', group: 'Content' },
-	{ href: '/global-sadhana-dashboard', label: 'Sadhana Progress', icon: GlobeLock, section: 'global-sadhana-dashboard', group: 'Content' },
-	{ href: '/store', label: 'Store', icon: ShoppingBag, section: 'store', group: 'Content' },
-	{ href: '/faqs', label: 'FAQs', icon: HelpCircle, section: 'faqs', group: 'Content' },
-	{ href: '/app-settings', label: 'App Settings', icon: Sliders, section: 'app-settings', group: 'Content' },
-	{ href: '/config', label: 'Config & Flags', icon: Settings2, section: 'config', group: 'Content' },
+	{ href: '/mantras',       label: 'Mantras',       icon: BookOpen,    section: 'mantras',       group: 'Content' },
+	{ href: '/quotes',        label: 'Quotes',         icon: Quote,       section: 'quotes',        group: 'Content' },
+	{ href: '/global-sadhana',label: 'Global Sadhana', icon: Globe,       section: 'global-sadhana',group: 'Content' },
+	{ href: '/store',         label: 'Store',          icon: ShoppingBag, section: 'store',         group: 'Content' },
+	{ href: '/faqs',          label: 'FAQs',           icon: HelpCircle,  section: 'faqs',          group: 'Content' },
 
-	// ── Practice — user activity ──────────────────────────────────────────────
-	{ href: '/accounts', label: 'Accounts', icon: Users, section: 'accounts', group: 'Practice' },
-	{ href: '/programs', label: 'Programs', icon: Layers, section: 'programs', group: 'Practice' },
-	{ href: '/sessions', label: 'Sessions', icon: Activity, section: 'sessions', group: 'Practice' },
+	// ── Activity — user practice data ────────────────────────────────────────
+	{ href: '/global-sadhana-dashboard', label: 'Sadhana Progress', icon: GlobeLock, section: 'global-sadhana-dashboard', group: 'Activity' },
+	{ href: '/programs', label: 'Programs', icon: Layers,   section: 'programs', group: 'Activity' },
+	{ href: '/sessions', label: 'Sessions', icon: Activity, section: 'sessions', group: 'Activity' },
 
 	// ── Rewards ───────────────────────────────────────────────────────────────
-	{ href: '/rewards', label: 'Rewards Ledger', icon: Coins, section: 'rewards', group: 'Rewards' },
-	{ href: '/reward-rules', label: 'Reward Rules', icon: Gift, section: 'reward-rules', group: 'Rewards' },
-	{ href: '/invites', label: 'Invites', icon: UserPlus, section: 'invites', group: 'Rewards' },
+	{ href: '/rewards',      label: 'Ledger',       icon: Coins, section: 'rewards',      group: 'Rewards' },
+	{ href: '/reward-rules', label: 'Reward Rules', icon: Gift,  section: 'reward-rules', group: 'Rewards' },
+
+	// ── Settings ──────────────────────────────────────────────────────────────
+	{ href: '/app-settings', label: 'App Settings',  icon: Sliders,   section: 'app-settings', group: 'Settings' },
+	{ href: '/config',       label: 'Config & Flags', icon: Settings2, section: 'config',       group: 'Settings' },
 
 	// ── Support ───────────────────────────────────────────────────────────────
-	{ href: '/support', label: 'Issues Reported', icon: Flag, section: 'support', group: 'Support' },
+	{ href: '/support',  label: 'Issues',   icon: Flag,               section: 'support',  group: 'Support' },
 	{ href: '/feedback', label: 'Feedback', icon: MessageCircleHeart, section: 'feedback', group: 'Support' },
 
-	// ── Audit ─────────────────────────────────────────────────────────────────
-	{ href: '/otp-log', label: 'OTP Log', icon: MessageSquareDot, section: 'otp-log', group: 'Audit' },
-	{ href: '/devices', label: 'Devices', icon: Smartphone, section: 'devices', group: 'Audit' },
-	{ href: '/admins', label: 'Admins', icon: ShieldCheck, section: 'admins', group: 'Audit' },
-	{ href: '/roles', label: 'Roles', icon: KeyRound, section: 'roles', group: 'Audit' },
-
+	// ── System ────────────────────────────────────────────────────────────────
+	{ href: '/otp-log', label: 'OTP Log', icon: MessageSquareDot, section: 'otp-log', group: 'System' },
+	{ href: '/devices', label: 'Devices', icon: Smartphone,       section: 'devices', group: 'System' },
+	{ href: '/admins',  label: 'Admins',  icon: ShieldCheck,      section: 'admins',  group: 'System' },
+	{ href: '/roles',   label: 'Roles',   icon: KeyRound,         section: 'roles',   group: 'System' },
 ];

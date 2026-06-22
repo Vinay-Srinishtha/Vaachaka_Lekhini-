@@ -141,7 +141,12 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 			}
 		}
 
-		let imageUrl: string | null = row.image_url?.trim() || null;
+		// Only accept image_url values that are already on our S3 bucket under
+		// the correct quotations/ prefix. Anything else (wrong bucket, old path,
+		// external CDN) is discarded so the admin can re-upload via the UI.
+		const rawImageUrl = row.image_url?.trim() || null;
+		let imageUrl: string | null =
+			rawImageUrl && /\/quotations\//.test(rawImageUrl) ? rawImageUrl : null;
 		const imageRef = row.image?.trim();
 		if (imageRef && !imageUrl) {
 			const imgBuf = imageBuffers.get(imageRef) ?? imageBuffers.get(imageRef.split('/').pop()!);

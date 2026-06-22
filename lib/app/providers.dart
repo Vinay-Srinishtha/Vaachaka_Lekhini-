@@ -691,6 +691,9 @@ final appSettingsProvider = FutureProvider<AppSettings>((ref) async {
       inviteHost: (d['invite_host'] as String?)?.isNotEmpty == true
           ? d['invite_host'] as String
           : 'vaachakalekhini.com',
+      appLink: (d['app_link'] as String?)?.isNotEmpty == true
+          ? d['app_link'] as String
+          : null,
       appDownloadLink: (d['app_download_link'] as String?)?.isNotEmpty == true
           ? d['app_download_link'] as String
           : null,
@@ -710,6 +713,7 @@ final appSettingsProvider = FutureProvider<AppSettings>((ref) async {
       aboutApp: null,
       logoUrl: null,
       inviteHost: 'vaachakalekhini.com',
+      appLink: null,
       appDownloadLink: null,
       shareQuoteImageUrl: null,
       shareQuoteText: null,
@@ -724,6 +728,7 @@ class AppSettings {
     required this.aboutApp,
     required this.logoUrl,
     required this.inviteHost,
+    required this.appLink,
     required this.appDownloadLink,
     required this.shareQuoteImageUrl,
     required this.shareQuoteText,
@@ -733,7 +738,14 @@ class AppSettings {
   final String? aboutApp;
   final String? logoUrl;
   final String inviteHost;
+  /// Primary app link (editable in admin → App Settings → App Link).
+  final String? appLink;
   final String? appDownloadLink;
+
+  /// Best available app link: app_link preferred, falls back to app_download_link.
+  String get effectiveAppLink =>
+      (appLink?.isNotEmpty == true ? appLink : appDownloadLink) ??
+      'https://vaachakalekhini.com/app';
   final String? shareQuoteImageUrl;
   final String? shareQuoteText;
 

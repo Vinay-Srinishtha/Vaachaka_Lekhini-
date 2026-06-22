@@ -879,7 +879,7 @@ class _HeroQuote extends ConsumerWidget {
                       quoteText: quoteText,
                       attribution: attribution,
                       imageUrl: chosen!.imageUrl,
-                      appLink: appSettings?.appDownloadLink ?? '',
+                      appLink: appSettings?.effectiveAppLink ?? '',
                       template: appSettings?.shareQuoteText,
                     ),
                     borderRadius: BorderRadius.circular(18),

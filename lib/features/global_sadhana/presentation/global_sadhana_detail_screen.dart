@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../app/providers.dart';
 import '../../../app/router.dart';
@@ -126,6 +130,29 @@ class _GlobalSadhanaDetailScreenState
       }
     }
     return 'Could not join. Please try again.';
+  }
+
+  Future<void> _share(GlobalSadhana sadhana) async {
+    final appLink = ref.read(appSettingsProvider).value?.effectiveAppLink
+        ?? 'https://vaachakalekhini.com/app';
+    final msg = '🕉 Join the "${sadhana.title}" Global Sadhana!\n'
+        'Together we chant toward ${IndianNumberFormat.format(sadhana.targetCount)} chants.\n'
+        'Join me on Vachika Lekhini 🙏\n$appLink';
+    final imageUrl = sadhana.imageUrl;
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      try {
+        final tmpDir = await getTemporaryDirectory();
+        final ext = imageUrl.contains('.png') ? 'png' : 'jpg';
+        final file = File('${tmpDir.path}/sadhana_share.$ext');
+        await Dio().download(imageUrl, file.path);
+        await SharePlus.instance.share(ShareParams(
+          text: msg,
+          files: [XFile(file.path, mimeType: 'image/$ext')],
+        ));
+        return;
+      } catch (_) {}
+    }
+    await SharePlus.instance.share(ShareParams(text: msg));
   }
 
   @override
@@ -412,6 +439,14 @@ class _GlobalSadhanaDetailScreenState
               onPressed: () => context.go(KvlRoute.welcome),
             ),
           ],
+
+          const SizedBox(height: KvlSpacing.sm),
+          KvlButton(
+            variant: KvlButtonVariant.ghost,
+            label: 'Share this Sadhana',
+            icon: Icons.share_rounded,
+            onPressed: () => _share(sadhana),
+          ),
 
           const SizedBox(height: KvlSpacing.md),
         ],

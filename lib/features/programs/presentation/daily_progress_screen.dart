@@ -1,7 +1,11 @@
+import 'dart:io';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -86,7 +90,7 @@ class _DailyProgressScreenState extends ConsumerState<DailyProgressScreen> {
             ref.watch(settingsProvider).value ?? KvlSettings.fallback;
         final mantra = program == null ? null : ref.watch(mantraByIdProvider(program.mantraId));
         final mantraName = mantra?.name.displayForLanguage(settings.languageCode) ?? '';
-        final appDownloadLink = ref.watch(appSettingsProvider).value?.appDownloadLink;
+        final appDownloadLink = ref.watch(appSettingsProvider).value?.effectiveAppLink;
         final title = mantraName.isEmpty
             ? context.l10n.dailyProgressTitle
             : '$mantraName Mantra';
@@ -682,10 +686,7 @@ class _ShareSheetContent extends StatelessWidget {
                   // If there's a share image, use share_plus to attach it
                   // (WhatsApp on Android picks up the image from the share intent).
                   if (shareImageUrl != null && shareImageUrl!.isNotEmpty) {
-                    await SharePlus.instance.share(ShareParams(
-                      text: message,
-                      uri: Uri.tryParse(shareImageUrl!),
-                    ));
+                    await _shareWithImage(message: message, imageUrl: shareImageUrl!);
                   } else {
                     final appUri = Uri(
                       scheme: 'whatsapp',
@@ -728,7 +729,11 @@ class _ShareSheetContent extends StatelessWidget {
                 icon: Icons.camera_alt_rounded,
                 onTap: () async {
                   Navigator.pop(context);
-                  await SharePlus.instance.share(ShareParams(text: message));
+                  if (shareImageUrl != null && shareImageUrl!.isNotEmpty) {
+                    await _shareWithImage(message: message, imageUrl: shareImageUrl!);
+                  } else {
+                    await SharePlus.instance.share(ShareParams(text: message));
+                  }
                 },
               ),
               _ShareOption(
@@ -736,7 +741,11 @@ class _ShareSheetContent extends StatelessWidget {
                 color: KvlColors.inkSoft,
                 icon: Icons.more_horiz_rounded,
                 onTap: () async {
-                  await SharePlus.instance.share(ShareParams(text: message));
+                  if (shareImageUrl != null && shareImageUrl!.isNotEmpty) {
+                    await _shareWithImage(message: message, imageUrl: shareImageUrl!);
+                  } else {
+                    await SharePlus.instance.share(ShareParams(text: message));
+                  }
                   if (context.mounted) Navigator.pop(context);
                 },
               ),
@@ -746,6 +755,26 @@ class _ShareSheetContent extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Downloads [imageUrl] to a temp file and shares it together with [message].
+/// Falls back to text-only share if the download fails.
+Future<void> _shareWithImage({
+  required String message,
+  required String imageUrl,
+}) async {
+  try {
+    final tmpDir = await getTemporaryDirectory();
+    final ext = imageUrl.contains('.png') ? 'png' : 'jpg';
+    final file = File('${tmpDir.path}/program_share.$ext');
+    await Dio().download(imageUrl, file.path);
+    await SharePlus.instance.share(ShareParams(
+      text: message,
+      files: [XFile(file.path, mimeType: 'image/$ext')],
+    ));
+  } catch (_) {
+    await SharePlus.instance.share(ShareParams(text: message));
   }
 }
 

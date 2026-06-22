@@ -273,6 +273,14 @@ class ProgramRepositoryDrift implements ProgramRepository {
   }
 
   @override
+  Future<void> decrementWritings(String programId, {int by = 1}) async {
+    await _db.customStatement(
+      'UPDATE programs SET total_writings = MAX(0, total_writings - ?), updated_at = ? WHERE id = ?',
+      [by, DateTime.now().millisecondsSinceEpoch ~/ 1000, programId],
+    );
+  }
+
+  @override
   Future<void> incrementSession(String sessionId, {int by = 1}) async {
     await _db.customStatement(
       'UPDATE sessions SET count_added = count_added + ?, updated_at = ? WHERE id = ?',

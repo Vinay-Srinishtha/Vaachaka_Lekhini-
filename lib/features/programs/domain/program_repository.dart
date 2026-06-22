@@ -66,6 +66,9 @@ abstract class ProgramRepository {
   /// recently updated program if no sessions yet.
   Future<Program?> mostRecentlyActive(String memberId);
 
+  /// Subtract [by] from totalWritings for [programId] (used when a writing is deleted).
+  Future<void> decrementWritings(String programId, {int by = 1});
+
   /// Reconcile server-computed totals into local Drift (no outbox enqueue).
   /// Called after each /api/v1/me pull to keep program status live.
   Future<void> reconcileFromServer(

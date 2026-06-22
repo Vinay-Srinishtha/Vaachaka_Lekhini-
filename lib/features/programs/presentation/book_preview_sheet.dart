@@ -217,8 +217,10 @@ class _BookPreviewSheet extends ConsumerWidget {
                         mainAxisSpacing: 10,
                       ),
                       itemCount: list.length,
-                      itemBuilder: (_, i) =>
-                          _WritingTile(asset: list[i]),
+                      itemBuilder: (_, i) => _WritingTile(
+                        asset: list[i],
+                        mantraId: mantraId,
+                      ),
                     );
                   },
                 ),
@@ -237,39 +239,115 @@ class _BookPreviewSheet extends ConsumerWidget {
 // Single tile
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _WritingTile extends StatelessWidget {
-  const _WritingTile({required this.asset});
+class _WritingTile extends ConsumerWidget {
+  const _WritingTile({required this.asset, required this.mantraId});
   final HandwritingAsset asset;
+  final String mantraId;
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => _showFull(context),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-              color: KvlColors.primary.withValues(alpha: 0.18), width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Stack(
+      children: [
+        GestureDetector(
+          onTap: () => _showFull(context),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                  color: KvlColors.primary.withValues(alpha: 0.18), width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Image.file(
-          File(asset.filePath!),
-          fit: BoxFit.contain,
-          errorBuilder: (_, err, _) => const Center(
-            child: Icon(Icons.broken_image_outlined,
-                color: KvlColors.muted, size: 28),
+            clipBehavior: Clip.antiAlias,
+            child: Image.file(
+              File(asset.filePath!),
+              fit: BoxFit.contain,
+              errorBuilder: (_, err, _) => const Center(
+                child: Icon(Icons.broken_image_outlined,
+                    color: KvlColors.muted, size: 28),
+              ),
+            ),
           ),
         ),
+        // Delete × button — top-right corner
+        Positioned(
+          top: 4,
+          right: 4,
+          child: GestureDetector(
+            onTap: () => _confirmDelete(context, ref),
+            child: Container(
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                color: Colors.red.shade600,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.close_rounded,
+                  color: Colors.white, size: 14),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete Writing?'),
+        content: const Text(
+          'This writing will be permanently removed from your book '
+          'and the count will be reduced by 1.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
       ),
     );
+    if (confirmed != true) return;
+
+    // Delete the handwriting asset (file + hive record)
+    await ref.read(handwritingRepositoryProvider).delete(asset.id);
+
+    // Decrement totalWritings on all programs for this mantra
+    final profile = ref.read(activeProfileProvider).value;
+    if (profile != null) {
+      final programs = await ref
+          .read(programRepositoryProvider)
+          .listForProfile(profile.id);
+      for (final p in programs.where((p) => p.mantraId == mantraId)) {
+        await ref
+            .read(programRepositoryProvider)
+            .decrementWritings(p.id);
+      }
+    }
+
+    // Refresh the book grid and any badge counts
+    ref.invalidate(bookAssetsProvider(mantraId));
+    ref.invalidate(programsForActiveProfileProvider);
   }
 
   void _showFull(BuildContext context) {

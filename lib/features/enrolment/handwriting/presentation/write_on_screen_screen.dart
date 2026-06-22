@@ -1257,7 +1257,6 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
         builder: (context, constraints) {
           final compact = constraints.maxHeight < 390;
 
-          final h = constraints.maxHeight;
           final topInset = compact ? 13.0 : 18.0;
           final bottomStripH = compact ? 28.0 : 32.0;
           return Stack(
@@ -1319,20 +1318,20 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
                   ),
                 ),
               ),
-              // Top-right: compact Complete button
+              // Bottom-right: Complete button
               Positioned(
                 right: compact ? 10 : 16,
-                top: topInset,
+                bottom: bottomStripH + (compact ? 6 : 10),
                 child: _MergedActionButton(
                   saving: widget.saving,
                   onTap: widget.onFinish,
                   compact: compact,
                 ),
               ),
-              // Right rail: canvas tools
+              // Right rail: canvas tools — start just below top bar
               Positioned(
                 right: compact ? 10 : 16,
-                top: h * .22,
+                top: topInset,
                 bottom: bottomStripH + (compact ? 6 : 10),
                 child: SingleChildScrollView(
                 child: Column(

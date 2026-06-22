@@ -73,74 +73,80 @@ class HomeScreen extends ConsumerWidget {
           final cameraGap = MediaQuery.viewPaddingOf(context).top.clamp(40.0, 52.0);
           final topInset = cameraGap + 4.0;
 
-          return Padding(
-            padding: EdgeInsets.fromLTRB(
-              side,
-              topInset,
-              side,
-              tight ? KvlSpacing.sm : KvlSpacing.md,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _HomeHeader(
-                  greeting: greeting,
-                  subline: subline,
-                  initial: profile?.initials ?? '?',
-                  profileId: profile?.id ?? '',
-                  compact: compact,
-                  onProfileTap: () => context.push(KvlRoute.profile),
-                  profileCompletion: _profileCompletion(profile),
+          // Quote gets whatever vertical space remains after fixed widgets.
+          // On screens where the Global Sadhana card pushes things down, the
+          // SingleChildScrollView lets the user scroll just enough to see it —
+          // ClampingScrollPhysics keeps it from bouncing past the content.
+          final quoteHeight = tight ? 175.0 : compact ? 195.0 : 220.0;
+
+          return SingleChildScrollView(
+            physics: const ClampingScrollPhysics(),
+            child: ConstrainedBox(
+              // Keep content at least screen-tall so it never looks half-empty.
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  side,
+                  topInset,
+                  side,
+                  tight ? KvlSpacing.sm : KvlSpacing.md,
                 ),
-                SizedBox(height: headerGap),
-                // Bulletin — truly edge-to-edge. OverflowBox lets the child
-                // exceed the Column's padded width so it spans the full screen
-                // width on BOTH edges (Transform alone left a gap on the right
-                // because layout constraints still clamped the child width).
-                Builder(
-                  builder: (ctx) {
-                    final w = MediaQuery.of(ctx).size.width;
-                    // SizedBox bounds the vertical slot (bulletin is 34 tall);
-                    // OverflowBox widens the child to the full screen width so
-                    // it bleeds past the column padding on both edges.
-                    return SizedBox(
-                      height: 34,
-                      child: OverflowBox(
-                        minWidth: w,
-                        maxWidth: w,
-                        minHeight: 34,
-                        maxHeight: 34,
-                        alignment: Alignment.center,
-                        child: _Bulletin(
-                          text: ref.watch(appSettingsProvider).value?.bulletinText ??
-                              _kDefaultBulletinText,
-                        ),
-                      ),
-                    );
-                  },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _HomeHeader(
+                      greeting: greeting,
+                      subline: subline,
+                      initial: profile?.initials ?? '?',
+                      profileId: profile?.id ?? '',
+                      compact: compact,
+                      onProfileTap: () => context.push(KvlRoute.profile),
+                      profileCompletion: _profileCompletion(profile),
+                    ),
+                    SizedBox(height: headerGap),
+                    // Bulletin — truly edge-to-edge.
+                    Builder(
+                      builder: (ctx) {
+                        final w = MediaQuery.of(ctx).size.width;
+                        return SizedBox(
+                          height: 34,
+                          child: OverflowBox(
+                            minWidth: w,
+                            maxWidth: w,
+                            minHeight: 34,
+                            maxHeight: 34,
+                            alignment: Alignment.center,
+                            child: _Bulletin(
+                              text: ref.watch(appSettingsProvider).value?.bulletinText ??
+                                  _kDefaultBulletinText,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    SizedBox(height: gap),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      switchInCurve: Curves.easeOut,
+                      switchOutCurve: Curves.easeIn,
+                      child: isLoadingPrograms
+                          ? _ProgramCardShimmer(key: const ValueKey('shimmer'), compact: compact)
+                          : _ProgramCarousel(
+                              key: const ValueKey('carousel'),
+                              programs: activePrograms,
+                              compact: compact,
+                            ),
+                    ),
+                    SizedBox(height: gap),
+                    _GlobalSadhanaSection(compact: compact),
+                    SizedBox(height: gap),
+                    SizedBox(
+                      height: quoteHeight,
+                      child: _HeroQuote(compact: compact, tight: tight),
+                    ),
+                  ],
                 ),
-                SizedBox(height: gap),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 220),
-                  switchInCurve: Curves.easeOut,
-                  switchOutCurve: Curves.easeIn,
-                  // Always show the carousel — it includes the "Start a new
-                  // Sadhana" card even when there are no active programs.
-                  child: isLoadingPrograms
-                      ? _ProgramCardShimmer(key: const ValueKey('shimmer'), compact: compact)
-                      : _ProgramCarousel(
-                          key: const ValueKey('carousel'),
-                          programs: activePrograms,
-                          compact: compact,
-                        ),
-                ),
-                SizedBox(height: gap),
-                _GlobalSadhanaSection(compact: compact),
-                SizedBox(height: gap),
-                Expanded(
-                  child: _HeroQuote(compact: compact, tight: tight),
-                ),
-              ],
+              ),
             ),
           );
         },

@@ -158,7 +158,9 @@ class _PracticeTabState extends State<_PracticeTab> {
                 height: 46,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: KvlColors.primaryGradient,
+                  gradient: widget.active
+                      ? KvlColors.practiceActiveGradient
+                      : KvlColors.primaryGradient,
                   border: Border.all(
                     color: Colors.white.withValues(alpha: .75),
                     width: 2,
@@ -166,8 +168,11 @@ class _PracticeTabState extends State<_PracticeTab> {
                   boxShadow: [
                     ...KvlShadows.primaryGlow,
                     BoxShadow(
-                      color: KvlColors.primaryDeep.withValues(alpha: .25),
-                      blurRadius: widget.active ? 12 : 8,
+                      color: (widget.active
+                              ? const Color(0xFFD94B2A)
+                              : KvlColors.primaryDeep)
+                          .withValues(alpha: .30),
+                      blurRadius: widget.active ? 14 : 8,
                       offset: const Offset(0, 3),
                     ),
                   ],

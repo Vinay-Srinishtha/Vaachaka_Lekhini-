@@ -135,11 +135,11 @@ class HomeScreen extends ConsumerWidget {
                         ),
                 ),
                 SizedBox(height: gap),
+                _GlobalSadhanaSection(compact: compact),
+                SizedBox(height: gap),
                 Expanded(
                   child: _HeroQuote(compact: compact, tight: tight),
                 ),
-                SizedBox(height: gap),
-                _GlobalSadhanaSection(compact: compact),
               ],
             ),
           );

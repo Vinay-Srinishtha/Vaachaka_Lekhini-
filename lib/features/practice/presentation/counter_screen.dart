@@ -716,22 +716,31 @@ class _TopBar extends ConsumerWidget {
             },
           ),
         ),
-        // Reward points + book count stacked in the top-right.
+        // Reward points + book count — mirrors the slot() vertical structure
+        // (btn-height circle area + labelH spacer) so everything stays aligned.
         Expanded(
           flex: 2,
-          child: Align(
-            alignment: Alignment.topRight,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 SizedBox(
                   height: btn,
-                  child: Center(
+                  child: Align(
+                    alignment: Alignment.centerRight,
                     child: _PointsBadge(compact: compact, sessionCount: sessionCount),
                   ),
                 ),
-                _BookCountBadge(compact: compact, mantraId: mantraId),
+                SizedBox(height: 2),
+                SizedBox(
+                  height: labelH,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: _BookCountBadge(compact: compact, mantraId: mantraId),
+                  ),
+                ),
               ],
             ),
           ),

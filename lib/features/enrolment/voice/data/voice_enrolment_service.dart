@@ -219,21 +219,14 @@ class VoiceEnrolmentService {
     }
   }
 
-  /// Count how many times [mantra]'s Devanagari form appears in [text].
-  /// Falls back to the distinctive core word for recall: if the full phrase
-  /// wasn't recognised cleanly but its core word was (the grammar now accepts
-  /// individual words), count those instead.
+  /// Count how many times [mantra]'s full Devanagari phrase appears in [text].
+  /// Only a complete phrase match counts — partial words (e.g. just "Shri"
+  /// from "Sri Rama") are never accepted.
   int _countOccurrences(String text, Mantra mantra) {
-    final full = VoicePhraseMatcher.countOccurrences(
+    return VoicePhraseMatcher.countOccurrences(
       text,
       mantra.name.devanagari,
     );
-    if (full > 0) return full;
-    final core = _coreWord(mantra);
-    if (core.isNotEmpty && core != mantra.name.devanagari.trim()) {
-      return VoicePhraseMatcher.countOccurrences(text, core);
-    }
-    return 0;
   }
 
   /// Grammar phrases for the mantra: the full Devanagari phrase plus each of
@@ -245,19 +238,6 @@ class VoiceEnrolmentService {
         .where((w) => w.runes.length >= 2)
         .toList();
     return {if (full.isNotEmpty) full, ...words}.toList();
-  }
-
-  /// The most distinctive (longest) word of the mantra — used as the recall
-  /// fallback when the full phrase isn't matched.
-  String _coreWord(Mantra mantra) {
-    final words = mantra.name.devanagari
-        .trim()
-        .split(RegExp(r'\s+'))
-        .where((w) => w.runes.length >= 2)
-        .toList();
-    if (words.isEmpty) return mantra.name.devanagari.trim();
-    words.sort((a, b) => b.runes.length.compareTo(a.runes.length));
-    return words.first;
   }
 
   Future<void> stop() async {

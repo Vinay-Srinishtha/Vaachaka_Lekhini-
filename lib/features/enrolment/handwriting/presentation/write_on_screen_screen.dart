@@ -624,7 +624,7 @@ class _SampleLandscapeWriteScaffold extends StatefulWidget {
 
 class _SampleLandscapeWriteScaffoldState
     extends State<_SampleLandscapeWriteScaffold> {
-  bool _guideVisible = false;
+  bool _guideVisible = true;
 
   @override
   Widget build(BuildContext context) {
@@ -1208,7 +1208,7 @@ class _ProtoWriteScaffold extends ConsumerStatefulWidget {
 
 class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
   double _guideScale = 1.0;
-  bool _guideVisible = false;
+  bool _guideVisible = true;
   AudioPlayer? _ambientPlayer;
 
   static const double _scaleMin = 0.5;

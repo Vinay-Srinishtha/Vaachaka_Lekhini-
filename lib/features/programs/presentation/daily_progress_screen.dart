@@ -859,6 +859,7 @@ class _DedicateSheetState extends State<DedicateSheet> {
 
   final _nameCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
   bool _loading = true;
   bool _saved = false;
 
@@ -876,6 +877,7 @@ class _DedicateSheetState extends State<DedicateSheet> {
       final parts = raw.split('||');
       _nameCtrl.text = parts[0];
       _noteCtrl.text = parts.length > 1 ? parts[1] : '';
+      _phoneCtrl.text = parts.length > 2 ? parts[2] : '';
       _saved = true;
     }
     setState(() => _loading = false);
@@ -884,22 +886,49 @@ class _DedicateSheetState extends State<DedicateSheet> {
   Future<void> _save() async {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) return;
+    final phone = _phoneCtrl.text.trim().replaceAll(RegExp(r'[\s\-()]'), '');
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
       _prefKey(widget.programId),
-      '$name||${_noteCtrl.text.trim()}',
+      '$name||${_noteCtrl.text.trim()}||$phone',
     );
     if (!mounted) return;
     setState(() => _saved = true);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Dedicated to $name 🙏'),
-        duration: const Duration(milliseconds: 1800),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: KvlColors.success,
-      ),
-    );
     Navigator.of(context).pop();
+
+    // If a phone number was linked, open the SMS app pre-filled so the user
+    // can send the dedication message with one tap.
+    if (phone.isNotEmpty) {
+      await _sendSms(phone, name);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Dedicated to $name 🙏'),
+            duration: const Duration(milliseconds: 1800),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: KvlColors.success,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _sendSms(String phone, String name) async {
+    final mantra = widget.mantraName.isNotEmpty ? widget.mantraName : 'this mantra';
+    final message =
+        '🙏 Namaste $name,\n\n'
+        'I have dedicated my $mantra Sadhana practice to you.\n'
+        'May this offering bring blessings, peace, and happiness to your life. 🕉\n\n'
+        '— Sent from Vachika Lekhini';
+    final uri = Uri(
+      scheme: 'sms',
+      path: phone,
+      queryParameters: {'body': message},
+    );
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
   }
 
   Future<void> _clear() async {
@@ -907,6 +936,7 @@ class _DedicateSheetState extends State<DedicateSheet> {
     await prefs.remove(_prefKey(widget.programId));
     _nameCtrl.clear();
     _noteCtrl.clear();
+    _phoneCtrl.clear();
     if (mounted) setState(() => _saved = false);
   }
 
@@ -914,6 +944,7 @@ class _DedicateSheetState extends State<DedicateSheet> {
   void dispose() {
     _nameCtrl.dispose();
     _noteCtrl.dispose();
+    _phoneCtrl.dispose();
     super.dispose();
   }
 
@@ -1004,6 +1035,47 @@ class _DedicateSheetState extends State<DedicateSheet> {
                     ),
                   ),
                   style: KvlText.ui(14, FontWeight.w500),
+                ),
+                const SizedBox(height: KvlSpacing.md),
+
+                // Phone number — links a contact so SMS is sent on save
+                Text(
+                  'Send blessing to (phone number)',
+                  style: KvlText.ui(13, FontWeight.w600),
+                ),
+                const SizedBox(height: KvlSpacing.xs),
+                TextField(
+                  controller: _phoneCtrl,
+                  keyboardType: TextInputType.phone,
+                  decoration: InputDecoration(
+                    hintText: 'e.g. +91 98765 43210',
+                    hintStyle: KvlText.caption(13)
+                        .copyWith(color: KvlColors.muted),
+                    filled: true,
+                    fillColor: KvlColors.surface,
+                    border: OutlineInputBorder(
+                      borderRadius: KvlRadius.brMD,
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: KvlSpacing.md,
+                      vertical: KvlSpacing.sm,
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.message_rounded,
+                      size: 18,
+                      color: KvlColors.primary,
+                    ),
+                    suffixText: 'Optional',
+                    suffixStyle: KvlText.caption(11)
+                        .copyWith(color: KvlColors.muted),
+                  ),
+                  style: KvlText.ui(14, FontWeight.w500),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'A blessing SMS will be sent to this number when you save.',
+                  style: KvlText.caption(11).copyWith(color: KvlColors.muted),
                 ),
                 const SizedBox(height: KvlSpacing.md),
 

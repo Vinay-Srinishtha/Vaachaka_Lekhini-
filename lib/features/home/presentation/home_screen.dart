@@ -21,7 +21,6 @@ import '../../profiles/domain/profile.dart';
 import '../../programs/domain/program.dart';
 import '../../settings/domain/settings_repository.dart';
 import '../../../l10n/l10n.dart';
-import '../domain/quote.dart';
 
 double _profileCompletion(Profile? profile) {
   if (profile == null) return 0.0;
@@ -884,7 +883,7 @@ class _HeroQuote extends ConsumerWidget {
                       context,
                       quoteText: quoteText,
                       attribution: attribution,
-                      imageUrl: chosen!.imageUrl,
+                      imageUrl: chosen.imageUrl,
                       appLink: appSettings?.effectiveAppLink ?? '',
                       template: appSettings?.shareQuoteText,
                     ),

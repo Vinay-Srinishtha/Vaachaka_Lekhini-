@@ -7,7 +7,6 @@ import 'package:hive_ce/hive.dart';
 import 'package:sqlite3_flutter_libs/sqlite3_flutter_libs.dart';
 import 'app/app.dart';
 import 'app/providers.dart';
-import 'core/api/api_client.dart';
 import 'core/storage/hive_setup.dart';
 import 'core/storage/storage_keys.dart';
 
@@ -46,11 +45,8 @@ Future<void> main() async {
   // connection, and remote config are already initialising before the widget
   // tree builds. This eliminates the visible "loading → content" flash.
   final container = ProviderContainer();
-  // When a protected request hits an unrecoverable session (secure-storage
-  // tokens wiped on an Android update / reinstall while the Hive session
-  // survived, or a rejected refresh), log out fully so the router redirects to
-  // login instead of stranding the user on "Missing bearer token" 401s.
-  ApiClient.onSessionExpired = () => container.read(authRepositoryProvider).logout();
+  // Auto-logout on session expiry is intentionally disabled — users stay
+  // logged in even if tokens expire; they must log out manually.
   container.read(appDatabaseProvider);          // opens Drift/SQLite connection early
   container.read(sessionProvider);              // starts the auth stream
   container.read(remoteConfigProvider);         // kicks off remote-config fetch

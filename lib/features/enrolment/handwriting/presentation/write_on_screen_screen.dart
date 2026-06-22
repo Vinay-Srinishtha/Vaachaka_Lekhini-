@@ -1446,28 +1446,35 @@ class _ProtoWritingCanvas extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final baseSize = compact ? 200.0 : 240.0;
-    final size = baseSize * guideScale;
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        if (guideVisible)
-          Positioned.fill(
-            child: FittedBox(
-              fit: BoxFit.contain,
-              child: SizedBox(
-                width: compact ? 1180 : 1320,
-                height: compact ? 380 : 420,
-                child: _DottedGuideText(
-                  text: guide,
-                  script: guideScript,
-                  fontSize: size,
-                  opacity: .50,
+    // Scale the entire canvas (guide + ink) together so strokes stay in sync
+    // with the reference when the user zooms in or out.
+    return ClipRect(
+      child: Transform.scale(
+        scale: guideScale,
+        alignment: Alignment.center,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (guideVisible)
+              Positioned.fill(
+                child: FittedBox(
+                  fit: BoxFit.contain,
+                  child: SizedBox(
+                    width: compact ? 1180 : 1320,
+                    height: compact ? 380 : 420,
+                    child: _DottedGuideText(
+                      text: guide,
+                      script: guideScript,
+                      fontSize: baseSize,
+                      opacity: .50,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-        Signature(controller: controller, backgroundColor: Colors.transparent),
-      ],
+            Signature(controller: controller, backgroundColor: Colors.transparent),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -241,15 +241,6 @@ class _BodyState extends ConsumerState<_Body> {
     final programId = widget.programId;
     final state = widget.state;
 
-    ref.listen(practiceControllerProvider(programId), (_, next) {
-      if (next.value?.targetReached == true &&
-          !_dedicationShown &&
-          context.mounted) {
-        _dedicationShown = true;
-        _showDedicationDialog(context, ref, programId);
-      }
-    });
-
     final mantra = ref.watch(mantraByIdProvider(state.program.mantraId));
     final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
     final controller = ref.read(practiceControllerProvider(programId).notifier);
@@ -389,12 +380,25 @@ class _BodyState extends ConsumerState<_Body> {
                         // User chose "Complete Session" — fall through to finish.
                       }
 
+                      final targetWasReached = state.targetReached ||
+                          (state.program.totalProgress + state.sessionCount >=
+                              state.program.targetWritings &&
+                              state.program.targetWritings > 0);
+
                       await controller.finish();
                       if (!context.mounted) return;
                       ref.read(sessionCompletedProvider.notifier).increment();
                       ref.invalidate(globalStatsProvider(state.program.mantraId));
 
-                      // Show goal-completed celebration if target was just hit.
+                      // Show program-complete dedication sheet when target was met.
+                      if (targetWasReached && !_dedicationShown) {
+                        _dedicationShown = true;
+                        await _showDedicationDialog(context, ref, programId);
+                        if (!context.mounted) return;
+                        return; // _showDedicationDialog navigates on dedicate
+                      }
+
+                      // Show goal-completed celebration if daily target was just hit.
                       final afterState = ref.read(practiceControllerProvider(programId)).value;
                       if (afterState != null && dailyTarget > 0 &&
                           (afterState.todaysTotal >= dailyTarget)) {

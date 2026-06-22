@@ -324,16 +324,6 @@ class PracticeController extends AsyncNotifier<PracticeState> {
       targetReached: hitProgramTarget ? true : null,
       dailyGoalReached: hitDailyGoal ? true : null,
     ));
-
-    if (hitProgramTarget) {
-      // Auto-pause so the dedication prompt can be shown.
-      Future(() async {
-        await _voice?.stop();
-        await _flush();
-        final cur = state.value;
-        if (cur != null) state = AsyncData(cur.copyWith(isRunning: false));
-      });
-    }
   }
 
   Future<void> _flush() async {

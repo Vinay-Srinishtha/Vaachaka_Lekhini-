@@ -609,31 +609,34 @@ class _TopBar extends ConsumerWidget {
       return InkWell(
         onTap: onTap,
         customBorder: const CircleBorder(),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: btn,
-              height: btn,
-              child: Center(child: circle),
-            ),
-            const SizedBox(height: 4),
-            SizedBox(
-              height: labelH,
-              child: label == null
-                  ? null
-                  : FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        label,
-                        maxLines: 1,
-                        style: KvlText.caption(
-                          compact ? 11.5 : 13,
-                        ).copyWith(color: KvlColors.inkSoft),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: btn,
+                height: btn,
+                child: Center(child: circle),
+              ),
+              const SizedBox(height: 2),
+              SizedBox(
+                height: labelH,
+                child: label == null
+                    ? null
+                    : FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          label,
+                          maxLines: 1,
+                          style: KvlText.caption(
+                            compact ? 11 : 12,
+                          ).copyWith(color: KvlColors.inkSoft),
+                        ),
                       ),
-                    ),
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -661,7 +664,7 @@ class _TopBar extends ConsumerWidget {
           child: slot(
             circle: iconCircle(Icons.draw_outlined),
             onTap: onWritingMode,
-            label: 'Writing mode',
+            label: 'Write',
           ),
         ),
         Expanded(
@@ -669,7 +672,7 @@ class _TopBar extends ConsumerWidget {
             circle: iconCircle(ref.watch(_ambientOnProvider)
                 ? Icons.music_note_rounded
                 : Icons.music_off_rounded),
-            label: 'Ambient sound',
+            label: 'Ambient',
             onTap: () async {
               ref.read(_ambientOnProvider.notifier).toggle();
               final player = ref.read(_ambientPlayerProvider);

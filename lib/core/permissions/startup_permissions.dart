@@ -30,6 +30,10 @@ abstract final class StartupPermissions {
 
     await _request(Permission.microphone, 'microphone');
     await _request(Permission.notification, 'notification');
+    await _request(Permission.camera, 'camera');
+    // READ_MEDIA_IMAGES (Android 13+) / READ_EXTERNAL_STORAGE (older) for
+    // gallery access and handwriting photo import.
+    await _request(Permission.photos, 'photos');
   }
 
   static Future<void> _request(Permission permission, String label) async {

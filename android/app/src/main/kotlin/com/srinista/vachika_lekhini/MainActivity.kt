@@ -123,6 +123,19 @@ class MainActivity : FlutterActivity() {
 
         try {
             manager.ringerMode = next
+            // Setting RINGER_MODE_SILENT alone is insufficient on Android 6+ — the OS
+            // may still ring for calls unless DND is also engaged. Conversely, restoring
+            // normal mode must lift DND so calls flow through again.
+            if (hasNotificationPolicyAccess()) {
+                val nm = notificationManager()
+                when (next) {
+                    AudioManager.RINGER_MODE_SILENT ->
+                        nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_NONE)
+                    AudioManager.RINGER_MODE_NORMAL ->
+                        nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALL)
+                    // Vibrate: leave DND as-is; vibrate still lets priority calls through.
+                }
+            }
         } catch (e: SecurityException) {
             // DND access revoked at runtime — prompt user and bail.
             openNotificationPolicySettings()

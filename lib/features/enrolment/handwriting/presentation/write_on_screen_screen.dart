@@ -1287,13 +1287,13 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
                   onSwitchToVoice: widget.onSwitchToVoice,
                 ),
               ),
-              // Top-center: Global counter + pts + book preview
+              // Top-center: Global + pts + book — single compact row, floating centered
               Positioned(
                 left: 0,
                 right: 0,
                 top: topInset,
                 child: Center(
-                  child: Column(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       _WritingCounts(
@@ -1302,17 +1302,12 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
                         increment: widget.writingCount,
                         compact: compact,
                       ),
-                      const SizedBox(height: 5),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _PointsBadge(compact: compact),
-                          const SizedBox(width: 10),
-                          BookPreviewButton(
-                            compact: compact,
-                            mantraId: widget.mantraId,
-                          ),
-                        ],
+                      SizedBox(width: compact ? 8 : 10),
+                      _PointsBadge(compact: compact),
+                      SizedBox(width: compact ? 8 : 10),
+                      BookPreviewButton(
+                        compact: compact,
+                        mantraId: widget.mantraId,
                       ),
                     ],
                   ),
@@ -1605,7 +1600,7 @@ class _LandscapeTopBar extends ConsumerWidget {
         ),
         const SizedBox(width: 20),
         item(
-          icon: Icons.language_rounded,
+          icon: Icons.translate_rounded,
           label: selectedLangLabel,
           onTap: onPickLanguage,
           iconColor: KvlColors.primaryDeep,
@@ -1614,7 +1609,7 @@ class _LandscapeTopBar extends ConsumerWidget {
           const SizedBox(width: 20),
           item(
             icon: Icons.mic_rounded,
-            label: 'Voice',
+            label: 'Voice Mode',
             onTap: onSwitchToVoice!,
             iconColor: KvlColors.accent,
           ),

@@ -129,27 +129,35 @@ class _GlobalSadhanaDetailScreenState
     return 'Could not join. Please try again.';
   }
 
+  bool _sharing = false;
+
   Future<void> _share(GlobalSadhana sadhana) async {
-    final appLink = ref.read(appSettingsProvider).value?.effectiveAppLink
-        ?? 'https://vaachika-lekhani.vercel.app';
-    final msg = '🕉 Join the "${sadhana.title}" Global Sadhana!\n'
-        'Together we chant toward ${IndianNumberFormat.format(sadhana.targetCount)} chants.\n'
-        'Join me on Vachika Lekhini 🙏\n$appLink';
-    final imageUrl = sadhana.imageUrl;
-    if (imageUrl != null && imageUrl.isNotEmpty) {
-      try {
-        final tmpDir = await getTemporaryDirectory();
-        final ext = imageUrl.contains('.png') ? 'png' : 'jpg';
-        final file = File('${tmpDir.path}/sadhana_share.$ext');
-        await Dio().download(imageUrl, file.path);
-        await SharePlus.instance.share(ShareParams(
-          text: msg,
-          files: [XFile(file.path, mimeType: 'image/$ext')],
-        ));
-        return;
-      } catch (_) {}
+    if (_sharing) return;
+    _sharing = true;
+    try {
+      final appLink = ref.read(appSettingsProvider).value?.effectiveAppLink
+          ?? 'https://vaachika-lekhani.vercel.app';
+      final msg = '🕉 Join the "${sadhana.title}" Global Sadhana!\n'
+          'Together we chant toward ${IndianNumberFormat.format(sadhana.targetCount)} chants.\n'
+          'Join me on Vachika Lekhini 🙏\n$appLink';
+      final imageUrl = sadhana.imageUrl;
+      if (imageUrl != null && imageUrl.isNotEmpty) {
+        try {
+          final tmpDir = await getTemporaryDirectory();
+          final ext = imageUrl.contains('.png') ? 'png' : 'jpg';
+          final file = File('${tmpDir.path}/sadhana_share.$ext');
+          await Dio().download(imageUrl, file.path);
+          await SharePlus.instance.share(ShareParams(
+            text: msg,
+            files: [XFile(file.path, mimeType: 'image/$ext')],
+          ));
+          return;
+        } catch (_) {}
+      }
+      await SharePlus.instance.share(ShareParams(text: msg));
+    } finally {
+      _sharing = false;
     }
-    await SharePlus.instance.share(ShareParams(text: msg));
   }
 
   @override

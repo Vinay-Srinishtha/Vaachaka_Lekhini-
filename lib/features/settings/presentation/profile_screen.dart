@@ -610,8 +610,14 @@ class ProfileScreen extends ConsumerWidget {
   Future<void> _downloadData(WidgetRef ref) => downloadPracticeReport(ref);
 }
 
+bool _reportExportInProgress = false;
+
 /// Shared entry point so other screens can trigger the PDF export.
 Future<void> downloadPracticeReport(WidgetRef ref) async {
+  if (_reportExportInProgress) return;
+  _reportExportInProgress = true;
+  try {
+  // body continues below — closed by finally at end of function
     final profile = ref.read(activeProfileProvider).value;
     final session = ref.read(sessionProvider).value;
     final settings = await ref.read(settingsRepositoryProvider).snapshot();
@@ -952,6 +958,9 @@ Future<void> downloadPracticeReport(WidgetRef ref) async {
         text: 'My mantra practice data from Vachika Lekhini',
       ),
     );
+  } finally {
+    _reportExportInProgress = false;
+  }
   }
 
 pw.Widget _pdfSectionHeader(String title, PdfColor primary, PdfColor bg) {

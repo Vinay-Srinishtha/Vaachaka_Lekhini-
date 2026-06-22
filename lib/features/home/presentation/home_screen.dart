@@ -909,6 +909,10 @@ class _HeroQuote extends ConsumerWidget {
 // Quote share helper — downloads image to a temp file then shares as XFile
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Guard against double-taps: share_plus is async (image download can take
+// seconds) so without this every tap during the wait fires another share sheet.
+bool _shareInProgress = false;
+
 Future<void> _shareQuote(
   BuildContext context, {
   required String quoteText,
@@ -917,6 +921,9 @@ Future<void> _shareQuote(
   required String appLink,
   required String? template,
 }) async {
+  if (_shareInProgress) return;
+  _shareInProgress = true;
+  try {
   String shareText;
   if (template != null && template.isNotEmpty) {
     shareText = template
@@ -933,21 +940,23 @@ Future<void> _shareQuote(
 
   if (imageUrl == null || imageUrl.isEmpty) {
     await SharePlus.instance.share(ShareParams(text: shareText));
-    return;
+  } else {
+    try {
+      final tmpDir = await getTemporaryDirectory();
+      final ext = imageUrl.contains('.png') ? 'png' : 'jpg';
+      final file = File('${tmpDir.path}/quote_share.$ext');
+      await Dio().download(imageUrl, file.path);
+      await SharePlus.instance.share(ShareParams(
+        text: shareText,
+        files: [XFile(file.path, mimeType: 'image/$ext')],
+      ));
+    } catch (_) {
+      // Fall back to text-only if image download fails.
+      await SharePlus.instance.share(ShareParams(text: shareText));
+    }
   }
-
-  try {
-    final tmpDir = await getTemporaryDirectory();
-    final ext = imageUrl.contains('.png') ? 'png' : 'jpg';
-    final file = File('${tmpDir.path}/quote_share.$ext');
-    await Dio().download(imageUrl, file.path);
-    await SharePlus.instance.share(ShareParams(
-      text: shareText,
-      files: [XFile(file.path, mimeType: 'image/$ext')],
-    ));
-  } catch (_) {
-    // Fall back to text-only if image download fails.
-    await SharePlus.instance.share(ShareParams(text: shareText));
+  } finally {
+    _shareInProgress = false;
   }
 }
 

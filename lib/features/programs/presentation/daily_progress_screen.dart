@@ -760,10 +760,15 @@ class _ShareSheetContent extends StatelessWidget {
 
 /// Downloads [imageUrl] to a temp file and shares it together with [message].
 /// Falls back to text-only share if the download fails.
+/// Guard flag prevents double-taps from firing multiple share sheets.
+bool _shareWithImageInProgress = false;
+
 Future<void> _shareWithImage({
   required String message,
   required String imageUrl,
 }) async {
+  if (_shareWithImageInProgress) return;
+  _shareWithImageInProgress = true;
   try {
     final tmpDir = await getTemporaryDirectory();
     final ext = imageUrl.contains('.png') ? 'png' : 'jpg';
@@ -775,6 +780,8 @@ Future<void> _shareWithImage({
     ));
   } catch (_) {
     await SharePlus.instance.share(ShareParams(text: message));
+  } finally {
+    _shareWithImageInProgress = false;
   }
 }
 

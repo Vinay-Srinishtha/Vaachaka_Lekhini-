@@ -119,27 +119,32 @@ class _SetProgramTargetScreenState
         return;
       }
 
-      final enrolment = await ref
-          .read(voiceEnrolmentRepositoryProvider)
-          .get(profile.id, widget.mantraId);
-      if (!mounted) return;
-      if (enrolment == null || !enrolment.isComplete) {
-        setState(() => _busy = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(seconds: 5),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: KvlColors.primaryDeep,
-            content: Text(
-              'Complete voice training '
-              '(${VoiceEnrolment.requiredSamples}/${VoiceEnrolment.requiredSamples}) '
-              'before creating a voice program.',
-              style: KvlText.caption(12).copyWith(color: Colors.white),
+      // Voice training check only applies when creating a brand-new program.
+      // In attach mode (programId != null) the program already exists and the
+      // user may have been practicing in manual mode — don't block them.
+      if (widget.programId == null) {
+        final enrolment = await ref
+            .read(voiceEnrolmentRepositoryProvider)
+            .get(profile.id, widget.mantraId);
+        if (!mounted) return;
+        if (enrolment == null || !enrolment.isComplete) {
+          setState(() => _busy = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              duration: const Duration(seconds: 5),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: KvlColors.primaryDeep,
+              content: Text(
+                'Complete voice training '
+                '(${VoiceEnrolment.requiredSamples}/${VoiceEnrolment.requiredSamples}) '
+                'before creating a voice program.',
+                style: KvlText.caption(12).copyWith(color: Colors.white),
+              ),
             ),
-          ),
-        );
-        context.push('${KvlRoute.voiceTraining}/${widget.mantraId}');
-        return;
+          );
+          context.push('${KvlRoute.voiceTraining}/${widget.mantraId}');
+          return;
+        }
       }
 
       final repo = ref.read(programRepositoryProvider);

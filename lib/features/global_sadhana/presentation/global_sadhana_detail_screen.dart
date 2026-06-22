@@ -31,29 +31,26 @@ class _GlobalSadhanaDetailScreenState
   Future<void> _startPractice(GlobalSadhana sadhana) async {
     final profile = ref.read(activeProfileProvider).value;
     if (profile == null) return;
-
-    // Check for an existing personal program for this mantra.
-    final programs = ref
-        .read(programsForActiveProfileProvider)
-        .value
-        ?.where((p) => p.mantraId == sadhana.mantraId && !p.isCompleted)
-        .toList();
-
-    if (programs != null && programs.isNotEmpty) {
-      if (mounted) context.push('${KvlRoute.practice}/${programs.first.id}');
-      return;
-    }
-
-    // No personal program — auto-create with sensible defaults so the user
-    // can practice immediately without a goal-setting screen.
     setState(() => _startingPractice = true);
     try {
       final repo = ref.read(programRepositoryProvider);
-      final program = await repo.create(
+
+      // Always do a fresh DB lookup to avoid race with provider loading state.
+      final all = await repo.listForProfile(profile.id);
+      final existing = all
+          .where((p) => p.mantraId == sadhana.mantraId && !p.isCompleted)
+          .toList();
+
+      if (existing.isNotEmpty) {
+        if (mounted) context.push('${KvlRoute.practice}/${existing.first.id}');
+        return;
+      }
+
+      // No personal program — create an open one so the user can set their
+      // own goal via "Build Your Program" after the first session.
+      final program = await repo.createOpen(
         memberId: profile.id,
         mantraId: sadhana.mantraId,
-        targetWritings: 1008,
-        targetDays: 108,
       );
       ref.invalidate(programsForActiveProfileProvider);
       if (mounted) context.push('${KvlRoute.practice}/${program.id}');

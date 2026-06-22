@@ -1288,6 +1288,17 @@ class _PointsBadgeState extends ConsumerState<_PointsBadge>
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(_PointsBadge old) {
+    super.didUpdateWidget(old);
+    if (old.sessionCount != widget.sessionCount) {
+      // Run after the current frame so setState is safe.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _checkSessionMilestone(widget.sessionCount);
+      });
+    }
+  }
+
   // Animate only when another 11-chant milestone is crossed in the session.
   void _checkSessionMilestone(int sessionCount) {
     final milestones = sessionCount ~/ 11;
@@ -1304,9 +1315,6 @@ class _PointsBadgeState extends ConsumerState<_PointsBadge>
   Widget build(BuildContext context) {
     final points = ref.watch(rewardTotalProvider).value;
     if (points == null) return const SizedBox.shrink();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _checkSessionMilestone(widget.sessionCount);
-    });
     final compact = widget.compact;
     return Stack(
       clipBehavior: Clip.none,

@@ -37,6 +37,8 @@
 	}: Props = $props();
 
 	let submitting = $state(false);
+	let imageUrl = $state<string | null>(value.imageUrl ?? null);
+	$effect.pre(() => { imageUrl = value.imageUrl ?? null; });
 </script>
 
 <form
@@ -97,13 +99,14 @@
 		</div>
 		<div>
 			<p class="text-sm font-medium text-slate-700 mb-1.5">Image</p>
-			<input id="imageUrl" name="imageUrl" type="hidden" value={value.imageUrl ?? ''} />
+			<input id="imageUrl" name="imageUrl" type="hidden" value={imageUrl ?? ''} />
 			<MediaUploadField
 				category="store-image"
 				targetId="imageUrl"
 				accept="image/*"
-				buttonLabel="Upload Image"
-				currentUrl={value.imageUrl}
+				buttonLabel={imageUrl ? 'Replace image' : 'Upload image'}
+				currentUrl={imageUrl}
+				onUrlChange={(url) => { imageUrl = url; }}
 			/>
 			{#if fieldErrors.imageUrl}<p class="mt-1 text-xs text-red-600">{fieldErrors.imageUrl}</p>{/if}
 		</div>

@@ -18,6 +18,7 @@ import '../../../core/theme/theme.dart';
 import '../../../core/utils/indian_number_format.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../programs/domain/session.dart';
+import '../../global_sadhana/domain/global_sadhana.dart';
 import '../../programs/presentation/book_preview_sheet.dart';
 import '../../programs/presentation/daily_progress_screen.dart';
 import '../../settings/domain/settings_repository.dart';
@@ -545,16 +546,38 @@ class _BodyState extends ConsumerState<_Body> {
     WidgetRef ref,
     String programId,
   ) async {
-    final mantraId = ref
-        .read(practiceControllerProvider(programId))
-        .value
-        ?.program
-        .mantraId;
+    final programState =
+        ref.read(practiceControllerProvider(programId)).value;
+    final mantraId = programState?.program.mantraId;
+    final todaysCount = programState?.todaysTotal ?? 0;
+
+    // Check if there's an active Global Sadhana for this mantra that the user
+    // is enrolled in — if so show the Global Sadhana celebration sheet instead.
+    GlobalSadhana? gsMatch;
+    if (mantraId != null) {
+      final sadhanas =
+          ref.read(activeGlobalSadhanaProvider).value ?? const [];
+      final gsRepo = ref.read(globalSadhanaRepositoryProvider);
+      for (final s in sadhanas) {
+        if (s.mantraId == mantraId && s.isActive) {
+          final enr = gsRepo.cachedEnrollment(s.id);
+          if (enr != null) {
+            gsMatch = s;
+            break;
+          }
+        }
+      }
+    }
+
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _DailyGoalSheet(mantraId: mantraId),
+      builder: (_) => _DailyGoalSheet(
+        mantraId: mantraId,
+        globalSadhana: gsMatch,
+        todaysCount: todaysCount,
+      ),
     );
   }
 
@@ -1936,12 +1959,20 @@ class _GoalIncompleteSheet extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _DailyGoalSheet extends StatelessWidget {
-  const _DailyGoalSheet({this.mantraId});
+  const _DailyGoalSheet({
+    this.mantraId,
+    this.globalSadhana,
+    this.todaysCount = 0,
+  });
   final String? mantraId;
+  final GlobalSadhana? globalSadhana;
+  final int todaysCount;
 
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.of(context).padding.bottom;
+    final isGlobal = globalSadhana != null;
+
     return Container(
       decoration: const BoxDecoration(
         color: KvlColors.bg,
@@ -1954,6 +1985,7 @@ class _DailyGoalSheet extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Handle bar
           Center(
             child: Container(
               width: 40, height: 4,
@@ -1964,19 +1996,63 @@ class _DailyGoalSheet extends StatelessWidget {
               ),
             ),
           ),
-          const Text('🎉', style: TextStyle(fontSize: 48), textAlign: TextAlign.center),
-          const SizedBox(height: KvlSpacing.sm),
-          Text(
-            'You reached your goal today 🙏',
-            textAlign: TextAlign.center,
-            style: KvlText.ui(20, FontWeight.w800),
-          ),
-          const SizedBox(height: KvlSpacing.xs),
-          Text(
-            'Your daily sadhana is complete. Keep the streak alive!',
-            textAlign: TextAlign.center,
-            style: KvlText.caption(13).copyWith(color: KvlColors.muted),
-          ),
+
+          if (isGlobal) ...[
+            // ── Global Sadhana celebration ─────────────────────────────────
+            // Banner image or placeholder
+            ClipRRect(
+              borderRadius: KvlRadius.brLG,
+              child: globalSadhana!.imageUrl != null
+                  ? Image.network(
+                      globalSadhana!.imageUrl!,
+                      height: 160,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => _GsPlaceholder(sadhana: globalSadhana!),
+                    )
+                  : _GsPlaceholder(sadhana: globalSadhana!),
+            ),
+            const SizedBox(height: KvlSpacing.md),
+            Text(
+              '🕉  ${globalSadhana!.title}',
+              textAlign: TextAlign.center,
+              style: KvlText.ui(16, FontWeight.w700),
+            ),
+            const SizedBox(height: KvlSpacing.xs),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: KvlSpacing.md,
+                vertical: KvlSpacing.sm,
+              ),
+              decoration: BoxDecoration(
+                color: KvlColors.primaryGhost,
+                borderRadius: KvlRadius.brMD,
+              ),
+              child: Text(
+                'You contributed ${IndianNumberFormat.format(todaysCount)} chants today for this initiative 🙏',
+                textAlign: TextAlign.center,
+                style: KvlText.ui(14, FontWeight.w600)
+                    .copyWith(color: KvlColors.primaryDeep, height: 1.4),
+              ),
+            ),
+          ] else ...[
+            // ── Generic daily goal celebration ──────────────────────────────
+            const Text('🎉', style: TextStyle(fontSize: 48), textAlign: TextAlign.center),
+            const SizedBox(height: KvlSpacing.sm),
+            Text(
+              'You reached your goal today 🙏',
+              textAlign: TextAlign.center,
+              style: KvlText.ui(20, FontWeight.w800),
+            ),
+            const SizedBox(height: KvlSpacing.xs),
+            Text(
+              'Your daily sadhana is complete. Keep the streak alive!',
+              textAlign: TextAlign.center,
+              style: KvlText.caption(13).copyWith(color: KvlColors.muted),
+            ),
+          ],
+
+          // Preview My Book — shown for all programs that have writings
           if (mantraId != null) ...[
             const SizedBox(height: KvlSpacing.md),
             OutlinedButton.icon(
@@ -2000,9 +2076,43 @@ class _DailyGoalSheet extends StatelessWidget {
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: Text(
-              'Continue Practice',
+              'Complete Session',
               style: KvlText.ui(14, FontWeight.w600).copyWith(color: KvlColors.primary),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GsPlaceholder extends StatelessWidget {
+  const _GsPlaceholder({required this.sadhana});
+  final GlobalSadhana sadhana;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 160,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFFFF8C42), Color(0xFFE07020)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.language_rounded, color: Colors.white, size: 36),
+          const SizedBox(height: 8),
+          Text(
+            sadhana.title,
+            style: KvlText.title(15).copyWith(color: Colors.white),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

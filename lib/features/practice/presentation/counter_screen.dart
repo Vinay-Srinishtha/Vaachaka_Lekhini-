@@ -48,19 +48,23 @@ final _ambientPlayerProvider = Provider.autoDispose<AudioPlayer>((ref) {
   player.setReleaseMode(ReleaseMode.loop);
   // Background Sruthi at 50% — present but never overpowering the chanting.
   player.setVolume(0.5);
-  // Mix with the live mic capture instead of grabbing audio focus, so turning
-  // Sruthi on never interrupts voice recognition (same fix as the reward bell).
+  // Audio context: plays through silent/ringer switch on both platforms.
+  // iOS: playback category bypasses the silent switch (unlike ambient/soloAmbient).
+  // Android: usageType.media is not muted by silent mode (only ringtones are).
   player.setAudioContext(AudioContext(
     android: AudioContextAndroid(
       isSpeakerphoneOn: false,
-      stayAwake: false,
+      stayAwake: true,
       contentType: AndroidContentType.music,
       usageType: AndroidUsageType.media,
       audioFocus: AndroidAudioFocus.none,
     ),
     iOS: AudioContextIOS(
-      category: AVAudioSessionCategory.playAndRecord,
-      options: const {AVAudioSessionOptions.mixWithOthers},
+      category: AVAudioSessionCategory.playback,
+      options: const {
+        AVAudioSessionOptions.mixWithOthers,
+        AVAudioSessionOptions.defaultToSpeaker,
+      },
     ),
   ));
   // Pre-load the asset so the first play is instant (no decode delay).

@@ -119,8 +119,33 @@
 
 		</div>
 
-		<!-- RIGHT column: About App + Invite Host -->
+		<!-- RIGHT column: App Link + Invite Host + About App -->
 		<div class="flex flex-col gap-6 min-h-0">
+
+			<!-- App Link -->
+			<div class="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+				<div class="flex items-start gap-3">
+					<span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-600">
+						<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 0 0 6 3.75v16.5a2.25 2.25 0 0 0 2.25 2.25h7.5A2.25 2.25 0 0 0 18 20.25V3.75a2.25 2.25 0 0 0-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 8.25h3m-3 3h3m-3 3h3"/></svg>
+					</span>
+					<div>
+						<h2 class="text-sm font-semibold text-slate-800">App Link</h2>
+						<p class="mt-0.5 text-xs text-slate-500">Public URL where users can download the app. Used in share messages, invite links, and the API.</p>
+					</div>
+				</div>
+				<div>
+					<label class="mb-1 block text-xs font-medium text-slate-600" for="app_link">App URL</label>
+					<input
+						id="app_link"
+						name="app_link"
+						type="url"
+						value={s.app_link ?? 'https://vaachakalekhini.com/app'}
+						placeholder="https://vaachakalekhini.com/app"
+						class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+					/>
+					<p class="mt-1.5 text-[10px] text-slate-400">Exposed in the Flutter app as <code class="bg-slate-100 px-1 rounded">app_link</code> and used as the <code class="bg-slate-100 px-1 rounded">{'{app_link}'}</code> placeholder in share templates.</p>
+				</div>
+			</div>
 
 			<!-- Invite Host -->
 			<div class="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">

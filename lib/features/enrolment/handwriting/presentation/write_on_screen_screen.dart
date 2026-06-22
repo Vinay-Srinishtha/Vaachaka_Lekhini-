@@ -562,6 +562,8 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
             ? () => context.go('${KvlRoute.practice}/${widget.programId}')
             : null,
         mantraId: widget.mantraId,
+        selectedLangLabel: KvlLanguage.byCode(effectiveLangCode).label,
+        onPickLanguage: () => unawaited(_showLanguagePicker()),
         targetCount: programs
             .where((p) => p.id == widget.programId)
             .fold<int>(0, (_, p) => p.targetWritings),
@@ -1182,6 +1184,8 @@ class _ProtoWriteScaffold extends ConsumerStatefulWidget {
     required this.onColorSelected,
     required this.onSwitchToVoice,
     required this.mantraId,
+    required this.selectedLangLabel,
+    required this.onPickLanguage,
     this.targetCount = 0,
   });
 
@@ -1200,6 +1204,8 @@ class _ProtoWriteScaffold extends ConsumerStatefulWidget {
   final ValueChanged<Color> onColorSelected;
   final VoidCallback? onSwitchToVoice;
   final String mantraId;
+  final String selectedLangLabel;
+  final VoidCallback onPickLanguage;
   final int targetCount;
 
   @override
@@ -1397,13 +1403,60 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
                     ),
                   ),
                 ),
-              // Bottom-left: Preview My Book
+              // Bottom-left: Language chip + Preview My Book
               Positioned(
                 left: compact ? 10 : 16,
                 bottom: bottomStripH + (compact ? 6 : 10),
-                child: BookPreviewButton(
-                  compact: compact,
-                  mantraId: widget.mantraId,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      onTap: widget.onPickLanguage,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: compact ? 10 : 13,
+                          vertical: compact ? 6 : 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: KvlColors.primaryGhost,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: KvlColors.primary.withValues(alpha: .35),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: .07),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.language_rounded,
+                                size: compact ? 13 : 15,
+                                color: KvlColors.primaryDeep),
+                            SizedBox(width: compact ? 4 : 5),
+                            Text(
+                              widget.selectedLangLabel,
+                              style: KvlText.ui(compact ? 11 : 12.5, FontWeight.w600)
+                                  .copyWith(color: KvlColors.primaryDeep),
+                            ),
+                            SizedBox(width: compact ? 3 : 4),
+                            Icon(Icons.expand_more_rounded,
+                                size: compact ? 13 : 15,
+                                color: KvlColors.primaryDeep),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: compact ? 8 : 10),
+                    BookPreviewButton(
+                      compact: compact,
+                      mantraId: widget.mantraId,
+                    ),
+                  ],
                 ),
               ),
               // Bottom strip: Progress [bar] X/Y

@@ -745,7 +745,7 @@ class AppSettings {
   /// Best available app link: app_link preferred, falls back to app_download_link.
   String get effectiveAppLink =>
       (appLink?.isNotEmpty == true ? appLink : appDownloadLink) ??
-      'https://vaachakalekhini.com/app';
+      'https://vaachika-lekhani.vercel.app';
   final String? shareQuoteImageUrl;
   final String? shareQuoteText;
 

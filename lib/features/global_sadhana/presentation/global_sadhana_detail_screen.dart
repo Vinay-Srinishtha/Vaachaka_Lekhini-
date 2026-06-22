@@ -131,7 +131,7 @@ class _GlobalSadhanaDetailScreenState
 
   Future<void> _share(GlobalSadhana sadhana) async {
     final appLink = ref.read(appSettingsProvider).value?.effectiveAppLink
-        ?? 'https://vaachakalekhini.com/app';
+        ?? 'https://vaachika-lekhani.vercel.app';
     final msg = '🕉 Join the "${sadhana.title}" Global Sadhana!\n'
         'Together we chant toward ${IndianNumberFormat.format(sadhana.targetCount)} chants.\n'
         'Join me on Vachika Lekhini 🙏\n$appLink';

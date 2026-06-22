@@ -139,8 +139,8 @@
 						id="app_link"
 						name="app_link"
 						type="url"
-						value={s.app_link ?? 'https://vaachakalekhini.com/app'}
-						placeholder="https://vaachakalekhini.com/app"
+						value={s.app_link ?? 'https://vaachika-lekhani.vercel.app'}
+						placeholder="https://vaachika-lekhani.vercel.app"
 						class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
 					/>
 					<p class="mt-1.5 text-[10px] text-slate-400">Exposed in the Flutter app as <code class="bg-slate-100 px-1 rounded">app_link</code> and used as the <code class="bg-slate-100 px-1 rounded">{'{app_link}'}</code> placeholder in share templates.</p>
@@ -228,7 +228,7 @@
 					name="app_download_link"
 					type="url"
 					value={s.app_download_link ?? ''}
-					placeholder="https://vaachakalekhini.com/download"
+					placeholder="https://vaachika-lekhani.vercel.app"
 					class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
 				/>
 				<p class="text-[10px] text-slate-400">Use a universal link that redirects to Play Store / App Store.</p>

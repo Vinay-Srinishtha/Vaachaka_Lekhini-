@@ -10,7 +10,7 @@ async function loadSettings() {
 		privacy_policy: '',
 		about_app: '',
 		app_logo_url: '',
-		app_link: 'https://vaachakalekhini.com/app',
+		app_link: 'https://vaachika-lekhani.vercel.app',
 		invite_host: 'vaachakalekhini.com',
 		app_download_link: '',
 		share_quote_image_url: '',
@@ -29,7 +29,9 @@ export const load: PageServerLoad = async (event) => {
 
 export const actions: Actions = {
 	save: async (event) => {
-		requireRole(event, 'editor');
+		try { requireRole(event, 'editor'); } catch {
+			return { ok: false, settings: await loadSettings(), error: 'You do not have permission to save settings.' };
+		}
 		const form = await event.request.formData();
 		const privacyPolicy     = String(form.get('privacy_policy') ?? '').trim();
 		const aboutApp          = String(form.get('about_app') ?? '').trim();
@@ -50,18 +52,23 @@ export const actions: Actions = {
 				create: { key, value, updatedAt: new Date() }
 			});
 
-		await prisma.$transaction([
-			upsert('privacy_policy', privacyPolicy),
-			upsert('about_app', aboutApp),
-			upsert('app_logo_url', appLogoUrl),
-			upsert('app_link', appLink),
-			upsert('invite_host', inviteHost || 'vaachakalekhini.com'),
-			upsert('app_download_link', appDownloadLink),
-			upsert('share_quote_image_url', shareQuoteImgUrl),
-			upsert('share_quote_text', shareQuoteText),
-			upsert('bulletin_mode', bulletinMode),
-			upsert('bulletin_text', bulletinText),
-		]);
+		try {
+			await prisma.$transaction([
+				upsert('privacy_policy', privacyPolicy),
+				upsert('about_app', aboutApp),
+				upsert('app_logo_url', appLogoUrl),
+				upsert('app_link', appLink),
+				upsert('invite_host', inviteHost || 'vaachika-lekhani.vercel.app'),
+				upsert('app_download_link', appDownloadLink),
+				upsert('share_quote_image_url', shareQuoteImgUrl),
+				upsert('share_quote_text', shareQuoteText),
+				upsert('bulletin_mode', bulletinMode),
+				upsert('bulletin_text', bulletinText),
+			]);
+		} catch (e) {
+			console.error('[app-settings save]', e);
+			return { ok: false, settings: await loadSettings(), error: 'Database error — changes not saved. Check server logs.' };
+		}
 
 		const settings = await loadSettings();
 		return { ok: true, settings, error: null };

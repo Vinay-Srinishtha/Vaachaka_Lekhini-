@@ -63,6 +63,15 @@ final _ambientPlayerProvider = Provider.autoDispose<AudioPlayer>((ref) {
       options: const {AVAudioSessionOptions.mixWithOthers},
     ),
   ));
+  // Pre-load the asset so the first play is instant (no decode delay).
+  // The source stays buffered; toggle uses resume()/pause() from here on.
+  player.setSourceAsset('audio/ambient_loop.mp3');
+  // Gapless fallback: if the native loop still fires a completion event,
+  // seek back to zero and resume immediately so there is no audible gap.
+  player.onPlayerComplete.listen((_) async {
+    await player.seek(Duration.zero);
+    await player.resume();
+  });
   ref.onDispose(() {
     player.stop();
     player.dispose();
@@ -700,9 +709,10 @@ class _TopBar extends ConsumerWidget {
               ref.read(_ambientOnProvider.notifier).toggle();
               final player = ref.read(_ambientPlayerProvider);
               if (ref.read(_ambientOnProvider)) {
-                await player.play(AssetSource('audio/ambient_loop.mp3'));
+                // Source is pre-loaded — resume is instant with no gap.
+                await player.resume();
               } else {
-                await player.stop();
+                await player.pause();
               }
             },
           ),

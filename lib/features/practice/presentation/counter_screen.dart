@@ -299,6 +299,7 @@ class _BodyState extends ConsumerState<_Body> {
                   _TopBar(
                     compact: compact,
                     sessionCount: state.sessionCount,
+                    mantraId: state.program.mantraId,
                     onBack: () {
                       if (context.canPop()) {
                         context.pop();
@@ -311,14 +312,6 @@ class _BodyState extends ConsumerState<_Body> {
                     ),
                     ringerMode: ringerMode,
                     onCycleRinger: () => _cycleRingerMode(ref),
-                  ),
-                  SizedBox(height: compact ? 8 : 12),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: BookPreviewButton(
-                      compact: compact,
-                      mantraId: state.program.mantraId,
-                    ),
                   ),
                   SizedBox(height: compact ? 10 : 16),
                   Expanded(
@@ -612,6 +605,7 @@ class _TopBar extends ConsumerWidget {
     required this.onWritingMode,
     required this.ringerMode,
     required this.onCycleRinger,
+    required this.mantraId,
   });
   final bool compact;
   final int sessionCount;
@@ -619,6 +613,7 @@ class _TopBar extends ConsumerWidget {
   final VoidCallback onWritingMode;
   final RingerMode ringerMode;
   final VoidCallback onCycleRinger;
+  final String mantraId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -721,21 +716,82 @@ class _TopBar extends ConsumerWidget {
             },
           ),
         ),
-        // Reward points — replaces the old profile button (top-right). The
-        // +pts milestone animation plays here.
+        // Reward points + book count stacked in the top-right.
         Expanded(
           flex: 2,
           child: Align(
             alignment: Alignment.topRight,
-            child: SizedBox(
-              height: btn,
-              child: Center(
-                child: _PointsBadge(compact: compact, sessionCount: sessionCount),
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                SizedBox(
+                  height: btn,
+                  child: Center(
+                    child: _PointsBadge(compact: compact, sessionCount: sessionCount),
+                  ),
+                ),
+                _BookCountBadge(compact: compact, mantraId: mantraId),
+              ],
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Book count badge — icon + number only, sits below the points chip
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _BookCountBadge extends ConsumerWidget {
+  const _BookCountBadge({required this.compact, required this.mantraId});
+  final bool compact;
+  final String mantraId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final count =
+        ref.watch(bookAssetsProvider(mantraId)).value?.length ?? 0;
+    if (count == 0) return const SizedBox.shrink();
+
+    return GestureDetector(
+      onTap: () => BookPreviewButton.openSheet(context, mantraId),
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 9 : 11,
+          vertical: compact ? 4 : 5,
+        ),
+        decoration: BoxDecoration(
+          color: KvlColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: KvlColors.border, width: 1.1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.menu_book_rounded,
+              size: compact ? 13 : 15,
+              color: KvlColors.primaryDeep,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              IndianNumberFormat.format(count),
+              style: KvlText.ui(compact ? 11 : 12, FontWeight.w800)
+                  .copyWith(color: KvlColors.primaryDeep),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

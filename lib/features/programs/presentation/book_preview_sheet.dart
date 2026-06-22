@@ -13,7 +13,7 @@ import '../../mantras/domain/mantra.dart';
 // Provider
 // ─────────────────────────────────────────────────────────────────────────────
 
-final _bookAssetsProvider =
+final bookAssetsProvider =
     FutureProvider.autoDispose.family<List<HandwritingAsset>, String>(
   (ref, mantraId) async {
     final profile = ref.watch(activeProfileProvider).value;
@@ -46,7 +46,7 @@ class BookPreviewButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final count =
-        ref.watch(_bookAssetsProvider(mantraId)).value?.length ?? 0;
+        ref.watch(bookAssetsProvider(mantraId)).value?.length ?? 0;
 
     return GestureDetector(
       onTap: () => openSheet(context, mantraId),
@@ -123,7 +123,7 @@ class _BookPreviewSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final assets = ref.watch(_bookAssetsProvider(mantraId));
+    final assets = ref.watch(bookAssetsProvider(mantraId));
     final mantra = ref.watch(mantraByIdProvider(mantraId));
     final mh = MediaQuery.sizeOf(context).height;
 

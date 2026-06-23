@@ -14,10 +14,9 @@ import '../../../core/utils/indian_number_format.dart';
 import '../../enrolment/handwriting/domain/handwriting_asset.dart';
 import '../../mantras/domain/mantra.dart';
 import '../../profiles/domain/profile.dart';
-import '../domain/program.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Provider
+// Providers
 // ─────────────────────────────────────────────────────────────────────────────
 
 final bookAssetsProvider =
@@ -36,6 +35,16 @@ final bookAssetsProvider =
   },
 );
 
+/// Aggregate total chants + writings across ALL programs (active & completed)
+/// for a given mantra. This is the canonical "book total" displayed everywhere.
+final bookTotalForMantraProvider =
+    Provider.autoDispose.family<int, String>((ref, mantraId) {
+  final programs = ref.watch(programsForActiveProfileProvider).value ?? [];
+  return programs
+      .where((p) => p.mantraId == mantraId)
+      .fold(0, (sum, p) => sum + p.totalProgress);
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Public entry-point button
 // ─────────────────────────────────────────────────────────────────────────────
@@ -52,8 +61,7 @@ class BookPreviewButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final count =
-        ref.watch(bookAssetsProvider(mantraId)).value?.length ?? 0;
+    final total = ref.watch(bookTotalForMantraProvider(mantraId));
 
     return GestureDetector(
       onTap: () => openSheet(context, mantraId),
@@ -88,7 +96,7 @@ class BookPreviewButton extends ConsumerWidget {
               style: KvlText.ui(compact ? 11.5 : 12.5, FontWeight.w700)
                   .copyWith(color: KvlColors.primaryDeep),
             ),
-            if (count > 0) ...[
+            if (total > 0) ...[
               const SizedBox(width: 5),
               Container(
                 padding:
@@ -98,7 +106,7 @@ class BookPreviewButton extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  IndianNumberFormat.format(count),
+                  IndianNumberFormat.format(total),
                   style: KvlText.ui(compact ? 10 : 11, FontWeight.w800)
                       .copyWith(color: KvlColors.primaryDeep),
                 ),
@@ -147,13 +155,13 @@ const _cellH = _gridH / 9;
 Future<void> _openLekhanaSheet({
   required BuildContext context,
   required Profile? profile,
-  required Program? program,
+  required int totalProgress,
   required Mantra? mantra,
   required List<HandwritingAsset> assets,
 }) async {
   final bytes = await _buildLekhanaSheetPdf(
     profile: profile,
-    program: program,
+    totalProgress: totalProgress,
     mantra: mantra,
     assets: assets,
   );
@@ -162,7 +170,7 @@ Future<void> _openLekhanaSheet({
 
 Future<Uint8List> _buildLekhanaSheetPdf({
   required Profile? profile,
-  required Program? program,
+  required int totalProgress,
   required Mantra? mantra,
   required List<HandwritingAsset> assets,
 }) async {
@@ -203,7 +211,6 @@ Future<Uint8List> _buildLekhanaSheetPdf({
   final name = profile?.name ?? '';
   final gothra = profile?.gothra ?? '';
   final address = profile?.location ?? '';
-  final totalProgress = program?.totalProgress ?? 0;
   final totalForPdf = math.max(totalProgress, 1);
 
   // ── Mantra text ────────────────────────────────────────────────────────────
@@ -535,13 +542,16 @@ class _BookPreviewSheet extends ConsumerWidget {
     final assets = ref.watch(bookAssetsProvider(mantraId));
     final mantra = ref.watch(mantraByIdProvider(mantraId));
     final profile = ref.watch(activeProfileProvider).value;
-    final programs = ref.watch(programsForActiveProfileProvider).value ?? [];
-    final program = programs.where((p) => p.mantraId == mantraId).firstOrNull;
+    final allPrograms = ref.watch(programsForActiveProfileProvider).value ?? [];
+    final mantraPrograms = allPrograms.where((p) => p.mantraId == mantraId).toList();
+    final totalProgress = ref.watch(bookTotalForMantraProvider(mantraId));
+    final completedPrograms = mantraPrograms.where((p) => p.isCompleted).length;
+    final activePrograms = mantraPrograms.where((p) => !p.isCompleted).length;
     final mh = MediaQuery.sizeOf(context).height;
 
     return DraggableScrollableSheet(
-      initialChildSize: 0.72,
-      minChildSize: 0.4,
+      initialChildSize: 0.85,
+      minChildSize: 0.5,
       maxChildSize: 0.95,
       expand: false,
       builder: (_, scrollCtrl) {
@@ -564,10 +574,9 @@ class _BookPreviewSheet extends ConsumerWidget {
                   ),
                 ),
               ),
-              // Header
+              // Header row
               Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 20, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 child: Row(
                   children: [
                     const Icon(Icons.menu_book_rounded,
@@ -577,10 +586,7 @@ class _BookPreviewSheet extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'My Writing Book',
-                            style: KvlText.title(17),
-                          ),
+                          Text('My Writing Book', style: KvlText.title(17)),
                           if (mantra != null)
                             Text(
                               _mantraName(mantra),
@@ -590,50 +596,146 @@ class _BookPreviewSheet extends ConsumerWidget {
                         ],
                       ),
                     ),
+                    // Share / PDF button — always visible
                     assets.when(
-                      data: (list) => Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '${IndianNumberFormat.format(list.length)} writings',
-                            style: KvlText.caption(12)
-                                .copyWith(color: KvlColors.inkSoft),
-                          ),
-                          const SizedBox(width: 10),
-                          ElevatedButton.icon(
-                            onPressed: () => _openLekhanaSheet(
-                              context: context,
-                              profile: profile,
-                              program: program,
-                              mantra: mantra,
-                              assets: list,
-                            ),
-                            icon: const Icon(Icons.picture_as_pdf_rounded,
-                                size: 16),
-                            label: const Text('Preview Book'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: KvlColors.primaryDeep,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 8),
-                              textStyle:
-                                  KvlText.ui(13, FontWeight.w700),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              elevation: 0,
-                            ),
-                          ),
-                        ],
+                      data: (list) => IconButton(
+                        onPressed: totalProgress == 0
+                            ? null
+                            : () => _openLekhanaSheet(
+                                  context: context,
+                                  profile: profile,
+                                  totalProgress: totalProgress,
+                                  mantra: mantra,
+                                  assets: list,
+                                ),
+                        icon: const Icon(Icons.share_rounded),
+                        color: KvlColors.primaryDeep,
+                        tooltip: 'Share / Save PDF',
                       ),
                       loading: () => const SizedBox.shrink(),
-                      error: (e, _) => const SizedBox.shrink(),
+                      error: (_, __) => const SizedBox.shrink(),
                     ),
                   ],
                 ),
               ),
+
+              // ── Complete Book Score card ───────────────────────────────────
+              if (mantraPrograms.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 14),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          KvlColors.primaryDeep,
+                          KvlColors.primary.withValues(alpha: 0.85),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: KvlColors.primaryDeep.withValues(alpha: 0.25),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        // Big count
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Complete Book Score',
+                                style: KvlText.caption(11).copyWith(
+                                  color: Colors.white.withValues(alpha: 0.75),
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                IndianNumberFormat.format(totalProgress),
+                                style: KvlText.ui(32, FontWeight.w900)
+                                    .copyWith(color: Colors.white),
+                              ),
+                              Text(
+                                'total chants & writings',
+                                style: KvlText.caption(11).copyWith(
+                                  color: Colors.white.withValues(alpha: 0.7),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Program stats
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            _ScoreStat(
+                              label: 'Programs',
+                              value: '${mantraPrograms.length}',
+                            ),
+                            const SizedBox(height: 6),
+                            _ScoreStat(
+                              label: 'Completed',
+                              value: '$completedPrograms',
+                            ),
+                            const SizedBox(height: 6),
+                            _ScoreStat(
+                              label: 'Active',
+                              value: '$activePrograms',
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              // ── PDF button ─────────────────────────────────────────────────
+              if (totalProgress > 0)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: assets.when(
+                    data: (list) => SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _openLekhanaSheet(
+                          context: context,
+                          profile: profile,
+                          totalProgress: totalProgress,
+                          mantra: mantra,
+                          assets: list,
+                        ),
+                        icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
+                        label: const Text('Preview & Share Book PDF'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: KvlColors.primaryDeep,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          textStyle: KvlText.ui(14, FontWeight.w700),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          elevation: 0,
+                        ),
+                      ),
+                    ),
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, __) => const SizedBox.shrink(),
+                  ),
+                ),
+
               const Divider(height: 1),
-              // Grid
+
+              // ── Writing samples grid ───────────────────────────────────────
               Expanded(
                 child: assets.when(
                   loading: () => const Center(
@@ -675,6 +777,34 @@ class _BookPreviewSheet extends ConsumerWidget {
   }
 
   String _mantraName(Mantra m) => m.name.roman;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Score card stat chip
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ScoreStat extends StatelessWidget {
+  const _ScoreStat({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          '$label: ',
+          style: KvlText.caption(11)
+              .copyWith(color: Colors.white.withValues(alpha: 0.7)),
+        ),
+        Text(
+          value,
+          style: KvlText.ui(12, FontWeight.w800).copyWith(color: Colors.white),
+        ),
+      ],
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

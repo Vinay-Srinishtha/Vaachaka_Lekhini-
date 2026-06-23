@@ -533,21 +533,78 @@ pw.Widget _buildGrid({
 // Bottom sheet
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _BookPreviewSheet extends ConsumerWidget {
+class _BookPreviewSheet extends ConsumerStatefulWidget {
   const _BookPreviewSheet({required this.mantraId});
   final String mantraId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final assets = ref.watch(bookAssetsProvider(mantraId));
-    final mantra = ref.watch(mantraByIdProvider(mantraId));
+  ConsumerState<_BookPreviewSheet> createState() => _BookPreviewSheetState();
+}
+
+class _BookPreviewSheetState extends ConsumerState<_BookPreviewSheet>
+    with SingleTickerProviderStateMixin {
+  late TabController _tab;
+
+  @override
+  void initState() {
+    super.initState();
+    _tab = TabController(length: 2, vsync: this);
+    _tab.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _tab.dispose();
+    super.dispose();
+  }
+
+  Future<void> _deleteAsset(HandwritingAsset asset) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Remove writing?'),
+        content: const Text(
+            'This sample will be removed from your book. Your count remains unchanged.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Remove',
+                style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await ref.read(handwritingRepositoryProvider).delete(asset.id);
+    if (asset.filePath != null) {
+      try {
+        await File(asset.filePath!).delete();
+      } catch (_) {}
+    }
+    ref.invalidate(bookAssetsProvider(widget.mantraId));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final assets = ref.watch(bookAssetsProvider(widget.mantraId));
+    final mantra = ref.watch(mantraByIdProvider(widget.mantraId));
     final profile = ref.watch(activeProfileProvider).value;
-    final allPrograms = ref.watch(programsForActiveProfileProvider).value ?? [];
-    final mantraPrograms = allPrograms.where((p) => p.mantraId == mantraId).toList();
-    final totalProgress = ref.watch(bookTotalForMantraProvider(mantraId));
-    final completedPrograms = mantraPrograms.where((p) => p.isCompleted).length;
-    final activePrograms = mantraPrograms.where((p) => !p.isCompleted).length;
+    final allPrograms =
+        ref.watch(programsForActiveProfileProvider).value ?? [];
+    final mantraPrograms =
+        allPrograms.where((p) => p.mantraId == widget.mantraId).toList();
+    final totalProgress =
+        ref.watch(bookTotalForMantraProvider(widget.mantraId));
+    final completedPrograms =
+        mantraPrograms.where((p) => p.isCompleted).length;
+    final activePrograms =
+        mantraPrograms.where((p) => !p.isCompleted).length;
     final mh = MediaQuery.sizeOf(context).height;
+    final isBookTab = _tab.index == 1;
 
     return DraggableScrollableSheet(
       initialChildSize: 0.85,
@@ -576,7 +633,8 @@ class _BookPreviewSheet extends ConsumerWidget {
               ),
               // Header row
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 child: Row(
                   children: [
                     const Icon(Icons.menu_book_rounded,
@@ -589,145 +647,247 @@ class _BookPreviewSheet extends ConsumerWidget {
                           Text('My Writing Book', style: KvlText.title(17)),
                           if (mantra != null)
                             Text(
-                              _mantraName(mantra),
+                              mantra.name.roman,
                               style: KvlText.caption(12)
                                   .copyWith(color: KvlColors.inkSoft),
                             ),
                         ],
                       ),
                     ),
-                    // Share / PDF button — always visible
-                    assets.when(
-                      data: (list) => IconButton(
-                        onPressed: totalProgress == 0
-                            ? null
-                            : () => _openLekhanaSheet(
-                                  context: context,
-                                  profile: profile,
-                                  totalProgress: totalProgress,
-                                  mantra: mantra,
-                                  assets: list,
-                                ),
-                        icon: const Icon(Icons.share_rounded),
-                        color: KvlColors.primaryDeep,
-                        tooltip: 'Share / Save PDF',
+                    // Share button — only on Book tab
+                    if (isBookTab)
+                      assets.when(
+                        data: (list) => IconButton(
+                          onPressed: totalProgress == 0
+                              ? null
+                              : () => _openLekhanaSheet(
+                                    context: context,
+                                    profile: profile,
+                                    totalProgress: totalProgress,
+                                    mantra: mantra,
+                                    assets: list,
+                                  ),
+                          icon: const Icon(Icons.share_rounded),
+                          color: KvlColors.primaryDeep,
+                          tooltip: 'Share / Save PDF',
+                        ),
+                        loading: () => const SizedBox.shrink(),
+                        error: (_, __) => const SizedBox.shrink(),
                       ),
-                      loading: () => const SizedBox.shrink(),
-                      error: (_, __) => const SizedBox.shrink(),
-                    ),
                   ],
                 ),
               ),
 
-              // ── Complete Book Score card ───────────────────────────────────
-              if (mantraPrograms.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 14),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          KvlColors.primaryDeep,
-                          KvlColors.primary.withValues(alpha: 0.85),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: KvlColors.primaryDeep.withValues(alpha: 0.25),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        // Big count
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Complete Book Score',
-                                style: KvlText.caption(11).copyWith(
-                                  color: Colors.white.withValues(alpha: 0.75),
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                IndianNumberFormat.format(totalProgress),
-                                style: KvlText.ui(32, FontWeight.w900)
-                                    .copyWith(color: Colors.white),
-                              ),
-                              Text(
-                                'total chants & writings',
-                                style: KvlText.caption(11).copyWith(
-                                  color: Colors.white.withValues(alpha: 0.7),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Program stats
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            _ScoreStat(
-                              label: 'Programs',
-                              value: '${mantraPrograms.length}',
-                            ),
-                            const SizedBox(height: 6),
-                            _ScoreStat(
-                              label: 'Completed',
-                              value: '$completedPrograms',
-                            ),
-                            const SizedBox(height: 6),
-                            _ScoreStat(
-                              label: 'Active',
-                              value: '$activePrograms',
-                            ),
-                          ],
-                        ),
-                      ],
+              // Tab bar
+              TabBar(
+                controller: _tab,
+                labelColor: KvlColors.primaryDeep,
+                unselectedLabelColor: KvlColors.inkSoft,
+                indicatorColor: KvlColors.primary,
+                indicatorWeight: 2.5,
+                labelStyle: KvlText.ui(13, FontWeight.w700),
+                unselectedLabelStyle: KvlText.ui(13, FontWeight.w500),
+                tabs: [
+                  Tab(
+                    text: assets.when(
+                      data: (l) => 'Samples (${l.length})',
+                      loading: () => 'Samples',
+                      error: (_, __) => 'Samples',
                     ),
                   ),
-                ),
+                  const Tab(text: 'Preview Book'),
+                ],
+              ),
 
               const Divider(height: 1),
 
-              // ── Book pages grid ────────────────────────────────────────────
+              // Tab content
               Expanded(
-                child: assets.when(
-                  loading: () => const Center(
-                    child: CircularProgressIndicator(
-                        color: KvlColors.primary, strokeWidth: 2),
-                  ),
-                  error: (e, _) => Center(
-                    child: Text('Could not load writings',
-                        style: KvlText.body()
-                            .copyWith(color: KvlColors.inkSoft)),
-                  ),
-                  data: (list) {
-                    if (totalProgress == 0) return _EmptyBook(mh: mh);
-                    final totalBoxes = (totalProgress / 108).ceil();
-                    return ListView.builder(
-                      controller: scrollCtrl,
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-                      itemCount: totalBoxes,
-                      itemBuilder: (_, boxIdx) => _BookPageBox(
-                        boxIdx: boxIdx,
-                        totalProgress: totalProgress,
-                        assets: list,
-                        mantraId: mantraId,
+                child: TabBarView(
+                  controller: _tab,
+                  children: [
+                    // ── Tab 0: Samples ─────────────────────────────────────
+                    assets.when(
+                      loading: () => const Center(
+                        child: CircularProgressIndicator(
+                            color: KvlColors.primary, strokeWidth: 2),
                       ),
-                    );
-                  },
+                      error: (e, _) => Center(
+                        child: Text('Could not load writings',
+                            style: KvlText.body()
+                                .copyWith(color: KvlColors.inkSoft)),
+                      ),
+                      data: (list) {
+                        if (list.isEmpty) {
+                          return Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(32),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.draw_outlined,
+                                      size: 52,
+                                      color: KvlColors.muted
+                                          .withValues(alpha: 0.5)),
+                                  const SizedBox(height: 16),
+                                  Text('No writing samples yet',
+                                      style: KvlText.title(17)
+                                          .copyWith(color: KvlColors.inkSoft)),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Write on screen to add samples\nto your book.',
+                                    style: KvlText.caption(13).copyWith(
+                                        color: KvlColors.muted, height: 1.5),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+                        final sorted = [...list]
+                          ..sort((a, b) =>
+                              b.createdAt.compareTo(a.createdAt));
+                        return GridView.builder(
+                          controller: scrollCtrl,
+                          padding: const EdgeInsets.all(16),
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: 1.2,
+                          ),
+                          itemCount: sorted.length,
+                          itemBuilder: (_, i) =>
+                              _SampleTile(
+                                asset: sorted[i],
+                                onDelete: () => _deleteAsset(sorted[i]),
+                              ),
+                        );
+                      },
+                    ),
+
+                    // ── Tab 1: Book grid ────────────────────────────────────
+                    assets.when(
+                      loading: () => const Center(
+                        child: CircularProgressIndicator(
+                            color: KvlColors.primary, strokeWidth: 2),
+                      ),
+                      error: (e, _) => Center(
+                        child: Text('Could not load writings',
+                            style: KvlText.body()
+                                .copyWith(color: KvlColors.inkSoft)),
+                      ),
+                      data: (list) {
+                        if (totalProgress == 0) return _EmptyBook(mh: mh);
+                        return ListView(
+                          controller: scrollCtrl,
+                          padding:
+                              const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                          children: [
+                            // Score card
+                            if (mantraPrograms.isNotEmpty) ...[
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 14),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      KvlColors.primaryDeep,
+                                      KvlColors.primary
+                                          .withValues(alpha: 0.85),
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: KvlColors.primaryDeep
+                                          .withValues(alpha: 0.25),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Complete Book Score',
+                                            style: KvlText.caption(11)
+                                                .copyWith(
+                                              color: Colors.white
+                                                  .withValues(alpha: 0.75),
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            IndianNumberFormat.format(
+                                                totalProgress),
+                                            style: KvlText.ui(32,
+                                                    FontWeight.w900)
+                                                .copyWith(
+                                                    color: Colors.white),
+                                          ),
+                                          Text(
+                                            'total chants & writings',
+                                            style: KvlText.caption(11)
+                                                .copyWith(
+                                              color: Colors.white
+                                                  .withValues(alpha: 0.7),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      children: [
+                                        _ScoreStat(
+                                          label: 'Programs',
+                                          value: '${mantraPrograms.length}',
+                                        ),
+                                        const SizedBox(height: 6),
+                                        _ScoreStat(
+                                          label: 'Completed',
+                                          value: '$completedPrograms',
+                                        ),
+                                        const SizedBox(height: 6),
+                                        _ScoreStat(
+                                          label: 'Active',
+                                          value: '$activePrograms',
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                            // Book pages
+                            ...List.generate(
+                              (totalProgress / 108).ceil(),
+                              (boxIdx) => _BookPageBox(
+                                boxIdx: boxIdx,
+                                totalProgress: totalProgress,
+                                assets: list,
+                                mantraId: widget.mantraId,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -736,8 +896,6 @@ class _BookPreviewSheet extends ConsumerWidget {
       },
     );
   }
-
-  String _mantraName(Mantra m) => m.name.roman;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -982,6 +1140,112 @@ class _GridPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_GridPainter old) => false;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sample tile — single writing image card with delete button
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SampleTile extends StatelessWidget {
+  const _SampleTile({required this.asset, required this.onDelete});
+  final HandwritingAsset asset;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+            color: KvlColors.primary.withValues(alpha: 0.3), width: 1.1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          // Image
+          ClipRRect(
+            borderRadius: BorderRadius.circular(11),
+            child: asset.filePath != null
+                ? Image.file(
+                    File(asset.filePath!),
+                    width: double.infinity,
+                    height: double.infinity,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const Center(
+                      child: Icon(Icons.broken_image_outlined,
+                          color: Colors.grey, size: 32),
+                    ),
+                  )
+                : const Center(
+                    child: Icon(Icons.broken_image_outlined,
+                        color: Colors.grey, size: 32),
+                  ),
+          ),
+          // Delete button
+          Positioned(
+            top: 4,
+            right: 4,
+            child: GestureDetector(
+              onTap: onDelete,
+              child: Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      blurRadius: 4,
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.delete_outline_rounded,
+                    size: 16, color: Colors.red),
+              ),
+            ),
+          ),
+          // Date label
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.35),
+                borderRadius: const BorderRadius.vertical(
+                    bottom: Radius.circular(11)),
+              ),
+              child: Text(
+                _fmt(asset.createdAt),
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _fmt(DateTime dt) {
+    final d = dt.toLocal();
+    return '${d.day.toString().padLeft(2, '0')}/'
+        '${d.month.toString().padLeft(2, '0')}/'
+        '${d.year}';
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

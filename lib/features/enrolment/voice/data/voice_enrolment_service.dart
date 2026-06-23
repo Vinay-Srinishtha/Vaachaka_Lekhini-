@@ -122,15 +122,17 @@ class VoiceEnrolmentService {
 
     final stream = await _audio.start(
       minAmplitude: sensitivity.minAmplitudeThreshold,
-      // 450 ms holdover protects word onsets and inter-syllable dips from
-      // being clipped to silence by the amplitude gate. Going too low (e.g.
-      // 10 ms) zeros out the soft attack of the first chant before the window
-      // timer even starts, so the first chant never matches.
+      // 450 ms holdover: bridges the brief amplitude dip between rapid
+      // consecutive chants so they are never split into separate silence
+      // windows. Do NOT lower this — it is what lets fast chanting work.
       holdoverMs: 450,
-      // Learn the room's noise floor for the first 300 ms and raise the gate
-      // above it — filters background noise while real chants pass (recall in
-      // noisy rooms). Quiet rooms keep the configured threshold unchanged.
-      calibrateMs: 300,
+      // 400 ms calibration: learns the ambient noise floor before gating.
+      // Audio passes through during calibration so the first chant is never
+      // lost. Slightly longer than before for a more accurate floor estimate.
+      calibrateMs: 400,
+      // 1.5× multiplier: gentle noise rejection that clears ambient hiss
+      // without raising the gate so high it clips soft or rapid chants.
+      noiseMultiplier: 1.5,
     );
 
     // ── PCM stream → Vosk ──────────────────────────────────────────────────
@@ -142,9 +144,10 @@ class VoiceEnrolmentService {
     _sub = stream.listen(
       (chunk) async {
         final peak = AudioCapture.peakAmplitude(chunk);
-        // Emit a live, normalised level for reactive UI (peak ≈ 6000 → full).
+        // Emit a live, normalised level for reactive UI.
+        // voiceRecognition + autoGain produce a stronger signal so 5000 ≈ full.
         if (!_levels.isClosed) {
-          _levels.add((peak / 6000.0).clamp(0.0, 1.0));
+          _levels.add((peak / 5000.0).clamp(0.0, 1.0));
         }
 
         // Skip chunk processing while the timer is flushing to avoid

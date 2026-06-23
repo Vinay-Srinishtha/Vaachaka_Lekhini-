@@ -1,11 +1,10 @@
 import 'dart:async';
-import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:signature/signature.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -1410,6 +1409,13 @@ class _ProtoWritingCanvas extends StatelessWidget {
   }
 }
 
+// ── Dot-trace guide — rendered natively via Canvas + TextPainter ──────────────
+// No SVG: uses FontLoader for custom fonts, then two saveLayer passes:
+//   Pass A — outline ring (12 offset copies, interior punched out with dstOut)
+//   Pass B — dot grid clipped to glyph boundary via BlendMode.dstIn
+
+bool _suravaramFontLoaded = false;
+
 class _DottedGuideText extends StatefulWidget {
   const _DottedGuideText({
     required this.text,
@@ -1427,101 +1433,144 @@ class _DottedGuideText extends StatefulWidget {
   State<_DottedGuideText> createState() => _DottedGuideTextState();
 }
 
-// Cache the base64-encoded Suravaram font so it is loaded only once.
-String? _suravaramB64;
-
 class _DottedGuideTextState extends State<_DottedGuideText> {
   bool _ready = false;
 
   @override
   void initState() {
     super.initState();
-    if (widget.script == MantraScript.telugu) {
-      _loadFont();
-    } else {
-      _ready = true;
-    }
+    _init();
   }
 
-  Future<void> _loadFont() async {
-    if (_suravaramB64 == null) {
+  Future<void> _init() async {
+    if (widget.script == MantraScript.telugu && !_suravaramFontLoaded) {
       final data = await rootBundle.load('assets/fonts/Suravaram-Regular.ttf');
-      _suravaramB64 = base64Encode(data.buffer.asUint8List());
+      final loader = FontLoader('Suravaram')
+        ..addFont(Future.value(data));
+      await loader.load();
+      _suravaramFontLoaded = true;
     }
     if (mounted) setState(() => _ready = true);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_ready) return const SizedBox.shrink();
-    final text = widget.text;
-    final script = widget.script;
-    final fontSize = widget.fontSize;
-    final opacity = widget.opacity;
-    if (text.trim().isEmpty) return const SizedBox.shrink();
-    final escapedText = const HtmlEscape().convert(text);
-    final fontFamily = switch (script) {
-      MantraScript.latin => 'Lexend, Arial, sans-serif',
-      MantraScript.devanagari =>
-        'Tiro Devanagari Hindi, Noto Sans Devanagari, serif',
-      MantraScript.telugu => 'Suravaram, serif',
-      MantraScript.kannada => 'Tiro Kannada, Noto Sans Kannada, serif',
-    };
-    final fontFaceDefs = script == MantraScript.telugu && _suravaramB64 != null
-        ? '''  <style>
-    @font-face {
-      font-family: 'Suravaram';
-      src: url('data:font/truetype;base64,$_suravaramB64') format('truetype');
-    }
-  </style>'''
-        : '';
-    // flutter_svg ignores stroke-dasharray on <text> but supports <pattern>
-    // fills and plain strokes. Strategy:
-    //   Layer 1 — very light solid fill: shows the full glyph shape so the
-    //             reader can see where each stroke belongs.
-    //   Layer 2 — round-dot pattern fill: gives the "dotted guide" feel.
-    //   Layer 3 — medium outline stroke: traces the exact glyph boundary,
-    //             making every curve and connector clearly legible.
-    final dotOpacity  = (opacity * 1.00).clamp(0.0, 1.0).toStringAsFixed(2);
-    final fillOpacity = (opacity * 0.14).clamp(0.0, 1.0).toStringAsFixed(2);
-    final rimOpacity  = (opacity * 0.70).clamp(0.0, 1.0).toStringAsFixed(2);
-    final svg = '''
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="420" viewBox="0 0 1400 420">
-$fontFaceDefs
-  <defs>
-    <pattern id="dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-      <circle cx="10" cy="10" r="5.5" fill="#CC6A2B" fill-opacity="$dotOpacity"/>
-    </pattern>
-  </defs>
-  <!-- layer 1: ghost fill so character shape is always visible -->
-  <text x="700" y="320" text-anchor="middle"
-    font-family="$fontFamily"
-    font-size="$fontSize"
-    font-weight="600"
-    fill="#CC6A2B"
-    fill-opacity="$fillOpacity"
-    stroke="none">$escapedText</text>
-  <!-- layer 2: round-dot pattern fill -->
-  <text x="700" y="320" text-anchor="middle"
-    font-family="$fontFamily"
-    font-size="$fontSize"
-    font-weight="600"
-    fill="url(#dots)"
-    stroke="none">$escapedText</text>
-  <!-- layer 3: crisp outline so every stroke edge is clear -->
-  <text x="700" y="320" text-anchor="middle"
-    font-family="$fontFamily"
-    font-size="$fontSize"
-    font-weight="600"
-    fill="none"
-    stroke="#CC6A2B"
-    stroke-opacity="$rimOpacity"
-    stroke-width="4"
-    stroke-linejoin="round">$escapedText</text>
-</svg>
-''';
-    return SvgPicture.string(svg, fit: BoxFit.contain);
+    if (!_ready || widget.text.trim().isEmpty) return const SizedBox.shrink();
+    return CustomPaint(
+      painter: _DotTracePainter(
+        text: widget.text,
+        script: widget.script,
+        fontSize: widget.fontSize,
+        opacity: widget.opacity,
+      ),
+    );
   }
+}
+
+class _DotTracePainter extends CustomPainter {
+  const _DotTracePainter({
+    required this.text,
+    required this.script,
+    required this.fontSize,
+    required this.opacity,
+  });
+
+  final String text;
+  final MantraScript script;
+  final double fontSize;
+  final double opacity;
+
+  static const _orange = Color(0xFFCC6A2B);
+  static const _dotSpacing = 30.0;
+  static const _dotRadius = 5.5;
+
+  String get _fontFamily => switch (script) {
+        MantraScript.latin => 'Lexend',
+        MantraScript.devanagari => 'Tiro Devanagari Hindi',
+        MantraScript.telugu => 'Suravaram',
+        MantraScript.kannada => 'Tiro Kannada',
+      };
+
+  TextPainter _tp(Paint foreground) {
+    final tp = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          fontFamily: _fontFamily,
+          fontSize: fontSize,
+          fontWeight: FontWeight.w600,
+          foreground: foreground,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    return tp;
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (text.trim().isEmpty) return;
+
+    // Measure once for positioning.
+    final measure = _tp(Paint()..color = Colors.transparent);
+    final cx = (size.width - measure.width) / 2;
+    final cy = (size.height - measure.height) / 2;
+    final center = Offset(cx, cy);
+    final bounds = Offset.zero & size;
+    final strokeR = (fontSize * 0.036).clamp(4.0, 12.0);
+
+    // ── Pass A: outline ring ─────────────────────────────────────────────────
+    canvas.saveLayer(bounds, Paint());
+
+    // Draw 12 copies in a circle to fill the stroke band.
+    final outlinePaint = Paint()
+      ..color = _orange.withValues(alpha: (opacity * 0.9).clamp(0, 1));
+    final outlineTP = _tp(outlinePaint);
+    for (var i = 0; i < 12; i++) {
+      final a = i * 2 * math.pi / 12;
+      outlineTP.paint(
+        canvas,
+        center + Offset(math.cos(a) * strokeR, math.sin(a) * strokeR),
+      );
+    }
+
+    // Punch interior — removes fill, leaving only the ring.
+    final punchTP = _tp(Paint()
+      ..blendMode = BlendMode.dstOut
+      ..color = Colors.black);
+    punchTP.paint(canvas, center);
+    canvas.restore();
+
+    // ── Pass B: dot grid clipped to glyph ────────────────────────────────────
+    canvas.saveLayer(bounds, Paint());
+
+    // Fill with evenly-spaced orange dots.
+    final dotPaint = Paint()
+      ..color = _orange.withValues(alpha: opacity.clamp(0, 1));
+    var y = _dotSpacing / 2;
+    while (y < size.height) {
+      var x = _dotSpacing / 2;
+      while (x < size.width) {
+        canvas.drawCircle(Offset(x, y), _dotRadius, dotPaint);
+        x += _dotSpacing;
+      }
+      y += _dotSpacing;
+    }
+
+    // Clip to glyph: keep dots only where the glyph has pixels.
+    final maskTP = _tp(Paint()
+      ..blendMode = BlendMode.dstIn
+      ..color = Colors.black);
+    maskTP.paint(canvas, center);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_DotTracePainter old) =>
+      old.text != text ||
+      old.script != script ||
+      old.fontSize != fontSize ||
+      old.opacity != opacity;
 }
 
 class _LandscapeTopBar extends ConsumerWidget {

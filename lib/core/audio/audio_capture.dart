@@ -73,11 +73,23 @@ class AudioCapture {
       encoder: AudioEncoder.pcm16bits,
       sampleRate: sampleRate,
       numChannels: 1,
-      noiseSuppress: false, // hardware NoiseSuppressor unavailable on many devices → crashes release APK
+      // autoGain: platform AGC — boosts quiet voices to a consistent level.
+      autoGain: true,
+      // noiseSuppress/echoCancel kept false: the hardware NoiseSuppressor API
+      // is unavailable on many Android devices and crashes the release APK.
+      // We use AndroidAudioSource.voiceRecognition instead, which applies
+      // platform-level speech optimisation (AGC + noise gating) safely on all
+      // devices — it is the same source used by Google Assistant / ASR apps.
+      noiseSuppress: false,
       echoCancel: false,
-      // Bluetooth SCO management left ON (default) so the mic can capture from
-      // Bluetooth and wired headsets as well as the built-in mic. The earlier
-      // "Reply already submitted" SCO crash is fixed by record_android 2.1.1.
+      androidConfig: AndroidRecordConfig(
+        // voiceRecognition: Android's speech-optimised capture path.
+        // Applies hardware gain normalisation and ambient noise gating without
+        // the NoiseSuppressor crash. Universally available (API 7+).
+        audioSource: AndroidAudioSource.voiceRecognition,
+        // Keep Bluetooth SCO managed so headset/wired mics work seamlessly.
+        manageBluetooth: true,
+      ),
     ));
     _out = StreamController<Uint8List>.broadcast();
 

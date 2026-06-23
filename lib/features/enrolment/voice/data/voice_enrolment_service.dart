@@ -102,9 +102,10 @@ class VoiceEnrolmentService {
     await _recognizer!.setGrammar(_grammarPhrases(mantra));
 
     final stream = await _audio.start(
-      minAmplitude: sensitivity.minAmplitudeThreshold,
+      minAmplitude: 0, // gate disabled — let Vosk handle silence; hardware gate
+                       // threshold at 2000 was blocking all audio without AGC
       holdoverMs: 450,
-      calibrateMs: 0,   // disabled — adaptive gate was raising threshold and clipping early chants
+      calibrateMs: 0,
       noiseMultiplier: 1.5,
     );
 

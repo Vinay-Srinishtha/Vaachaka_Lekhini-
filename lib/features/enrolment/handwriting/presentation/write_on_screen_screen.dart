@@ -1450,43 +1450,31 @@ class _DottedGuideTextState extends State<_DottedGuideText> {
     }
   }
 
-  String get _fontFamily => switch (widget.script) {
-        MantraScript.latin => 'Lexend',
-        MantraScript.devanagari => 'Tiro Devanagari Hindi',
-        MantraScript.telugu => 'Suravaram',
-        MantraScript.kannada => 'Tiro Kannada',
-      };
-
   Future<void> _compute(double canvasW, double canvasH) async {
     if (_computing) return;
     _computing = true;
 
-    // 1. Load Telugu font into Flutter's font registry so TextPainter uses it.
+    // Ensure Suravaram asset font is registered in the Flutter engine.
     if (widget.script == MantraScript.telugu && !_suravaramFontLoaded) {
       final data = await rootBundle.load('assets/fonts/Suravaram-Regular.ttf');
       final loader = FontLoader('Suravaram')..addFont(Future.value(data));
       await loader.load();
       _suravaramFontLoaded = true;
-      // Yield one frame so the engine registers the font before layout.
       await Future.delayed(Duration.zero);
     }
 
-    // 2. Render at ½ scale — finer glyph detail than ¼ while keeping buffer small.
+    // Render at ½ scale using the exact same font as the app's mantra display.
     const scale = 0.5;
     final scaledFontSize = widget.fontSize * scale;
     final scaledW = (canvasW * scale).ceil();
     final scaledH = (canvasH * scale).ceil();
 
+    // KvlText.mantraByScript gives the identical TextStyle the UI uses.
+    final baseStyle = KvlText.mantraByScript(widget.script, scaledFontSize)
+        .copyWith(color: Colors.black, fontWeight: FontWeight.w700);
+
     final tp = TextPainter(
-      text: TextSpan(
-        text: widget.text,
-        style: TextStyle(
-          fontFamily: _fontFamily,
-          fontSize: scaledFontSize,
-          fontWeight: FontWeight.w700,
-          color: Colors.black,
-        ),
-      ),
+      text: TextSpan(text: widget.text, style: baseStyle),
       textDirection: TextDirection.ltr,
     )..layout(maxWidth: canvasW * scale);
 

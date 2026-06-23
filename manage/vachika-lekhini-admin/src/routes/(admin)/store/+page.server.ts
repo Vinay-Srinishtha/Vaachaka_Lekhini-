@@ -1,8 +1,38 @@
-import type { Actions } from './$types';
+import type { Actions, PageServerLoad } from './$types';
 import { error, fail, redirect } from '@sveltejs/kit';
 import { prisma } from '$lib/server/prisma';
 import { requireRole } from '$lib/server/auth';
+import { parseListQuery } from '$lib/server/list-query';
 import { patchQuery } from '$lib/url';
+
+const SORT_COLS = ['sortOrder', 'pointsCost', 'name', 'createdAt'] as const;
+
+export const load: PageServerLoad = async (event) => {
+	requireRole(event, 'viewer');
+	const q = parseListQuery(event.url, { col: 'sortOrder', dir: 'asc' }, SORT_COLS);
+
+	const where = q.q
+		? {
+				OR: [
+					{ name: { contains: q.q, mode: 'insensitive' as const } },
+					{ slug: { contains: q.q, mode: 'insensitive' as const } },
+					{ description: { contains: q.q, mode: 'insensitive' as const } }
+				]
+			}
+		: {};
+
+	const [items, total] = await Promise.all([
+		prisma.storeItem.findMany({
+			where,
+			orderBy: { [q.sort.col]: q.sort.dir },
+			skip: q.skip,
+			take: q.take
+		}),
+		prisma.storeItem.count({ where })
+	]);
+
+	return { items, total, query: { q: q.q, page: q.page, pageSize: q.pageSize } };
+};
 
 export const actions: Actions = {
 	toggleActive: async (event) => {

@@ -1561,8 +1561,8 @@ class _LandscapeTopBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final double iconSize = compact ? 26 : 28;
     final double labelSize = compact ? 10.0 : 11.0;
-    final double pillFs = compact ? 11.5 : 12.5;
-    final double pillIconSz = compact ? 12.0 : 14.0;
+    final double pillFs = compact ? 12.5 : 13.5;
+    final double pillIconSz = compact ? 13.0 : 15.0;
     final double gap = compact ? 14.0 : 18.0;
     final ambientOn = ref.watch(_ambientOnProvider);
     final points = ref.watch(rewardTotalProvider).value ?? 0;
@@ -1633,14 +1633,8 @@ class _LandscapeTopBar extends ConsumerWidget {
       },
     );
 
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 14, vertical: compact ? 6 : 8),
-      decoration: BoxDecoration(
-        color: KvlColors.surface.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: KvlColors.border, width: 1),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.07), blurRadius: 8, offset: const Offset(0, 2))],
-      ),
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: compact ? 4 : 6, vertical: compact ? 4 : 6),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,

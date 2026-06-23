@@ -151,15 +151,13 @@ Future<void> _openLekhanaSheet({
   required Mantra? mantra,
   required List<HandwritingAsset> assets,
 }) async {
-  await Printing.layoutPdf(
-    name: 'Lekhana_Sheet.pdf',
-    onLayout: (_) => _buildLekhanaSheetPdf(
-      profile: profile,
-      program: program,
-      mantra: mantra,
-      assets: assets,
-    ),
+  final bytes = await _buildLekhanaSheetPdf(
+    profile: profile,
+    program: program,
+    mantra: mantra,
+    assets: assets,
   );
+  await Printing.sharePdf(bytes: bytes, filename: 'Lekhana_Sheet.pdf');
 }
 
 Future<Uint8List> _buildLekhanaSheetPdf({

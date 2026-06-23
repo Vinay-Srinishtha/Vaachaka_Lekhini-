@@ -302,7 +302,7 @@ class _BodyState extends ConsumerState<_Body> {
                     },
                     onWritingMode: () => context.push(
                       '${KvlRoute.handwritingWrite}/${state.program.mantraId}?programId=$programId',
-                    ),
+                    ).then((_) => controller.reloadProgram()),
                     ringerMode: ringerMode,
                     onCycleRinger: () => _cycleRingerMode(ref),
                   ),
@@ -328,6 +328,17 @@ class _BodyState extends ConsumerState<_Body> {
                     compact: compact,
                   ),
                   SizedBox(height: compact ? 8 : 10),
+                  _ModeToggle(
+                    modality: state.modality,
+                    canSwitch: !state.isRunning,
+                    compact: compact,
+                    onVoice: () => controller.setModality(SessionModality.voice),
+                    onPhone: () => controller.setModality(SessionModality.manual),
+                    onWrite: () => context.push(
+                      '${KvlRoute.handwritingWrite}/${state.program.mantraId}?programId=$programId',
+                    ).then((_) => controller.reloadProgram()),
+                  ),
+                  SizedBox(height: compact ? 6 : 8),
                   _ActionRow(
                     compact: compact,
                     showFinish: state.activeSessionId != null,
@@ -1416,6 +1427,116 @@ class _PointsBadgeState extends ConsumerState<_PointsBadge>
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Action row (PAUSE / Finish buttons)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Mode toggle — Phone / Voice / Write
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ModeToggle extends StatelessWidget {
+  const _ModeToggle({
+    required this.modality,
+    required this.canSwitch,
+    required this.compact,
+    required this.onVoice,
+    required this.onPhone,
+    required this.onWrite,
+  });
+
+  final SessionModality modality;
+  final bool canSwitch;
+  final bool compact;
+  final VoidCallback onVoice;
+  final VoidCallback onPhone;
+  final VoidCallback onWrite;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: compact ? 40 : 46,
+      decoration: BoxDecoration(
+        color: KvlColors.surface,
+        borderRadius: BorderRadius.circular(compact ? 14 : 16),
+        border: Border.all(color: KvlColors.border, width: 1.1),
+      ),
+      child: Row(
+        children: [
+          _chip(
+            icon: Icons.mic_rounded,
+            label: 'Voice',
+            active: modality == SessionModality.voice,
+            onTap: canSwitch ? onVoice : null,
+            compact: compact,
+            first: true,
+          ),
+          Container(width: 1, color: KvlColors.border),
+          _chip(
+            icon: Icons.phone_android_rounded,
+            label: 'Phone',
+            active: modality == SessionModality.manual,
+            onTap: canSwitch ? onPhone : null,
+            compact: compact,
+          ),
+          Container(width: 1, color: KvlColors.border),
+          _chip(
+            icon: Icons.draw_outlined,
+            label: 'Write',
+            active: false,
+            onTap: onWrite,
+            compact: compact,
+            last: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _chip({
+    required IconData icon,
+    required String label,
+    required bool active,
+    required VoidCallback? onTap,
+    required bool compact,
+    bool first = false,
+    bool last = false,
+  }) {
+    final radius = BorderRadius.horizontal(
+      left: first ? Radius.circular(compact ? 13 : 15) : Radius.zero,
+      right: last ? Radius.circular(compact ? 13 : 15) : Radius.zero,
+    );
+    return Expanded(
+      child: Material(
+        color: active ? KvlColors.primary.withValues(alpha: 0.12) : Colors.transparent,
+        borderRadius: radius,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: radius,
+          child: Opacity(
+            opacity: onTap == null ? 0.4 : 1.0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: compact ? 15 : 17,
+                  color: active ? KvlColors.primaryDeep : KvlColors.inkSoft,
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  label,
+                  style: KvlText.ui(compact ? 12 : 13, FontWeight.w700).copyWith(
+                    color: active ? KvlColors.primaryDeep : KvlColors.inkSoft,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _ActionRow extends StatelessWidget {

@@ -43,12 +43,9 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen>
   final _micLevel = ValueNotifier<double>(0.0);
   StreamSubscription<double>? _levelSub;
 
-  // Ripple pool — same pattern as counter_screen.dart.
-  static const _poolSize = 4;
-  late List<AnimationController> _pool;
-  int _nextSlot = 0;
+  // Shrink-reappear animation fired on each counted chant.
+  late AnimationController _chantAnim;
   DateTime? _lastCountTime;
-  final List<double> _slotIntensity = List.filled(_poolSize, 0.5);
 
   // Handwriting samples already credited — reduces voice target accordingly.
   int _existingHandwritingSamples = 0;
@@ -60,12 +57,9 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen>
   void initState() {
     super.initState();
     _sub = _service.events.listen(_onEvent);
-    _pool = List.generate(
-      _poolSize,
-      (_) => AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 1800),
-      ),
+    _chantAnim = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 380),
     );
     _loadExistingEnrolment();
   }
@@ -86,26 +80,12 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen>
     if (!mounted) return;
     final prev = _count;
     setState(() => _count = e.count);
-    if (_count > prev) _fireRipple();
+    if (_count > prev) _chantAnim.forward(from: 0);
     if (mounted && _count >= _target && _recording) {
       _finishAndProceed();
     }
   }
 
-  void _fireRipple() {
-    final now = DateTime.now();
-    double intensity = 0.5;
-    if (_lastCountTime != null) {
-      final ms = now.difference(_lastCountTime!).inMilliseconds;
-      intensity = (1.0 - ((ms - 300) / 2700)).clamp(0.18, 0.82);
-    }
-    _lastCountTime = now;
-    final slot = _nextSlot % _poolSize;
-    _nextSlot++;
-    _slotIntensity[slot] = intensity;
-    _pool[slot].duration = Duration(milliseconds: (1900 - intensity * 450).round());
-    _pool[slot].forward(from: 0);
-  }
 
   Future<void> _start() async {
     final mantra = ref.read(mantraByIdProvider(widget.mantraId));
@@ -214,7 +194,7 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen>
     _sub?.cancel();
     _levelSub?.cancel();
     _micLevel.dispose();
-    for (final c in _pool) { c.dispose(); }
+    _chantAnim.dispose();
     _service.dispose();
     super.dispose();
   }
@@ -248,8 +228,6 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen>
             child: Center(
               child: _OrbMic(
                 recording: _recording,
-                pool: _pool,
-                slotIntensity: _slotIntensity,
                 level: _micLevel,
                 onTap: _recording ? _stop : _start,
               ),
@@ -261,6 +239,7 @@ class _VoiceTrainingScreenState extends ConsumerState<VoiceTrainingScreen>
             mantraText: mantraText,
             script: script,
             target: _target,
+            chantAnim: _chantAnim,
           ),
           const SizedBox(height: KvlSpacing.sm),
 
@@ -422,13 +401,22 @@ class _ChantInstructionCard extends StatelessWidget {
     required this.mantraText,
     required this.script,
     required this.target,
+    required this.chantAnim,
   });
   final String mantraText;
   final MantraScript script;
   final int target;
+  final AnimationController chantAnim;
 
   @override
   Widget build(BuildContext context) {
+    // Shrink to 0.6 at mid-animation then bounce back to 1.0.
+    final scale = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.6).chain(CurveTween(curve: Curves.easeIn)), weight: 40),
+      TweenSequenceItem(tween: Tween(begin: 0.6, end: 1.08).chain(CurveTween(curve: Curves.easeOut)), weight: 40),
+      TweenSequenceItem(tween: Tween(begin: 1.08, end: 1.0).chain(CurveTween(curve: Curves.easeIn)), weight: 20),
+    ]).animate(chantAnim);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: KvlSpacing.lg, vertical: KvlSpacing.md),
       decoration: BoxDecoration(
@@ -451,12 +439,16 @@ class _ChantInstructionCard extends StatelessWidget {
             style: KvlText.ui(13, FontWeight.w500).copyWith(color: KvlColors.inkSoft),
           ),
           const SizedBox(height: 2),
-          Text(
-            mantraText,
-            style: KvlText.mantraByScript(script, 22).copyWith(
-              color: KvlColors.primary,
-              fontWeight: FontWeight.w800,
-              height: 1.15,
+          // Mantra text shrinks away then reappears on each counted chant.
+          ScaleTransition(
+            scale: scale,
+            child: Text(
+              mantraText,
+              style: KvlText.mantraByScript(script, 22).copyWith(
+                color: KvlColors.primary,
+                fontWeight: FontWeight.w800,
+                height: 1.15,
+              ),
             ),
           ),
           const SizedBox(height: 2),
@@ -484,14 +476,10 @@ class _ChantInstructionCard extends StatelessWidget {
 class _OrbMic extends StatefulWidget {
   const _OrbMic({
     required this.recording,
-    required this.pool,
-    required this.slotIntensity,
     required this.level,
     required this.onTap,
   });
   final bool recording;
-  final List<AnimationController> pool;
-  final List<double> slotIntensity;
   final ValueListenable<double> level;
   final VoidCallback onTap;
 
@@ -500,8 +488,6 @@ class _OrbMic extends StatefulWidget {
 }
 
 class _OrbMicState extends State<_OrbMic> with SingleTickerProviderStateMixin {
-  static const _poolSize = 4;
-
   // Pulse animation — only runs when signal detected
   late final AnimationController _pulse = AnimationController(
     vsync: this,
@@ -551,35 +537,6 @@ class _OrbMicState extends State<_OrbMic> with SingleTickerProviderStateMixin {
             return Stack(
               alignment: Alignment.center,
               children: [
-                // ── Sonar ripple rings (fire on each detected chant) ──
-                for (var i = 0; i < _poolSize; i++)
-                  AnimatedBuilder(
-                    animation: widget.pool[i],
-                    builder: (ctx, _) {
-                      final raw = widget.pool[i].value;
-                      if (raw == 0.0) return const SizedBox.shrink();
-                      final t = Curves.easeOutCubic.transform(raw);
-                      final intensity = widget.slotIntensity[i];
-                      final maxR =
-                          (available * 0.5) * (0.55 + intensity * 0.45);
-                      final r = (orbDiam / 2) + (maxR - orbDiam / 2) * t;
-                      final opacity = ((1.0 - t) *
-                              (0.55 + intensity * 0.35))
-                          .clamp(0.0, 0.9);
-                      final strokeW =
-                          (3.5 - t * 2.5).clamp(0.8, 3.5);
-                      return CustomPaint(
-                        size: Size(r * 2, r * 2),
-                        painter: _RingPainter(
-                          radius: r,
-                          color: KvlColors.primary
-                              .withValues(alpha: opacity),
-                          strokeWidth: strokeW,
-                        ),
-                      );
-                    },
-                  ),
-
                 // ── Halo rings — pulse only when signal is active ──
                 if (hasSignal)
                   AnimatedBuilder(

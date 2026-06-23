@@ -62,20 +62,9 @@ class VoiceEnrolmentService {
   Mantra? _mantra;
 
   /// How often (ms) we force a finalisation regardless of silence.
-  ///
-  /// 1800 ms gives Vosk enough context for slower/softer chants while still
-  /// being short enough to keep the counter feeling live:
-  /// • Slow / with gaps  → Vosk's own silence-detection fires first (this timer
-  ///   is just a safety net — it fires on an already-empty buffer, returns "").
-  /// • Medium (~1 s/chant) → timer catches it cleanly within two chant durations.
-  /// • Fast continuous   → two chants can land in one window; _countOccurrences
-  ///   counts both from the same result text.
-  /// • Staccato / jotted → holdover gate keeps inter-chant dips from looking
-  ///   like silence, so the full word accumulates before the window fires.
-  ///
-  /// Do NOT go below 1200 ms — shorter windows risk cutting mid-syllable for
-  /// slower speakers, producing partial-word results that score 0.
-  static const int _windowMs = 1800;
+  /// 1200 ms: tight enough to catch each chant at ~1/s pace without cutting
+  /// mid-syllable. Vosk's own silence-detection fires first for slow chants.
+  static const int _windowMs = 1200;
 
   Stream<VoiceTrainingEvent> get events => _events.stream;
 
@@ -144,8 +133,11 @@ class VoiceEnrolmentService {
         if (r == null) return;
 
         if (r.isFinal && r.text.trim().isNotEmpty) {
-          // Natural silence-based final — count it immediately.
+          // Natural silence-based final — count and reset the forced-finalize
+          // timer so it re-aligns to the next chant start, preventing the
+          // window from cutting the next word mid-syllable.
           await _handleText(r.text);
+          _restartWindowTimer();
         } else if (!r.isFinal && r.text.isNotEmpty) {
           _events.add(VoiceTrainingEvent.partial(_matches, r.text));
         }
@@ -154,11 +146,20 @@ class VoiceEnrolmentService {
     );
   }
 
+  /// Cancel and restart the periodic window timer from now.
+  /// Called after Vosk fires a natural silence-based final so the next
+  /// forced-finalize window starts fresh, never cutting the next chant
+  /// mid-syllable due to a fixed-phase periodic offset.
+  void _restartWindowTimer() {
+    if (!_running) return;
+    _windowTimer?.cancel();
+    _windowTimer = Timer.periodic(
+      const Duration(milliseconds: _windowMs),
+      (_) => _forceFinalize(),
+    );
+  }
+
   /// Forced finalisation: flush accumulated audio, count, let Vosk reset.
-  ///
-  /// Vosk's `getFinalResult()` (called inside `finalize()`) both returns
-  /// the best result AND resets the internal decoder state — ready to
-  /// accept audio for the next utterance without any recognizer recreation.
   Future<void> _forceFinalize() async {
     if (!_running || _finalizing) return;
     _finalizing = true;
@@ -167,7 +168,6 @@ class VoiceEnrolmentService {
       if (r != null && r.text.trim().isNotEmpty) {
         await _handleText(r.text);
       }
-      // Vosk state is now reset — no setGrammar / recreate needed.
     } finally {
       _finalizing = false;
     }

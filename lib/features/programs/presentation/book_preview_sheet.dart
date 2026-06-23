@@ -1033,31 +1033,6 @@ class _ShareOptionsSheet extends StatelessWidget {
                 KvlText.caption(12).copyWith(color: KvlColors.inkSoft),
           ),
           const SizedBox(height: 20),
-          // Option 1: Hyperlink
-          _ShareOption(
-            icon: Icons.link_rounded,
-            color: const Color(0xFF2980B9),
-            title: 'Share as Link',
-            subtitle: 'Copy a shareable hyperlink to your book',
-            onTap: () {
-              Navigator.pop(context);
-              _shareLink(context);
-            },
-          ),
-          const SizedBox(height: 12),
-          // Option 2: App format (share writing images)
-          _ShareOption(
-            icon: Icons.photo_library_rounded,
-            color: const Color(0xFF27AE60),
-            title: 'Share as Images',
-            subtitle: 'Share your writing samples as image files',
-            onTap: () {
-              Navigator.pop(context);
-              _shareImages(context);
-            },
-          ),
-          const SizedBox(height: 12),
-          // Option 3: Lekhana Sheet PDF
           _ShareOption(
             icon: Icons.picture_as_pdf_rounded,
             color: const Color(0xFFD35400),
@@ -1070,44 +1045,6 @@ class _ShareOptionsSheet extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  void _shareLink(BuildContext context) {
-    final mantraName = mantra?.name.roman ?? 'mantra';
-    final url =
-        'https://vaachikalekhini.srinishtha.com/book?m=${Uri.encodeComponent(mantraName)}';
-    Clipboard.setData(ClipboardData(text: url));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Link copied: $url'),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
-
-  Future<void> _shareImages(BuildContext context) async {
-    final sorted = [...assets]
-      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
-    final paths = sorted
-        .where((a) => a.filePath != null)
-        .map((a) => a.filePath!)
-        .toList();
-    if (paths.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No writing images to share.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-    // Share first image via system share sheet
-    // (full multi-file share requires share_plus with XFile list)
-    await Printing.sharePdf(
-      bytes: await File(paths.first).readAsBytes(),
-      filename: 'writing_sample.png',
     );
   }
 

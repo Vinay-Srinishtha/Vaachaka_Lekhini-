@@ -1,4 +1,9 @@
 <script lang="ts">
+	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
+	import SearchInput from '$lib/components/SearchInput.svelte';
+	import Pagination from '$lib/components/Pagination.svelte';
+	import { patchQuery } from '$lib/url';
 	import type { PageData } from './$types';
 	const { data }: { data: PageData } = $props();
 
@@ -7,6 +12,17 @@
 		resolved: 'bg-green-100 text-green-800 border-green-200',
 		dismissed: 'bg-gray-100 text-gray-500 border-gray-200'
 	};
+
+	const STATUS_TABS = [
+		{ value: '', label: 'All' },
+		{ value: 'open', label: 'Open' },
+		{ value: 'resolved', label: 'Resolved' },
+		{ value: 'dismissed', label: 'Dismissed' }
+	];
+
+	function setStatus(s: string) {
+		goto(patchQuery(page.url, { status: s || null, page: null }), { keepFocus: true, noScroll: true });
+	}
 </script>
 
 <svelte:head><title>Issues Reported</title></svelte:head>
@@ -17,7 +33,26 @@
 			<h1 class="text-xl font-semibold">Issues Reported</h1>
 			<p class="text-sm text-gray-500 mt-0.5">Sorted newest first · click a row to view details</p>
 		</div>
-		<span class="bg-slate-100 text-slate-600 text-xs font-semibold px-3 py-1 rounded-full">{data.reports.length} total</span>
+		<span class="bg-slate-100 text-slate-600 text-xs font-semibold px-3 py-1 rounded-full">{data.total} total</span>
+	</div>
+
+	<!-- Search + status filter -->
+	<div class="flex flex-col sm:flex-row gap-3">
+		<div class="flex-1">
+			<SearchInput placeholder="Search by subject, mobile or status…" />
+		</div>
+		<div class="flex gap-1 shrink-0">
+			{#each STATUS_TABS as tab}
+				<button
+					onclick={() => setStatus(tab.value)}
+					class="px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors {data.status === tab.value
+						? 'bg-brand-600 text-white border-brand-600'
+						: 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}"
+				>
+					{tab.label}
+				</button>
+			{/each}
+		</div>
 	</div>
 
 	{#if data.reports.length === 0}
@@ -25,11 +60,10 @@
 			<svg class="w-10 h-10 mb-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
 			</svg>
-			<p class="text-sm">No reports yet.</p>
+			<p class="text-sm">{data.query.q ? `No reports match "${data.query.q}"` : 'No reports yet.'}</p>
 		</div>
 	{:else}
 		<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-			<!-- Table header -->
 			<div class="grid grid-cols-[120px_1fr_160px_110px] gap-4 px-4 py-2 border-b border-slate-100 bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wide">
 				<span>Status</span>
 				<span>Subject</span>
@@ -50,6 +84,8 @@
 					<span class="text-xs text-slate-400">{new Date(r.createdAt).toLocaleDateString()}</span>
 				</a>
 			{/each}
+
+			<Pagination total={data.total} pageSize={data.query.pageSize} currentPage={data.query.page} />
 		</div>
 	{/if}
 </div>

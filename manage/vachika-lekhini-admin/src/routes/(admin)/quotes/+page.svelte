@@ -13,15 +13,9 @@
 	const deleteId = $derived(page.url.searchParams.get('delete'));
 	const target = $derived(deleteId ? data.quotes.find((q: { id: string }) => q.id === deleteId) : null);
 
-	const q = $derived((page.url.searchParams.get('q') ?? '').toLowerCase().trim());
-	const visibleQuotes = $derived(
-		q ? data.quotes.filter((quote: any) =>
-			[quote.text, quote.textRoman, quote.textTelugu, quote.textDevanagari, quote.textKannada,
-			 quote.source, quote.sourceRoman, quote.sourceTelugu,
-			 quote.mantra?.nameRoman, quote.slug]
-			.some(f => (f ?? '').toLowerCase().includes(q))
-		) : data.quotes
-	);
+	// Search is server-driven via ?q= URL param — data.quotes is already filtered
+	const q = $derived(data.q);
+	const visibleQuotes = $derived(data.quotes);
 
 	function displayText(quote: any): string {
 		return quote.textRoman || quote.textTelugu || quote.textDevanagari || quote.textKannada || quote.text || '—';
@@ -39,9 +33,10 @@
 	}
 
 	let submitting = $state(false);
-	const totalActive = $derived(data.quotes.filter((qt: any) => qt.isActive).length);
-	const withImages = $derived(data.quotes.filter((qt: any) => qt.imageUrl).length);
-	const universal = $derived(data.quotes.filter((qt: any) => !qt.mantra).length);
+	// Stats are computed server-side on ALL quotes (not just the filtered page)
+	const totalActive = $derived(data.totalActive);
+	const withImages = $derived(data.withImages);
+	const universal = $derived(data.universal);
 	let uploading = $state(false);
 	let uploadError = $state('');
 	let uploadResult = $state<{ created: number; skipped: number; errors: string[] } | null>(null);
@@ -125,7 +120,7 @@
 	<div>
 		<h1 class="text-xl font-semibold text-slate-900">Quotes</h1>
 		<p class="mt-1 text-sm text-slate-500">
-			{visibleQuotes.length}{q ? ` of ${data.quotes.length}` : ''} quotes ·
+			{q ? `${visibleQuotes.length} of ${data.total} quotes match "${q}"` : `${data.total} quotes`} ·
 			shown on the Flutter home screen · images saved to S3
 		</p>
 	</div>
@@ -134,7 +129,7 @@
 <!-- Stats bar -->
 <div class="mb-6 flex flex-wrap gap-3">
 	{#each [
-		{ label: 'Total', value: data.quotes.length, color: 'bg-slate-100 text-slate-700' },
+		{ label: 'Total', value: data.total, color: 'bg-slate-100 text-slate-700' },
 		{ label: 'Active', value: totalActive, color: 'bg-green-50 text-green-700 border border-green-200' },
 		{ label: 'With Images', value: withImages, color: 'bg-sky-50 text-sky-700 border border-sky-200' },
 		{ label: 'Universal', value: universal, color: 'bg-indigo-50 text-indigo-700 border border-indigo-200' },

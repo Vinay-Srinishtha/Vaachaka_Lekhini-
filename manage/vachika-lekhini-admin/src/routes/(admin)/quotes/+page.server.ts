@@ -6,8 +6,27 @@ import { patchQuery } from '$lib/url';
 
 export const load: PageServerLoad = async (event) => {
 	requireRole(event, 'viewer');
-	const [quotes, mantras] = await Promise.all([
+	const q = (event.url.searchParams.get('q') ?? '').trim();
+
+	const where = q
+		? {
+				OR: [
+					{ textRoman: { contains: q, mode: 'insensitive' as const } },
+					{ textTelugu: { contains: q, mode: 'insensitive' as const } },
+					{ textDevanagari: { contains: q, mode: 'insensitive' as const } },
+					{ textKannada: { contains: q, mode: 'insensitive' as const } },
+					{ text: { contains: q, mode: 'insensitive' as const } },
+					{ sourceRoman: { contains: q, mode: 'insensitive' as const } },
+					{ sourceTelugu: { contains: q, mode: 'insensitive' as const } },
+					{ slug: { contains: q, mode: 'insensitive' as const } },
+					{ mantra: { nameRoman: { contains: q, mode: 'insensitive' as const } } }
+				]
+			}
+		: {};
+
+	const [quotes, mantras, total, totalActive, withImages, universal] = await Promise.all([
 		prisma.quote.findMany({
+			where,
 			orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
 			select: {
 				id: true,
@@ -33,9 +52,14 @@ export const load: PageServerLoad = async (event) => {
 			where: { isActive: true },
 			orderBy: { nameRoman: 'asc' },
 			select: { id: true, slug: true, nameRoman: true, nameTelugu: true }
-		})
+		}),
+		prisma.quote.count(),
+		prisma.quote.count({ where: { isActive: true } }),
+		prisma.quote.count({ where: { imageUrl: { not: null } } }),
+		prisma.quote.count({ where: { mantraId: null } })
 	]);
-	return { quotes, mantras };
+
+	return { quotes, mantras, q, total, totalActive, withImages, universal };
 };
 
 export const actions: Actions = {

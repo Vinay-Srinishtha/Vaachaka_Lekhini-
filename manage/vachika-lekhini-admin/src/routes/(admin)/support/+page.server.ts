@@ -1,16 +1,42 @@
 import { prisma } from '$lib/server/prisma';
 import { requireRole } from '$lib/server/auth';
 import { fail } from '@sveltejs/kit';
+import { parseListQuery } from '$lib/server/list-query';
 import type { Actions, PageServerLoad } from './$types';
+
+const SORT_COLS = ['createdAt', 'status', 'subject'] as const;
 
 export const load: PageServerLoad = async (event) => {
 	requireRole(event, 'viewer');
-	const reports = await prisma.supportReport.findMany({
-		where: { kind: 'report' },
-		orderBy: { createdAt: 'desc' },
-		take: 50
-	});
-	return { reports };
+	const q = parseListQuery(event.url, { col: 'createdAt', dir: 'desc' }, SORT_COLS);
+	const status = event.url.searchParams.get('status') ?? '';
+
+	const where: Record<string, unknown> = { kind: 'report' };
+	if (['open', 'resolved', 'dismissed'].includes(status)) where.status = status;
+	if (q.q) {
+		where.OR = [
+			{ subject: { contains: q.q, mode: 'insensitive' } },
+			{ mobile: { contains: q.q } },
+			{ status: { contains: q.q, mode: 'insensitive' } }
+		];
+	}
+
+	const [reports, total] = await Promise.all([
+		prisma.supportReport.findMany({
+			where,
+			orderBy: { [q.sort.col]: q.sort.dir },
+			skip: q.skip,
+			take: q.take
+		}),
+		prisma.supportReport.count({ where })
+	]);
+
+	return {
+		reports,
+		total,
+		status,
+		query: { q: q.q, page: q.page, pageSize: q.pageSize }
+	};
 };
 
 export const actions: Actions = {

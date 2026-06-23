@@ -1,7 +1,7 @@
 name: vachika_lekhini
 description: "Vaachaka Lekhini — spiritual practice app: voice chant counter, handwriting practice, programs, rewards."
 publish_to: 'none'
-version: 8.0.0+30
+version: 8.0.1+31
 
 environment:
   sdk: ^3.11.0
@@ -94,6 +94,10 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   generate: true
+  fonts:
+    - family: Suravaram
+      fonts:
+        - asset: assets/fonts/Suravaram-Regular.ttf
   assets:
     - assets/models/vosk-model-small-hi-0.22.zip
     - assets/mantras/

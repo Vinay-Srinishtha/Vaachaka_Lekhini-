@@ -135,7 +135,7 @@
   "todaysCount": "Today's Count",
   "toMilestone": "To Milestone",
   "milestoneCompleted": "Completed",
-  "milestoneLeft": "{count} left",
+  "milestoneLeft": "{count} chants",
   "@milestoneLeft": {
     "placeholders": {
       "count": {

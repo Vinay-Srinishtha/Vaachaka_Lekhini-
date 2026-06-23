@@ -271,7 +271,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String milestoneLeft(int count) {
-    return '$count left';
+    return '$count chants';
   }
 
   @override

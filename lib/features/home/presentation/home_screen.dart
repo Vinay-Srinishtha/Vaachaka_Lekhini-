@@ -72,12 +72,6 @@ class HomeScreen extends ConsumerWidget {
           final cameraGap = MediaQuery.viewPaddingOf(context).top.clamp(40.0, 52.0);
           final topInset = cameraGap + 4.0;
 
-          // Quote gets whatever vertical space remains after fixed widgets.
-          // On screens where the Global Sadhana card pushes things down, the
-          // SingleChildScrollView lets the user scroll just enough to see it —
-          // ClampingScrollPhysics keeps it from bouncing past the content.
-          final quoteHeight = tight ? 175.0 : compact ? 195.0 : 220.0;
-
           return SingleChildScrollView(
             physics: const ClampingScrollPhysics(),
             child: ConstrainedBox(
@@ -139,8 +133,8 @@ class HomeScreen extends ConsumerWidget {
                     SizedBox(height: gap),
                     _GlobalSadhanaSection(compact: compact),
                     SizedBox(height: gap),
-                    SizedBox(
-                      height: quoteHeight,
+                    AspectRatio(
+                      aspectRatio: 4 / 5,
                       child: _HeroQuote(compact: compact, tight: tight),
                     ),
                   ],
@@ -1125,8 +1119,8 @@ class _GlobalSadhanaCard extends StatelessWidget {
             children: [
               // ── Banner image (if available) ─────────────────────────────
               if (hasImage)
-                SizedBox(
-                  height: compact ? 100 : 120,
+                AspectRatio(
+                  aspectRatio: 16 / 9,
                   child: Stack(
                     fit: StackFit.expand,
                     children: [

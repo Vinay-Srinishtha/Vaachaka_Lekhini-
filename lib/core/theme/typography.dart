@@ -64,14 +64,16 @@ abstract final class KvlText {
         height: 1.5,
       );
 
-  static TextStyle mantraTelugu([double size = 24]) => GoogleFonts.tiroTelugu(
+  static TextStyle mantraTelugu([double size = 24]) => TextStyle(
+    fontFamily: 'Suravaram',
     fontSize: size,
     fontWeight: FontWeight.w400,
     color: KvlColors.ink,
     height: 1.4,
   );
 
-  static TextStyle bodyTelugu([double size = 13]) => GoogleFonts.notoSansTelugu(
+  static TextStyle bodyTelugu([double size = 13]) => TextStyle(
+    fontFamily: 'Suravaram',
     fontSize: size,
     fontWeight: FontWeight.w400,
     color: KvlColors.ink,

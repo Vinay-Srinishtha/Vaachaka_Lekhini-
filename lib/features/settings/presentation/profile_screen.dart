@@ -23,6 +23,7 @@ import '../../auth/domain/auth_repository.dart';
 import '../../auth/domain/session.dart';
 import '../../auth/presentation/auth_shared_widgets.dart';
 import '../../programs/domain/program.dart';
+import '../../programs/presentation/book_preview_sheet.dart';
 import '../../../l10n/l10n.dart';
 import '../../../app/router.dart';
 import '../../../core/i18n/language_options.dart';
@@ -454,6 +455,16 @@ class ProfileScreen extends ConsumerWidget {
                 icon: Icons.lock_outline_rounded,
                 label: context.l10n.privacyPolicy,
                 onTap: () => _openInfo(context, 'privacy'),
+              ),
+              SettingRow(
+                icon: Icons.menu_book_rounded,
+                label: 'Preview My Writing Book',
+                onTap: () {
+                  final firstMantraId = programs.isNotEmpty ? programs.first.mantraId : null;
+                  if (firstMantraId != null) {
+                    BookPreviewButton.openSheet(context, firstMantraId);
+                  }
+                },
               ),
               SettingRow(
                 icon: Icons.cloud_download_outlined,

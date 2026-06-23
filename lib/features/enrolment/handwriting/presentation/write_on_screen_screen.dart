@@ -22,6 +22,7 @@ import '../../../programs/domain/session.dart';
 import '../../../settings/domain/settings_repository.dart';
 import '../domain/handwriting_asset.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../../core/widgets/kvl_toast.dart';
 import '../../../../core/widgets/widgets.dart';
 import '../../../../core/audio/reward_sound_service.dart';
 import '../../../enrolment/voice/domain/voice_enrolment.dart';
@@ -123,25 +124,14 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
     final prefs = await SharedPreferences.getInstance();
     if (prefs.getBool('tip_writing_v1') == true) return;
     if (!mounted) return;
-    var dontShowAgain = true;
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetCtx) => _TipSheet(
-        title: 'Writing Tips',
-        bullets: const [
-          '• Write clearly within the dotted guide area',
-          '• Each writing is accepted automatically — no need to tap ADD',
-          '• Tap DONE / Complete Session when finished',
-        ],
-        initialDontShowAgain: dontShowAgain,
-        onChanged: (v) => dontShowAgain = v,
-      ),
+    KvlToast.show(
+      context,
+      'Write clearly in the guide area — each writing is accepted automatically',
+      icon: Icons.edit_note_rounded,
+      iconColor: KvlColors.primary,
+      duration: const Duration(seconds: 4),
     );
-    if (dontShowAgain) {
-      await prefs.setBool('tip_writing_v1', true);
-    }
+    await prefs.setBool('tip_writing_v1', true);
   }
 
   Future<void> _showLanguagePicker({bool isFirstTime = false}) async {
@@ -260,6 +250,9 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
             mantraId: widget.mantraId,
             bytes: png,
           );
+      // Invalidate book provider immediately so the count pill and book sheet
+      // reflect the new writing without waiting for session completion.
+      ref.invalidate(bookAssetsProvider(widget.mantraId));
       await _creditHandwritingSample(profile.id);
       setState(() {
         _writingCount++;
@@ -1271,9 +1264,10 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
                   guideVisible: _guideVisible,
                 ),
               ),
-              // Top-left: Ring, Show/Hide Ref, Ambient, Language, Voice
+              // Top: unified bar — tools + info pills + palette all inline
               Positioned(
-                left: compact ? 18 : 28,
+                left: compact ? 8 : 12,
+                right: compact ? 60 : 70,
                 top: topInset,
                 child: _LandscapeTopBar(
                   compact: compact,
@@ -1285,21 +1279,12 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
                   selectedLangLabel: widget.selectedLangLabel,
                   onPickLanguage: widget.onPickLanguage,
                   onSwitchToVoice: widget.onSwitchToVoice,
-                ),
-              ),
-              // Top-center: Global + pts + book — minimal icon+number pills, one line
-              Positioned(
-                left: 0,
-                right: 0,
-                top: topInset,
-                child: Center(
-                  child: _CompactInfoRow(
-                    globalCount: globalCount,
-                    yours: yours,
-                    increment: widget.writingCount,
-                    compact: compact,
-                    mantraId: widget.mantraId,
-                  ),
+                  penColor: widget.penColor,
+                  onColorSelected: widget.onColorSelected,
+                  globalCount: globalCount,
+                  yours: yours,
+                  increment: widget.writingCount,
+                  mantraId: widget.mantraId,
                 ),
               ),
               // Bottom-right: Complete button
@@ -1347,12 +1332,6 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
                       icon: Icons.redo_rounded,
                       selected: false,
                       onTap: widget.onRedo,
-                    ),
-                    SizedBox(height: compact ? 6 : 10),
-                    _ColorPaletteButton(
-                      selectedColor: widget.penColor,
-                      compact: compact,
-                      onColorSelected: widget.onColorSelected,
                     ),
                   ],
                 ),
@@ -1431,7 +1410,7 @@ class _ProtoWritingCanvas extends StatelessWidget {
   }
 }
 
-class _DottedGuideText extends StatelessWidget {
+class _DottedGuideText extends StatefulWidget {
   const _DottedGuideText({
     required this.text,
     required this.script,
@@ -1445,16 +1424,57 @@ class _DottedGuideText extends StatelessWidget {
   final double opacity;
 
   @override
+  State<_DottedGuideText> createState() => _DottedGuideTextState();
+}
+
+// Cache the base64-encoded Suravaram font so it is loaded only once.
+String? _suravaramB64;
+
+class _DottedGuideTextState extends State<_DottedGuideText> {
+  bool _ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.script == MantraScript.telugu) {
+      _loadFont();
+    } else {
+      _ready = true;
+    }
+  }
+
+  Future<void> _loadFont() async {
+    if (_suravaramB64 == null) {
+      final data = await rootBundle.load('assets/fonts/Suravaram-Regular.ttf');
+      _suravaramB64 = base64Encode(data.buffer.asUint8List());
+    }
+    if (mounted) setState(() => _ready = true);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (!_ready) return const SizedBox.shrink();
+    final text = widget.text;
+    final script = widget.script;
+    final fontSize = widget.fontSize;
+    final opacity = widget.opacity;
     if (text.trim().isEmpty) return const SizedBox.shrink();
     final escapedText = const HtmlEscape().convert(text);
     final fontFamily = switch (script) {
       MantraScript.latin => 'Lexend, Arial, sans-serif',
       MantraScript.devanagari =>
         'Tiro Devanagari Hindi, Noto Sans Devanagari, serif',
-      MantraScript.telugu => 'Suravaram, Tiro Telugu, Noto Sans Telugu, serif',
+      MantraScript.telugu => 'Suravaram, serif',
       MantraScript.kannada => 'Tiro Kannada, Noto Sans Kannada, serif',
     };
+    final fontFaceDefs = script == MantraScript.telugu && _suravaramB64 != null
+        ? '''  <style>
+    @font-face {
+      font-family: 'Suravaram';
+      src: url('data:font/truetype;base64,$_suravaramB64') format('truetype');
+    }
+  </style>'''
+        : '';
     // flutter_svg ignores stroke-dasharray on <text> but supports <pattern>
     // fills and plain strokes. Strategy:
     //   Layer 1 — very light solid fill: shows the full glyph shape so the
@@ -1467,6 +1487,7 @@ class _DottedGuideText extends StatelessWidget {
     final rimOpacity  = (opacity * 0.70).clamp(0.0, 1.0).toStringAsFixed(2);
     final svg = '''
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="420" viewBox="0 0 1400 420">
+$fontFaceDefs
   <defs>
     <pattern id="dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
       <circle cx="10" cy="10" r="5.5" fill="#CC6A2B" fill-opacity="$dotOpacity"/>
@@ -1512,6 +1533,12 @@ class _LandscapeTopBar extends ConsumerWidget {
     required this.onGuideToggle,
     required this.selectedLangLabel,
     required this.onPickLanguage,
+    required this.penColor,
+    required this.onColorSelected,
+    required this.globalCount,
+    required this.yours,
+    required this.increment,
+    required this.mantraId,
     this.onSwitchToVoice,
   });
 
@@ -1522,88 +1549,237 @@ class _LandscapeTopBar extends ConsumerWidget {
   final VoidCallback onGuideToggle;
   final String selectedLangLabel;
   final VoidCallback onPickLanguage;
+  final Color penColor;
+  final ValueChanged<Color> onColorSelected;
+  final int globalCount;
+  final int yours;
+  final int increment;
+  final String mantraId;
   final VoidCallback? onSwitchToVoice;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final double iconSize = compact ? 28 : 32;
-    final double labelSize = compact ? 10.5 : 11.5;
+    final double iconSize = compact ? 26 : 28;
+    final double labelSize = compact ? 10.0 : 11.0;
+    final double pillFs = compact ? 11.5 : 12.5;
+    final double pillIconSz = compact ? 12.0 : 14.0;
+    final double gap = compact ? 14.0 : 18.0;
     final ambientOn = ref.watch(_ambientOnProvider);
+    final points = ref.watch(rewardTotalProvider).value ?? 0;
+    final bookCount = ref.watch(bookAssetsProvider(mantraId)).value?.length ?? 0;
+    final globalBase = (globalCount - yours).clamp(0, globalCount);
 
-    Widget item({
+    // Uniform icon+label button
+    Widget btn({
       required IconData icon,
       required String label,
       required VoidCallback onTap,
       Color? iconColor,
+      Widget? customIcon,
     }) {
       return GestureDetector(
         onTap: onTap,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: iconSize, color: iconColor ?? KvlColors.ink),
+            customIcon ?? Icon(icon, size: iconSize, color: iconColor ?? KvlColors.ink),
             const SizedBox(height: 2),
-            Text(
-              label,
-              style: KvlText.caption(labelSize).copyWith(color: KvlColors.inkSoft),
-            ),
+            Text(label, style: KvlText.caption(labelSize).copyWith(color: KvlColors.inkSoft)),
           ],
         ),
       );
     }
 
+    // Uniform pill widget
+    Widget pill({required Widget child, Color bg = Colors.white, Color? border, VoidCallback? onTap}) {
+      final w = Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: border ?? KvlColors.border, width: 1.1),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 6, offset: const Offset(0, 2))],
+        ),
+        child: child,
+      );
+      if (onTap != null) return GestureDetector(onTap: onTap, child: w);
+      return w;
+    }
+
+    // Divider between sections
+    Widget divider() => Container(
+      width: 1, height: compact ? 36 : 42,
+      margin: EdgeInsets.symmetric(horizontal: gap * 0.6),
+      color: KvlColors.border,
+    );
+
     final (ringerIcon, ringerLabel) = switch (ringerMode) {
-      RingerMode.silent  => (Icons.notifications_off_rounded,    'Silent'),
-      RingerMode.vibrate => (Icons.vibration_rounded,             'Vibrate'),
-      RingerMode.normal  => (Icons.notifications_active_rounded,  'Ring'),
-      RingerMode.unknown => (Icons.notifications_none_rounded,    'Ringer'),
+      RingerMode.silent  => (Icons.notifications_off_rounded, 'Silent'),
+      RingerMode.vibrate => (Icons.vibration_rounded,          'Vibrate'),
+      RingerMode.normal  => (Icons.notifications_active_rounded, 'Ring'),
+      RingerMode.unknown => (Icons.notifications_none_rounded,   'Ringer'),
     };
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        item(icon: ringerIcon, label: ringerLabel, onTap: onCycleRinger),
-        const SizedBox(width: 20),
-        item(
-          icon: guideVisible ? Icons.auto_stories_rounded : Icons.edit_rounded,
-          label: guideVisible ? 'Hide Ref' : 'Show Ref',
-          onTap: onGuideToggle,
-          iconColor: guideVisible ? KvlColors.primary : KvlColors.ink,
-        ),
-        const SizedBox(width: 20),
-        item(
-          icon: ambientOn ? Icons.music_note_rounded : Icons.music_off_rounded,
-          label: 'Ambient',
-          onTap: () async {
-            ref.read(_ambientOnProvider.notifier).toggle();
-            final isNowOn = ref.read(_ambientOnProvider);
-            final player = ref.read(_ambientPlayerProvider);
-            if (isNowOn) {
-              await player.play(AssetSource('audio/ambient_loop.mp3'));
-            } else {
-              await player.stop();
-            }
-          },
-          iconColor: ambientOn ? KvlColors.primary : KvlColors.ink,
-        ),
-        const SizedBox(width: 20),
-        item(
-          icon: Icons.translate_rounded,
-          label: selectedLangLabel,
-          onTap: onPickLanguage,
-          iconColor: KvlColors.primaryDeep,
-        ),
-        if (onSwitchToVoice != null) ...[
-          const SizedBox(width: 20),
-          item(
-            icon: Icons.mic_rounded,
-            label: 'Voice Mode',
-            onTap: onSwitchToVoice!,
-            iconColor: KvlColors.accent,
+    // Color palette as icon+label button
+    final paletteBtn = btn(
+      icon: Icons.palette_rounded,
+      label: 'Colour',
+      iconColor: penColor,
+      onTap: () {
+        showDialog<Color>(
+          context: context,
+          builder: (_) => _ColorPickerDialog(selectedColor: penColor),
+        ).then((c) { if (c != null) onColorSelected(c); });
+      },
+    );
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 14, vertical: compact ? 6 : 8),
+      decoration: BoxDecoration(
+        color: KvlColors.surface.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: KvlColors.border, width: 1),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.07), blurRadius: 8, offset: const Offset(0, 2))],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // ── Tool buttons ──────────────────────────────────────────────
+          btn(icon: ringerIcon, label: ringerLabel, onTap: onCycleRinger),
+          SizedBox(width: gap),
+          btn(
+            icon: guideVisible ? Icons.auto_stories_rounded : Icons.edit_rounded,
+            label: guideVisible ? 'Hide Ref' : 'Show Ref',
+            onTap: onGuideToggle,
+            iconColor: guideVisible ? KvlColors.primary : KvlColors.ink,
           ),
+          SizedBox(width: gap),
+          btn(
+            icon: ambientOn ? Icons.music_note_rounded : Icons.music_off_rounded,
+            label: 'Ambient',
+            iconColor: ambientOn ? KvlColors.primary : KvlColors.ink,
+            onTap: () async {
+              ref.read(_ambientOnProvider.notifier).toggle();
+              final isNowOn = ref.read(_ambientOnProvider);
+              final player = ref.read(_ambientPlayerProvider);
+              if (isNowOn) {
+                await player.play(AssetSource('audio/ambient_loop.mp3'));
+              } else {
+                await player.stop();
+              }
+            },
+          ),
+          SizedBox(width: gap),
+          btn(icon: Icons.translate_rounded, label: selectedLangLabel, onTap: onPickLanguage, iconColor: KvlColors.primaryDeep),
+          if (onSwitchToVoice != null) ...[
+            SizedBox(width: gap),
+            btn(icon: Icons.mic_rounded, label: 'Voice Mode', onTap: onSwitchToVoice!, iconColor: KvlColors.accent),
+          ],
+          SizedBox(width: gap),
+          paletteBtn,
+
+          divider(),
+
+          // ── Info pills — same height, inline ─────────────────────────
+          // Global
+          pill(
+            bg: const Color(0xFFFFF4EC),
+            border: KvlColors.primary.withValues(alpha: 0.3),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.public_rounded, size: pillIconSz, color: KvlColors.primaryDeep),
+              const SizedBox(width: 4),
+              Text(IndianNumberFormat.format(globalBase),
+                  style: KvlText.ui(pillFs, FontWeight.w800).copyWith(color: const Color(0xFFCC6A2B))),
+              Text('  +  ', style: KvlText.ui(pillFs, FontWeight.w500).copyWith(color: KvlColors.inkSoft)),
+              TweenAnimationBuilder<double>(
+                key: ValueKey(increment),
+                tween: Tween(begin: increment > 0 ? 1.15 : 1.0, end: 1.0),
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeOutCubic,
+                builder: (_, s, child) => Transform.scale(scale: s, child: child),
+                child: Text(IndianNumberFormat.format(increment),
+                    style: KvlText.ui(pillFs, FontWeight.w800).copyWith(color: const Color(0xFF16A34A))),
+              ),
+            ]),
+          ),
+          const SizedBox(width: 6),
+          // Points
+          pill(
+            bg: const Color(0xFFFBF3D8),
+            border: const Color(0xFFE8C04A),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.star_rounded, size: pillIconSz, color: KvlColors.gold),
+              const SizedBox(width: 4),
+              Text(IndianNumberFormat.format(points),
+                  style: KvlText.ui(pillFs, FontWeight.w800).copyWith(color: const Color(0xFF5a4400))),
+            ]),
+          ),
+          if (bookCount > 0) ...[
+            const SizedBox(width: 6),
+            // Book
+            pill(
+              onTap: () => BookPreviewButton.openSheet(context, mantraId),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.menu_book_rounded, size: pillIconSz, color: KvlColors.primaryDeep),
+                const SizedBox(width: 4),
+                Text(IndianNumberFormat.format(bookCount),
+                    style: KvlText.ui(pillFs, FontWeight.w800).copyWith(color: KvlColors.primaryDeep)),
+              ]),
+            ),
+          ],
         ],
-      ],
+      ),
+    );
+  }
+}
+
+// Simple dialog wrapper so palette tap opens the existing color picker sheet.
+class _ColorPickerDialog extends StatelessWidget {
+  const _ColorPickerDialog({required this.selectedColor});
+  final Color selectedColor;
+
+  @override
+  Widget build(BuildContext context) {
+    // Reuse the existing color picker sheet logic inline.
+    final colors = [
+      KvlColors.ink,
+      KvlColors.primary,
+      KvlColors.accent,
+      KvlColors.danger,
+      const Color(0xFF1D4ED8),
+      Colors.black,
+    ];
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Pen Colour', style: KvlText.title(16)),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 12, runSpacing: 12,
+              children: colors.map((c) => GestureDetector(
+                onTap: () => Navigator.of(context).pop(c),
+                child: Container(
+                  width: 40, height: 40,
+                  decoration: BoxDecoration(
+                    color: c,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: c == selectedColor ? KvlColors.primaryDeep : Colors.transparent,
+                      width: 3,
+                    ),
+                    boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                  ),
+                ),
+              )).toList(),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -2249,93 +2425,6 @@ class _ProgressStrip extends StatelessWidget {
   }
 }
 
-/// One-time tip bottom sheet with a "Don't show again" checkbox.
-class _TipSheet extends StatefulWidget {
-  const _TipSheet({
-    required this.title,
-    required this.bullets,
-    required this.initialDontShowAgain,
-    required this.onChanged,
-  });
-
-  final String title;
-  final List<String> bullets;
-  final bool initialDontShowAgain;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  State<_TipSheet> createState() => _TipSheetState();
-}
-
-class _TipSheetState extends State<_TipSheet> {
-  late bool _dontShowAgain = widget.initialDontShowAgain;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Container(
-        margin: const EdgeInsets.all(12),
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
-        decoration: BoxDecoration(
-          color: KvlColors.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: KvlColors.border),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.lightbulb_rounded,
-                    color: KvlColors.primaryDeep, size: 22),
-                const SizedBox(width: 8),
-                Text(widget.title, style: KvlText.ui(16, FontWeight.w800)),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ...widget.bullets.map((b) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(
-                    b,
-                    style: KvlText.body(13.5)
-                        .copyWith(height: 1.4, color: KvlColors.inkSoft),
-                  ),
-                )),
-            const SizedBox(height: 6),
-            InkWell(
-              onTap: () {
-                setState(() => _dontShowAgain = !_dontShowAgain);
-                widget.onChanged(_dontShowAgain);
-              },
-              child: Row(
-                children: [
-                  Checkbox(
-                    value: _dontShowAgain,
-                    onChanged: (v) {
-                      setState(() => _dontShowAgain = v ?? false);
-                      widget.onChanged(_dontShowAgain);
-                    },
-                  ),
-                  Text("Don't show again",
-                      style: KvlText.body(13).copyWith(color: KvlColors.ink)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: KvlButton(
-                label: 'Got it!',
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class _DedicationDialog extends StatelessWidget {
   const _DedicationDialog({required this.onDedicate});

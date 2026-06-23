@@ -140,15 +140,16 @@ class _SadhanaCard extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Image banner
-            if (sadhana.imageUrl != null)
-              CachedNetworkImage(
-                imageUrl: sadhana.imageUrl!,
-                height: 140,
-                fit: BoxFit.cover,
-                errorWidget: (_, _, _) => _PlaceholderBanner(sadhana: sadhana),
-              )
-            else
-              _PlaceholderBanner(sadhana: sadhana),
+            AspectRatio(
+              aspectRatio: 16 / 9,
+              child: sadhana.imageUrl != null
+                  ? CachedNetworkImage(
+                      imageUrl: sadhana.imageUrl!,
+                      fit: BoxFit.cover,
+                      errorWidget: (_, _, _) => _PlaceholderBanner(sadhana: sadhana),
+                    )
+                  : _PlaceholderBanner(sadhana: sadhana),
+            ),
 
             Padding(
               padding: const EdgeInsets.all(KvlSpacing.md),
@@ -275,7 +276,6 @@ class _PlaceholderBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 100,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [KvlColors.primary, KvlColors.primaryDeep],

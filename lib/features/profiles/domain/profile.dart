@@ -65,6 +65,7 @@ class Profile extends Equatable {
     this.birthYear,
     this.motherTongue,
     this.location,
+    this.gothra,
     this.targetMantraId,
     this.profileCompletedAt,
     this.addresses = const [],
@@ -95,6 +96,9 @@ class Profile extends Equatable {
 
   /// City / region the user is from. User-editable.
   final String? location;
+
+  /// Gothra (gotra) lineage. User-editable.
+  final String? gothra;
 
   /// Mantra ID set by admin as the user's target practice mantra.
   /// Not visible or editable by the user.
@@ -134,6 +138,7 @@ class Profile extends Equatable {
     int? birthYear,
     String? motherTongue,
     String? location,
+    String? gothra,
     String? targetMantraId,
     DateTime? profileCompletedAt,
     List<MemberAddress>? addresses,
@@ -149,6 +154,7 @@ class Profile extends Equatable {
         birthYear: birthYear ?? this.birthYear,
         motherTongue: motherTongue ?? this.motherTongue,
         location: location ?? this.location,
+        gothra: gothra ?? this.gothra,
         targetMantraId: targetMantraId ?? this.targetMantraId,
         profileCompletedAt: profileCompletedAt ?? this.profileCompletedAt,
         addresses: addresses ?? this.addresses,
@@ -167,6 +173,7 @@ class Profile extends Equatable {
         'birthYear': birthYear,
         'motherTongue': motherTongue,
         'location': location,
+        'gothra': gothra,
         // targetMantraId is admin-only — never sent from the client
         'profileCompletedAt': profileCompletedAt?.toIso8601String(),
         'createdAt': createdAt.toIso8601String(),
@@ -185,6 +192,7 @@ class Profile extends Equatable {
         birthYear: j['birthYear'] as int?,
         motherTongue: j['motherTongue'] as String?,
         location: j['location'] as String?,
+        gothra: j['gothra'] as String?,
         targetMantraId: j['targetMantraId'] as String?,
         profileCompletedAt: j['profileCompletedAt'] != null
             ? DateTime.tryParse(j['profileCompletedAt'] as String)
@@ -209,6 +217,7 @@ class Profile extends Equatable {
         birthYear,
         motherTongue,
         location,
+        gothra,
         targetMantraId,
         profileCompletedAt,
         addresses,

@@ -16,6 +16,7 @@ import '../../../core/i18n/language_options.dart';
 import '../../../core/phone/phone_mode_service.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/utils/indian_number_format.dart';
+import '../../../core/widgets/kvl_toast.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../programs/domain/session.dart';
 import '../../global_sadhana/domain/global_sadhana.dart';
@@ -368,18 +369,8 @@ class _BodyState extends ConsumerState<_Body> {
                         return;
                       }
 
-                      // Program with goal: check if daily target is met BEFORE finishing.
+                      // Program with goal — just finish; no blocking sheet.
                       final dailyTarget = state.program.effectiveDailyTarget;
-                      final todaysTotal = ref.read(practiceControllerProvider(programId)).value?.todaysTotal ?? 0;
-                      final projected = todaysTotal + state.sessionCount;
-                      if (dailyTarget > 0 && projected < dailyTarget) {
-                        final remaining = dailyTarget - projected;
-                        final shouldContinue = await _showGoalIncompleteSheet(context, remaining);
-                        if (!context.mounted) return;
-                        if (shouldContinue == true) return; // user chose to continue chanting
-                        // User chose "Complete Session" — fall through to finish.
-                      }
-
                       final targetWasReached = state.targetReached ||
                           (state.program.totalProgress + state.sessionCount >=
                               state.program.targetWritings &&
@@ -398,12 +389,16 @@ class _BodyState extends ConsumerState<_Body> {
                         return; // _showDedicationDialog navigates on dedicate
                       }
 
-                      // Show goal-completed celebration if daily target was just hit.
+                      // Silent toast if daily goal was just hit — no blocking sheet.
                       final afterState = ref.read(practiceControllerProvider(programId)).value;
                       if (afterState != null && dailyTarget > 0 &&
-                          (afterState.todaysTotal >= dailyTarget)) {
-                        await _showDailyGoalSheet(context, ref, programId);
-                        if (!context.mounted) return;
+                          afterState.todaysTotal >= dailyTarget) {
+                        KvlToast.show(
+                          context,
+                          '🙏 Daily goal reached! Well done.',
+                          icon: Icons.star_rounded,
+                          iconColor: KvlColors.gold,
+                        );
                       }
 
                       context.go(KvlRoute.home);
@@ -536,58 +531,6 @@ class _BodyState extends ConsumerState<_Body> {
           // program card (disabled) — clears the full navigation stack.
           context.go(KvlRoute.programs);
         },
-      ),
-    );
-  }
-
-  /// Shows the "daily goal incomplete" sheet. Returns true if user wants to
-  /// continue chanting, false/null if they chose "Complete Session".
-  Future<bool?> _showGoalIncompleteSheet(BuildContext context, int remaining) {
-    return showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _GoalIncompleteSheet(remaining: remaining),
-    );
-  }
-
-  /// Shows the "daily goal reached" celebration sheet on explicit Finish.
-  Future<void> _showDailyGoalSheet(
-    BuildContext context,
-    WidgetRef ref,
-    String programId,
-  ) async {
-    final programState =
-        ref.read(practiceControllerProvider(programId)).value;
-    final mantraId = programState?.program.mantraId;
-    final todaysCount = programState?.todaysTotal ?? 0;
-
-    // Check if there's an active Global Sadhana for this mantra that the user
-    // is enrolled in — if so show the Global Sadhana celebration sheet instead.
-    GlobalSadhana? gsMatch;
-    if (mantraId != null) {
-      final sadhanas =
-          ref.read(activeGlobalSadhanaProvider).value ?? const [];
-      final gsRepo = ref.read(globalSadhanaRepositoryProvider);
-      for (final s in sadhanas) {
-        if (s.mantraId == mantraId && s.isActive) {
-          final enr = gsRepo.cachedEnrollment(s.id);
-          if (enr != null) {
-            gsMatch = s;
-            break;
-          }
-        }
-      }
-    }
-
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _DailyGoalSheet(
-        mantraId: mantraId,
-        globalSadhana: gsMatch,
-        todaysCount: todaysCount,
       ),
     );
   }
@@ -1962,245 +1905,3 @@ class _TipSheetState extends State<_TipSheet> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Daily Goal Celebration sheet
-// ─────────────────────────────────────────────────────────────────────────────
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Goal incomplete sheet — shown on Finish when daily target not yet met
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _GoalIncompleteSheet extends StatelessWidget {
-  const _GoalIncompleteSheet({required this.remaining});
-  final int remaining;
-
-  @override
-  Widget build(BuildContext context) {
-    final bottom = MediaQuery.of(context).padding.bottom;
-    return Container(
-      decoration: const BoxDecoration(
-        color: KvlColors.bg,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      padding: EdgeInsets.fromLTRB(
-        KvlSpacing.lg, KvlSpacing.lg, KvlSpacing.lg, KvlSpacing.lg + bottom,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Center(
-            child: Container(
-              width: 40, height: 4,
-              margin: const EdgeInsets.only(bottom: KvlSpacing.md),
-              decoration: BoxDecoration(
-                color: KvlColors.muted.withValues(alpha: .3),
-                borderRadius: KvlRadius.brPill,
-              ),
-            ),
-          ),
-          const Text('🙏', style: TextStyle(fontSize: 44), textAlign: TextAlign.center),
-          const SizedBox(height: KvlSpacing.sm),
-          Text(
-            '${IndianNumberFormat.format(remaining)} chants left',
-            textAlign: TextAlign.center,
-            style: KvlText.ui(20, FontWeight.w800),
-          ),
-          const SizedBox(height: KvlSpacing.xs),
-          Text(
-            'to complete your daily sadhana goal.\nDo you want to continue?',
-            textAlign: TextAlign.center,
-            style: KvlText.caption(13).copyWith(color: KvlColors.muted),
-          ),
-          const SizedBox(height: KvlSpacing.lg),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: KvlColors.primary,
-              shape: RoundedRectangleBorder(borderRadius: KvlRadius.brMD),
-              minimumSize: const Size.fromHeight(48),
-            ),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(
-              'Continue This Session',
-              style: KvlText.ui(14, FontWeight.w700).copyWith(color: Colors.white),
-            ),
-          ),
-          const SizedBox(height: KvlSpacing.sm),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(
-              'Complete Session',
-              style: KvlText.ui(14, FontWeight.w600).copyWith(color: KvlColors.muted),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Daily Goal Celebration sheet
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _DailyGoalSheet extends StatelessWidget {
-  const _DailyGoalSheet({
-    this.mantraId,
-    this.globalSadhana,
-    this.todaysCount = 0,
-  });
-  final String? mantraId;
-  final GlobalSadhana? globalSadhana;
-  final int todaysCount;
-
-  @override
-  Widget build(BuildContext context) {
-    final bottom = MediaQuery.of(context).padding.bottom;
-    final isGlobal = globalSadhana != null;
-
-    return Container(
-      decoration: const BoxDecoration(
-        color: KvlColors.bg,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      padding: EdgeInsets.fromLTRB(
-        KvlSpacing.lg, KvlSpacing.lg, KvlSpacing.lg, KvlSpacing.lg + bottom,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Handle bar
-          Center(
-            child: Container(
-              width: 40, height: 4,
-              margin: const EdgeInsets.only(bottom: KvlSpacing.md),
-              decoration: BoxDecoration(
-                color: KvlColors.muted.withValues(alpha: .3),
-                borderRadius: KvlRadius.brPill,
-              ),
-            ),
-          ),
-
-          if (isGlobal) ...[
-            // ── Global Sadhana celebration ─────────────────────────────────
-            // Banner image or placeholder
-            ClipRRect(
-              borderRadius: KvlRadius.brLG,
-              child: globalSadhana!.imageUrl != null
-                  ? Image.network(
-                      globalSadhana!.imageUrl!,
-                      height: 160,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => _GsPlaceholder(sadhana: globalSadhana!),
-                    )
-                  : _GsPlaceholder(sadhana: globalSadhana!),
-            ),
-            const SizedBox(height: KvlSpacing.md),
-            Text(
-              '🕉  ${globalSadhana!.title}',
-              textAlign: TextAlign.center,
-              style: KvlText.ui(16, FontWeight.w700),
-            ),
-            const SizedBox(height: KvlSpacing.xs),
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: KvlSpacing.md,
-                vertical: KvlSpacing.sm,
-              ),
-              decoration: BoxDecoration(
-                color: KvlColors.primaryGhost,
-                borderRadius: KvlRadius.brMD,
-              ),
-              child: Text(
-                'You contributed ${IndianNumberFormat.format(todaysCount)} chants today for this initiative 🙏',
-                textAlign: TextAlign.center,
-                style: KvlText.ui(14, FontWeight.w600)
-                    .copyWith(color: KvlColors.primaryDeep, height: 1.4),
-              ),
-            ),
-          ] else ...[
-            // ── Generic daily goal celebration ──────────────────────────────
-            const Text('🎉', style: TextStyle(fontSize: 48), textAlign: TextAlign.center),
-            const SizedBox(height: KvlSpacing.sm),
-            Text(
-              'You reached your goal today 🙏',
-              textAlign: TextAlign.center,
-              style: KvlText.ui(20, FontWeight.w800),
-            ),
-            const SizedBox(height: KvlSpacing.xs),
-            Text(
-              'Your daily sadhana is complete. Keep the streak alive!',
-              textAlign: TextAlign.center,
-              style: KvlText.caption(13).copyWith(color: KvlColors.muted),
-            ),
-          ],
-
-          // Preview My Book — shown for all programs that have writings
-          if (mantraId != null) ...[
-            const SizedBox(height: KvlSpacing.md),
-            OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: KvlColors.primary.withValues(alpha: .5)),
-                shape: RoundedRectangleBorder(borderRadius: KvlRadius.brMD),
-                minimumSize: const Size.fromHeight(44),
-              ),
-              onPressed: () {
-                Navigator.of(context).pop();
-                BookPreviewButton.openSheet(context, mantraId!);
-              },
-              icon: const Icon(Icons.menu_book_rounded, size: 18),
-              label: Text(
-                'Preview My Book',
-                style: KvlText.ui(13, FontWeight.w600).copyWith(color: KvlColors.primary),
-              ),
-            ),
-          ],
-          const SizedBox(height: KvlSpacing.sm),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(
-              'Complete Session',
-              style: KvlText.ui(14, FontWeight.w600).copyWith(color: KvlColors.primary),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _GsPlaceholder extends StatelessWidget {
-  const _GsPlaceholder({required this.sadhana});
-  final GlobalSadhana sadhana;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 160,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFFFF8C42), Color(0xFFE07020)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      alignment: Alignment.center,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.language_rounded, color: Colors.white, size: 36),
-          const SizedBox(height: 8),
-          Text(
-            sadhana.title,
-            style: KvlText.title(15).copyWith(color: Colors.white),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-}

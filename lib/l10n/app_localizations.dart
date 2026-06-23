@@ -579,7 +579,7 @@ abstract class AppLocalizations {
   /// No description provided for @milestoneLeft.
   ///
   /// In en, this message translates to:
-  /// **'{count} left'**
+  /// **'{count} chants'**
   String milestoneLeft(int count);
 
   /// No description provided for @practisingFor.

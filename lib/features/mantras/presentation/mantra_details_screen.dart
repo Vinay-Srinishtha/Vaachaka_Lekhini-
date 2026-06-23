@@ -121,7 +121,7 @@ class _DeityHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final imageUrl = mantra.imageUrl;
     return AspectRatio(
-      aspectRatio: 4 / 3,
+      aspectRatio: 16 / 9,
       child: ClipRRect(
         borderRadius: KvlRadius.brLG,
         child: imageUrl != null && imageUrl.isNotEmpty

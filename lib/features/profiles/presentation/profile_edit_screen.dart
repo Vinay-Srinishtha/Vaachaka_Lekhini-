@@ -25,6 +25,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _birthYearCtrl;
   late final TextEditingController _locationCtrl;
+  late final TextEditingController _gothraCtrl;
 
   Gender? _gender;
   String? _motherTongue;
@@ -57,6 +58,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       text: profile?.birthYear != null ? '${profile!.birthYear}' : '',
     );
     _locationCtrl = TextEditingController(text: profile?.location ?? '');
+    _gothraCtrl = TextEditingController(text: profile?.gothra ?? '');
     _gender = profile?.gender;
     _motherTongue = profile?.motherTongue;
   }
@@ -66,6 +68,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     _nameCtrl.dispose();
     _birthYearCtrl.dispose();
     _locationCtrl.dispose();
+    _gothraCtrl.dispose();
     super.dispose();
   }
 
@@ -87,12 +90,14 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       final birthYear = int.tryParse(_birthYearCtrl.text.trim());
 
       final location = _locationCtrl.text.trim();
+      final gothra = _gothraCtrl.text.trim();
       final updated = profile.copyWith(
         name: name,
         gender: _gender,
         birthYear: birthYear,
         motherTongue: _motherTongue,
         location: location.isNotEmpty ? location : null,
+        gothra: gothra.isNotEmpty ? gothra : null,
       );
 
       await ref.read(profileRepositoryProvider).update(updated);
@@ -189,6 +194,17 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
             TextFormField(
               controller: _locationCtrl,
               decoration: _inputDecoration('e.g. Hyderabad, Telangana'),
+              textCapitalization: TextCapitalization.words,
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: KvlSpacing.md),
+
+            // Gothra
+            _buildLabel('Gothra (Gotra)'),
+            const SizedBox(height: 4),
+            TextFormField(
+              controller: _gothraCtrl,
+              decoration: _inputDecoration('e.g. Kashyapa, Bharadwaja, Vasishtha'),
               textCapitalization: TextCapitalization.words,
               textInputAction: TextInputAction.next,
             ),

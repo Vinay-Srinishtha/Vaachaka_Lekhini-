@@ -189,22 +189,21 @@ class _GlobalSadhanaDetailScreenState
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Banner image
-          if (sadhana.imageUrl != null) ...[
-            ClipRRect(
-              borderRadius: KvlRadius.brLG,
-              child: Image.network(
-                sadhana.imageUrl!,
-                height: 180,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => _BannerPlaceholder(sadhana: sadhana),
-              ),
+          ClipRRect(
+            borderRadius: KvlRadius.brLG,
+            child: AspectRatio(
+              aspectRatio: 16 / 9,
+              child: sadhana.imageUrl != null
+                  ? Image.network(
+                      sadhana.imageUrl!,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => _BannerPlaceholder(sadhana: sadhana),
+                    )
+                  : _BannerPlaceholder(sadhana: sadhana),
             ),
-            const SizedBox(height: KvlSpacing.md),
-          ] else ...[
-            _BannerPlaceholder(sadhana: sadhana),
-            const SizedBox(height: KvlSpacing.md),
-          ],
+          ),
+          const SizedBox(height: KvlSpacing.md),
 
           // Status pill
           if (sadhana.isCompleted)
@@ -469,7 +468,6 @@ class _BannerPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 140,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFFFF8C42), Color(0xFFE07020)],

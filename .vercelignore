@@ -1,0 +1,22 @@
+# Flutter build artifacts
+build/
+android/
+ios/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Flutter source (not needed for admin deploy)
+lib/
+assets/
+docs/
+notes/
+memory/
+
+# Node / package artifacts
+node_modules/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

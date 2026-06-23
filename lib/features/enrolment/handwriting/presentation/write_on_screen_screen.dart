@@ -1436,6 +1436,19 @@ class _DottedGuideText extends StatefulWidget {
 class _DottedGuideTextState extends State<_DottedGuideText> {
   List<Offset>? _dots;
   bool _computing = false;
+  // Cache the key used to compute current _dots so we can detect changes.
+  String _computedKey = '';
+
+  @override
+  void didUpdateWidget(_DottedGuideText old) {
+    super.didUpdateWidget(old);
+    // If text or script changed, discard cached dots and recompute.
+    if (old.text != widget.text || old.script != widget.script) {
+      _dots = null;
+      _computing = false;
+      _computedKey = '';
+    }
+  }
 
   String get _fontFamily => switch (widget.script) {
         MantraScript.latin => 'Lexend',
@@ -1458,8 +1471,8 @@ class _DottedGuideTextState extends State<_DottedGuideText> {
       await Future.delayed(Duration.zero);
     }
 
-    // 2. Render at ¼ scale to keep pixel buffer small (~265×95 for 1060×380).
-    const scale = 0.25;
+    // 2. Render at ½ scale — finer glyph detail than ¼ while keeping buffer small.
+    const scale = 0.5;
     final scaledFontSize = widget.fontSize * scale;
     final scaledW = (canvasW * scale).ceil();
     final scaledH = (canvasH * scale).ceil();
@@ -1491,7 +1504,7 @@ class _DottedGuideTextState extends State<_DottedGuideText> {
 
     // 3. Boundary scan: pixel is a boundary if it has alpha AND a transparent
     //    neighbour. Subsample into cells so dots are evenly spaced.
-    const cellSize = 5; // px at scaled resolution → ~20 px spacing at full scale
+    const cellSize = 3; // px at ½ scale → ~6 px spacing at full scale = tighter dots
     const alphaThr = 30;
     final cells = <String>{};
     final dots = <Offset>[];
@@ -1556,10 +1569,10 @@ class _BoundaryDotsPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFF1a1a1a).withValues(alpha: (opacity * 0.78).clamp(0, 1))
+      ..color = const Color(0xFF888888).withValues(alpha: (opacity * 0.65).clamp(0, 1))
       ..style = PaintingStyle.fill;
     for (final dot in dots) {
-      canvas.drawCircle(dot, 3.0, paint);
+      canvas.drawCircle(dot, 2.2, paint);
     }
   }
 

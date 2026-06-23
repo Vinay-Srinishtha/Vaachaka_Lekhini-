@@ -121,24 +121,23 @@ class BookPreviewButton extends ConsumerWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Lekhana Sheet PDF constants
+// Lekhana Sheet PDF — layout constants (A4 portrait, 4 boxes stacked)
 // ─────────────────────────────────────────────────────────────────────────────
 
 const _orange = PdfColor.fromInt(0xFFD35400);
-const _orangeLight = PdfColor.fromInt(0xFFF0A070);
 const _a4W = 595.28;
 const _a4H = 841.89;
-const _margin = 28.0;
-const _contentW = _a4W - _margin * 2;
-const _contentH = _a4H - _margin * 2;
-const _headerH = 68.0;
-const _footerH = 20.0;
-const _boxGap = 8.0;
-const _boxW = (_contentW - _boxGap) / 2;
-const _boxH = (_contentH - _headerH - _footerH - _boxGap - 12) / 2;
-const _labelH = 16.0;
-const _gridH = _boxH - _labelH;
-const _cellW = _boxW / 12;
+const _mH = 22.0; // horizontal margin
+const _mV = 18.0; // vertical margin
+const _contentW = _a4W - _mH * 2;   // 551.28
+const _contentH = _a4H - _mV * 2;   // 805.89
+const _headerH = 58.0;
+const _footerH = 16.0;
+const _dateLabelH = 13.0;
+const _boxGap = 4.0;
+// 4 boxes + 3 gaps + 4 date labels; remaining height split equally
+const _gridH = (_contentH - _headerH - _footerH - 4 * _dateLabelH - 3 * _boxGap - 8) / 4;
+const _cellW = _contentW / 12;
 const _cellH = _gridH / 9;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -215,15 +214,15 @@ Future<Uint8List> _buildLekhanaSheetPdf({
       : (mantra?.name.devanagari ?? 'ॐ');
 
   // ── Box timestamps ─────────────────────────────────────────────────────────
-  final dateFmt = DateFormat('dd-MM-yyyy , h:mma');
+  final dateFmt = DateFormat("dd-MM-yyyy , h:mma");
   String boxTimestamp(int boxIdx) {
-    if (sortedAssets.isEmpty) return '--';
+    if (sortedAssets.isEmpty) return '—';
     final assetIdx =
         math.min((boxIdx + 1) * 108 - 1, sortedAssets.length - 1);
     return dateFmt.format(sortedAssets[assetIdx].createdAt).toLowerCase();
   }
 
-  // ── Pagination ─────────────────────────────────────────────────────────────
+  // ── Pagination — 4 boxes per page ──────────────────────────────────────────
   final totalBoxes = (totalForPdf / 108).ceil();
   final totalPages = (totalBoxes / 4).ceil();
 
@@ -237,34 +236,20 @@ Future<Uint8List> _buildLekhanaSheetPdf({
       pageFormat: PdfPageFormat.a4,
       margin: pw.EdgeInsets.zero,
       build: (ctx) {
-        // Boxes for this page
-        final boxes = List.generate(
-          4,
-          (slot) {
-            final boxIdx = boxStartOnPage + slot;
-            return _buildBox(
-              boxIdx: boxIdx,
-              totalProgress: totalForPdf,
-              mantraText: mantraText,
-              surFont: surFont,
-              writingImages: writingImages,
-              timestamp: boxIdx < totalBoxes ? boxTimestamp(boxIdx) : '--',
-            );
-          },
-        );
-
         return pw.Stack(
           children: [
-            // Watermark
+            // ── Full-page watermark ──────────────────────────────────────
             pw.Positioned.fill(
               child: pw.Opacity(
                 opacity: 0.07,
                 child: pw.Image(wmImage, fit: pw.BoxFit.cover),
               ),
             ),
-            // Content
+
+            // ── Page content ─────────────────────────────────────────────
             pw.Padding(
-              padding: const pw.EdgeInsets.all(_margin),
+              padding: const pw.EdgeInsets.symmetric(
+                  horizontal: _mH, vertical: _mV),
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.stretch,
                 children: [
@@ -276,25 +261,37 @@ Future<Uint8List> _buildLekhanaSheetPdf({
                     totalProgress: totalProgress,
                     logoImage: logoImage,
                   ),
-                  pw.SizedBox(height: 10),
-                  // Boxes — 2 × 2
-                  pw.Row(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      boxes[0],
-                      pw.SizedBox(width: _boxGap),
-                      boxes[1],
-                    ],
-                  ),
-                  pw.SizedBox(height: _boxGap),
-                  pw.Row(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      boxes[2],
-                      pw.SizedBox(width: _boxGap),
-                      boxes[3],
-                    ],
-                  ),
+                  pw.SizedBox(height: 6),
+
+                  // 4 boxes stacked vertically
+                  ...List.generate(4, (slot) {
+                    final boxIdx = boxStartOnPage + slot;
+                    return pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+                      children: [
+                        if (slot > 0) pw.SizedBox(height: _boxGap),
+                        // "Date & Time" label — above the box
+                        pw.Text(
+                          'Date & Time : ${boxIdx < totalBoxes ? boxTimestamp(boxIdx) : "—"}...',
+                          style: pw.TextStyle(
+                            fontSize: 7.5,
+                            fontStyle: pw.FontStyle.italic,
+                            color: PdfColors.grey700,
+                          ),
+                        ),
+                        pw.SizedBox(height: 1),
+                        // Grid box
+                        _buildGrid(
+                          boxIdx: boxIdx,
+                          totalProgress: totalForPdf,
+                          mantraText: mantraText,
+                          surFont: surFont,
+                          writingImages: writingImages,
+                        ),
+                      ],
+                    );
+                  }),
+
                   pw.Spacer(),
                   // Footer
                   pw.Center(
@@ -329,71 +326,108 @@ pw.Widget _buildHeader({
       .where((s) => s.isNotEmpty)
       .join(', ');
 
-  return pw.Container(
+  return pw.SizedBox(
     height: _headerH,
     child: pw.Row(
-      crossAxisAlignment: pw.CrossAxisAlignment.center,
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        // Left: devotee info
+        // ── Left: devotee details ──────────────────────────────────────────
         pw.Expanded(
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             mainAxisAlignment: pw.MainAxisAlignment.center,
             children: [
+              // Name & Gothram on one line
               pw.RichText(
-                text: pw.TextSpan(
-                  children: [
-                    pw.TextSpan(
-                      text: 'Devotee Name & Gothram : ',
-                      style: pw.TextStyle(fontSize: 9, color: _orange),
+                text: pw.TextSpan(children: [
+                  pw.TextSpan(
+                    text: 'Devotee Name & Gothram : ',
+                    style: pw.TextStyle(fontSize: 8.5, color: PdfColors.grey800),
+                  ),
+                  pw.TextSpan(
+                    text: nameGothra.isEmpty ? '—' : nameGothra,
+                    style: pw.TextStyle(
+                      fontSize: 8.5,
+                      fontWeight: pw.FontWeight.bold,
+                      color: _orange,
                     ),
-                    pw.TextSpan(
-                      text: nameGothra.isEmpty ? '—' : nameGothra,
-                      style: pw.TextStyle(
-                          fontSize: 9,
-                          fontWeight: pw.FontWeight.bold,
-                          color: _orange),
-                    ),
-                  ],
-                ),
+                  ),
+                ]),
               ),
-              pw.SizedBox(height: 4),
-              pw.RichText(
-                text: pw.TextSpan(
-                  children: [
+              pw.SizedBox(height: 3),
+              // Address — centered
+              pw.Center(
+                child: pw.RichText(
+                  text: pw.TextSpan(children: [
                     pw.TextSpan(
                       text: 'Address : ',
-                      style: pw.TextStyle(fontSize: 9, color: _orange),
+                      style: pw.TextStyle(fontSize: 8.5, color: PdfColors.grey800),
                     ),
                     pw.TextSpan(
                       text: address.isEmpty ? '—' : address,
                       style: pw.TextStyle(
-                          fontSize: 9,
-                          fontWeight: pw.FontWeight.bold,
-                          color: _orange),
+                        fontSize: 8.5,
+                        fontWeight: pw.FontWeight.bold,
+                        color: _orange,
+                      ),
                     ),
-                  ],
+                  ]),
                 ),
               ),
-              pw.SizedBox(height: 4),
-              pw.Text(
-                'Total Chants Completed : $totalProgress',
-                style: pw.TextStyle(fontSize: 9, color: PdfColors.grey800),
+              pw.SizedBox(height: 3),
+              // Total chants
+              pw.RichText(
+                text: pw.TextSpan(children: [
+                  pw.TextSpan(
+                    text: 'Total Chants Completed : ',
+                    style: pw.TextStyle(fontSize: 8.5, color: PdfColors.grey800),
+                  ),
+                  pw.TextSpan(
+                    text: '$totalProgress',
+                    style: pw.TextStyle(
+                      fontSize: 8.5,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.grey900,
+                    ),
+                  ),
+                ]),
               ),
             ],
           ),
         ),
-        // Right: logo + app name
+
+        // ── Right: powered by + logo + QR + Vaachika Lekhini ──────────────
         pw.Column(
           mainAxisAlignment: pw.MainAxisAlignment.center,
           crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
             pw.Text(
               'powered by',
-              style: pw.TextStyle(fontSize: 7, color: PdfColors.grey500),
+              style: pw.TextStyle(fontSize: 6.5, color: PdfColors.grey500),
             ),
-            pw.SizedBox(height: 3),
-            pw.Image(logoImage, width: 32, height: 32),
+            pw.SizedBox(height: 2),
+            pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
+              children: [
+                // Circular logo
+                pw.ClipOval(
+                  child: pw.SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: pw.Image(logoImage, fit: pw.BoxFit.cover),
+                  ),
+                ),
+                pw.SizedBox(width: 4),
+                // QR code
+                pw.BarcodeWidget(
+                  barcode: pw.Barcode.qrCode(),
+                  data: 'https://vaachikalekhini.srinishtha.com',
+                  width: 36,
+                  height: 36,
+                  drawText: false,
+                ),
+              ],
+            ),
             pw.SizedBox(height: 3),
             pw.Text(
               'Vaachika Lekhini',
@@ -410,106 +444,82 @@ pw.Widget _buildHeader({
   );
 }
 
-pw.Widget _buildBox({
+pw.Widget _buildGrid({
   required int boxIdx,
   required int totalProgress,
   required String mantraText,
   required pw.Font surFont,
   required List<pw.MemoryImage?> writingImages,
-  required String timestamp,
 }) {
   final boxStart = boxIdx * 108;
   final filledCells = (totalProgress - boxStart).clamp(0, 108);
 
-  return pw.Container(
-    width: _boxW,
-    height: _boxH,
-    decoration: pw.BoxDecoration(
-      border: pw.Border.all(color: _orange, width: 1.5),
-    ),
-    child: pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-      children: [
-        // Date & Time label row
-        pw.Container(
-          height: _labelH,
-          padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-          decoration: const pw.BoxDecoration(
-            border: pw.Border(
-              bottom: pw.BorderSide(color: _orange, width: 0.5),
-            ),
-          ),
-          child: pw.Align(
-            alignment: pw.Alignment.centerLeft,
-            child: pw.Text(
-              'Date & Time : $timestamp',
-              style: pw.TextStyle(fontSize: 7),
-            ),
-          ),
+  return pw.SizedBox(
+    width: _contentW,
+    height: _gridH,
+    child: pw.Table(
+      columnWidths: {
+        for (var i = 0; i < 12; i++) i: const pw.FixedColumnWidth(_cellW),
+      },
+      border: pw.TableBorder(
+        // Solid orange outer border
+        top: const pw.BorderSide(color: _orange, width: 1.2),
+        bottom: const pw.BorderSide(color: _orange, width: 1.2),
+        left: const pw.BorderSide(color: _orange, width: 1.2),
+        right: const pw.BorderSide(color: _orange, width: 1.2),
+        // Solid thin horizontal inner lines
+        horizontalInside: const pw.BorderSide(color: _orange, width: 0.35),
+        // Dashed thin vertical inner lines
+        verticalInside: const pw.BorderSide(
+          color: _orange,
+          width: 0.35,
+          style: pw.BorderStyle.dashed,
         ),
-        // 12 × 9 cell grid
-        pw.SizedBox(
-          width: _boxW,
-          height: _gridH,
-          child: pw.Table(
-            columnWidths: {
-              for (var i = 0; i < 12; i++) i: const pw.FixedColumnWidth(_cellW),
-            },
-            border: pw.TableBorder.all(
-              color: _orangeLight,
-              width: 0.3,
-            ),
-            children: List.generate(9, (row) {
-              return pw.TableRow(
-                children: List.generate(12, (col) {
-                  final cellIdx = row * 12 + col;
-                  final globalIdx = boxStart + cellIdx;
+      ),
+      children: List.generate(9, (row) {
+        return pw.TableRow(
+          children: List.generate(12, (col) {
+            final cellIdx = row * 12 + col;
+            final globalIdx = boxStart + cellIdx;
 
-                  if (cellIdx >= filledCells) {
-                    return pw.SizedBox(
-                      width: _cellW,
-                      height: _cellH,
-                    );
-                  }
+            if (cellIdx >= filledCells) {
+              return pw.SizedBox(width: _cellW, height: _cellH);
+            }
 
-                  // Try writing image first
-                  if (writingImages.isNotEmpty) {
-                    final img =
-                        writingImages[globalIdx % writingImages.length];
-                    if (img != null) {
-                      return pw.SizedBox(
-                        width: _cellW,
-                        height: _cellH,
-                        child: pw.Padding(
-                          padding: const pw.EdgeInsets.all(0.5),
-                          child: pw.Image(img, fit: pw.BoxFit.contain),
-                        ),
-                      );
-                    }
-                  }
+            // Writing image — cycle through available samples
+            if (writingImages.isNotEmpty) {
+              final img = writingImages[globalIdx % writingImages.length];
+              if (img != null) {
+                return pw.SizedBox(
+                  width: _cellW,
+                  height: _cellH,
+                  child: pw.Padding(
+                    padding: const pw.EdgeInsets.all(0.5),
+                    child: pw.Image(img, fit: pw.BoxFit.contain),
+                  ),
+                );
+              }
+            }
 
-                  // Fallback: Suravaram text
-                  return pw.SizedBox(
-                    width: _cellW,
-                    height: _cellH,
-                    child: pw.Center(
-                      child: pw.Text(
-                        mantraText,
-                        style: pw.TextStyle(
-                          font: surFont,
-                          fontSize: 7,
-                          color: PdfColors.black,
-                        ),
-                        textAlign: pw.TextAlign.center,
-                      ),
-                    ),
-                  );
-                }),
-              );
-            }),
-          ),
-        ),
-      ],
+            // Fallback: Suravaram Telugu text
+            return pw.SizedBox(
+              width: _cellW,
+              height: _cellH,
+              child: pw.Center(
+                child: pw.Text(
+                  mantraText,
+                  style: pw.TextStyle(
+                    font: surFont,
+                    fontSize: 7.5,
+                    color: PdfColors.black,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+            );
+          }),
+        );
+      }),
     ),
   );
 }

@@ -129,7 +129,7 @@ class VoiceEnrolmentService {
       // 400 ms calibration: learns the ambient noise floor before gating.
       // Audio passes through during calibration so the first chant is never
       // lost. Slightly longer than before for a more accurate floor estimate.
-      calibrateMs: 400,
+      calibrateMs: 300,
       // 1.5× multiplier: gentle noise rejection that clears ambient hiss
       // without raising the gate so high it clips soft or rapid chants.
       noiseMultiplier: 1.5,
@@ -144,10 +144,8 @@ class VoiceEnrolmentService {
     _sub = stream.listen(
       (chunk) async {
         final peak = AudioCapture.peakAmplitude(chunk);
-        // Emit a live, normalised level for reactive UI.
-        // voiceRecognition + autoGain produce a stronger signal so 5000 ≈ full.
         if (!_levels.isClosed) {
-          _levels.add((peak / 5000.0).clamp(0.0, 1.0));
+          _levels.add((peak / 6000.0).clamp(0.0, 1.0));
         }
 
         // Skip chunk processing while the timer is flushing to avoid

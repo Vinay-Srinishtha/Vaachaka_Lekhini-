@@ -530,7 +530,7 @@ pw.Widget _buildGrid({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Bottom sheet
+// Bottom sheet — Samples only; "Preview Book" is a button
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _BookPreviewSheet extends ConsumerStatefulWidget {
@@ -541,23 +541,7 @@ class _BookPreviewSheet extends ConsumerStatefulWidget {
   ConsumerState<_BookPreviewSheet> createState() => _BookPreviewSheetState();
 }
 
-class _BookPreviewSheetState extends ConsumerState<_BookPreviewSheet>
-    with SingleTickerProviderStateMixin {
-  late TabController _tab;
-
-  @override
-  void initState() {
-    super.initState();
-    _tab = TabController(length: 2, vsync: this);
-    _tab.addListener(() => setState(() {}));
-  }
-
-  @override
-  void dispose() {
-    _tab.dispose();
-    super.dispose();
-  }
-
+class _BookPreviewSheetState extends ConsumerState<_BookPreviewSheet> {
   Future<void> _deleteAsset(HandwritingAsset asset) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -572,8 +556,8 @@ class _BookPreviewSheetState extends ConsumerState<_BookPreviewSheet>
               child: const Text('Cancel')),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Remove',
-                style: TextStyle(color: Colors.red)),
+            child:
+                const Text('Remove', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -593,18 +577,8 @@ class _BookPreviewSheetState extends ConsumerState<_BookPreviewSheet>
     final assets = ref.watch(bookAssetsProvider(widget.mantraId));
     final mantra = ref.watch(mantraByIdProvider(widget.mantraId));
     final profile = ref.watch(activeProfileProvider).value;
-    final allPrograms =
-        ref.watch(programsForActiveProfileProvider).value ?? [];
-    final mantraPrograms =
-        allPrograms.where((p) => p.mantraId == widget.mantraId).toList();
     final totalProgress =
         ref.watch(bookTotalForMantraProvider(widget.mantraId));
-    final completedPrograms =
-        mantraPrograms.where((p) => p.isCompleted).length;
-    final activePrograms =
-        mantraPrograms.where((p) => !p.isCompleted).length;
-    final mh = MediaQuery.sizeOf(context).height;
-    final isBookTab = _tab.index == 1;
 
     return DraggableScrollableSheet(
       initialChildSize: 0.85,
@@ -654,246 +628,496 @@ class _BookPreviewSheetState extends ConsumerState<_BookPreviewSheet>
                         ],
                       ),
                     ),
-                    // Share button — only on Book tab
-                    if (isBookTab)
-                      assets.when(
-                        data: (list) => IconButton(
-                          onPressed: totalProgress == 0
-                              ? null
-                              : () => _openLekhanaSheet(
-                                    context: context,
-                                    profile: profile,
-                                    totalProgress: totalProgress,
-                                    mantra: mantra,
-                                    assets: list,
-                                  ),
-                          icon: const Icon(Icons.share_rounded),
-                          color: KvlColors.primaryDeep,
-                          tooltip: 'Share / Save PDF',
-                        ),
-                        loading: () => const SizedBox.shrink(),
-                        error: (_, __) => const SizedBox.shrink(),
+                    // Preview Book button
+                    assets.when(
+                      data: (list) => _PreviewBookButton(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute<void>(
+                              fullscreenDialog: true,
+                              builder: (_) => _BookPreviewPage(
+                                mantraId: widget.mantraId,
+                                mantra: mantra,
+                                profile: profile,
+                                assets: list,
+                                totalProgress: totalProgress,
+                              ),
+                            ),
+                          );
+                        },
                       ),
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, __) => const SizedBox.shrink(),
+                    ),
                   ],
                 ),
               ),
 
-              // Tab bar
-              TabBar(
-                controller: _tab,
-                labelColor: KvlColors.primaryDeep,
-                unselectedLabelColor: KvlColors.inkSoft,
-                indicatorColor: KvlColors.primary,
-                indicatorWeight: 2.5,
-                labelStyle: KvlText.ui(13, FontWeight.w700),
-                unselectedLabelStyle: KvlText.ui(13, FontWeight.w500),
-                tabs: [
-                  Tab(
-                    text: assets.when(
-                      data: (l) => 'Samples (${l.length})',
-                      loading: () => 'Samples',
-                      error: (_, __) => 'Samples',
-                    ),
-                  ),
-                  const Tab(text: 'Preview Book'),
-                ],
-              ),
-
-              const Divider(height: 1),
-
-              // Tab content
-              Expanded(
-                child: TabBarView(
-                  controller: _tab,
+              // Samples label row
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+                child: Row(
                   children: [
-                    // ── Tab 0: Samples ─────────────────────────────────────
-                    assets.when(
-                      loading: () => const Center(
-                        child: CircularProgressIndicator(
-                            color: KvlColors.primary, strokeWidth: 2),
+                    Text(
+                      assets.when(
+                        data: (l) => 'Writing Samples (${l.length})',
+                        loading: () => 'Writing Samples',
+                        error: (_, __) => 'Writing Samples',
                       ),
-                      error: (e, _) => Center(
-                        child: Text('Could not load writings',
-                            style: KvlText.body()
-                                .copyWith(color: KvlColors.inkSoft)),
-                      ),
-                      data: (list) {
-                        if (list.isEmpty) {
-                          return Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(32),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.draw_outlined,
-                                      size: 52,
-                                      color: KvlColors.muted
-                                          .withValues(alpha: 0.5)),
-                                  const SizedBox(height: 16),
-                                  Text('No writing samples yet',
-                                      style: KvlText.title(17)
-                                          .copyWith(color: KvlColors.inkSoft)),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Write on screen to add samples\nto your book.',
-                                    style: KvlText.caption(13).copyWith(
-                                        color: KvlColors.muted, height: 1.5),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }
-                        final sorted = [...list]
-                          ..sort((a, b) =>
-                              b.createdAt.compareTo(a.createdAt));
-                        return GridView.builder(
-                          controller: scrollCtrl,
-                          padding: const EdgeInsets.all(16),
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
-                            childAspectRatio: 1.2,
-                          ),
-                          itemCount: sorted.length,
-                          itemBuilder: (_, i) =>
-                              _SampleTile(
-                                asset: sorted[i],
-                                onDelete: () => _deleteAsset(sorted[i]),
-                              ),
-                        );
-                      },
-                    ),
-
-                    // ── Tab 1: Book grid ────────────────────────────────────
-                    assets.when(
-                      loading: () => const Center(
-                        child: CircularProgressIndicator(
-                            color: KvlColors.primary, strokeWidth: 2),
-                      ),
-                      error: (e, _) => Center(
-                        child: Text('Could not load writings',
-                            style: KvlText.body()
-                                .copyWith(color: KvlColors.inkSoft)),
-                      ),
-                      data: (list) {
-                        if (totalProgress == 0) return _EmptyBook(mh: mh);
-                        return ListView(
-                          controller: scrollCtrl,
-                          padding:
-                              const EdgeInsets.fromLTRB(16, 16, 16, 32),
-                          children: [
-                            // Score card
-                            if (mantraPrograms.isNotEmpty) ...[
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 20, vertical: 14),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      KvlColors.primaryDeep,
-                                      KvlColors.primary
-                                          .withValues(alpha: 0.85),
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: KvlColors.primaryDeep
-                                          .withValues(alpha: 0.25),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Complete Book Score',
-                                            style: KvlText.caption(11)
-                                                .copyWith(
-                                              color: Colors.white
-                                                  .withValues(alpha: 0.75),
-                                              letterSpacing: 0.5,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            IndianNumberFormat.format(
-                                                totalProgress),
-                                            style: KvlText.ui(32,
-                                                    FontWeight.w900)
-                                                .copyWith(
-                                                    color: Colors.white),
-                                          ),
-                                          Text(
-                                            'total chants & writings',
-                                            style: KvlText.caption(11)
-                                                .copyWith(
-                                              color: Colors.white
-                                                  .withValues(alpha: 0.7),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.end,
-                                      children: [
-                                        _ScoreStat(
-                                          label: 'Programs',
-                                          value: '${mantraPrograms.length}',
-                                        ),
-                                        const SizedBox(height: 6),
-                                        _ScoreStat(
-                                          label: 'Completed',
-                                          value: '$completedPrograms',
-                                        ),
-                                        const SizedBox(height: 6),
-                                        _ScoreStat(
-                                          label: 'Active',
-                                          value: '$activePrograms',
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                            ],
-                            // Book pages
-                            ...List.generate(
-                              (totalProgress / 108).ceil(),
-                              (boxIdx) => _BookPageBox(
-                                boxIdx: boxIdx,
-                                totalProgress: totalProgress,
-                                assets: list,
-                                mantraId: widget.mantraId,
-                              ),
-                            ),
-                          ],
-                        );
-                      },
+                      style: KvlText.ui(13, FontWeight.w700)
+                          .copyWith(color: KvlColors.primaryDeep),
                     ),
                   ],
+                ),
+              ),
+              const Divider(height: 12),
+
+              // Samples grid
+              Expanded(
+                child: assets.when(
+                  loading: () => const Center(
+                    child: CircularProgressIndicator(
+                        color: KvlColors.primary, strokeWidth: 2),
+                  ),
+                  error: (e, _) => Center(
+                    child: Text('Could not load writings',
+                        style: KvlText.body()
+                            .copyWith(color: KvlColors.inkSoft)),
+                  ),
+                  data: (list) {
+                    if (list.isEmpty) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.draw_outlined,
+                                  size: 52,
+                                  color:
+                                      KvlColors.muted.withValues(alpha: 0.5)),
+                              const SizedBox(height: 16),
+                              Text('No writing samples yet',
+                                  style: KvlText.title(17)
+                                      .copyWith(color: KvlColors.inkSoft)),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Write on screen to add samples\nto your book.',
+                                style: KvlText.caption(13).copyWith(
+                                    color: KvlColors.muted, height: 1.5),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                    final sorted = [...list]
+                      ..sort(
+                          (a, b) => b.createdAt.compareTo(a.createdAt));
+                    return GridView.builder(
+                      controller: scrollCtrl,
+                      padding: const EdgeInsets.all(16),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: 1.2,
+                      ),
+                      itemCount: sorted.length,
+                      itemBuilder: (_, i) => _SampleTile(
+                        asset: sorted[i],
+                        onDelete: () => _deleteAsset(sorted[i]),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// "Preview Book" pill button shown in the sheet header
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _PreviewBookButton extends StatelessWidget {
+  const _PreviewBookButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFD35400), Color(0xFFE67E22)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFD35400).withValues(alpha: 0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.auto_stories_rounded,
+                size: 15, color: Colors.white),
+            const SizedBox(width: 5),
+            Text(
+              'Preview Book',
+              style: KvlText.ui(12, FontWeight.w700)
+                  .copyWith(color: Colors.white),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Full-screen Book Preview page
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _BookPreviewPage extends ConsumerWidget {
+  const _BookPreviewPage({
+    required this.mantraId,
+    required this.mantra,
+    required this.profile,
+    required this.assets,
+    required this.totalProgress,
+  });
+
+  final String mantraId;
+  final Mantra? mantra;
+  final Profile? profile;
+  final List<HandwritingAsset> assets;
+  final int totalProgress;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final allPrograms =
+        ref.watch(programsForActiveProfileProvider).value ?? [];
+    final mantraPrograms =
+        allPrograms.where((p) => p.mantraId == mantraId).toList();
+    final completedPrograms =
+        mantraPrograms.where((p) => p.isCompleted).length;
+    final activePrograms =
+        mantraPrograms.where((p) => !p.isCompleted).length;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFFDF8F2),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFFDF8F2),
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.close_rounded, color: KvlColors.primaryDeep),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('My Writing Book',
+                style: KvlText.title(16)
+                    .copyWith(color: KvlColors.primaryDeep)),
+            if (mantra != null)
+              Text(mantra!.name.roman,
+                  style: KvlText.caption(11)
+                      .copyWith(color: KvlColors.inkSoft)),
+          ],
+        ),
+        actions: [
+          // Share button → bottom sheet with 3 options
+          IconButton(
+            icon: const Icon(Icons.share_rounded,
+                color: KvlColors.primaryDeep),
+            tooltip: 'Share',
+            onPressed: totalProgress == 0
+                ? null
+                : () => _showShareSheet(context),
+          ),
+        ],
+      ),
+      body: totalProgress == 0
+          ? const _EmptyBook(mh: 600)
+          : ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+              children: [
+                // Score card
+                if (mantraPrograms.isNotEmpty) ...[
+                  _ScoreCard(
+                    totalProgress: totalProgress,
+                    programCount: mantraPrograms.length,
+                    completed: completedPrograms,
+                    active: activePrograms,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                // Book pages (boxes of 108)
+                ...List.generate(
+                  (totalProgress / 108).ceil(),
+                  (boxIdx) => _BookPageBox(
+                    boxIdx: boxIdx,
+                    totalProgress: totalProgress,
+                    assets: assets,
+                    mantraId: mantraId,
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  void _showShareSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ShareOptionsSheet(
+        profile: profile,
+        mantra: mantra,
+        assets: assets,
+        totalProgress: totalProgress,
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Score card (extracted from old Tab 1)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ScoreCard extends StatelessWidget {
+  const _ScoreCard({
+    required this.totalProgress,
+    required this.programCount,
+    required this.completed,
+    required this.active,
+  });
+
+  final int totalProgress;
+  final int programCount;
+  final int completed;
+  final int active;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding:
+          const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            KvlColors.primaryDeep,
+            KvlColors.primary.withValues(alpha: 0.85),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: KvlColors.primaryDeep.withValues(alpha: 0.25),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Complete Book Score',
+                  style: KvlText.caption(11).copyWith(
+                    color: Colors.white.withValues(alpha: 0.75),
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  IndianNumberFormat.format(totalProgress),
+                  style: KvlText.ui(32, FontWeight.w900)
+                      .copyWith(color: Colors.white),
+                ),
+                Text(
+                  'total chants & writings',
+                  style: KvlText.caption(11).copyWith(
+                    color: Colors.white.withValues(alpha: 0.7),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              _ScoreStat(label: 'Programs', value: '$programCount'),
+              const SizedBox(height: 6),
+              _ScoreStat(label: 'Completed', value: '$completed'),
+              const SizedBox(height: 6),
+              _ScoreStat(label: 'Active', value: '$active'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Share options bottom sheet — Hyperlink / App format / Book PDF
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ShareOptionsSheet extends StatelessWidget {
+  const _ShareOptionsSheet({
+    required this.profile,
+    required this.mantra,
+    required this.assets,
+    required this.totalProgress,
+  });
+
+  final Profile? profile;
+  final Mantra? mantra;
+  final List<HandwritingAsset> assets;
+  final int totalProgress;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFFFDF8F2),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: KvlColors.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text('Share your book', style: KvlText.title(16)),
+          const SizedBox(height: 4),
+          Text(
+            'Choose how you want to share',
+            style:
+                KvlText.caption(12).copyWith(color: KvlColors.inkSoft),
+          ),
+          const SizedBox(height: 20),
+          // Option 1: Hyperlink
+          _ShareOption(
+            icon: Icons.link_rounded,
+            color: const Color(0xFF2980B9),
+            title: 'Share as Link',
+            subtitle: 'Copy a shareable hyperlink to your book',
+            onTap: () {
+              Navigator.pop(context);
+              _shareLink(context);
+            },
+          ),
+          const SizedBox(height: 12),
+          // Option 2: App format (share writing images)
+          _ShareOption(
+            icon: Icons.photo_library_rounded,
+            color: const Color(0xFF27AE60),
+            title: 'Share as Images',
+            subtitle: 'Share your writing samples as image files',
+            onTap: () {
+              Navigator.pop(context);
+              _shareImages(context);
+            },
+          ),
+          const SizedBox(height: 12),
+          // Option 3: Lekhana Sheet PDF
+          _ShareOption(
+            icon: Icons.picture_as_pdf_rounded,
+            color: const Color(0xFFD35400),
+            title: 'Share as Book (PDF)',
+            subtitle: 'Generate & share the Lekhana Sheet PDF',
+            onTap: () {
+              Navigator.pop(context);
+              _shareBook(context);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _shareLink(BuildContext context) {
+    final mantraName = mantra?.name.roman ?? 'mantra';
+    final url =
+        'https://vaachikalekhini.srinishtha.com/book?m=${Uri.encodeComponent(mantraName)}';
+    Clipboard.setData(ClipboardData(text: url));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Link copied: $url'),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  Future<void> _shareImages(BuildContext context) async {
+    final sorted = [...assets]
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    final paths = sorted
+        .where((a) => a.filePath != null)
+        .map((a) => a.filePath!)
+        .toList();
+    if (paths.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No writing images to share.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    // Share first image via system share sheet
+    // (full multi-file share requires share_plus with XFile list)
+    await Printing.sharePdf(
+      bytes: await File(paths.first).readAsBytes(),
+      filename: 'writing_sample.png',
+    );
+  }
+
+  Future<void> _shareBook(BuildContext context) async {
+    await _openLekhanaSheet(
+      context: context,
+      profile: profile,
+      totalProgress: totalProgress,
+      mantra: mantra,
+      assets: assets,
     );
   }
 }
@@ -1245,6 +1469,80 @@ class _SampleTile extends StatelessWidget {
     return '${d.day.toString().padLeft(2, '0')}/'
         '${d.month.toString().padLeft(2, '0')}/'
         '${d.year}';
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Share option row
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ShareOption extends StatelessWidget {
+  const _ShareOption({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+              color: color.withValues(alpha: 0.25), width: 1.2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 22),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: KvlText.ui(14, FontWeight.w700)
+                          .copyWith(color: KvlColors.ink)),
+                  const SizedBox(height: 2),
+                  Text(subtitle,
+                      style: KvlText.caption(11)
+                          .copyWith(color: KvlColors.inkSoft)),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded,
+                color: KvlColors.muted.withValues(alpha: 0.6), size: 20),
+          ],
+        ),
+      ),
+    );
   }
 }
 

@@ -1,11 +1,10 @@
 import 'dart:async';
-import 'dart:convert';
+import 'dart:ui' as ui;
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:signature/signature.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -1410,11 +1409,12 @@ class _ProtoWritingCanvas extends StatelessWidget {
   }
 }
 
-// ── Dashed-outline tracing guide ─────────────────────────────────────────────
-// Renders the mantra as a dashed stroke outline (no fill, no background dots)
-// via SVG stroke-dasharray — the only reliable way to dash glyph outlines.
+// ── Dotted-boundary tracing guide ────────────────────────────────────────────
+// Strategy: render the text with the real font to an offscreen image at ¼ scale,
+// scan boundary pixels (glyph edge ↔ transparent), place a dot per cell.
+// Result: dots follow actual glyph curves — no SVG, no separate shapes.
 
-String? _suravaramB64;
+bool _suravaramFontLoaded = false;
 
 class _DottedGuideText extends StatefulWidget {
   const _DottedGuideText({
@@ -1434,57 +1434,138 @@ class _DottedGuideText extends StatefulWidget {
 }
 
 class _DottedGuideTextState extends State<_DottedGuideText> {
-  bool _ready = false;
+  List<Offset>? _dots;
+  bool _computing = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _init();
-  }
+  String get _fontFamily => switch (widget.script) {
+        MantraScript.latin => 'Lexend',
+        MantraScript.devanagari => 'Tiro Devanagari Hindi',
+        MantraScript.telugu => 'Suravaram',
+        MantraScript.kannada => 'Tiro Kannada',
+      };
 
-  Future<void> _init() async {
-    if (widget.script == MantraScript.telugu && _suravaramB64 == null) {
+  Future<void> _compute(double canvasW, double canvasH) async {
+    if (_computing) return;
+    _computing = true;
+
+    // 1. Load Telugu font into Flutter's font registry so TextPainter uses it.
+    if (widget.script == MantraScript.telugu && !_suravaramFontLoaded) {
       final data = await rootBundle.load('assets/fonts/Suravaram-Regular.ttf');
-      _suravaramB64 = base64Encode(data.buffer.asUint8List());
+      final loader = FontLoader('Suravaram')..addFont(Future.value(data));
+      await loader.load();
+      _suravaramFontLoaded = true;
+      // Yield one frame so the engine registers the font before layout.
+      await Future.delayed(Duration.zero);
     }
-    if (mounted) setState(() => _ready = true);
+
+    // 2. Render at ¼ scale to keep pixel buffer small (~265×95 for 1060×380).
+    const scale = 0.25;
+    final scaledFontSize = widget.fontSize * scale;
+    final scaledW = (canvasW * scale).ceil();
+    final scaledH = (canvasH * scale).ceil();
+
+    final tp = TextPainter(
+      text: TextSpan(
+        text: widget.text,
+        style: TextStyle(
+          fontFamily: _fontFamily,
+          fontSize: scaledFontSize,
+          fontWeight: FontWeight.w700,
+          color: Colors.black,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: canvasW * scale);
+
+    // Centre text in scaled canvas.
+    final tx = ((scaledW - tp.width) / 2).roundToDouble();
+    final ty = ((scaledH - tp.height) / 2).roundToDouble();
+
+    final recorder = ui.PictureRecorder();
+    tp.paint(Canvas(recorder), Offset(tx, ty));
+    final img = await recorder.endRecording().toImage(scaledW, scaledH);
+    final byteData = await img.toByteData(format: ui.ImageByteFormat.rawRgba);
+    img.dispose();
+
+    if (byteData == null || !mounted) { _computing = false; return; }
+
+    // 3. Boundary scan: pixel is a boundary if it has alpha AND a transparent
+    //    neighbour. Subsample into cells so dots are evenly spaced.
+    const cellSize = 5; // px at scaled resolution → ~20 px spacing at full scale
+    const alphaThr = 30;
+    final cells = <String>{};
+    final dots = <Offset>[];
+
+    for (var y = 0; y < scaledH; y++) {
+      for (var x = 0; x < scaledW; x++) {
+        final idx = (y * scaledW + x) * 4;
+        if (byteData.getUint8(idx + 3) <= alphaThr) continue;
+
+        // Check 8-connected neighbours.
+        bool boundary = false;
+        outer:
+        for (var dy = -1; dy <= 1; dy++) {
+          for (var dx = -1; dx <= 1; dx++) {
+            if (dx == 0 && dy == 0) continue;
+            final nx = x + dx;
+            final ny = y + dy;
+            if (nx < 0 || ny < 0 || nx >= scaledW || ny >= scaledH) {
+              boundary = true; break outer;
+            }
+            if (byteData.getUint8((ny * scaledW + nx) * 4 + 3) <= alphaThr) {
+              boundary = true; break outer;
+            }
+          }
+        }
+        if (!boundary) continue;
+
+        // One dot per grid cell to avoid dense overlap.
+        final key = '${x ~/ cellSize},${y ~/ cellSize}';
+        if (cells.add(key)) {
+          // Convert from scaled → full-canvas coordinates.
+          dots.add(Offset((x + 0.5) / scale, (y + 0.5) / scale));
+        }
+      }
+    }
+
+    _dots = dots;
+    _computing = false;
+    if (mounted) setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_ready || widget.text.trim().isEmpty) return const SizedBox.shrink();
-
-    final escapedText = const HtmlEscape().convert(widget.text);
-    final fontFamily = switch (widget.script) {
-      MantraScript.latin => 'Lexend, Arial, sans-serif',
-      MantraScript.devanagari => 'Tiro Devanagari Hindi, Noto Sans Devanagari, serif',
-      MantraScript.telugu => 'Suravaram, serif',
-      MantraScript.kannada => 'Tiro Kannada, Noto Sans Kannada, serif',
-    };
-    final fontFaceDefs = widget.script == MantraScript.telugu && _suravaramB64 != null
-        ? '<style>@font-face{font-family:"Suravaram";src:url("data:font/truetype;base64,$_suravaramB64") format("truetype");}</style>'
-        : '';
-    final strokeOpacity = (widget.opacity * 0.7).clamp(0.0, 1.0).toStringAsFixed(2);
-
-    // Thin dashed outline — no fill, no dots — matches reference tracing style.
-    final svg = '''
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="420" viewBox="0 0 1400 420">
-  $fontFaceDefs
-  <text x="700" y="320" text-anchor="middle"
-    font-family="$fontFamily"
-    font-size="${widget.fontSize}"
-    font-weight="700"
-    fill="none"
-    stroke="#1a1a1a"
-    stroke-opacity="$strokeOpacity"
-    stroke-width="3"
-    stroke-dasharray="10,5"
-    stroke-linecap="round"
-    stroke-linejoin="round">$escapedText</text>
-</svg>''';
-
-    return SvgPicture.string(svg, fit: BoxFit.contain);
+    if (widget.text.trim().isEmpty) return const SizedBox.shrink();
+    return LayoutBuilder(builder: (_, constraints) {
+      final w = constraints.maxWidth;
+      final h = constraints.maxHeight;
+      if (_dots == null && !_computing) _compute(w, h);
+      if (_dots == null) return const SizedBox.shrink();
+      return CustomPaint(
+        painter: _BoundaryDotsPainter(dots: _dots!, opacity: widget.opacity),
+      );
+    });
   }
+}
+
+class _BoundaryDotsPainter extends CustomPainter {
+  const _BoundaryDotsPainter({required this.dots, required this.opacity});
+  final List<Offset> dots;
+  final double opacity;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFF1a1a1a).withValues(alpha: (opacity * 0.78).clamp(0, 1))
+      ..style = PaintingStyle.fill;
+    for (final dot in dots) {
+      canvas.drawCircle(dot, 3.0, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_BoundaryDotsPainter old) =>
+      old.opacity != opacity || old.dots != dots;
 }
 
 class _LandscapeTopBar extends ConsumerWidget {

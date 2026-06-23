@@ -500,12 +500,6 @@ class ProfileScreen extends ConsumerWidget {
           ),
           const SizedBox(height: KvlSpacing.sm),
           KvlButton(
-            variant: KvlButtonVariant.outlineDanger,
-            label: 'Clear Practice Data',
-            onPressed: () => _confirmClearData(context, ref),
-          ),
-          const SizedBox(height: KvlSpacing.sm),
-          KvlButton(
             variant: KvlButtonVariant.danger,
             label: context.l10n.deleteAccount,
             onPressed: () => _confirmDelete(context, ref),
@@ -1054,38 +1048,6 @@ Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
     }
   }
 
-Future<void> _confirmClearData(BuildContext context, WidgetRef ref) async {
-  final ok = await showDialog<bool>(
-    context: context,
-    builder: (_) => AlertDialog(
-      title: const Text('Clear Practice Data?'),
-      content: const Text(
-        'This will delete all your local Sadhanas, sessions and reward history from this device. Server data is unaffected.',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: KvlColors.danger),
-          onPressed: () => Navigator.pop(context, true),
-          child: const Text('Clear'),
-        ),
-      ],
-    ),
-  );
-  if (ok ?? false) {
-    await ref.read(appDatabaseProvider).clearProgramData();
-    ref.invalidate(programsForActiveProfileProvider);
-    ref.invalidate(rewardTotalProvider);
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Practice data cleared'), behavior: SnackBarBehavior.floating),
-      );
-    }
-  }
-}
 
 Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
     final ok = await showDialog<bool>(

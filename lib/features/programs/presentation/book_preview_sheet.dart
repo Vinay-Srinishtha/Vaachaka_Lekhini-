@@ -699,43 +699,9 @@ class _BookPreviewSheet extends ConsumerWidget {
                   ),
                 ),
 
-              // ── PDF button ─────────────────────────────────────────────────
-              if (totalProgress > 0)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: assets.when(
-                    data: (list) => SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () => _openLekhanaSheet(
-                          context: context,
-                          profile: profile,
-                          totalProgress: totalProgress,
-                          mantra: mantra,
-                          assets: list,
-                        ),
-                        icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
-                        label: const Text('Preview & Share Book PDF'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: KvlColors.primaryDeep,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 13),
-                          textStyle: KvlText.ui(14, FontWeight.w700),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          elevation: 0,
-                        ),
-                      ),
-                    ),
-                    loading: () => const SizedBox.shrink(),
-                    error: (_, __) => const SizedBox.shrink(),
-                  ),
-                ),
-
               const Divider(height: 1),
 
-              // ── Writing samples grid ───────────────────────────────────────
+              // ── Book pages grid ────────────────────────────────────────────
               Expanded(
                 child: assets.when(
                   loading: () => const Center(
@@ -748,21 +714,16 @@ class _BookPreviewSheet extends ConsumerWidget {
                             .copyWith(color: KvlColors.inkSoft)),
                   ),
                   data: (list) {
-                    if (list.isEmpty) {
-                      return _EmptyBook(mh: mh);
-                    }
-                    return GridView.builder(
+                    if (totalProgress == 0) return _EmptyBook(mh: mh);
+                    final totalBoxes = (totalProgress / 108).ceil();
+                    return ListView.builder(
                       controller: scrollCtrl,
-                      padding: const EdgeInsets.all(16),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        crossAxisSpacing: 10,
-                        mainAxisSpacing: 10,
-                      ),
-                      itemCount: list.length,
-                      itemBuilder: (_, i) => _WritingTile(
-                        asset: list[i],
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                      itemCount: totalBoxes,
+                      itemBuilder: (_, boxIdx) => _BookPageBox(
+                        boxIdx: boxIdx,
+                        totalProgress: totalProgress,
+                        assets: list,
                         mantraId: mantraId,
                       ),
                     );
@@ -808,141 +769,219 @@ class _ScoreStat extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Single tile
+// Book page box — one box = 108 cells (12 cols × 9 rows), like the PDF
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _WritingTile extends ConsumerWidget {
-  const _WritingTile({required this.asset, required this.mantraId});
-  final HandwritingAsset asset;
+class _BookPageBox extends StatelessWidget {
+  const _BookPageBox({
+    required this.boxIdx,
+    required this.totalProgress,
+    required this.assets,
+    required this.mantraId,
+  });
+
+  final int boxIdx;
+  final int totalProgress;
+  final List<HandwritingAsset> assets;
   final String mantraId;
 
+  static const int _cols = 12;
+  static const int _rows = 9;
+  static const int _cellsPerBox = _cols * _rows; // 108
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Stack(
-      children: [
-        GestureDetector(
-          onTap: () => _showFull(context),
-          child: Container(
+  Widget build(BuildContext context) {
+    final boxStart = boxIdx * _cellsPerBox;
+    final filledInBox = (totalProgress - boxStart).clamp(0, _cellsPerBox);
+    final isComplete = filledInBox == _cellsPerBox;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Page label
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Row(
+              children: [
+                Text(
+                  'Page ${boxIdx + 1}',
+                  style: KvlText.ui(12, FontWeight.w700)
+                      .copyWith(color: KvlColors.primaryDeep),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${boxStart + 1}–${boxStart + _cellsPerBox}',
+                  style: KvlText.caption(11)
+                      .copyWith(color: KvlColors.inkSoft),
+                ),
+                const Spacer(),
+                if (isComplete)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: KvlColors.primary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'Complete',
+                      style: KvlText.caption(10).copyWith(
+                        color: KvlColors.primaryDeep,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  )
+                else
+                  Text(
+                    '$filledInBox / $_cellsPerBox',
+                    style: KvlText.caption(11)
+                        .copyWith(color: KvlColors.inkSoft),
+                  ),
+              ],
+            ),
+          ),
+          // Grid
+          Container(
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                  color: KvlColors.primary.withValues(alpha: 0.18), width: 1),
+                  color: KvlColors.primary.withValues(alpha: 0.5),
+                  width: 1.2),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
               ],
             ),
-            clipBehavior: Clip.antiAlias,
-            child: Image.file(
-              File(asset.filePath!),
-              fit: BoxFit.contain,
-              errorBuilder: (_, err, _) => const Center(
-                child: Icon(Icons.broken_image_outlined,
-                    color: KvlColors.muted, size: 28),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(9),
+              child: AspectRatio(
+                aspectRatio: _cols / _rows,
+                child: LayoutBuilder(
+                  builder: (_, constraints) {
+                    final cellW = constraints.maxWidth / _cols;
+                    final cellH = constraints.maxHeight / _rows;
+                    return Stack(
+                      children: [
+                        // Grid lines
+                        CustomPaint(
+                          size: Size(constraints.maxWidth, constraints.maxHeight),
+                          painter: _GridPainter(
+                              cols: _cols, rows: _rows),
+                        ),
+                        // Cells
+                        for (var row = 0; row < _rows; row++)
+                          for (var col = 0; col < _cols; col++)
+                            _buildCell(
+                              row: row,
+                              col: col,
+                              cellW: cellW,
+                              cellH: cellH,
+                              boxStart: boxStart,
+                              filledInBox: filledInBox,
+                            ),
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
-          ),
-        ),
-        // Delete × button — top-right corner
-        Positioned(
-          top: 4,
-          right: 4,
-          child: GestureDetector(
-            onTap: () => _confirmDelete(context, ref),
-            child: Container(
-              width: 22,
-              height: 22,
-              decoration: BoxDecoration(
-                color: Colors.red.shade600,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 4,
-                    offset: const Offset(0, 1),
-                  ),
-                ],
-              ),
-              child: const Icon(Icons.close_rounded,
-                  color: Colors.white, size: 14),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete Writing?'),
-        content: const Text(
-          'This writing will be permanently removed from your book '
-          'and the count will be reduced by 1.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
           ),
         ],
       ),
     );
-    if (confirmed != true) return;
-
-    await ref.read(handwritingRepositoryProvider).delete(asset.id);
-
-    final profile = ref.read(activeProfileProvider).value;
-    if (profile != null) {
-      final programs = await ref
-          .read(programRepositoryProvider)
-          .listForProfile(profile.id);
-      for (final p in programs.where((p) => p.mantraId == mantraId)) {
-        await ref
-            .read(programRepositoryProvider)
-            .decrementWritings(p.id);
-      }
-    }
-
-    ref.invalidate(bookAssetsProvider(mantraId));
-    ref.invalidate(programsForActiveProfileProvider);
   }
 
-  void _showFull(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (_) => Dialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16)),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
+  Widget _buildCell({
+    required int row,
+    required int col,
+    required double cellW,
+    required double cellH,
+    required int boxStart,
+    required int filledInBox,
+  }) {
+    final cellIdx = row * _cols + col;
+    final globalIdx = boxStart + cellIdx;
+
+    if (cellIdx >= filledInBox) {
+      // Empty cell
+      return Positioned(
+        left: col * cellW,
+        top: row * cellH,
+        width: cellW,
+        height: cellH,
+        child: const SizedBox.shrink(),
+      );
+    }
+
+    // Filled cell — show writing image if available
+    if (assets.isNotEmpty) {
+      final asset = assets[globalIdx % assets.length];
+      if (asset.filePath != null) {
+        return Positioned(
+          left: col * cellW + 0.5,
+          top: row * cellH + 0.5,
+          width: cellW - 1,
+          height: cellH - 1,
           child: Image.file(
             File(asset.filePath!),
             fit: BoxFit.contain,
-            errorBuilder: (_, err, _) => const SizedBox(
-              height: 200,
-              child: Center(
-                child: Icon(Icons.broken_image_outlined,
-                    color: KvlColors.muted, size: 40),
-              ),
-            ),
+            errorBuilder: (_, __, ___) => _filledCell(cellW, cellH),
           ),
-        ),
-      ),
+        );
+      }
+    }
+
+    return Positioned(
+      left: col * cellW + 0.5,
+      top: row * cellH + 0.5,
+      width: cellW - 1,
+      height: cellH - 1,
+      child: _filledCell(cellW, cellH),
     );
   }
+
+  Widget _filledCell(double w, double h) => Container(
+        color: KvlColors.primary.withValues(alpha: 0.18),
+      );
+}
+
+class _GridPainter extends CustomPainter {
+  const _GridPainter({required this.cols, required this.rows});
+  final int cols;
+  final int rows;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFFD35400).withValues(alpha: 0.35)
+      ..strokeWidth = 0.4;
+
+    final cellW = size.width / cols;
+    final cellH = size.height / rows;
+
+    for (var c = 1; c < cols; c++) {
+      final x = c * cellW;
+      // dashed vertical lines
+      var y = 0.0;
+      while (y < size.height) {
+        canvas.drawLine(Offset(x, y), Offset(x, y + 2), paint);
+        y += 4;
+      }
+    }
+    for (var r = 1; r < rows; r++) {
+      final y = r * cellH;
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_GridPainter old) => false;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

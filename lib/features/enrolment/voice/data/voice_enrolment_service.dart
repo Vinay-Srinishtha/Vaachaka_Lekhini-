@@ -57,16 +57,9 @@ class VoiceEnrolmentService {
   /// calling into the recognizer concurrently.
   bool _finalizing = false;
 
-  /// True once the window timer has been started (deferred until first
-  /// real audio arrives so the first chant is never cut mid-word).
   bool _timerStarted = false;
   int _target = 11;
   Mantra? _mantra;
-
-  /// Peak amplitude that marks genuine speech onset (vs. ambient noise). Set
-  /// from the active mic sensitivity in [start]; the window timer waits for a
-  /// chunk this loud so the very first chant always gets a full window.
-  double _speechThreshold = 800;
 
   /// How often (ms) we force a finalisation regardless of silence.
   ///
@@ -111,7 +104,6 @@ class VoiceEnrolmentService {
     _matches = 0;
     _target = target;
     _mantra = mantra;
-    _speechThreshold = sensitivity.minAmplitudeThreshold;
 
     await warmUp();
     // Wider grammar = higher recall: the small model can land on the full
@@ -122,25 +114,23 @@ class VoiceEnrolmentService {
 
     final stream = await _audio.start(
       minAmplitude: sensitivity.minAmplitudeThreshold,
-      // 450 ms holdover: bridges the brief amplitude dip between rapid
-      // consecutive chants so they are never split into separate silence
-      // windows. Do NOT lower this — it is what lets fast chanting work.
       holdoverMs: 450,
-      // 400 ms calibration: learns the ambient noise floor before gating.
-      // Audio passes through during calibration so the first chant is never
-      // lost. Slightly longer than before for a more accurate floor estimate.
-      calibrateMs: 300,
-      // 1.5× multiplier: gentle noise rejection that clears ambient hiss
-      // without raising the gate so high it clips soft or rapid chants.
+      calibrateMs: 0,   // disabled — adaptive gate was raising threshold and clipping early chants
       noiseMultiplier: 1.5,
     );
 
-    // ── PCM stream → Vosk ──────────────────────────────────────────────────
-    // The window timer is NOT started here. It is deferred until the first
-    // non-silence audio chunk arrives so the very first chant always gets a
-    // full forced-finalize window regardless of how long the user waits before
-    // speaking. Without this, a user who starts chanting ~1 s after tapping
-    // "Start" would have their first word cut mid-syllable by the timer.
+    // ── Start window timer immediately ─────────────────────────────────────
+    // Previously the timer was deferred until speech onset (peak ≥ threshold).
+    // That caused the first 1–3 chants to be lost: they accumulated in Vosk
+    // but were never force-finalized because the threshold was never crossed
+    // (quiet room, mic warmup, etc.). Starting the timer right away means
+    // the first chant always gets finalized within one window.
+    _timerStarted = true;
+    _windowTimer = Timer.periodic(
+      const Duration(milliseconds: _windowMs),
+      (_) => _forceFinalize(),
+    );
+
     _sub = stream.listen(
       (chunk) async {
         final peak = AudioCapture.peakAmplitude(chunk);
@@ -148,23 +138,7 @@ class VoiceEnrolmentService {
           _levels.add((peak / 6000.0).clamp(0.0, 1.0));
         }
 
-        // Skip chunk processing while the timer is flushing to avoid
-        // calling acceptChunk and finalize/getFinalResult concurrently.
         if (!_running || _finalizing) return;
-
-        // Start the window timer only on genuine SPEECH onset — a chunk loud
-        // enough to clear the sensitivity threshold. Using "any non-zero byte"
-        // here was wrong: the amplitude gate forwards ambient noise as real
-        // audio during its holdover window, so the timer used to start on
-        // mic-open noise and could fire mid-way through the first chant,
-        // cutting it before it was ever counted.
-        if (!_timerStarted && peak >= _speechThreshold) {
-          _timerStarted = true;
-          _windowTimer = Timer.periodic(
-            const Duration(milliseconds: _windowMs),
-            (_) => _forceFinalize(),
-          );
-        }
 
         final r = await _recognizer?.acceptChunk(chunk);
         if (r == null) return;

@@ -87,7 +87,7 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
     _idleTimer?.cancel();
     if (_controller.isEmpty || _checking || _saving) return;
     _idleTimer = Timer(
-      const Duration(milliseconds: 900),
+      const Duration(milliseconds: 600),
       _submitOne,
     );
   }

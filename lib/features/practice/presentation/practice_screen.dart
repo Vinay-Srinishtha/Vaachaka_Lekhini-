@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -109,6 +110,26 @@ class _PracticeDashboard extends ConsumerStatefulWidget {
 
 class _PracticeDashboardView extends ConsumerState<_PracticeDashboard> {
   bool _showProgramPicker = false;
+  Timer? _statsRefreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Re-poll global stats every 30 s so counters roll live.
+    _statsRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) {
+        ref.invalidate(
+          globalStatsProvider(widget.state.program.mantraId),
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _statsRefreshTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -164,7 +185,7 @@ class _PracticeDashboardView extends ConsumerState<_PracticeDashboard> {
                     SizedBox(height: tight ? KvlSpacing.xs : gap),
 
                     // ── Community stats ───────────────────────────────────────
-                    _CommunityStatsRow(
+                    _LiveStatsBar(
                       globalCount: globalCount,
                       liveUsers: liveUsers,
                       loading: statsLoading,
@@ -259,10 +280,10 @@ class _PracticeDashboardView extends ConsumerState<_PracticeDashboard> {
   }
 }
 
-// ── Community stats row ───────────────────────────────────────────────────────
+// ── Live stats bar — no containers, rolling digits, JioHotstar-style ─────────
 
-class _CommunityStatsRow extends StatelessWidget {
-  const _CommunityStatsRow({
+class _LiveStatsBar extends StatelessWidget {
+  const _LiveStatsBar({
     required this.globalCount,
     required this.liveUsers,
     required this.loading,
@@ -276,38 +297,91 @@ class _CommunityStatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final h = compact ? 96.0 : 108.0;
+    final numSize = compact ? 22.0 : 25.0;
+    final labelSize = compact ? 10.5 : 11.5;
+
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
+        // ── Global Sadhana ─────────────────────────────────────────────────
         Expanded(
-          child: _GradientStatCard(
-            height: h,
-            gradientColors: const [Color(0xFFFEF1E0), Color(0xFFFADFB5)],
-            borderColor: KvlColors.primary.withValues(alpha: .22),
-            iconBg: KvlColors.primarySoft,
-            icon: Icons.public_rounded,
-            iconColor: KvlColors.primaryDeep,
-            label: 'Global Count',
-            value: IndianNumberFormat.format(globalCount),
-            valueColor: KvlColors.primaryDeep,
-            loading: loading,
-            compact: compact,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(Icons.public_rounded,
+                  size: compact ? 20 : 22, color: KvlColors.primaryDeep),
+              const SizedBox(width: 6),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (loading)
+                    _Shimmer(width: 56, height: numSize)
+                  else
+                    _RollingCounter(
+                      value: globalCount,
+                      fontSize: numSize,
+                      color: KvlColors.primaryDeep,
+                    ),
+                  Text(
+                    'Global Sadhana',
+                    style: KvlText.caption(labelSize).copyWith(
+                      color: KvlColors.inkSoft,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-        const SizedBox(width: KvlSpacing.md),
+
+        // Divider
+        Container(
+          width: 1,
+          height: 36,
+          color: KvlColors.border.withValues(alpha: .5),
+        ),
+
+        // ── Live Devotees ──────────────────────────────────────────────────
         Expanded(
-          child: _GradientStatCard(
-            height: h,
-            gradientColors: const [Color(0xFFE8F5F4), Color(0xFFBDD9D7)],
-            borderColor: KvlColors.accent.withValues(alpha: .25),
-            iconBg: KvlColors.accentSoft,
-            icon: Icons.people_alt_rounded,
-            iconColor: KvlColors.accent,
-            label: 'Live Users',
-            value: IndianNumberFormat.format(liveUsers),
-            valueColor: KvlColors.accent,
-            loading: loading,
-            compact: compact,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const _LivePulseDot(),
+                      const SizedBox(width: 4),
+                      if (loading)
+                        _Shimmer(width: 48, height: numSize)
+                      else
+                        _RollingCounter(
+                          value: liveUsers,
+                          fontSize: numSize,
+                          color: KvlColors.accent,
+                        ),
+                    ],
+                  ),
+                  Text(
+                    'Live Devotees',
+                    style: KvlText.caption(labelSize).copyWith(
+                      color: KvlColors.inkSoft,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 6),
+              Icon(Icons.people_alt_rounded,
+                  size: compact ? 20 : 22, color: KvlColors.accent),
+            ],
           ),
         ),
       ],
@@ -315,119 +389,170 @@ class _CommunityStatsRow extends StatelessWidget {
   }
 }
 
-class _GradientStatCard extends StatelessWidget {
-  const _GradientStatCard({
-    required this.height,
-    required this.gradientColors,
-    required this.borderColor,
-    required this.iconBg,
-    required this.icon,
-    required this.iconColor,
-    required this.label,
+// ── Rolling digit counter ─────────────────────────────────────────────────────
+
+class _RollingCounter extends StatelessWidget {
+  const _RollingCounter({
     required this.value,
-    required this.valueColor,
-    required this.loading,
-    required this.compact,
+    required this.fontSize,
+    required this.color,
   });
 
-  final double height;
-  final List<Color> gradientColors;
-  final Color borderColor;
-  final Color iconBg;
-  final IconData icon;
-  final Color iconColor;
-  final String label;
-  final String value;
-  final Color valueColor;
-  final bool loading;
-  final bool compact;
+  final int value;
+  final double fontSize;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      padding: EdgeInsets.all(compact ? 12.0 : 14.0),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: gradientColors,
-        ),
-        borderRadius: KvlRadius.brLG,
-        border: Border.all(color: borderColor, width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: gradientColors.last.withValues(alpha: .6),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-          BoxShadow(
-            color: Colors.black.withValues(alpha: .05),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
+    final formatted = IndianNumberFormat.format(value);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: [
+          for (var i = 0; i < formatted.length; i++)
+            _RollingDigit(
+              key: ValueKey('$i-${formatted[i]}-$value'),
+              char: formatted[i],
+              fontSize: fontSize,
+              color: color,
+            ),
         ],
+    );
+  }
+}
+
+class _RollingDigit extends StatelessWidget {
+  const _RollingDigit({
+    super.key,
+    required this.char,
+    required this.fontSize,
+    required this.color,
+  });
+
+  final String char;
+  final double fontSize;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDigit = char.codeUnitAt(0) >= 48 && char.codeUnitAt(0) <= 57;
+    return AnimatedSwitcher(
+      duration: Duration(milliseconds: isDigit ? 380 : 0),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, anim) => SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.8),
+          end: Offset.zero,
+        ).animate(anim),
+        child: FadeTransition(opacity: anim, child: child),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            width: compact ? 38 : 44,
-            height: compact ? 38 : 44,
-            decoration: BoxDecoration(
-              color: iconBg,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: iconColor.withValues(alpha: .15),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+      child: Text(
+        char,
+        key: ValueKey(char),
+        style: KvlText.ui(fontSize, FontWeight.w800).copyWith(color: color),
+      ),
+    );
+  }
+}
+
+// ── Pulsing live dot ──────────────────────────────────────────────────────────
+
+class _LivePulseDot extends StatefulWidget {
+  const _LivePulseDot();
+
+  @override
+  State<_LivePulseDot> createState() => _LivePulseDotState();
+}
+
+class _LivePulseDotState extends State<_LivePulseDot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+    _scale = Tween<double>(begin: 0.6, end: 1.0).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scale,
+      child: Container(
+        width: 8,
+        height: 8,
+        decoration: BoxDecoration(
+          color: const Color(0xFFE53935),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFE53935).withValues(alpha: .5),
+              blurRadius: 4,
+              spreadRadius: 1,
             ),
-            alignment: Alignment.center,
-            child: Icon(icon, color: iconColor, size: compact ? 20 : 23),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: KvlText.caption(compact ? 11 : 12).copyWith(
-                    color: KvlColors.inkSoft,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                if (loading)
-                  Container(
-                    height: compact ? 20 : 24,
-                    width: 64,
-                    decoration: BoxDecoration(
-                      color: iconColor.withValues(alpha: .15),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  )
-                else
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      value,
-                      maxLines: 1,
-                      style: KvlText.ui(compact ? 20 : 23, FontWeight.w800)
-                          .copyWith(color: valueColor),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Shimmer placeholder ───────────────────────────────────────────────────────
+
+class _Shimmer extends StatefulWidget {
+  const _Shimmer({required this.width, required this.height});
+  final double width;
+  final double height;
+
+  @override
+  State<_Shimmer> createState() => _ShimmerState();
+}
+
+class _ShimmerState extends State<_Shimmer>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (_, __) => Container(
+        width: widget.width,
+        height: widget.height,
+        decoration: BoxDecoration(
+          color: KvlColors.border.withValues(alpha: .3 + _ctrl.value * .3),
+          borderRadius: BorderRadius.circular(4),
+        ),
       ),
     );
   }

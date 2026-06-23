@@ -67,8 +67,8 @@ class BookPreviewButton extends ConsumerWidget {
       onTap: () => openSheet(context, mantraId),
       child: Container(
         padding: EdgeInsets.symmetric(
-          horizontal: compact ? 10 : 13,
-          vertical: compact ? 5 : 7,
+          horizontal: compact ? 13 : 16,
+          vertical: compact ? 7 : 9,
         ),
         decoration: BoxDecoration(
           color: KvlColors.surface,
@@ -87,13 +87,13 @@ class BookPreviewButton extends ConsumerWidget {
           children: [
             Icon(
               Icons.menu_book_rounded,
-              size: compact ? 14 : 16,
+              size: compact ? 16 : 18,
               color: KvlColors.primaryDeep,
             ),
             const SizedBox(width: 5),
             Text(
               'My Book',
-              style: KvlText.ui(compact ? 11.5 : 12.5, FontWeight.w700)
+              style: KvlText.ui(compact ? 13 : 14, FontWeight.w700)
                   .copyWith(color: KvlColors.primaryDeep),
             ),
             if (total > 0) ...[

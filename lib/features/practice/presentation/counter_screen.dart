@@ -893,7 +893,7 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
         }();
 
         return Stack(
-          clipBehavior: Clip.none,
+          clipBehavior: Clip.hardEdge,
           alignment: Alignment.center,
           children: [
             // Soft static glow — centred on the "Shankara" title.
@@ -991,9 +991,9 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
                           style: TextStyle(
                             // Reduced from 0.40 / 90 cap per design — smaller
                             // Sri Rama heading on the practice screen.
-                            fontSize: (constraints.maxWidth * 0.28).clamp(
-                              26.0,
-                              60.0,
+                            fontSize: (constraints.maxWidth * 0.252).clamp(
+                              23.4,
+                              54.0,
                             ),
                             fontWeight: FontWeight.w800,
                             letterSpacing: 0,

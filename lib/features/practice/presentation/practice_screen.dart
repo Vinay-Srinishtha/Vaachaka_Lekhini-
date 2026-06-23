@@ -953,19 +953,19 @@ class _DashboardHeader extends ConsumerWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: KvlColors.gold.withValues(alpha: .15),
+              color: const Color(0xFFFBF3D8),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: KvlColors.gold.withValues(alpha: .4)),
+              border: Border.all(color: const Color(0xFFE8C04A), width: 1.1),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.star_rounded, size: 16, color: KvlColors.gold),
+                const Icon(Icons.star_rounded, size: 15, color: KvlColors.gold),
                 const SizedBox(width: 4),
                 Text(
                   '$pts pts',
                   style: KvlText.ui(13, FontWeight.w700)
-                      .copyWith(color: KvlColors.gold),
+                      .copyWith(color: const Color(0xFF5a4400)),
                 ),
               ],
             ),

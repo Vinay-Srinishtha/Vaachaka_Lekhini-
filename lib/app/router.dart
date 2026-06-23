@@ -433,42 +433,24 @@ class _RewardHistoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: KvlRadius.brSM,
-      child: SizedBox(
-        width: 92,
-        height: 44,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFBF3D8),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFE8C04A), width: 1.1),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.star_rounded, size: 16, color: KvlColors.gold),
-                const SizedBox(width: 4),
-                Flexible(
-                  child: Text(
-                    IndianNumberFormat.format(points),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: KvlText.ui(
-                      12,
-                      FontWeight.w700,
-                    ).copyWith(color: KvlColors.ink),
-                  ),
-                ),
-              ],
-            ),
+            const Icon(Icons.star_rounded, size: 15, color: KvlColors.gold),
+            const SizedBox(width: 4),
             Text(
-              context.l10n.seeHistory,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: KvlText.caption(9.5).copyWith(
-                color: KvlColors.primaryDeep,
-                fontWeight: FontWeight.w600,
-              ),
+              '${IndianNumberFormat.format(points)} pts',
+              style: KvlText.ui(12, FontWeight.w700)
+                  .copyWith(color: const Color(0xFF5a4400)),
             ),
           ],
         ),

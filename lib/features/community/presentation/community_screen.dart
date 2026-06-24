@@ -42,7 +42,9 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
   }
 }
 
-class _Body extends StatelessWidget {
+// ─── Body ────────────────────────────────────────────────────────────────────
+
+class _Body extends StatefulWidget {
   const _Body({
     required this.list,
     required this.sort,
@@ -65,12 +67,54 @@ class _Body extends StatelessWidget {
   final VoidCallback? onRetry;
 
   @override
+  State<_Body> createState() => _BodyState();
+}
+
+class _BodyState extends State<_Body> {
+  final _scrollController = ScrollController();
+  final _selfKey = GlobalKey();
+  bool _scrolledToSelf = false;
+
+  @override
+  void didUpdateWidget(_Body old) {
+    super.didUpdateWidget(old);
+    // Reset scroll-to-self when the filter/sort changes so the next data load
+    // re-triggers the scroll.
+    if (old.sort != widget.sort || old.selectedMantraId != widget.selectedMantraId) {
+      _scrolledToSelf = false;
+    }
+    if (!_scrolledToSelf && widget.list != old.list && widget.list.isNotEmpty) {
+      _scheduleScrollToSelf();
+    }
+  }
+
+  void _scheduleScrollToSelf() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _selfKey.currentContext;
+      if (ctx == null) return;
+      _scrolledToSelf = true;
+      Scrollable.ensureVisible(
+        ctx,
+        alignment: 0.5, // center the self row vertically
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeOutCubic,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final topInset = MediaQuery.viewPaddingOf(context).top.clamp(36.0, 48.0);
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    // One entry per account: keep only the first (highest-ranked) self row.
     bool selfSeen = false;
-    final deduped = list.where((f) {
+    final deduped = widget.list.where((f) {
       if (!f.isSelf) return true;
       if (selfSeen) return false;
       selfSeen = true;
@@ -81,107 +125,123 @@ class _Body extends StatelessWidget {
     final selfInPodium = podium.any((f) => f.isSelf);
     final rest = deduped.skip(3).where((f) => !selfInPodium || !f.isSelf).toList();
 
-    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    if (widget.loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (widget.hasError) {
+      return _ErrorView(onRetry: widget.onRetry);
+    }
+
+    if (deduped.isEmpty) {
+      return _EmptyView();
+    }
 
     return RefreshIndicator(
-      onRefresh: onRetry != null ? () async => onRetry!() : () async {},
+      onRefresh: widget.onRetry != null ? () async => widget.onRetry!() : () async {},
       color: KvlColors.primary,
-      child: SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(
-        KvlSpacing.lg,
-        topInset + 68,
-        KvlSpacing.lg,
-        bottomInset + 104,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _SortToggle(sort: sort, onChanged: onSortChanged),
-          // With a single mantra, "All" and that one chip are equivalent —
-          // hide the filter entirely; only show it when there's a real choice.
-          if (mantras.length > 1) ...[
-            const SizedBox(height: KvlSpacing.sm),
-            _MantraFilter(
-              mantras: mantras,
-              selectedId: selectedMantraId,
-              onChanged: onMantraChanged,
+      child: CustomScrollView(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          // ── Scrollable header: sort toggle + mantra filter ──
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                KvlSpacing.lg,
+                topInset + 68,
+                KvlSpacing.lg,
+                KvlSpacing.md,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _SortToggle(sort: widget.sort, onChanged: widget.onSortChanged),
+                  if (widget.mantras.length > 1) ...[
+                    const SizedBox(height: KvlSpacing.sm),
+                    _MantraFilter(
+                      mantras: widget.mantras,
+                      selectedId: widget.selectedMantraId,
+                      onChanged: widget.onMantraChanged,
+                    ),
+                  ],
+                ],
+              ),
             ),
-          ],
-          const SizedBox(height: KvlSpacing.md),
-          if (loading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 48),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (hasError)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 48),
-              child: Column(
-                children: [
-                  Icon(Icons.cloud_off_rounded, size: 48, color: KvlColors.primarySoft),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Could not load rankings',
-                    style: KvlText.ui(15, FontWeight.w600).copyWith(color: KvlColors.inkSoft),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Check your connection and try again.',
-                    textAlign: TextAlign.center,
-                    style: KvlText.caption(12).copyWith(color: KvlColors.muted),
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton.icon(
-                    onPressed: onRetry,
-                    icon: const Icon(Icons.refresh_rounded, size: 16),
-                    label: const Text('Retry'),
-                    style: FilledButton.styleFrom(backgroundColor: KvlColors.primary),
-                  ),
-                ],
+          ),
+
+          // ── Pinned podium — always visible ──
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _PodiumHeader(top3: podium, sort: widget.sort),
+          ),
+
+          // ── Rank rows: 4th place onward ──
+          if (rest.isEmpty)
+            const SliverToBoxAdapter(child: SizedBox.shrink())
+          else
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(
+                KvlSpacing.lg,
+                KvlSpacing.sm,
+                KvlSpacing.lg,
+                bottomInset + 104,
               ),
-            )
-          else if (deduped.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 48),
-              child: Column(
-                children: [
-                  Icon(Icons.leaderboard_outlined, size: 48, color: KvlColors.primarySoft),
-                  const SizedBox(height: 12),
-                  Text(
-                    context.l10n.noRankingsYet,
-                    style: KvlText.ui(15, FontWeight.w600).copyWith(color: KvlColors.inkSoft),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    context.l10n.noRankingsSubtitle,
-                    textAlign: TextAlign.center,
-                    style: KvlText.caption(12).copyWith(color: KvlColors.muted),
-                  ),
-                ],
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, i) {
+                    final friend = rest[i];
+                    return Padding(
+                      padding: EdgeInsets.only(
+                        bottom: i < rest.length - 1 ? KvlSpacing.xs : 0,
+                      ),
+                      child: _RankRow(
+                        key: friend.isSelf ? _selfKey : null,
+                        rank: i + 4,
+                        friend: friend,
+                        sort: widget.sort,
+                        highlight: friend.isSelf,
+                      ),
+                    );
+                  },
+                  childCount: rest.length,
+                ),
               ),
-            )
-          else ...[
-            _Podium(top3: podium, sort: sort),
-            const SizedBox(height: KvlSpacing.sm),
-            for (int i = 0; i < rest.length; i++) ...[
-              _RankRow(
-                rank: i + 4,
-                friend: rest[i],
-                sort: sort,
-                highlight: rest[i].isSelf,
-              ),
-              if (i < rest.length - 1)
-                const SizedBox(height: KvlSpacing.xs),
-            ],
-          ],
+            ),
         ],
       ),
-    ),   // SingleChildScrollView
-    );   // RefreshIndicator
+    );
   }
 }
 
+// ─── Pinned podium header ─────────────────────────────────────────────────────
+
+class _PodiumHeader extends SliverPersistentHeaderDelegate {
+  const _PodiumHeader({required this.top3, required this.sort});
+  final List<Friend> top3;
+  final LeaderboardSort sort;
+
+  static const double _height = 168.0;
+
+  @override
+  double get minExtent => _height;
+  @override
+  double get maxExtent => _height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      padding: const EdgeInsets.symmetric(horizontal: KvlSpacing.lg),
+      child: _Podium(top3: top3, sort: sort),
+    );
+  }
+
+  @override
+  bool shouldRebuild(_PodiumHeader old) => old.top3 != top3 || old.sort != sort;
+}
+
+// ─── Sort toggle ─────────────────────────────────────────────────────────────
 
 class _SortToggle extends StatelessWidget {
   const _SortToggle({required this.sort, required this.onChanged});
@@ -197,7 +257,6 @@ class _SortToggle extends StatelessWidget {
         borderRadius: KvlRadius.brSM,
       ),
       child: Row(
-        // Chants first, Streaks second (per design).
         children: [
           _Pill(
             label: context.l10n.totalChantsSort,
@@ -216,11 +275,7 @@ class _SortToggle extends StatelessWidget {
 }
 
 class _Pill extends StatelessWidget {
-  const _Pill({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
+  const _Pill({required this.label, required this.selected, required this.onTap});
   final String label;
   final bool selected;
   final VoidCallback onTap;
@@ -241,16 +296,16 @@ class _Pill extends StatelessWidget {
           alignment: Alignment.center,
           child: Text(
             label,
-            style: KvlText.ui(
-              12,
-              FontWeight.w600,
-            ).copyWith(color: selected ? Colors.white : KvlColors.inkSoft),
+            style: KvlText.ui(12, FontWeight.w600)
+                .copyWith(color: selected ? Colors.white : KvlColors.inkSoft),
           ),
         ),
       ),
     );
   }
 }
+
+// ─── Podium ───────────────────────────────────────────────────────────────────
 
 class _Podium extends StatelessWidget {
   const _Podium({required this.top3, required this.sort});
@@ -296,6 +351,7 @@ class _Pod extends StatelessWidget {
     final metric = sort == LeaderboardSort.streak
         ? context.l10n.streakDaysCount(friend.longestStreak)
         : IndianNumberFormat.compact(friend.totalChants);
+    final isSelf = friend.isSelf;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -309,12 +365,17 @@ class _Pod extends StatelessWidget {
           margin: const EdgeInsets.only(top: 2),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: border, width: 3),
+            border: Border.all(
+              color: isSelf ? KvlColors.primary : border,
+              width: isSelf ? 3.5 : 3,
+            ),
             gradient: LinearGradient(
-              colors: [
-                KvlColors.primary.withValues(alpha: .9),
-                KvlColors.primaryDeep,
-              ],
+              colors: isSelf
+                  ? [KvlColors.primary, KvlColors.primaryDeep]
+                  : [
+                      KvlColors.primary.withValues(alpha: .9),
+                      KvlColors.primaryDeep,
+                    ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -333,19 +394,28 @@ class _Pod extends StatelessWidget {
         SizedBox(
           width: 72,
           child: Text(
-            friend.name,
+            isSelf ? 'You' : friend.name,
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: KvlText.caption(10.5).copyWith(fontWeight: FontWeight.w600),
+            style: KvlText.caption(10.5).copyWith(
+              fontWeight: FontWeight.w600,
+              color: isSelf ? KvlColors.primaryDeep : null,
+            ),
           ),
         ),
-        Text(metric, maxLines: 1, overflow: TextOverflow.ellipsis, style: KvlText.muted(10)),
+        Text(
+          metric,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: KvlText.muted(10),
+        ),
       ],
     );
   }
 }
 
+// ─── Mantra filter ────────────────────────────────────────────────────────────
 
 class _MantraFilter extends StatelessWidget {
   const _MantraFilter({
@@ -385,11 +455,7 @@ class _MantraFilter extends StatelessWidget {
 }
 
 class _FilterChip extends StatelessWidget {
-  const _FilterChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
+  const _FilterChip({required this.label, required this.selected, required this.onTap});
   final String label;
   final bool selected;
   final VoidCallback onTap;
@@ -420,9 +486,11 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
+// ─── Rank row ─────────────────────────────────────────────────────────────────
 
-class _RankRow extends StatefulWidget {
+class _RankRow extends StatelessWidget {
   const _RankRow({
+    super.key,
     required this.rank,
     required this.friend,
     required this.sort,
@@ -434,18 +502,13 @@ class _RankRow extends StatefulWidget {
   final bool highlight;
 
   @override
-  State<_RankRow> createState() => _RankRowState();
-}
-
-class _RankRowState extends State<_RankRow> {
-  @override
   Widget build(BuildContext context) {
-    final metric = widget.sort == LeaderboardSort.streak
-        ? context.l10n.streakDaysCount(widget.friend.longestStreak)
-        : IndianNumberFormat.compact(widget.friend.totalChants);
+    final metric = sort == LeaderboardSort.streak
+        ? context.l10n.streakDaysCount(friend.longestStreak)
+        : IndianNumberFormat.compact(friend.totalChants);
     return KvlCard(
-      variant: widget.highlight ? KvlCardVariant.soft : KvlCardVariant.plain,
-      border: widget.highlight
+      variant: highlight ? KvlCardVariant.soft : KvlCardVariant.plain,
+      border: highlight
           ? Border.all(color: KvlColors.primarySoft, width: 1.5)
           : null,
       padding: const EdgeInsets.symmetric(
@@ -457,9 +520,9 @@ class _RankRowState extends State<_RankRow> {
           SizedBox(
             width: 22,
             child: Text(
-              '${widget.rank}',
+              '$rank',
               style: KvlText.ui(13, FontWeight.w700).copyWith(
-                color: widget.highlight ? KvlColors.primaryDeep : KvlColors.inkSoft,
+                color: highlight ? KvlColors.primaryDeep : KvlColors.inkSoft,
               ),
             ),
           ),
@@ -476,7 +539,7 @@ class _RankRowState extends State<_RankRow> {
             ),
             alignment: Alignment.center,
             child: Text(
-              widget.friend.initials,
+              friend.initials,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 11,
@@ -491,11 +554,11 @@ class _RankRowState extends State<_RankRow> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  widget.highlight ? context.l10n.youLabel : widget.friend.name,
+                  highlight ? context.l10n.youLabel : friend.name,
                   style: KvlText.ui(12, FontWeight.w600),
                 ),
                 Text(
-                  widget.sort == LeaderboardSort.streak
+                  sort == LeaderboardSort.streak
                       ? context.l10n.longestStreakLabel
                       : context.l10n.totalChantsSort,
                   style: KvlText.muted(10),
@@ -508,18 +571,79 @@ class _RankRowState extends State<_RankRow> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                widget.friend.streakActive ? '$metric 🔥' : metric,
+                friend.streakActive ? '$metric 🔥' : metric,
                 style: KvlText.ui(12, FontWeight.w600),
               ),
-              if (widget.sort == LeaderboardSort.streak &&
-                  widget.friend.currentStreak > 0 &&
-                  widget.friend.currentStreak != widget.friend.longestStreak)
+              if (sort == LeaderboardSort.streak &&
+                  friend.currentStreak > 0 &&
+                  friend.currentStreak != friend.longestStreak)
                 Text(
-                  context.l10n.streakDaysCount(widget.friend.currentStreak),
-                  style: KvlText.muted(9)
-                      .copyWith(color: KvlColors.primary),
+                  context.l10n.streakDaysCount(friend.currentStreak),
+                  style: KvlText.muted(9).copyWith(color: KvlColors.primary),
                 ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Empty / error states ─────────────────────────────────────────────────────
+
+class _ErrorView extends StatelessWidget {
+  const _ErrorView({this.onRetry});
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.cloud_off_rounded, size: 48, color: KvlColors.primarySoft),
+          const SizedBox(height: 12),
+          Text(
+            'Could not load rankings',
+            style: KvlText.ui(15, FontWeight.w600).copyWith(color: KvlColors.inkSoft),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Check your connection and try again.',
+            textAlign: TextAlign.center,
+            style: KvlText.caption(12).copyWith(color: KvlColors.muted),
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded, size: 16),
+            label: const Text('Retry'),
+            style: FilledButton.styleFrom(backgroundColor: KvlColors.primary),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyView extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.leaderboard_outlined, size: 48, color: KvlColors.primarySoft),
+          const SizedBox(height: 12),
+          Text(
+            context.l10n.noRankingsYet,
+            style: KvlText.ui(15, FontWeight.w600).copyWith(color: KvlColors.inkSoft),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            context.l10n.noRankingsSubtitle,
+            textAlign: TextAlign.center,
+            style: KvlText.caption(12).copyWith(color: KvlColors.muted),
           ),
         ],
       ),

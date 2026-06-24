@@ -75,10 +75,12 @@ class SyncEngine with WidgetsBindingObserver {
   }
 
   /// Walk the outbox FIFO and POST each item. Stops on the first failure
-  /// (so writes stay ordered per-resource).
+  /// (so writes stay ordered per-resource). Triggers a pull afterwards if
+  /// anything was pushed so the server-computed counts reflect immediately.
   Future<void> drain() async {
     if (_draining) return;
     _draining = true;
+    var pushed = 0;
     try {
       final pending = await _outbox.peekAll();
       for (final item in pending) {
@@ -103,6 +105,7 @@ class SyncEngine with WidgetsBindingObserver {
             await _api.dio.post<Map<String, Object?>>(route, data: body);
           }
           await _outbox.remove(item.id);
+          pushed++;
           if (kDebugMode) debugPrint('[sync] pushed ${item.kind} → ${spec.route}');
         } on DioException catch (e) {
           final status = e.response?.statusCode ?? 0;
@@ -123,6 +126,9 @@ class SyncEngine with WidgetsBindingObserver {
     } finally {
       _draining = false;
     }
+    // Pull fresh server data after any successful push so counts are
+    // immediately up-to-date without waiting for the next poll tick.
+    if (pushed > 0 && _auth.isAuthenticated) unawaited(pull());
   }
 
   _SyncSpec? _specFor(String kind) => switch (kind) {
@@ -189,7 +195,7 @@ class SyncEngine with WidgetsBindingObserver {
   }
 
   void _startPoll() {
-    _pollTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+    _pollTimer = Timer.periodic(const Duration(seconds: 15), (_) {
       if (_auth.isAuthenticated) unawaited(pull());
     });
   }

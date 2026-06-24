@@ -47,12 +47,15 @@ import '../features/profiles/data/profile_repository_local.dart';
 import '../features/profiles/domain/member_address.dart';
 import '../features/profiles/domain/profile.dart';
 import '../features/profiles/domain/profile_repository.dart';
+import '../features/tnc/data/tnc_repository.dart';
 
 /// App-wide Riverpod composition root.
 ///
 /// Repository providers are the only thing that changes when we swap
 /// local → remote in Phase 9; the rest of the tree consumes the abstract
 /// interface and doesn't care.
+
+final tncRepositoryProvider = Provider<TncRepository>((ref) => TncRepository(ref));
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepositoryRemote(
@@ -255,6 +258,8 @@ final accountHydrationProvider = Provider<void>((ref) {
           avatarSeed: member['avatar_key'] as String?,
           language: member['language'] as String? ?? 'en',
           mantraLanguage: member['mantra_language'] as String? ?? 'hi',
+          location: prefsMap['location'] as String?,
+          gothra: prefsMap['gothra'] as String?,
           addresses: addresses,
           createdAt:
               DateTime.tryParse(member['created_at'] as String? ?? '') ??
@@ -607,51 +612,58 @@ final storeItemsProvider = StreamProvider<List<StoreItem>>((ref) async* {
 /// hammering the API (the old 2-second loop caused a request storm when the
 /// backend was unreachable). Call ref.invalidate(globalStatsProvider(id)) to
 /// force an immediate refresh (e.g. after a practice session finishes).
-final globalStatsProvider = FutureProvider.autoDispose
-    .family<({int globalChantCount, int memberCount}), String>((ref, mantraId) async {
-  // Keep the provider alive across re-builds while its widget is on screen,
-  // but still allow disposal when the screen is gone.
-  final link = ref.keepAlive();
+typedef _GlobalStats = ({int globalChantCount, int memberCount, int liveCount});
 
-  // Schedule a periodic re-fetch while the screen is mounted.
-  final timer = Timer(const Duration(seconds: 30), () {
-    ref.invalidateSelf();
-  });
-  ref.onDispose(() {
-    timer.cancel();
-    link.close();
-  });
-
+final globalStatsProvider = StreamProvider.autoDispose
+    .family<_GlobalStats, String>((ref, mantraId) async* {
   final box = cacheBox();
   final cacheKey = '$_kStatsCachePrefix$mantraId';
 
-  ({int globalChantCount, int memberCount}) cachedOrZero() {
+  _GlobalStats cachedOrZero() {
     final raw = box.get(cacheKey);
     if (raw is Map) {
       return (
         globalChantCount: (raw['c'] as num?)?.toInt() ?? 0,
         memberCount: (raw['m'] as num?)?.toInt() ?? 0,
+        liveCount: (raw['l'] as num?)?.toInt() ?? 0,
       );
     }
-    return (globalChantCount: 0, memberCount: 0);
+    return (globalChantCount: 0, memberCount: 0, liveCount: 0);
   }
 
-  try {
-    final api = ref.watch(apiClientProvider);
-    final res = await api.dio.get<Map<String, dynamic>>(
-      '/api/v1/stats?mantra_id=${Uri.encodeComponent(mantraId)}',
-    );
-    final data = res.data ?? {};
-    final result = (
-      globalChantCount: (data['global_chant_count'] as num?)?.toInt() ?? 0,
-      memberCount: (data['member_count'] as num?)?.toInt() ?? 0,
-    );
-    await box.put(cacheKey, {'c': result.globalChantCount, 'm': result.memberCount});
-    return result;
-  } catch (_) {
-    // Offline / server down: keep the last known totals instead of dropping
-    // the global count to zero (which made the on-screen number flicker).
-    return cachedOrZero();
+  Future<_GlobalStats> fetchFresh() async {
+    try {
+      final api = ref.read(apiClientProvider);
+      final res = await api.dio.get<Map<String, dynamic>>(
+        '/api/v1/stats?mantra_id=${Uri.encodeComponent(mantraId)}',
+      );
+      final data = res.data ?? {};
+      final result = (
+        globalChantCount: (data['global_chant_count'] as num?)?.toInt() ?? 0,
+        memberCount: (data['member_count'] as num?)?.toInt() ?? 0,
+        liveCount: (data['live_count'] as num?)?.toInt() ?? 0,
+      );
+      await box.put(cacheKey, {
+        'c': result.globalChantCount,
+        'm': result.memberCount,
+        'l': result.liveCount,
+      });
+      return result;
+    } catch (_) {
+      return cachedOrZero();
+    }
+  }
+
+  // Emit cached value immediately — no loading flash.
+  yield cachedOrZero();
+
+  // Fetch fresh data and emit without ever going into loading state.
+  yield await fetchFresh();
+
+  // Poll every 45 s in the background; always emit stale-then-fresh.
+  while (true) {
+    await Future<void>.delayed(const Duration(seconds: 45));
+    yield await fetchFresh();
   }
 });
 

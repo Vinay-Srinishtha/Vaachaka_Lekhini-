@@ -13,6 +13,7 @@ import '../../../core/widgets/widgets.dart';
 import '../../../l10n/l10n.dart';
 import '../../settings/domain/settings_repository.dart';
 import '../domain/program.dart';
+import 'book_preview_sheet.dart';
 
 class ProgramsScreen extends ConsumerWidget {
   const ProgramsScreen({super.key});
@@ -282,6 +283,18 @@ class _BonusCard extends ConsumerWidget {
               ],
             ),
           ),
+          GestureDetector(
+            onTap: () => BookPreviewButton.openSheet(context, program.mantraId),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              child: const Icon(
+                Icons.menu_book_rounded,
+                size: 20,
+                color: KvlColors.primaryDeep,
+              ),
+            ),
+          ),
+          const SizedBox(width: 2),
           const Icon(Icons.chevron_right, color: KvlColors.inkSoft),
         ],
       ),
@@ -457,39 +470,55 @@ class _ProgramCard extends ConsumerWidget {
         children: [
           MilestoneRing.fraction(
             fraction: program.progressFraction,
-            strokeWidth: 3.5,
-            gap: 3,
+            strokeWidth: 3,
+            gap: 2,
             child: MantraThumb(
               glyph: glyph,
               imageUrl: imgUrl,
-              size: 46,
+              size: 40,
             ),
           ),
-          const SizedBox(width: KvlSpacing.md),
+          const SizedBox(width: KvlSpacing.sm),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   name,
-                  style: KvlText.bodyByScript(
-                    script,
-                    15,
-                  ).copyWith(fontWeight: FontWeight.w600),
+                  style: KvlText.bodyByScript(script, 14)
+                      .copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   complete
                       ? '${IndianNumberFormat.format(program.totalProgress)} / ${IndianNumberFormat.format(program.targetWritings)} · ${context.l10n.completedWithCheck}'
                       : '${IndianNumberFormat.format(program.totalProgress)} / ${IndianNumberFormat.format(program.targetWritings)}',
-                  style: KvlText.muted(12).copyWith(
+                  style: KvlText.muted(11.5).copyWith(
                     color: complete ? KvlColors.success : KvlColors.muted,
                   ),
                 ),
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, color: KvlColors.inkSoft),
+          // Book preview button — shows writing samples for this program only
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => BookPreviewButton.openSheet(context, program.mantraId),
+            child: Container(
+              margin: const EdgeInsets.only(left: 4, right: 2),
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: KvlColors.primaryDeep.withValues(alpha: .08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.menu_book_rounded,
+                size: 18,
+                color: KvlColors.primaryDeep,
+              ),
+            ),
+          ),
+          const Icon(Icons.chevron_right, color: KvlColors.inkSoft, size: 18),
         ],
       ),
     );

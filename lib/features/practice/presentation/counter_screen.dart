@@ -253,10 +253,12 @@ class _BodyState extends ConsumerState<_Body> {
     // community chant stat — this is the programme the user is contributing to.
     final sadhanas = ref.watch(activeGlobalSadhanaProvider).value ?? const [];
     final gsRepo = ref.read(globalSadhanaRepositoryProvider);
+    GlobalSadhana? enrolledGs;
     int? enrolledGlobalCount;
     for (final gs in sadhanas) {
       if (gs.mantraId == state.program.mantraId &&
           gsRepo.cachedEnrollment(gs.id) != null) {
+        enrolledGs = gs;
         enrolledGlobalCount = gs.currentCount;
         break;
       }
@@ -325,6 +327,7 @@ class _BodyState extends ConsumerState<_Body> {
                   _Counts(
                     globalCount: globalCount,
                     added: state.sessionCount,
+                    memberCount: statsAsync.value?.liveCount ?? 0,
                     compact: compact,
                   ),
                   SizedBox(height: compact ? 6 : 8),
@@ -424,7 +427,7 @@ class _BodyState extends ConsumerState<_Body> {
                     ),
                   ] else ...[
                     SizedBox(height: compact ? 6 : 8),
-                    _ProgressCard(state: state, compact: compact),
+                    _SimpleProgressBar(state: state, compact: compact, enrolledGs: enrolledGs),
                   ],
                   SizedBox(height: bottomPad),
                 ],
@@ -785,89 +788,31 @@ class _HeroMic extends StatefulWidget {
 }
 
 class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
-  static const _poolSize = 4;
-
-  // Darker, more saturated ripple palette so the rings read clearly against
-  // the cream background.
-  static const _ringColors = [
-    Color(0xFFD2691E),
-    Color(0xFFC75D24),
-    Color(0xFFB8521C),
-    Color(0xFFCC6A2B),
-    Color(0xFFA8481A),
-    Color(0xFFBE5E20),
-  ];
-
-  late List<AnimationController> _pool;
-  int _nextSlot = 0;
-  DateTime? _lastCountTime;
-  final List<double> _slotIntensity = List.filled(_poolSize, 0.5);
-  late AnimationController _textCtrl;
+  late final AnimationController _textCtrl;
 
   @override
   void initState() {
     super.initState();
-    _pool = List.generate(
-      _poolSize,
-      (_) => AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 1800),
-      ),
-    );
     _textCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 520),
     );
-    if (widget.isRunning) _textCtrl.reset();
   }
 
   @override
   void didUpdateWidget(_HeroMic old) {
     super.didUpdateWidget(old);
-    if (widget.isRunning && !old.isRunning) {
+    if (!widget.isRunning && old.isRunning) {
+      _textCtrl.stop();
       _textCtrl.reset();
-    } else if (!widget.isRunning && old.isRunning) {
-      _stopAll();
     }
     if (widget.sessionCount != old.sessionCount && widget.isRunning) {
-      if (widget.isVoiceMode) _fireRipple();
       _textCtrl.forward(from: 0);
     }
   }
 
-  void _fireRipple() {
-    final now = DateTime.now();
-    double intensity = 0.5;
-    if (_lastCountTime != null) {
-      final ms = now.difference(_lastCountTime!).inMilliseconds;
-      intensity = (1.0 - ((ms - 300) / 2700)).clamp(0.18, 0.82);
-    }
-    _lastCountTime = now;
-
-    final slot = _nextSlot % _poolSize;
-    _nextSlot++;
-    _slotIntensity[slot] = intensity;
-
-    _pool[slot].duration = Duration(
-      milliseconds: (1900 - intensity * 450).round(),
-    );
-    _pool[slot].forward(from: 0);
-  }
-
-  void _stopAll() {
-    for (final c in _pool) {
-      c.stop();
-      c.reset();
-    }
-    _textCtrl.stop();
-    _textCtrl.reset();
-  }
-
   @override
   void dispose() {
-    for (final c in _pool) {
-      c.dispose();
-    }
     _textCtrl.dispose();
     super.dispose();
   }
@@ -876,10 +821,7 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (ctx, constraints) {
-        final micDiam = widget.micSize * 1.4;
-        // Visible orb is smaller than the ripple base, and the waves scale to it.
         final orbDiam = widget.micSize * 1.05;
-        final maxDiam = constraints.biggest.longestSide * 3.2;
 
         // Vertical position of the "Shankara" title — the midpoint between the
         // stack top and the mic orb's top edge. The soft glow shares this so it
@@ -920,59 +862,15 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
               ),
             ),
 
-            // Outward ripples — fired on each voice count. Emanate from the
-            // centre of the "Shankara" title and grow outwards.
-            for (var i = 0; i < _poolSize; i++)
-              Align(
-                alignment: Alignment(0, titleAlignY),
-                child: AnimatedBuilder(
-                  animation: _pool[i],
-                  builder: (ctx2, _) {
-                    final raw = _pool[i].value;
-                    if (raw == 0.0) return const SizedBox.shrink();
-                    final t = Curves.easeOut.transform(raw);
-                    final intensity = _slotIntensity[i];
-                    final reach = micDiam + (maxDiam - micDiam) * intensity;
-                    // Grow from the centre point (≈0) outward, so the ring
-                    // emanates from the title's centre rather than popping in
-                    // already-large (which read as the circle drifting down).
-                    final diam = reach * t;
-                    final opacity = ((1.0 - t) * 0.34 * intensity).clamp(
-                      0.0,
-                      0.34,
-                    );
-                    final color = _ringColors[i % _ringColors.length];
-                    return Container(
-                      width: diam,
-                      height: diam,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          colors: [
-                            color.withValues(alpha: 0.0),
-                            color.withValues(alpha: opacity * 0.3),
-                            color.withValues(alpha: opacity),
-                          ],
-                          stops: const [0.0, 0.60, 1.0],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
 
-            // Mantra title — FIXED position & size in both idle and running.
-            // Vertically centred in the gap between the top bar (stack top)
-            // and the top edge of the mic orb (orb centre sits at y=0.76).
+            // Mantra title — quick shrink-and-back with colour flash on each count.
             Align(
               alignment: Alignment(0, titleAlignY),
               child: AnimatedBuilder(
                 animation: _textCtrl,
-                builder: (ctx2, _) {
-                  // Per-count pulse: quick shrink-and-back with a colour flash,
-                  // anchored in place (does not move the title).
+                builder: (_, __) {
                   final dip = math.sin(_textCtrl.value * math.pi); // 0→1→0
-                  final scale = 1.0 - 0.06 * dip;
+                  final scale = 1.0 - 0.14 * dip;
                   final color = Color.lerp(
                     const Color(0xFFCC7A3A),
                     const Color(0xFF7E2F08),
@@ -989,12 +887,7 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
                           textAlign: TextAlign.center,
                           maxLines: 1,
                           style: TextStyle(
-                            // Reduced from 0.40 / 90 cap per design — smaller
-                            // Sri Rama heading on the practice screen.
-                            fontSize: (constraints.maxWidth * 0.252).clamp(
-                              23.4,
-                              54.0,
-                            ),
+                            fontSize: (constraints.maxWidth * 0.252).clamp(23.4, 54.0),
                             fontWeight: FontWeight.w800,
                             letterSpacing: 0,
                             color: color,
@@ -1199,10 +1092,11 @@ class _VoiceWavesPainter extends CustomPainter {
 // Count display
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _Counts extends StatelessWidget {
+class _Counts extends StatefulWidget {
   const _Counts({
     required this.globalCount,
     required this.added,
+    required this.memberCount,
     required this.compact,
   });
 
@@ -1211,14 +1105,36 @@ class _Counts extends StatelessWidget {
 
   /// This session's live count (the green "+N" that grows on every chant).
   final int added;
+
+  /// Live devotees count from the global stats provider.
+  final int memberCount;
   final bool compact;
 
   @override
+  State<_Counts> createState() => _CountsState();
+}
+
+class _CountsState extends State<_Counts> with SingleTickerProviderStateMixin {
+  late final AnimationController _pulseCtrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1100),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _pulseCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Server total "till now" (excludes the live session adds shown separately).
-    final globalBase = (globalCount - added).clamp(0, globalCount);
+    final compact = widget.compact;
+    final added = widget.added;
+    final globalBase = (widget.globalCount - added).clamp(0, widget.globalCount);
+    final hasLive = widget.memberCount > 0;
+
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 360),
+      constraints: const BoxConstraints(maxWidth: 400),
       child: Container(
         padding: EdgeInsets.symmetric(
           horizontal: KvlSpacing.lg,
@@ -1275,9 +1191,6 @@ class _Counts extends StatelessWidget {
                   FontWeight.w600,
                 ).copyWith(color: const Color(0xFF9A8678)),
               ),
-              // The live session count pops on each increment so the number
-              // animates in lockstep with the title pulse + ripple (same
-              // rebuild), instead of snapping instantly while they ease.
               TweenAnimationBuilder<double>(
                 key: ValueKey(added),
                 tween: Tween(begin: added > 0 ? 1.14 : 1.0, end: 1.0),
@@ -1293,6 +1206,46 @@ class _Counts extends StatelessWidget {
                   ).copyWith(color: const Color(0xFF16A34A)),
                 ),
               ),
+              if (hasLive) ...[
+                Container(
+                  width: 1,
+                  height: compact ? 14 : 17,
+                  margin: const EdgeInsets.symmetric(horizontal: 10),
+                  color: KvlColors.border,
+                ),
+                AnimatedBuilder(
+                  animation: _pulseCtrl,
+                  builder: (_, __) => Container(
+                    width: compact ? 6 : 7,
+                    height: compact ? 6 : 7,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Color.lerp(
+                        const Color(0xFF22C55E),
+                        const Color(0xFF16A34A),
+                        _pulseCtrl.value,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF22C55E).withValues(
+                            alpha: 0.4 + 0.3 * _pulseCtrl.value,
+                          ),
+                          blurRadius: 4 + 3 * _pulseCtrl.value,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  '${IndianNumberFormat.format(widget.memberCount)} Live',
+                  style: KvlText.ui(
+                    compact ? 12 : 13,
+                    FontWeight.w700,
+                  ).copyWith(color: const Color(0xFF16A34A)),
+                ),
+              ],
             ],
           ),
         ),
@@ -1549,121 +1502,292 @@ class _ActionButton extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Today's progress card
+// Today's progress card — circular ring + glassmorphic stat chips
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _ProgressCard extends StatelessWidget {
-  const _ProgressCard({required this.state, required this.compact});
+class _SimpleProgressBar extends StatelessWidget {
+  const _SimpleProgressBar({required this.state, required this.compact, this.enrolledGs});
   final PracticeState state;
   final bool compact;
+  final GlobalSadhana? enrolledGs;
 
   @override
   Widget build(BuildContext context) {
-    final total = state.program.totalProgress + state.sessionCount;
-    final goal = state.program.targetWritings;
-    final progress = goal == 0 ? 0.0 : (total / goal).clamp(0, 1).toDouble();
+    final gs = enrolledGs;
+    final isGlobal = gs != null;
+    final total = isGlobal
+        ? gs.currentCount + state.sessionCount
+        : state.program.totalProgress + state.sessionCount;
+    final goal = isGlobal ? gs.targetCount : state.program.targetWritings;
+    final progress = goal == 0 ? 0.0 : (total / goal).clamp(0.0, 1.0);
+    final pct = (progress * 100).round();
+
     return Padding(
-      // Transparent — blends with the screen background (no card surface).
-      padding: const EdgeInsets.symmetric(
-        horizontal: KvlSpacing.md,
-        vertical: KvlSpacing.xs,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: Text(
-                  'Total Progress',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: KvlText.title(
-                    compact ? 13 : 15,
-                  ).copyWith(fontWeight: FontWeight.w800),
-                ),
+              Text(
+                isGlobal ? gs.title : 'Progress',
+                style: KvlText.caption(compact ? 11 : 12)
+                    .copyWith(color: KvlColors.inkSoft, fontWeight: FontWeight.w600),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(width: KvlSpacing.sm),
-              Flexible(
-                flex: 0,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    '${IndianNumberFormat.format(total)} / ${IndianNumberFormat.format(goal)}',
-                    maxLines: 1,
-                    style: KvlText.caption(
-                      compact ? 11 : 12,
-                    ).copyWith(color: KvlColors.inkSoft),
-                  ),
-                ),
+              Text(
+                '$pct%',
+                style: KvlText.caption(compact ? 11 : 12)
+                    .copyWith(color: KvlColors.primaryDeep, fontWeight: FontWeight.w700),
               ),
             ],
           ),
-          const SizedBox(height: KvlSpacing.sm),
-          _GradientProgressBar(progress: progress),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: progress),
+              duration: const Duration(milliseconds: 700),
+              curve: Curves.easeOutCubic,
+              builder: (_, v, __) => LinearProgressIndicator(
+                value: v,
+                minHeight: compact ? 7 : 9,
+                backgroundColor: KvlColors.primary.withValues(alpha: 0.12),
+                valueColor: AlwaysStoppedAnimation<Color>(KvlColors.primary),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-/// Rounded gradient progress bar with a soft track. The fill animates to the
-/// current [progress] (0–1) and keeps a pill cap even at small values.
-class _GradientProgressBar extends StatelessWidget {
-  const _GradientProgressBar({required this.progress});
-  final double progress;
+class _ProgressCard extends StatelessWidget {
+  const _ProgressCard({required this.state, required this.compact, this.enrolledGs});
+  final PracticeState state;
+  final bool compact;
+  final GlobalSadhana? enrolledGs;
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: KvlRadius.brPill,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          const height = 11.0;
-          final fullWidth = constraints.maxWidth;
-          // Keep a visible rounded cap once there's any progress.
-          final fillWidth = progress <= 0
-              ? 0.0
-              : (progress * fullWidth).clamp(height, fullWidth);
-          return Stack(
-            children: [
-              // Track
-              Container(
-                height: height,
-                width: fullWidth,
-                color: KvlColors.primary.withValues(alpha: 0.12),
-              ),
-              // Fill
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 350),
-                curve: Curves.easeOutCubic,
-                height: height,
-                width: fillWidth,
-                decoration: BoxDecoration(
-                  borderRadius: KvlRadius.brPill,
-                  gradient: const LinearGradient(
-                    colors: [
-                      Color(0xFFFFB572),
-                      KvlColors.primary,
-                      KvlColors.primaryDeep,
-                    ],
+    // When enrolled in a global sadhana, show the campaign's collective
+    // progress against its target instead of the personal program progress.
+    final gs = enrolledGs;
+    final isGlobal = gs != null;
+    final total = isGlobal
+        ? gs.currentCount + state.sessionCount
+        : state.program.totalProgress + state.sessionCount;
+    final goal = isGlobal ? gs.targetCount : state.program.targetWritings;
+    final progress = goal == 0 ? 0.0 : (total / goal).clamp(0, 1).toDouble();
+    final pct = (progress * 100).round();
+    final todayCount = state.todaysTotal + state.sessionCount;
+    final dailyTarget = state.program.effectiveDailyTarget;
+    final toMilestone = goal > 0 ? (goal - total).clamp(0, goal) : 0;
+    final ringSize = compact ? 76.0 : 90.0;
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: KvlSpacing.md,
+        vertical: compact ? 8 : 10,
+      ),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: Colors.white.withValues(alpha: 0.55),
+        border: Border.all(
+          color: KvlColors.primary.withValues(alpha: 0.18),
+          width: 1.1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: KvlColors.primary.withValues(alpha: 0.07),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Circular ring showing overall program progress
+          SizedBox(
+            width: ringSize,
+            height: ringSize,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
+                  width: ringSize,
+                  height: ringSize,
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0, end: progress),
+                    duration: const Duration(milliseconds: 600),
+                    curve: Curves.easeOutCubic,
+                    builder: (_, v, __) => CustomPaint(
+                      painter: _RingPainter(progress: v),
+                    ),
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: KvlColors.primary.withValues(alpha: 0.35),
-                      blurRadius: 6,
-                      offset: const Offset(0, 1),
+                ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '$pct%',
+                      style: KvlText.ui(compact ? 15 : 18, FontWeight.w900)
+                          .copyWith(color: KvlColors.primaryDeep),
+                    ),
+                    Text(
+                      'done',
+                      style: KvlText.caption(compact ? 9 : 10)
+                          .copyWith(color: KvlColors.inkSoft),
                     ),
                   ],
                 ),
-              ),
-            ],
-          );
-        },
+              ],
+            ),
+          ),
+          const SizedBox(width: KvlSpacing.md),
+          // Stat chips stacked vertically
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (isGlobal) ...[
+                  Text(
+                    gs.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: KvlText.ui(compact ? 10 : 11, FontWeight.w700)
+                        .copyWith(color: KvlColors.primaryDeep),
+                  ),
+                  SizedBox(height: compact ? 3 : 4),
+                ],
+                _StatChip(
+                  label: isGlobal ? 'Campaign' : 'Total',
+                  value: '${IndianNumberFormat.format(total)} / ${IndianNumberFormat.format(goal)}',
+                  icon: isGlobal ? Icons.public_rounded : Icons.auto_awesome_rounded,
+                  compact: compact,
+                ),
+                SizedBox(height: compact ? 5 : 7),
+                _StatChip(
+                  label: 'Today',
+                  value: dailyTarget > 0
+                      ? '${IndianNumberFormat.format(todayCount)} / ${IndianNumberFormat.format(dailyTarget)}'
+                      : IndianNumberFormat.format(todayCount),
+                  icon: Icons.today_rounded,
+                  compact: compact,
+                ),
+                if (goal > 0 && toMilestone > 0) ...[
+                  SizedBox(height: compact ? 5 : 7),
+                  _StatChip(
+                    label: isGlobal ? 'Remaining' : 'To go',
+                    value: IndianNumberFormat.format(toMilestone),
+                    icon: Icons.flag_rounded,
+                    iconColor: KvlColors.accent,
+                    compact: compact,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 }
+
+class _StatChip extends StatelessWidget {
+  const _StatChip({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.compact,
+    this.iconColor,
+  });
+  final String label;
+  final String value;
+  final IconData icon;
+  final bool compact;
+  final Color? iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 9 : 11,
+        vertical: compact ? 5 : 6,
+      ),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: KvlColors.primary.withValues(alpha: 0.06),
+        border: Border.all(
+          color: KvlColors.primary.withValues(alpha: 0.13),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: compact ? 12 : 13, color: iconColor ?? KvlColors.primaryDeep),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: KvlText.caption(compact ? 10 : 11)
+                .copyWith(color: KvlColors.inkSoft),
+          ),
+          const Spacer(),
+          Text(
+            value,
+            style: KvlText.ui(compact ? 11 : 12, FontWeight.w800)
+                .copyWith(color: KvlColors.primaryDeep),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RingPainter extends CustomPainter {
+  const _RingPainter({required this.progress});
+  final double progress;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final radius = size.shortestSide / 2 - 5;
+    final strokeW = size.shortestSide * 0.10;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    final trackPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeW
+      ..color = KvlColors.primary.withValues(alpha: 0.12)
+      ..strokeCap = StrokeCap.round;
+    canvas.drawCircle(center, radius, trackPaint);
+    if (progress <= 0) return;
+    final fillPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeW
+      ..strokeCap = StrokeCap.round
+      ..shader = SweepGradient(
+        startAngle: -math.pi / 2,
+        endAngle: -math.pi / 2 + 2 * math.pi * progress,
+        colors: const [Color(0xFFFFB572), KvlColors.primary, KvlColors.primaryDeep],
+        stops: const [0.0, 0.55, 1.0],
+        tileMode: TileMode.clamp,
+      ).createShader(rect);
+    canvas.drawArc(
+      rect,
+      -math.pi / 2,
+      2 * math.pi * progress,
+      false,
+      fillPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_RingPainter old) => old.progress != progress;
+}
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mic error card

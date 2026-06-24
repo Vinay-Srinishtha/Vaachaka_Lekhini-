@@ -12,9 +12,15 @@ const SIM_LO = '9900000000';
 const SIM_HI = '9900999999';
 const SIM_NAME_PREFIX = 'SIM_';
 
+// In range AND (has a SIM_ member  OR  has no members at all — orphan rows from
+// a failed provision). A real user in this range would have a non-SIM member,
+// so they are still never matched.
 const simWhere = {
 	mobile: { gte: SIM_LO, lte: SIM_HI },
-	members: { some: { displayName: { startsWith: SIM_NAME_PREFIX } } }
+	OR: [
+		{ members: { some: { displayName: { startsWith: SIM_NAME_PREFIX } } } },
+		{ members: { none: {} } }
+	]
 } as const;
 
 /// POST /api/v1/sim/clear  → { deleted, sadhanasAdjusted }
@@ -27,47 +33,30 @@ const simWhere = {
 /// contributed, and re-open any sadhana the sim load had pushed to 'completed'.
 export const POST: RequestHandler = async () => {
 	try {
-		// Sim member ids (both tags) — used to scope the contribution rollback.
-		const simMembers = await prisma.member.findMany({
-			where: {
-				displayName: { startsWith: SIM_NAME_PREFIX },
-				account: { mobile: { gte: SIM_LO, lte: SIM_HI } }
-			},
-			select: { id: true }
-		});
-		const memberIds = simMembers.map((m) => m.id);
-
-		let sadhanasAdjusted = 0;
-		if (memberIds.length > 0) {
-			const byS = await prisma.globalSadhanaContribution.groupBy({
-				by: ['globalSadhanaId'],
-				where: { memberId: { in: memberIds } },
-				_sum: { countAdded: true }
-			});
-			for (const row of byS) {
-				const back = row._sum.countAdded ?? 0;
-				if (back <= 0) continue;
-				await prisma.$transaction(async (tx) => {
-					const gs = await tx.globalSadhana.findUnique({
-						where: { id: row.globalSadhanaId },
-						select: { currentCount: true, targetCount: true, status: true }
-					});
-					if (!gs) return;
-					const next = Math.max(0, gs.currentCount - back);
-					await tx.globalSadhana.update({
-						where: { id: row.globalSadhanaId },
-						data: {
-							currentCount: next,
-							// Re-open if the sim load is what had completed it.
-							...(gs.status === 'completed' && next < gs.targetCount
-								? { status: 'active', completedAt: null }
-								: {})
-						}
-					});
-				});
-				sadhanasAdjusted++;
-			}
-		}
+		// Roll back each Global Sadhana's denormalised currentCount by exactly
+		// what sim members contributed — done entirely in SQL so it scales to
+		// any number of sim members (no huge IN list loaded into JS). Re-opens
+		// any sadhana the sim load had pushed to 'completed'.
+		const sadhanasAdjusted: number = await prisma.$executeRawUnsafe(
+			`WITH sums AS (
+				SELECT c."globalSadhanaId" AS gid, SUM(c."countAdded")::int AS s
+				FROM "GlobalSadhanaContribution" c
+				JOIN "Member" m ON m.id = c."memberId"
+				JOIN "Account" a ON a.id = m."accountId"
+				WHERE a.mobile BETWEEN '${SIM_LO}' AND '${SIM_HI}'
+				  AND m."displayName" LIKE '${SIM_NAME_PREFIX}%'
+				GROUP BY c."globalSadhanaId"
+			)
+			UPDATE "GlobalSadhana" g
+			SET "currentCount" = GREATEST(0, g."currentCount" - sums.s),
+			    status = CASE WHEN g.status = 'completed'::"GlobalSadhanaStatus"
+			                   AND (g."currentCount" - sums.s) < g."targetCount"
+			                  THEN 'active'::"GlobalSadhanaStatus" ELSE g.status END,
+			    "completedAt" = CASE WHEN g.status = 'completed'::"GlobalSadhanaStatus"
+			                          AND (g."currentCount" - sums.s) < g."targetCount"
+			                         THEN NULL ELSE g."completedAt" END
+			FROM sums WHERE g.id = sums.gid`
+		);
 
 		const result = await prisma.account.deleteMany({ where: simWhere });
 		return snakeJson({ deleted: result.count, sadhanasAdjusted });

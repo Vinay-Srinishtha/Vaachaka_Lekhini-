@@ -33,7 +33,10 @@ export const GET: RequestHandler = async ({ url }) => {
 		}
 	}
 
-	const [countAgg, memberCount] = await Promise.all([
+	// "Live" = session started in the last 30 min that has not yet ended.
+	const liveWindow = new Date(Date.now() - 30 * 60 * 1000);
+
+	const [countAgg, memberCount, liveCount] = await Promise.all([
 		// Total chants — optionally scoped to one mantra via program join.
 		prisma.session.aggregate({
 			where: resolvedMantraId ? { program: { mantraId: resolvedMantraId } } : undefined,
@@ -48,13 +51,26 @@ export const GET: RequestHandler = async ({ url }) => {
 						distinct: ['memberId']
 					})
 					.then((rows) => new Set(rows.map((r) => r.member.accountId)).size)
-			: prisma.account.count()
+			: prisma.account.count(),
+		// Currently active: open sessions (endedAt null) OR sessions started
+		// within the last 30 minutes — counts distinct members.
+		prisma.session
+			.findMany({
+				where: {
+					...(resolvedMantraId ? { program: { mantraId: resolvedMantraId } } : {}),
+					startedAt: { gte: liveWindow }
+				},
+				select: { memberId: true },
+				distinct: ['memberId']
+			})
+			.then((rows) => rows.length)
 	]);
 
 	return snakeJson(
 		{
 			global_chant_count: countAgg._sum.countAdded ?? 0,
-			member_count: memberCount
+			member_count: memberCount,
+			live_count: liveCount
 		},
 		{
 			headers: {

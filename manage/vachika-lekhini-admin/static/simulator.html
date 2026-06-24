@@ -66,19 +66,27 @@
   <div class="card">
     <div class="label">Configuration</div>
     <div class="row"><label>Users</label><input id="users" type="number" value="1000" min="1"></div>
-    <div class="row"><label>Chants / minute (per user)</label><input id="rate" type="number" value="40" min="1"></div>
-    <div class="row"><label>Duration (minutes)</label><input id="dur" type="number" value="5" min="1"></div>
+    <div class="row"><label>Goal target (chants to complete)</label><input id="goal" type="number" value="108" min="1"></div>
+    <div class="row"><label>Max sessions per user</label><input id="sessions" type="number" value="6" min="2"></div>
+    <div class="row"><label>Duration (minutes — real-time pacing)</label><input id="dur" type="number" value="5" min="1"></div>
     <div class="row"><label>Mode</label>
       <span class="pill sel" data-mode="bulk">Bulk</span>
       <span class="pill" data-mode="realtime">Real-time</span>
     </div>
     <div class="row"><label>Modality</label>
-      <span class="pill sel" data-mod="voice">voice</span>
+      <span class="pill sel" data-mod="mixed">mixed (voice + written)</span>
+      <span class="pill" data-mod="voice">voice</span>
       <span class="pill" data-mod="manual">manual</span>
-      <span class="pill" data-mod="handwriting">handwriting</span>
+      <span class="pill" data-mod="handwriting">written</span>
     </div>
     <div class="row"><label>Join active Global Sadhana (so its count reflects)</label>
       <input id="joinsadhana" type="checkbox" checked style="width:18px;height:18px">
+    </div>
+    <div class="row"><label>Simulate referrals + join/referral points</label>
+      <input id="referrals" type="checkbox" checked style="width:18px;height:18px">
+    </div>
+    <div class="row"><label>Simulate spending reward points (store redemptions)</label>
+      <input id="spending" type="checkbox" checked style="width:18px;height:18px">
     </div>
     <div class="row"><label>Diversify counts per user (varied activity + power users)</label>
       <input id="diversify" type="checkbox" checked style="width:18px;height:18px">
@@ -99,6 +107,8 @@
     <div class="stats">
       <div class="stat"><b id="s_sess">0</b><span>Sessions</span></div>
       <div class="stat"><b id="s_chant">0</b><span>Chants</span></div>
+      <div class="stat"><b id="s_done">0</b><span>Goals met</span></div>
+      <div class="stat"><b id="s_spent">0</b><span>Pts spent</span></div>
       <div class="stat"><b id="s_err">0</b><span>Errors</span></div>
     </div>
     <div class="err" id="errmsg" style="display:none"></div>
@@ -147,7 +157,10 @@ const TICK = 15;                        // seconds, real-time mode
 document.getElementById('target').textContent = API;
 
 const $ = id => document.getElementById(id);
-let mode = 'bulk', modality = 'voice';
+let mode = 'bulk', modality = 'mixed';
+// When 'mixed', each session randomly becomes voice or handwriting so both
+// totalChants and totalWritings populate.
+const pickModality = () => modality === 'mixed' ? (Math.random() < 0.5 ? 'voice' : 'handwriting') : modality;
 let stopFlag = false, running = false;
 
 // pill toggles
@@ -164,16 +177,17 @@ document.querySelectorAll('[data-mod]').forEach(p => p.onclick = () => {
 
 const fmt = n => n.toLocaleString('en-US');
 function proj(){
-  const u=+$('users').value||0, r=+$('rate').value||0, d=+$('dur').value||0;
+  const u=+$('users').value||0, g=+$('goal').value||0;
   const approx = $('diversify') && $('diversify').checked ? '≈' : '';
-  $('proj').textContent = `Projected: ${approx}${fmt(u*r*d)} chants across ${fmt(u)} users over ${d} min`
-    + (approx? ' (varied per user — leaderboard will spread).' : '.');
+  // ~75% of users complete (≥1× goal); average total ≈ 1.25× goal with spread.
+  $('proj').textContent = `Projected: ${approx}${fmt(Math.round(u*g*1.25))} chants across ${fmt(u)} users — `
+    + `most complete the ${fmt(g)}-chant goal, each via multiple sessions (some over, some under).`;
 }
-['users','rate','dur'].forEach(id => $(id).oninput = proj);
+['users','goal','sessions'].forEach(id => $(id).oninput = proj);
 $('diversify').onchange = proj; proj();
 
 // ---- state ----
-const st = {prov:0, total:0, sess:0, chant:0, err:0, elapsed:0, target:0};
+const st = {prov:0, total:0, sess:0, chant:0, err:0, elapsed:0, target:0, completed:0, spent:0, spentPts:0};
 function render(){
   $('progress').style.display='block';
   $('provtxt').textContent = `${st.prov}/${st.total}`;
@@ -183,6 +197,8 @@ function render(){
   $('timebar').style.width = (st.target? Math.min(1,st.elapsed/st.target)*100:0)+'%';
   $('s_sess').textContent = fmt(st.sess);
   $('s_chant').textContent = fmt(st.chant);
+  $('s_done').textContent = fmt(st.completed);
+  $('s_spent').textContent = fmt(st.spentPts);
   $('s_err').textContent = fmt(st.err);
 }
 function log(m){
@@ -251,7 +267,7 @@ async function postSessions(u, sessions){
     id:uuid(), member_id:u.memberId, program_id:u.programId,
     started_at:s.start.toISOString(), ended_at:s.end.toISOString(),
     duration_sec:Math.abs(Math.round((s.end-s.start)/1000)),
-    count_added:s.count, modality
+    count_added:s.count, modality:s.modality || pickModality()
   }));
   const r = await api('/api/v1/sessions', {method:'POST', token:u.token, body:{sessions:payload}});
   return (r && typeof r.created==='number') ? r.created : sessions.length;
@@ -273,17 +289,26 @@ const sleep = ms => new Promise(r=>setTimeout(r,ms));
 
 let users=[];
 async function run(){
+  const MAX_USERS=50000;   // browser ceiling — session posting is 1 request/user
+  const requested=Math.max(1, +$('users').value||1000);
+  if(requested>MAX_USERS){
+    if(!confirm(`This browser simulator is capped at ${MAX_USERS.toLocaleString()} users `
+      +`(session posting is one request per user). You entered ${requested.toLocaleString()}.\n\n`
+      +`Run with ${MAX_USERS.toLocaleString()} instead?`)) return;
+    $('users').value=MAX_USERS;
+  }
   const cfg = {
-    users: Math.max(1, +$('users').value||1000),
-    rate:  Math.max(1, +$('rate').value||40),
-    dur:   Math.max(1, +$('dur').value||5),
+    users:    Math.min(MAX_USERS, requested),
+    goal:     Math.max(1, +$('goal').value||108),
+    maxSess:  Math.max(2, +$('sessions').value||6),
+    dur:      Math.max(1, +$('dur').value||5),
   };
   stopFlag=false; running=true; users=[];
-  Object.assign(st,{prov:0,total:cfg.users,sess:0,chant:0,err:0,elapsed:0,target:cfg.dur*60});
+  Object.assign(st,{prov:0,total:cfg.users,sess:0,chant:0,err:0,elapsed:0,target:cfg.dur*60,completed:0,spent:0,spentPts:0});
   $('errmsg').style.display='none'; $('log').innerHTML='';
   $('start').textContent='Stop'; $('start').classList.add('stop');
   setPhase('provisioning'); render();
-  log(`Starting: ${cfg.users} users · ${cfg.rate}/min · ${cfg.dur} min · ${mode} · ${modality}`);
+  log(`Starting: ${cfg.users} users · goal ${cfg.goal} · ≤${cfg.maxSess} sessions/user · ${mode} · ${modality}`);
 
   try{
     const m = await api('/api/v1/mantras');
@@ -292,40 +317,41 @@ async function run(){
     const mantraId = list[0].slug || list[0].id;
     log('Using mantra: '+(list[0].nameRoman||mantraId));
 
-    await forEachConc([...Array(cfg.users).keys()], async i=>{
-      try{ const u=await provisionUser(i); await createProgram(u, mantraId); users.push(u); }
-      catch(e){ st.err++; if(st.err<=10) log(`provision #${i} failed: ${e.message}`); }
-      finally{ st.prov++; if(st.prov%25===0||st.prov===st.total) render(); }
-    });
+    // Bulk-provision in chunks (own account + member + program with goal
+    // target, referral graph, join points, global enrollment — all server-side).
+    // Chunking keeps each createMany request fast and under any size limit.
+    const diversify=$('diversify').checked;
+    const CHUNK=2000;
+    let createdAcc=0, enrolledG=0;
+    for(let off=0; off<cfg.users && !stopFlag; off+=CHUNK){
+      const n=Math.min(CHUNK, cfg.users-off);
+      const r = await api('/api/v1/sim/provision', {method:'POST',
+        body:{count:n, start_index:off, mantra_id:mantraId, goal:cfg.goal, target_days:40,
+          referrals:$('referrals').checked, enroll_global:$('joinsadhana').checked}});
+      for(const u of (r.users||[])){
+        let cmul=1;
+        if(diversify){ const x=Math.random();
+          cmul = x<0.12 ? (2+Math.random()*4) : x<0.75 ? (1+Math.random()*0.9) : (0.4+Math.random()*0.55); }
+        users.push({index:u.index, mobile:u.mobile, token:u.access_token,
+          memberId:u.member_id, programId:u.program_id, role:u.role, carry:0, cmul});
+      }
+      createdAcc+=r.created_accounts||0; enrolledG+=r.enrolled_global||0;
+      st.prov=users.length; render();
+    }
+    log(`Bulk-provisioned ${fmt(users.length)} users (${fmt(createdAcc)} new), goal ${cfg.goal}.`);
+    if($('referrals').checked) log('Referral graph + join/referral points seeded.');
+    if(enrolledG) log(`Enrolled ${fmt(enrolledG)} in active Global Sadhana.`);
+    else if($('joinsadhana').checked) log('No active Global Sadhana for this mantra.');
     render();
     if(stopFlag){ finish('Stopped during provisioning.'); return; }
     if(!users.length) throw new Error('No users provisioned — check backend.');
 
-    // Optionally enroll every sim user into an active Global Sadhana for this
-    // mantra so the drive's count reflects their chants. (Only 'active' drives
-    // auto-credit on the backend.)
-    if($('joinsadhana').checked){
-      try{
-        const gs = await api('/api/v1/global-sadhanas');
-        const match = (gs.sadhanas||[]).find(s=>s.mantra_id===mantraId && s.status==='active');
-        if(match){
-          log('Joining Global Sadhana: '+match.title);
-          let ok=0;
-          await forEachConc(users, async u=>{
-            try{ await api('/api/v1/global-sadhanas/'+match.id+'/enroll',
-              {method:'POST', token:u.token, body:{member_id:u.memberId}}); ok++; }
-            catch(e){ st.err++; }
-          });
-          log(`Enrolled ${fmt(ok)} users in “${match.title}”.`);
-        } else {
-          log('No active Global Sadhana for this mantra — skipping enrollment.');
-        }
-      }catch(e){ log('Global Sadhana lookup failed: '+e.message); }
-    }
-
-    setPhase('running'); log(`Provisioned ${users.length} users. Generating chants…`); render();
+    setPhase('running'); log('Running multiple sessions per user toward the goal…'); render();
     if(mode==='bulk') await runBulk(cfg); else await runRealtime(cfg);
-    finish(stopFlag?'Stopped.':'Run complete.');
+
+    if($('spending').checked && !stopFlag) await runSpending();
+
+    finish(stopFlag?'Stopped.':`Run complete — ${fmt(st.completed)}/${fmt(users.length)} completed their goal.`);
   }catch(e){
     setPhase('error'); $('errmsg').style.display='block'; $('errmsg').textContent=e.message;
     log('ERROR: '+e.message);
@@ -334,55 +360,90 @@ async function run(){
   }
 }
 
+// Build K (2..maxSess) sessions for one user, summing to round(goal*cmul),
+// each session on a different past day (so streaks build) with mixed modality.
+function splitSessions(u, cfg, now){
+  const total = Math.max(1, Math.round(cfg.goal * (u.cmul ?? 1)));
+  const K = Math.max(2, Math.min(cfg.maxSess, 2 + Math.floor(Math.random()*(cfg.maxSess-1))));
+  const weights = Array.from({length:K}, ()=> Math.random()+0.2);
+  const wsum = weights.reduce((a,b)=>a+b,0);
+  const parts=[]; let assigned=0;
+  for(let i=0;i<K;i++){
+    let c = i===K-1 ? (total-assigned) : Math.max(1, Math.round(total*weights[i]/wsum));
+    if(i<K-1) c = Math.min(c, total-assigned-(K-1-i));
+    if(c<1) c=1; assigned+=c; parts.push(c);
+  }
+  const sessions=[];
+  for(let i=0;i<K;i++){
+    const dayAgo=K-1-i;
+    const end=new Date(now - dayAgo*86400000);
+    sessions.push({start:new Date(end-15*60000), end, count:parts[i], modality:pickModality()});
+  }
+  return {sessions, total};
+}
+
 async function runBulk(cfg){
   const now=Date.now();
-  const diversify=$('diversify').checked;
   await forEachConc(users, async u=>{
     if(stopFlag) return;
-    const f = diversify ? u.factor : 1;
-    const sessions=[]; let userChants=0;
-    for(let mi=0; mi<cfg.dur; mi++){
-      // Per-minute jitter; diversified users occasionally sit a minute out.
-      const jit = diversify ? (0.5 + Math.random()) : 1;
-      if(diversify && Math.random()<0.1) continue;          // idle minute
-      const count=Math.max(1, Math.round(cfg.rate*f*jit));
-      sessions.push({
-        start:new Date(now-(cfg.dur-mi)*60000),
-        end:new Date(now-(cfg.dur-mi-1)*60000),
-        count });
-      userChants+=count;
-    }
-    try{ const c=await postSessions(u,sessions); st.sess+=c; st.chant+=userChants; }
-    catch(e){ st.err++; if(st.err<=10) log('bulk post failed: '+e.message); }
-    render();
+    const {sessions,total}=splitSessions(u,cfg,now);
+    try{ const c=await postSessions(u,sessions); st.sess+=c; st.chant+=total;
+      if(total>=cfg.goal) st.completed++;
+    }catch(e){ st.err++; if(st.err<=10) log('bulk post failed: '+e.message); }
+    if(st.sess % 200 < cfg.maxSess) render();
   });
   st.elapsed=st.target; render();
 }
 
 async function runRealtime(cfg){
-  const diversify=$('diversify').checked;
-  while(st.elapsed<st.target && !stopFlag){
+  // Pre-build each user's session queue, then drain one session per user per
+  // tick, paced across the duration so the DB fills in real time.
+  const now=Date.now();
+  for(const u of users){ const s=splitSessions(u,cfg,now); u._q=s.sessions; u._total=s.total; }
+  const ticks=cfg.maxSess;
+  const tickSec=Math.max(1, Math.round(cfg.dur*60/ticks));
+  for(let t=0; t<ticks && !stopFlag; t++){
     const t0=Date.now();
-    const remaining=st.target-st.elapsed;
-    const tick=Math.min(TICK, remaining);
     await forEachConc(users, async u=>{
-      if(stopFlag) return;
-      const f = diversify ? u.factor : 1;
-      const jit = diversify ? (0.5 + Math.random()) : 1;
-      const exact=cfg.rate*f*jit*tick/60 + u.carry;
-      const count=Math.floor(exact); u.carry=exact-count;
-      if(count<=0) return;
-      const end=new Date();
-      try{
-        const c=await postSessions(u,[{start:new Date(end-tick*1000),end,count}]);
-        st.sess+=c; st.chant+=count;
+      if(stopFlag || !u._q || !u._q.length) return;
+      const s=u._q.shift(); const end=new Date();
+      try{ const c=await postSessions(u,[{start:new Date(end-15*60000),end,count:s.count,modality:s.modality}]);
+        st.sess+=c; st.chant+=s.count;
+        if(!u._q.length && u._total>=cfg.goal) st.completed++;
       }catch(e){ st.err++; if(st.err<=10) log('tick post failed: '+e.message); }
     });
-    st.elapsed+=tick;
-    log(`t+${st.elapsed}s · ${fmt(st.sess)} sessions · ${fmt(st.chant)} chants`); render();
-    const sleepMs=tick*1000-(Date.now()-t0);
+    st.elapsed=Math.min(st.target,(t+1)*tickSec);
+    log(`tick ${t+1}/${ticks} · ${fmt(st.sess)} sessions · ${fmt(st.chant)} chants`); render();
+    const sleepMs=tickSec*1000-(Date.now()-t0);
     if(sleepMs>0 && !stopFlag) await sleep(sleepMs);
   }
+}
+
+// Some users redeem reward points on store items they can afford.
+async function runSpending(){
+  setPhase('spending'); log('Spending reward points on store items…'); render();
+  let items=[];
+  try{ items=(await api('/api/v1/store')).items||[]; }catch(e){ log('Store fetch failed: '+e.message); return; }
+  items = items.map(i=>({slug:i.slug, cost:i.points_cost??i.pointsCost??0})).filter(i=>i.cost>0).sort((a,b)=>a.cost-b.cost);
+  if(!items.length){ log('No store items to spend on.'); return; }
+  // ~45% of users attempt a redemption.
+  const spenders = users.filter(()=> Math.random()<0.45);
+  await forEachConc(spenders, async u=>{
+    if(stopFlag) return;
+    try{
+      const me=await api('/api/v1/me',{token:u.token});
+      const bal=(me.account?.members?.[0]?.reward_points_balance)??0;
+      const affordable=items.filter(i=>i.cost<=bal);
+      if(!affordable.length) return;
+      const pick=affordable[Math.floor(Math.random()*affordable.length)];
+      const r=await api('/api/v1/reward-events',{method:'POST',token:u.token,body:{events:[{
+        id:uuid(), member_id:u.memberId, kind:'spend', amount:pick.cost,
+        source:'store_redemption:'+pick.slug }]}});
+      if(r && r.created){ st.spent++; st.spentPts+=pick.cost; }
+    }catch(e){ st.err++; if(st.err<=10) log('spend failed: '+e.message); }
+    if(st.spent%50===0) render();
+  });
+  log(`${fmt(st.spent)} redemptions · ${fmt(st.spentPts)} points spent.`); render();
 }
 
 function finish(msg){ setPhase('done'); log(msg); render(); }

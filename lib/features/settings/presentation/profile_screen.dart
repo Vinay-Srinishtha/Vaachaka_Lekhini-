@@ -462,14 +462,9 @@ class ProfileScreen extends ConsumerWidget {
                 onTap: () {
                   final firstMantraId = programs.isNotEmpty ? programs.first.mantraId : null;
                   if (firstMantraId != null) {
-                    BookPreviewButton.openSheet(context, firstMantraId);
+                    BookPreviewButton.openPage(context, ref, firstMantraId);
                   }
                 },
-              ),
-              SettingRow(
-                icon: Icons.cloud_download_outlined,
-                label: context.l10n.downloadYourData,
-                onTap: () => _downloadData(ref),
               ),
               SettingRow(
                 icon: Icons.info_outline_rounded,
@@ -612,7 +607,6 @@ class ProfileScreen extends ConsumerWidget {
     context.push('/info/$topic');
   }
 
-  Future<void> _downloadData(WidgetRef ref) => downloadPracticeReport(ref);
 }
 
 bool _reportExportInProgress = false;
@@ -2261,10 +2255,11 @@ class _EditableAvatarState extends State<_EditableAvatar> {
             toolbarColor: KvlColors.primary,
             toolbarWidgetColor: Colors.white,
             activeControlsWidgetColor: KvlColors.primary,
+            statusBarColor: KvlColors.primary,
             initAspectRatio: CropAspectRatioPreset.square,
             lockAspectRatio: true,
             showCropGrid: true,
-            hideBottomControls: false,
+            hideBottomControls: true,
           ),
           IOSUiSettings(
             title: 'Adjust Photo',

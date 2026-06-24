@@ -145,16 +145,8 @@ class _PracticeDashboardView extends ConsumerState<_PracticeDashboard> {
         ? 0.0
         : (total / target).clamp(0, 1).toDouble();
 
-    final statsAsync = ref.watch(globalStatsProvider(program.mantraId));
-    // Only show skeleton on the very first load — keep stale value during background re-polls.
-    final statsLoading = statsAsync.isLoading && !statsAsync.hasValue;
-    // Global count: server total + any local today-count not yet synced to server.
+    // todaysCount only — stats are watched inside _LiveStatsBar to scope rebuilds.
     final todaysCount = widget.state.todaysCount;
-    final serverGlobal = statsAsync.value?.globalChantCount ?? 0;
-    // Floor at user's own total; also add today's local sessions that may not have synced yet.
-    final globalCount = [serverGlobal, total, serverGlobal + todaysCount].reduce((a, b) => a > b ? a : b);
-    // Live users = distinct accounts enrolled in this mantra program (from API).
-    final liveUsers = statsAsync.value?.memberCount ?? 0;
 
     return SafeArea(
       bottom: false,
@@ -186,9 +178,10 @@ class _PracticeDashboardView extends ConsumerState<_PracticeDashboard> {
 
                     // ── Community stats ───────────────────────────────────────
                     _LiveStatsBar(
-                      globalCount: globalCount,
-                      liveUsers: liveUsers,
-                      loading: statsLoading,
+                      mantraId: program.mantraId,
+                      mantraName: title,
+                      myTotal: total,
+                      todaysCount: todaysCount,
                       compact: compact,
                     ),
                     SizedBox(height: tight ? KvlSpacing.xs : gap),
@@ -221,6 +214,9 @@ class _PracticeDashboardView extends ConsumerState<_PracticeDashboard> {
                       onSessionStats: () => context.push(
                         '${KvlRoute.dailyProgress}/${program.id}',
                       ),
+                      programs: widget.programs,
+                      currentProgramId: program.id,
+                      onSwitchProgram: widget.onSelectProgram,
                     ),
                     SizedBox(height: tight ? KvlSpacing.xs : gap),
 
@@ -282,107 +278,109 @@ class _PracticeDashboardView extends ConsumerState<_PracticeDashboard> {
 
 // ── Live stats bar — no containers, rolling digits, JioHotstar-style ─────────
 
-class _LiveStatsBar extends StatelessWidget {
+// Watches globalStatsProvider internally — only this widget rebuilds on stats
+// refresh, never the full screen (fixing the whole-page flash on 30s poll).
+class _LiveStatsBar extends ConsumerWidget {
   const _LiveStatsBar({
-    required this.globalCount,
-    required this.liveUsers,
-    required this.loading,
+    required this.mantraId,
+    required this.mantraName,
+    required this.myTotal,
+    required this.todaysCount,
     required this.compact,
   });
 
-  final int globalCount;
-  final int liveUsers;
-  final bool loading;
+  final String mantraId;
+  final String mantraName;
+  final int myTotal;
+  final int todaysCount;
   final bool compact;
 
   @override
-  Widget build(BuildContext context) {
-    final numSize = compact ? 22.0 : 25.0;
-    final labelSize = compact ? 10.5 : 11.5;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final statsAsync = ref.watch(globalStatsProvider(mantraId));
+    final loading = statsAsync.isLoading && !statsAsync.hasValue;
+    final serverGlobal = statsAsync.value?.globalChantCount ?? 0;
+    final communityTotal = [serverGlobal, myTotal, serverGlobal + todaysCount]
+        .reduce((a, b) => a > b ? a : b);
+    final liveUsers = statsAsync.value?.liveCount ?? 0;
+
+    final numSize = compact ? 20.0 : 23.0;
+    final labelSize = compact ? 10.0 : 11.0;
+
+    Widget divider() => Container(
+          width: 1, height: 32,
+          color: KvlColors.border.withValues(alpha: .5),
+        );
+
+    Widget stat({
+      required Widget leading,
+      required int value,
+      required String label,
+      required Color color,
+      bool showShimmer = false,
+    }) =>
+        Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  leading,
+                  const SizedBox(width: 4),
+                  if (showShimmer)
+                    _Shimmer(width: 44, height: numSize)
+                  else
+                    _RollingCounter(value: value, fontSize: numSize, color: color),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: KvlText.caption(labelSize)
+                    .copyWith(color: KvlColors.inkSoft, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        );
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        // ── Global Sadhana ─────────────────────────────────────────────────
-        Expanded(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Icon(Icons.public_rounded,
-                  size: compact ? 20 : 22, color: KvlColors.primaryDeep),
-              const SizedBox(width: 6),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (loading)
-                    _Shimmer(width: 56, height: numSize)
-                  else
-                    _RollingCounter(
-                      value: globalCount,
-                      fontSize: numSize,
-                      color: KvlColors.primaryDeep,
-                    ),
-                  Text(
-                    'Global Sadhana',
-                    style: KvlText.caption(labelSize).copyWith(
-                      color: KvlColors.inkSoft,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+        // ── Total Sadhanas ──────────────────────────────────────────────────
+        stat(
+          leading: Icon(Icons.public_rounded,
+              size: compact ? 18 : 20, color: KvlColors.primaryDeep),
+          value: communityTotal,
+          label: 'Total Sadhanas',
+          color: KvlColors.primaryDeep,
+          showShimmer: loading,
         ),
 
-        // Divider
-        Container(
-          width: 1,
-          height: 36,
-          color: KvlColors.border.withValues(alpha: .5),
+        divider(),
+
+        // ── Live Devotees ───────────────────────────────────────────────────
+        stat(
+          leading: const _LivePulseDot(),
+          value: liveUsers,
+          label: 'Live Devotees',
+          color: KvlColors.accent,
+          showShimmer: loading,
         ),
 
-        // ── Live Devotees ──────────────────────────────────────────────────
-        Expanded(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      const _LivePulseDot(),
-                      const SizedBox(width: 4),
-                      if (loading)
-                        _Shimmer(width: 48, height: numSize)
-                      else
-                        _RollingCounter(
-                          value: liveUsers,
-                          fontSize: numSize,
-                          color: KvlColors.accent,
-                        ),
-                    ],
-                  ),
-                  Text(
-                    'Live Devotees',
-                    style: KvlText.caption(labelSize).copyWith(
-                      color: KvlColors.inkSoft,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 6),
-              Icon(Icons.people_alt_rounded,
-                  size: compact ? 20 : 22, color: KvlColors.accent),
-            ],
-          ),
+        divider(),
+
+        // ── My total for this mantra ────────────────────────────────────────
+        stat(
+          leading: const SizedBox.shrink(),
+          value: myTotal,
+          label: 'Total $mantraName',
+          color: const Color(0xFF7E2F08),
+          showShimmer: false,
         ),
       ],
     );
@@ -702,23 +700,192 @@ class _ActionsRow extends StatelessWidget {
   const _ActionsRow({
     required this.compact,
     required this.onSessionStats,
+    required this.programs,
+    required this.currentProgramId,
+    required this.onSwitchProgram,
   });
 
   final bool compact;
   final VoidCallback onSessionStats;
+  final List<Program> programs;
+  final String currentProgramId;
+  final ValueChanged<Program> onSwitchProgram;
+
+  void _showSwitchSheet(BuildContext context) {
+    final switchable = programs
+        .where((p) => p.id != currentProgramId && !p.isCompleted && p.hasGoal)
+        .toList();
+    if (switchable.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No other active programs to switch to.')),
+      );
+      return;
+    }
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _SwitchProgramSheet(
+        programs: switchable,
+        onSelect: onSwitchProgram,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final h = compact ? 50.0 : 56.0;
-    // "Change Mantra" was removed — single-mantra launch. Session stats only.
-    return _ActionTile(
-      height: h,
-      icon: Icons.bar_chart_rounded,
-      iconBg: KvlColors.accentSoft,
-      iconColor: KvlColors.accent,
-      label: context.l10n.sessionStats,
-      compact: compact,
-      onTap: onSessionStats,
+    return Row(
+      children: [
+        Expanded(
+          child: _ActionTile(
+            height: h,
+            icon: Icons.bar_chart_rounded,
+            iconBg: KvlColors.accentSoft,
+            iconColor: KvlColors.accent,
+            label: context.l10n.sessionStats,
+            compact: compact,
+            onTap: onSessionStats,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _ActionTile(
+            height: h,
+            icon: Icons.swap_horiz_rounded,
+            iconBg: KvlColors.primary.withValues(alpha: 0.10),
+            iconColor: KvlColors.primaryDeep,
+            label: 'Switch Program',
+            compact: compact,
+            onTap: () => _showSwitchSheet(context),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SwitchProgramSheet extends ConsumerWidget {
+  const _SwitchProgramSheet({required this.programs, required this.onSelect});
+  final List<Program> programs;
+  final ValueChanged<Program> onSelect;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFFFDF8F2),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Container(
+              width: 36, height: 4,
+              decoration: BoxDecoration(
+                color: KvlColors.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text('Switch Program', style: KvlText.title(16)),
+          const SizedBox(height: 4),
+          Text(
+            'Select a program to practice',
+            style: KvlText.caption(12).copyWith(color: KvlColors.inkSoft),
+          ),
+          const SizedBox(height: 14),
+          ...programs.map((p) {
+            final mantra = ref.watch(mantraByIdProvider(p.mantraId));
+            final label = mantra?.name.displayForLanguage(settings.languageCode)
+                ?? p.mantraId;
+            final progress = p.targetWritings > 0
+                ? (p.totalProgress / p.targetWritings).clamp(0.0, 1.0)
+                : 0.0;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: InkWell(
+                onTap: () {
+                  Navigator.pop(context);
+                  onSelect(p);
+                },
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    color: Colors.white,
+                    border: Border.all(
+                      color: KvlColors.primary.withValues(alpha: 0.2),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: KvlColors.primary.withValues(alpha: 0.06),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 38, height: 38,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFFD49A), KvlColors.primary],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          mantra?.name.thumbGlyph() ?? '🕉',
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(label,
+                                style: KvlText.ui(14, FontWeight.w700)),
+                            const SizedBox(height: 3),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: progress,
+                                minHeight: 4,
+                                backgroundColor:
+                                    KvlColors.primary.withValues(alpha: 0.12),
+                                valueColor: const AlwaysStoppedAnimation(
+                                    KvlColors.primary),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${IndianNumberFormat.format(p.totalProgress)} / ${IndianNumberFormat.format(p.targetWritings)}',
+                              style: KvlText.caption(11)
+                                  .copyWith(color: KvlColors.inkSoft),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right_rounded,
+                          color: KvlColors.inkSoft, size: 20),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
     );
   }
 }
@@ -1054,7 +1221,10 @@ class _DashboardHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pts = ref.watch(rewardTotalProvider).value ?? 0;
+    final profile = ref.watch(activeProfileProvider).value;
+    final initial = (profile?.name.trim().isNotEmpty == true)
+        ? profile!.name.trim()[0].toUpperCase()
+        : '?';
 
     return Row(
       children: [
@@ -1076,23 +1246,32 @@ class _DashboardHeader extends ConsumerWidget {
         GestureDetector(
           onTap: onProfileTap,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
-              color: const Color(0xFFFBF3D8),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFE8C04A), width: 1.1),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.star_rounded, size: 15, color: KvlColors.gold),
-                const SizedBox(width: 4),
-                Text(
-                  '$pts pts',
-                  style: KvlText.ui(13, FontWeight.w700)
-                      .copyWith(color: const Color(0xFF5a4400)),
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFFFFD49A), KvlColors.primary],
+              ),
+              border: Border.all(
+                color: KvlColors.primaryDeep.withValues(alpha: 0.25),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: KvlColors.primary.withValues(alpha: 0.25),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
               ],
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              initial,
+              style: KvlText.ui(16, FontWeight.w800)
+                  .copyWith(color: Colors.white),
             ),
           ),
         ),

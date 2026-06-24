@@ -172,6 +172,8 @@ class ProfileRepositoryLocal implements ProfileRepository {
         'preferences': {
           if (p.addresses.isNotEmpty)
             'addresses': p.addresses.map((a) => a.toJson()).toList(),
+          if (p.location != null) 'location': p.location,
+          if (p.gothra != null) 'gothra': p.gothra,
         },
       };
 

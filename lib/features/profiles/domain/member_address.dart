@@ -130,7 +130,6 @@ class MemberAddress extends Equatable {
 
   bool get isValid =>
       line1.trim().isNotEmpty &&
-      city.trim().isNotEmpty &&
       state.isNotEmpty &&
       pincode.trim().length == 6;
 

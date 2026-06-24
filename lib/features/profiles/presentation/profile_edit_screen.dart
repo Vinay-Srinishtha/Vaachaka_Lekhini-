@@ -628,7 +628,6 @@ class _AddressSheetState extends State<_AddressSheet> {
   late MemberAddress _addr;
   final _line1Ctrl = TextEditingController();
   final _line2Ctrl = TextEditingController();
-  final _cityCtrl = TextEditingController();
   final _pincodeCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
@@ -638,7 +637,6 @@ class _AddressSheetState extends State<_AddressSheet> {
     _addr = widget.initial ?? MemberAddress.blank();
     _line1Ctrl.text = _addr.line1;
     _line2Ctrl.text = _addr.line2 ?? '';
-    _cityCtrl.text = _addr.city;
     _pincodeCtrl.text = _addr.pincode;
   }
 
@@ -646,7 +644,6 @@ class _AddressSheetState extends State<_AddressSheet> {
   void dispose() {
     _line1Ctrl.dispose();
     _line2Ctrl.dispose();
-    _cityCtrl.dispose();
     _pincodeCtrl.dispose();
     super.dispose();
   }
@@ -656,7 +653,7 @@ class _AddressSheetState extends State<_AddressSheet> {
     final updated = _addr.copyWith(
       line1: _line1Ctrl.text.trim(),
       line2: _line2Ctrl.text.trim(),
-      city: _cityCtrl.text.trim(),
+      city: _addr.state, // use state as city for backend compat
       pincode: _pincodeCtrl.text.trim(),
     );
     Navigator.of(context).pop();
@@ -731,9 +728,6 @@ class _AddressSheetState extends State<_AddressSheet> {
                   validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null),
               const SizedBox(height: KvlSpacing.sm),
               _field(ctrl: _line2Ctrl, label: 'Address Line 2 (optional)', hint: 'Area, Locality, Landmark'),
-              const SizedBox(height: KvlSpacing.sm),
-              _field(ctrl: _cityCtrl, label: 'City / Town', hint: 'e.g. Hyderabad',
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null),
               const SizedBox(height: KvlSpacing.sm),
               DropdownButtonFormField<String>(
                 value: _addr.state.isEmpty ? null : _addr.state,

@@ -68,7 +68,7 @@
 	}
 </script>
 
-<div class="min-h-screen overflow-x-hidden">
+<div class="min-h-screen w-full">
 	{#if navigationBusy}
 		<div class="fixed inset-x-0 top-0 z-[60] h-[3px] overflow-hidden bg-brand-950/15" aria-hidden="true">
 			<div class="nav-progress h-full w-1/3 bg-gradient-to-r from-brand-300 via-brand-500 to-brand-300"></div>

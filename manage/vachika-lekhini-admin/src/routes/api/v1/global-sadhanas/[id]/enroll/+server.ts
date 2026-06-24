@@ -38,9 +38,6 @@ export const POST: RequestHandler = async (event) => {
 	if (!['published', 'active'].includes(sadhana.status)) {
 		throw error(409, 'This Global Sadhana is not open for enrollment');
 	}
-	if (sadhana.currentCount >= sadhana.targetCount) {
-		throw error(409, 'This Global Sadhana has already reached its target');
-	}
 
 	// Upsert enrollment — idempotent so the app can re-post after training.
 	const enrollment = await prisma.globalSadhanaEnrollment.upsert({

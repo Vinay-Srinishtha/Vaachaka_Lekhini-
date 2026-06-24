@@ -268,7 +268,7 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(SnackBar(
-      duration: const Duration(seconds: 2),
+      duration: const Duration(seconds: 3),
       backgroundColor: Colors.orange.shade700,
       behavior: SnackBarBehavior.floating,
       content: Text(
@@ -545,7 +545,7 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
         globalCount: globalCount,
         writingCount: _writingCount,
         onFinish: _save,
-        onClear: _controller.clear,
+        onClear: () { ScaffoldMessenger.of(context).clearSnackBars(); _controller.clear(); },
         onUndo: _controller.undo,
         onRedo: _controller.redo,
         penColor: _penColor,
@@ -571,7 +571,7 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
       onPickLanguage: () => unawaited(_showLanguagePicker()),
       onBack: () => context.canPop() ? context.pop() : context.go('/'),
       onSave: _saving ? null : _save,
-      onClear: _controller.clear,
+      onClear: () { ScaffoldMessenger.of(context).clearSnackBars(); _controller.clear(); },
       onUndo: _controller.undo,
       onRedo: _controller.redo,
       penColor: _penColor,

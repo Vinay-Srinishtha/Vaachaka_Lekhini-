@@ -53,18 +53,23 @@ class VoiceEnrolmentService {
   int _matches = 0;
   bool _running = false;
 
-  /// True while the timer is flushing — chunk callbacks skip to avoid
+  /// True while the timer is flushing — chunk callbacks buffer instead of
   /// calling into the recognizer concurrently.
   bool _finalizing = false;
+
+  /// Audio chunks received during a forced-finalize are buffered here and
+  /// replayed immediately after so no speech is ever silently dropped.
+  final _bufferedChunks = <Uint8List>[];
 
   bool _timerStarted = false;
   int _target = 11;
   Mantra? _mantra;
 
   /// How often (ms) we force a finalisation regardless of silence.
-  /// 1200 ms: tight enough to catch each chant at ~1/s pace without cutting
-  /// mid-syllable. Vosk's own silence-detection fires first for slow chants.
-  static const int _windowMs = 1200;
+  /// 800 ms: at fast-chanting pace (~1 chant/600 ms) this means at most one
+  /// chant lands per window, making recognition reliable. Vosk's own
+  /// silence-detection fires first for slower chants.
+  static const int _windowMs = 800;
 
   Stream<VoiceTrainingEvent> get events => _events.stream;
 
@@ -128,7 +133,16 @@ class VoiceEnrolmentService {
           _levels.add((peak / 6000.0).clamp(0.0, 1.0));
         }
 
-        if (!_running || _finalizing) return;
+        if (!_running) return;
+
+        // Buffer incoming audio while a forced-finalize is in progress.
+        // Replaying these chunks after the finalize ensures the start of the
+        // next chant is never silently discarded (the main cause of skips at
+        // fast chanting pace).
+        if (_finalizing) {
+          _bufferedChunks.add(chunk);
+          return;
+        }
 
         final r = await _recognizer?.acceptChunk(chunk);
         if (r == null) return;
@@ -160,7 +174,8 @@ class VoiceEnrolmentService {
     );
   }
 
-  /// Forced finalisation: flush accumulated audio, count, let Vosk reset.
+  /// Forced finalisation: flush accumulated audio, count, let Vosk reset,
+  /// then replay any chunks that arrived while we were blocked.
   Future<void> _forceFinalize() async {
     if (!_running || _finalizing) return;
     _finalizing = true;
@@ -171,6 +186,25 @@ class VoiceEnrolmentService {
       }
     } finally {
       _finalizing = false;
+    }
+
+    // Replay chunks buffered while finalization was in progress. This prevents
+    // the start of the next chant from being silently dropped.
+    if (!_running) {
+      _bufferedChunks.clear();
+      return;
+    }
+    final toReplay = List<Uint8List>.of(_bufferedChunks);
+    _bufferedChunks.clear();
+    for (final c in toReplay) {
+      if (!_running || _finalizing) break;
+      final r = await _recognizer?.acceptChunk(c);
+      if (r == null) continue;
+      if (r.isFinal && r.text.trim().isNotEmpty) {
+        await _handleText(r.text);
+        _restartWindowTimer();
+        break;
+      }
     }
   }
 
@@ -219,6 +253,7 @@ class VoiceEnrolmentService {
   Future<void> stop() async {
     if (!_running) return;
     _running = false;
+    _bufferedChunks.clear();
     if (!_levels.isClosed) _levels.add(0); // waves settle when capture stops
     _windowTimer?.cancel();
     _windowTimer = null;

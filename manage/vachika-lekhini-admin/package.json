@@ -16,14 +16,14 @@
 	"devDependencies": {
 		"@sveltejs/adapter-vercel": "^6.2.1",
 		"@sveltejs/kit": "^2.57.0",
-		"@sveltejs/vite-plugin-svelte": "^7.0.0",
+		"@sveltejs/vite-plugin-svelte": "^6.2.4",
 		"@types/pg": "^8.20.0",
 		"dotenv": "^17.4.2",
 		"prisma": "^7.8.0",
 		"svelte": "^5.55.2",
 		"svelte-check": "^4.4.6",
 		"typescript": "^6.0.2",
-		"vite": "^8.0.7"
+		"vite": "^7.0.0"
 	},
 	"dependencies": {
 		"@aws-sdk/client-s3": "^3.1069.0",

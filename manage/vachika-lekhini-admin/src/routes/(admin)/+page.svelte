@@ -69,6 +69,8 @@
 		<StatCard label="Active Programs" value={s.activePrograms.toLocaleString()} icon={Layers} tone="blue" hint="In progress" />
 		<StatCard label="Completed Programs" value={s.completedPrograms.toLocaleString()} icon={CheckCircle2} tone="green" hint="Goal reached" />
 
+		<StatCard label="Total Chants" value={s.totalChants.toLocaleString()} icon={Mic2} tone="brand" hint="All time across all programs" />
+		<StatCard label="Total Writings" value={s.totalWritings.toLocaleString()} icon={PenLine} tone="amber" hint="All time across all programs" />
 		<StatCard label="Points Earned" value={s.rewardEarned.toLocaleString()} icon={TrendingUp} tone="green" hint="All time" />
 		<StatCard label="Points Spent" value={s.rewardSpent.toLocaleString()} icon={TrendingDown} tone="red" hint="Redeemed" />
 		<StatCard label="Mantras" value={s.mantraCount.toLocaleString()} icon={BookOpen} tone="amber" hint={`${s.activeMantras} visible in app`} />

@@ -137,6 +137,7 @@ model Account {
   invitesSent  Invite[]   @relation("InviterAccount")
   invitesGot   Invite[]   @relation("InviteeAccount")
   otpChallenges OtpChallenge[]
+  tncAcceptances TncAcceptance[]
 
   @@index([isBanned])
 }
@@ -414,6 +415,16 @@ model AdminRoleConfig {
   updatedAt   DateTime  @updatedAt
 }
 
+/// Custom roles defined by super admins — stored alongside the built-in enum roles.
+model CustomAdminRole {
+  id          String   @id @default(cuid())
+  key         String   @unique // e.g. "content_editor"
+  label       String            // e.g. "Content Editor"
+  permissions String[] @default([])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 model RevokedToken {
   jti       String   @id
   expiresAt DateTime
@@ -578,6 +589,31 @@ model GlobalSadhanaContribution {
   @@index([globalSadhanaId, memberId])
   @@index([globalSadhanaId, createdAt])
   @@index([memberId])
+}
+
+model TermsAndConditions {
+  id          String   @id @default(cuid())
+  version     String   @unique
+  title       String
+  content     String
+  isActive    Boolean  @default(false)
+  effectiveAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  acceptances TncAcceptance[]
+}
+
+model TncAcceptance {
+  id         String             @id @default(cuid())
+  accountId  String
+  account    Account            @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  tncId      String
+  tnc        TermsAndConditions @relation(fields: [tncId], references: [id], onDelete: Cascade)
+  acceptedAt DateTime           @default(now())
+
+  @@unique([accountId, tncId])
+  @@index([accountId])
 }
 
 /// In-app bug reports and feedback submissions.

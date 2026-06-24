@@ -69,8 +69,7 @@ export const GET: RequestHandler = async (event) => {
 				JOIN "Account" a ON a.id = m."accountId" AND a."isBanned" = false
 				JOIN "Program" p ON p."memberId" = m.id AND p."mantraId" = ${mantraId}
 				GROUP BY m.id, m."displayName", m."accountId"
-				ORDER BY longest_streak DESC, total_progress DESC
-				LIMIT 50`
+				ORDER BY longest_streak DESC, total_progress DESC`
 			: await prisma.$queryRaw<Row[]>`
 				SELECT m.id,
 				       m."displayName"                                              AS name,
@@ -83,8 +82,7 @@ export const GET: RequestHandler = async (event) => {
 				JOIN "Account" a ON a.id = m."accountId" AND a."isBanned" = false
 				LEFT JOIN "Program" p ON p."memberId" = m.id
 				GROUP BY m.id, m."displayName", m."accountId"
-				ORDER BY longest_streak DESC, total_progress DESC
-				LIMIT 50`
+				ORDER BY longest_streak DESC, total_progress DESC`
 		: mantraId
 			? await prisma.$queryRaw<Row[]>`
 				SELECT m.id,
@@ -98,8 +96,7 @@ export const GET: RequestHandler = async (event) => {
 				JOIN "Account" a ON a.id = m."accountId" AND a."isBanned" = false
 				JOIN "Program" p ON p."memberId" = m.id AND p."mantraId" = ${mantraId}
 				GROUP BY m.id, m."displayName", m."accountId"
-				ORDER BY total_progress DESC, longest_streak DESC
-				LIMIT 50`
+				ORDER BY total_progress DESC, longest_streak DESC`
 			: await prisma.$queryRaw<Row[]>`
 				SELECT m.id,
 				       m."displayName"                                              AS name,
@@ -112,8 +109,7 @@ export const GET: RequestHandler = async (event) => {
 				JOIN "Account" a ON a.id = m."accountId" AND a."isBanned" = false
 				LEFT JOIN "Program" p ON p."memberId" = m.id
 				GROUP BY m.id, m."displayName", m."accountId"
-				ORDER BY total_progress DESC, longest_streak DESC
-				LIMIT 50`;
+				ORDER BY total_progress DESC, longest_streak DESC`;
 
 	const todayUtc = new Date();
 	todayUtc.setUTCHours(0, 0, 0, 0);

@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -780,11 +782,13 @@ class _HeroQuote extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final appSettings = ref.watch(appSettingsProvider).value;
     final profile = ref.watch(activeProfileProvider).value;
-    // Show quotes in the app's selected UI language. Watching settingsProvider
-    // (a stream) rebuilds this card live when the user changes the language.
-    // Fall back to the profile's mantra language if settings aren't loaded yet.
-    final quoteLanguage =
-        ref.watch(settingsProvider).value?.languageCode ?? profile?.mantraLanguage;
+    // Use the mantra language (the script the user chants in) so the quote
+    // appears in the same language as the mantra — not the UI language.
+    // Falls back through: settings.mantraLanguageCode → profile.mantraLanguage → UI lang.
+    final settings = ref.watch(settingsProvider).value;
+    final quoteLanguage = settings?.mantraLanguageCode
+        ?? profile?.mantraLanguage
+        ?? settings?.languageCode;
     // Daily quote: deterministic for today, targeted to user's primary mantra.
     final chosen = ref.watch(dailyQuoteProvider);
     if (chosen == null) return const SizedBox.shrink();
@@ -943,20 +947,103 @@ Future<void> _shareQuote(
     try {
       final tmpDir = await getTemporaryDirectory();
       final ext = imageUrl.contains('.png') ? 'png' : 'jpg';
-      final file = File('${tmpDir.path}/quote_share.$ext');
-      await Dio().download(imageUrl, file.path);
+      final rawFile = File('${tmpDir.path}/quote_share_raw.$ext');
+      await Dio().download(imageUrl, rawFile.path);
+
+      // Burn the app link onto the image so it's visible on every platform.
+      final stamped = await _stampLinkOnImage(
+        rawFile.readAsBytesSync(),
+        appLink,
+      );
+      final outFile = File('${tmpDir.path}/quote_share.png');
+      await outFile.writeAsBytes(stamped);
+
+      // Copy full caption to clipboard — Instagram/Facebook ignore text in share sheet.
+      await Clipboard.setData(ClipboardData(text: shareText));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Caption copied — paste it in Instagram/Facebook.'),
+            duration: Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+
       await SharePlus.instance.share(ShareParams(
-        text: shareText,
-        files: [XFile(file.path, mimeType: 'image/$ext')],
+        files: [XFile(outFile.path, mimeType: 'image/png')],
       ));
     } catch (_) {
-      // Fall back to text-only if image download fails.
       await SharePlus.instance.share(ShareParams(text: shareText));
     }
   }
   } finally {
     _shareInProgress = false;
   }
+}
+
+// Draws a semi-transparent pill at the bottom of the image containing the URL
+// so it's visible on every platform. Viewers can tap/long-press to open it.
+Future<Uint8List> _stampLinkOnImage(Uint8List imageBytes, String url) async {
+  final codec = await ui.instantiateImageCodec(imageBytes);
+  final frame = await codec.getNextFrame();
+  final src = frame.image;
+
+  final w = src.width.toDouble();
+  final h = src.height.toDouble();
+
+  final recorder = ui.PictureRecorder();
+  final canvas = Canvas(recorder);
+
+  // Draw original image
+  canvas.drawImage(src, Offset.zero, Paint());
+
+  // Pill dimensions
+  const pillH = 48.0;
+  const hPad = 20.0;
+  const vPad = 14.0;
+  final pillW = w - hPad * 2;
+  final pillY = h - pillH - vPad;
+
+  // Semi-transparent dark pill background
+  final pillPaint = Paint()..color = const Color(0xCC000000);
+  canvas.drawRRect(
+    RRect.fromRectAndRadius(
+      Rect.fromLTWH(hPad, pillY, pillW, pillH),
+      const Radius.circular(24),
+    ),
+    pillPaint,
+  );
+
+  // URL text centred in pill
+  final textPainter = TextPainter(
+    text: TextSpan(
+      text: url,
+      style: const TextStyle(
+        color: Color(0xFF90CAF9), // light-blue — looks like a link
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        decoration: TextDecoration.underline,
+        decorationColor: Color(0xFF90CAF9),
+      ),
+    ),
+    textDirection: TextDirection.ltr,
+    maxLines: 1,
+    ellipsis: '…',
+  )..layout(maxWidth: pillW - 24);
+
+  textPainter.paint(
+    canvas,
+    Offset(
+      hPad + (pillW - textPainter.width) / 2,
+      pillY + (pillH - textPainter.height) / 2,
+    ),
+  );
+
+  final picture = recorder.endRecording();
+  final img = await picture.toImage(src.width, src.height);
+  final data = await img.toByteData(format: ui.ImageByteFormat.png);
+  return data!.buffer.asUint8List();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

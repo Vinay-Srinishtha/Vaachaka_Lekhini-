@@ -3,15 +3,19 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/utils/indian_number_format.dart';
 import '../../enrolment/handwriting/domain/handwriting_asset.dart';
+import '../../home/domain/quote.dart';
 import '../../mantras/domain/mantra.dart';
 import '../../profiles/domain/profile.dart';
 
@@ -126,6 +130,29 @@ class BookPreviewButton extends ConsumerWidget {
       builder: (_) => _BookPreviewSheet(mantraId: mantraId),
     );
   }
+
+  /// Navigate directly to the full book preview page, bypassing the sheet.
+  static void openPage(BuildContext context, WidgetRef ref, String mantraId) {
+    final mantra = ref.read(mantraByIdProvider(mantraId));
+    final profile = ref.read(activeProfileProvider).value;
+    final totalProgress = ref.read(bookTotalForMantraProvider(mantraId));
+    ref.read(bookAssetsProvider(mantraId).future).then((assets) {
+      if (!context.mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute<void>(
+          fullscreenDialog: true,
+          builder: (_) => _BookPreviewPage(
+            mantraId: mantraId,
+            mantra: mantra,
+            profile: profile,
+            assets: assets,
+            totalProgress: totalProgress,
+          ),
+        ),
+      );
+    });
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -152,20 +179,25 @@ const _cellH = _gridH / 9;
 // PDF generator
 // ─────────────────────────────────────────────────────────────────────────────
 
-Future<void> _openLekhanaSheet({
-  required BuildContext context,
-  required Profile? profile,
-  required int totalProgress,
-  required Mantra? mantra,
-  required List<HandwritingAsset> assets,
+
+
+/// Load script pw.Font directly (preferred path — avoids ByteData roundtrip).
+Future<pw.Font?> _loadScriptPwFont({
+  required bool isTelugu,
+  required bool isKannada,
 }) async {
-  final bytes = await _buildLekhanaSheetPdf(
-    profile: profile,
-    totalProgress: totalProgress,
-    mantra: mantra,
-    assets: assets,
-  );
-  await Printing.sharePdf(bytes: bytes, filename: 'Lekhana_Sheet.pdf');
+  try {
+    if (isTelugu) {
+      final data = await rootBundle.load('assets/fonts/Suravaram-Regular.ttf');
+      return pw.Font.ttf(data);
+    } else if (isKannada) {
+      return await PdfGoogleFonts.tiroKannadaRegular();
+    } else {
+      return await PdfGoogleFonts.notoSansDevanagariRegular();
+    }
+  } catch (_) {
+    return null;
+  }
 }
 
 Future<Uint8List> _buildLekhanaSheetPdf({
@@ -173,50 +205,56 @@ Future<Uint8List> _buildLekhanaSheetPdf({
   required int totalProgress,
   required Mantra? mantra,
   required List<HandwritingAsset> assets,
+  String? programName,
+  Quote? quote,
 }) async {
-  // ── Fonts ──────────────────────────────────────────────────────────────────
-  final surData = await rootBundle.load('assets/fonts/Suravaram-Regular.ttf');
-  final surFont = pw.Font.ttf(surData);
+  // ── Determine mantra script and display text ───────────────────────────────
+  final bool isTelugu = mantra?.name.telugu?.isNotEmpty == true;
+  final bool isKannada = !isTelugu && (mantra?.name.kannada?.isNotEmpty == true);
+  final String mantraText = isTelugu
+      ? mantra!.name.telugu!
+      : isKannada
+          ? mantra!.name.kannada!
+          : (mantra?.name.devanagari ?? 'ॐ');
 
-  // ── Images ─────────────────────────────────────────────────────────────────
-  final logoBytes =
-      (await rootBundle.load('assets/app_icon.png')).buffer.asUint8List();
-  final logoImage = pw.MemoryImage(logoBytes);
-
-  final wmBytes =
-      (await rootBundle.load('assets/mantras/rama_quote_banner.png'))
-          .buffer
-          .asUint8List();
-  final wmImage = pw.MemoryImage(wmBytes);
-
-  // ── Writing images ─────────────────────────────────────────────────────────
+  // ── Load all bundle assets + writing images + script font in parallel ───────
   final sortedAssets = [...assets]
     ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
-  final writingImages = <pw.MemoryImage?>[];
-  for (final a in sortedAssets) {
-    if (a.filePath != null) {
-      try {
-        final bytes = await File(a.filePath!).readAsBytes();
-        writingImages.add(pw.MemoryImage(bytes));
-      } catch (_) {
-        writingImages.add(null);
-      }
-    } else {
-      writingImages.add(null);
-    }
-  }
+  final results = await Future.wait([
+    rootBundle.load('assets/fonts/Suravaram-Regular.ttf'),            // [0] Suravaram (Telugu / fallback)
+    rootBundle.load('assets/app_icon.png'),                            // [1]
+    rootBundle.load('assets/mantras/rama_quote_banner.png'),           // [2]
+    Future.wait(sortedAssets.map((a) async {                           // [3] writing images
+      if (a.filePath == null) return null;
+      try { return await File(a.filePath!).readAsBytes(); } catch (_) { return null; }
+    })).then((list) => list),
+    _loadScriptPwFont(isTelugu: isTelugu, isKannada: isKannada),      // [4] correct script font
+  ]);
+
+  final surFont = pw.Font.ttf(results[0] as ByteData);
+  final logoImage = pw.MemoryImage((results[1] as ByteData).buffer.asUint8List());
+  final wmImage = pw.MemoryImage((results[2] as ByteData).buffer.asUint8List());
+  final writingImages = (results[3] as List<Uint8List?>)
+      .map((b) => b != null ? pw.MemoryImage(b) : null)
+      .toList();
+
+  // Use the app-matching script font; fall back to Suravaram if unavailable.
+  final scriptFont = (results[4] as pw.Font?) ?? surFont;
 
   // ── Profile data ───────────────────────────────────────────────────────────
   final name = profile?.name ?? '';
   final gothra = profile?.gothra ?? '';
-  final address = profile?.location ?? '';
+  final address = () {
+    final loc = profile?.location ?? '';
+    if (loc.isNotEmpty) return loc;
+    // Fall back to first address summary, or just the state if line1 is blank.
+    final addr = profile?.addresses.isNotEmpty == true ? profile!.addresses.first : null;
+    if (addr == null) return '';
+    if (addr.line1.trim().isNotEmpty) return addr.summary;
+    return addr.state; // state-only (collected at signup)
+  }();
   final totalForPdf = math.max(totalProgress, 1);
-
-  // ── Mantra text ────────────────────────────────────────────────────────────
-  final mantraText = (mantra?.name.telugu?.isNotEmpty == true)
-      ? mantra!.name.telugu!
-      : (mantra?.name.devanagari ?? 'ॐ');
 
   // ── Box timestamps ─────────────────────────────────────────────────────────
   final dateFmt = DateFormat("dd-MM-yyyy , h:mma");
@@ -265,6 +303,7 @@ Future<Uint8List> _buildLekhanaSheetPdf({
                     address: address,
                     totalProgress: totalProgress,
                     logoImage: logoImage,
+                    programName: programName,
                   ),
                   pw.SizedBox(height: 6),
 
@@ -290,7 +329,7 @@ Future<Uint8List> _buildLekhanaSheetPdf({
                           boxIdx: boxIdx,
                           totalProgress: totalForPdf,
                           mantraText: mantraText,
-                          surFont: surFont,
+                          surFont: scriptFont,
                           writingImages: writingImages,
                         ),
                       ],
@@ -326,6 +365,7 @@ pw.Widget _buildHeader({
   required String address,
   required int totalProgress,
   required pw.ImageProvider logoImage,
+  String? programName,
 }) {
   final nameGothra = [name, if (gothra.isNotEmpty) gothra]
       .where((s) => s.isNotEmpty)
@@ -380,6 +420,26 @@ pw.Widget _buildHeader({
                 ),
               ),
               pw.SizedBox(height: 3),
+              // Program name (if provided)
+              if (programName != null && programName.isNotEmpty) ...[
+                pw.RichText(
+                  text: pw.TextSpan(children: [
+                    pw.TextSpan(
+                      text: 'Program : ',
+                      style: pw.TextStyle(fontSize: 8.5, color: PdfColors.grey800),
+                    ),
+                    pw.TextSpan(
+                      text: programName,
+                      style: pw.TextStyle(
+                        fontSize: 8.5,
+                        fontWeight: pw.FontWeight.bold,
+                        color: _orange,
+                      ),
+                    ),
+                  ]),
+                ),
+                pw.SizedBox(height: 3),
+              ],
               // Total chants
               pw.RichText(
                 text: pw.TextSpan(children: [
@@ -542,6 +602,31 @@ class _BookPreviewSheet extends ConsumerStatefulWidget {
 }
 
 class _BookPreviewSheetState extends ConsumerState<_BookPreviewSheet> {
+  late final GoRouter _router;
+  String? _openedOnLocation;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _router = GoRouter.of(context);
+    _openedOnLocation ??= _router.state.uri.toString();
+    _router.routerDelegate.addListener(_onRouteChange);
+  }
+
+  void _onRouteChange() {
+    if (!mounted) return;
+    final current = _router.state.uri.toString();
+    if (current != _openedOnLocation) {
+      Navigator.of(context, rootNavigator: false).maybePop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _router.routerDelegate.removeListener(_onRouteChange);
+    super.dispose();
+  }
+
   Future<void> _deleteAsset(HandwritingAsset asset) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -796,7 +881,7 @@ class _PreviewBookButton extends StatelessWidget {
 // Full-screen Book Preview page
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _BookPreviewPage extends ConsumerWidget {
+class _BookPreviewPage extends ConsumerStatefulWidget {
   const _BookPreviewPage({
     required this.mantraId,
     required this.mantra,
@@ -812,7 +897,35 @@ class _BookPreviewPage extends ConsumerWidget {
   final int totalProgress;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_BookPreviewPage> createState() => _BookPreviewPageState();
+}
+
+class _BookPreviewPageState extends ConsumerState<_BookPreviewPage> {
+  final _scoreCardKey = GlobalKey();
+
+  // Pre-generate PDF as soon as the page opens so share is instant.
+  late Future<Uint8List> _pdfFuture;
+
+  Mantra? get mantra => widget.mantra;
+  Profile? get profile => widget.profile;
+  List<HandwritingAsset> get assets => widget.assets;
+  int get totalProgress => widget.totalProgress;
+  String get mantraId => widget.mantraId;
+
+  @override
+  void initState() {
+    super.initState();
+    _pdfFuture = _buildLekhanaSheetPdf(
+      profile: widget.profile,
+      totalProgress: widget.totalProgress,
+      mantra: widget.mantra,
+      assets: widget.assets,
+      programName: widget.mantra?.name.roman,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final allPrograms =
         ref.watch(programsForActiveProfileProvider).value ?? [];
     final mantraPrograms =
@@ -821,7 +934,6 @@ class _BookPreviewPage extends ConsumerWidget {
         mantraPrograms.where((p) => p.isCompleted).length;
     final activePrograms =
         mantraPrograms.where((p) => !p.isCompleted).length;
-
     return Scaffold(
       backgroundColor: const Color(0xFFFDF8F2),
       appBar: AppBar(
@@ -851,7 +963,7 @@ class _BookPreviewPage extends ConsumerWidget {
             tooltip: 'Share',
             onPressed: totalProgress == 0
                 ? null
-                : () => _showShareSheet(context),
+                : () => _showShareSheet(context, null),
           ),
         ],
       ),
@@ -862,11 +974,14 @@ class _BookPreviewPage extends ConsumerWidget {
               children: [
                 // Score card
                 if (mantraPrograms.isNotEmpty) ...[
-                  _ScoreCard(
-                    totalProgress: totalProgress,
-                    programCount: mantraPrograms.length,
-                    completed: completedPrograms,
-                    active: activePrograms,
+                  RepaintBoundary(
+                    key: _scoreCardKey,
+                    child: _ScoreCard(
+                      totalProgress: totalProgress,
+                      programCount: mantraPrograms.length,
+                      completed: completedPrograms,
+                      active: activePrograms,
+                    ),
                   ),
                   const SizedBox(height: 16),
                 ],
@@ -885,7 +1000,7 @@ class _BookPreviewPage extends ConsumerWidget {
     );
   }
 
-  void _showShareSheet(BuildContext context) {
+  void _showShareSheet(BuildContext context, String? appLink) {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -894,6 +1009,9 @@ class _BookPreviewPage extends ConsumerWidget {
         mantra: mantra,
         assets: assets,
         totalProgress: totalProgress,
+        pdfFuture: _pdfFuture,
+        scoreCardKey: _scoreCardKey,
+        appLink: appLink,
       ),
     );
   }
@@ -994,12 +1112,18 @@ class _ShareOptionsSheet extends StatelessWidget {
     required this.mantra,
     required this.assets,
     required this.totalProgress,
+    required this.pdfFuture,
+    this.scoreCardKey,
+    this.appLink,
   });
 
   final Profile? profile;
   final Mantra? mantra;
+  final GlobalKey? scoreCardKey;
+  final String? appLink;
   final List<HandwritingAsset> assets;
   final int totalProgress;
+  final Future<Uint8List> pdfFuture;
 
   @override
   Widget build(BuildContext context) {
@@ -1049,12 +1173,25 @@ class _ShareOptionsSheet extends StatelessWidget {
   }
 
   Future<void> _shareBook(BuildContext context) async {
-    await _openLekhanaSheet(
-      context: context,
-      profile: profile,
-      totalProgress: totalProgress,
-      mantra: mantra,
-      assets: assets,
+    final bytes = await pdfFuture;
+
+    final mantraLabel = mantra?.name.roman ?? 'mantra';
+    final name = profile?.name.trim();
+    final greeting = (name != null && name.isNotEmpty) ? '$name has ' : 'I have ';
+    final message =
+        '🙏 ${greeting}completed $totalProgress ${mantraLabel} chants!\n\n'
+        'Here is my Lekhana Book — a record of every chant written by hand. '
+        'Jai Sri Rama! 🕉';
+
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/Lekhana_Sheet.pdf');
+    await file.writeAsBytes(bytes);
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(file.path, mimeType: 'application/pdf')],
+        fileNameOverrides: ['Lekhana_Sheet.pdf'],
+        text: message,
+      ),
     );
   }
 }

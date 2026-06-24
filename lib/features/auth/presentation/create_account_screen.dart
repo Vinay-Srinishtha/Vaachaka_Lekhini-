@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../app/providers.dart';
 import '../../../app/router.dart';
@@ -8,7 +9,9 @@ import '../../../core/storage/repository.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../l10n/l10n.dart';
+import '../../profiles/domain/member_address.dart';
 import '../../profiles/domain/profile.dart';
+import '../../tnc/presentation/tnc_sheet.dart';
 import 'auth_shared_widgets.dart';
 
 // ─────────────────────────────────────────────
@@ -29,6 +32,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
   final _confirm = TextEditingController();
   final _referral = TextEditingController();
   final String _language = 'en';
+  String? _selectedState;
 
   bool _busy = false;
   bool _checkingMobile = false;
@@ -61,7 +65,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
   bool get _nameValid => _username.text.trim().isNotEmpty;
   bool get _passwordValid => _password.text.length >= 8;
   bool get _confirmValid => _confirm.text == _password.text;
-  bool get _formValid => _nameValid && _mobileValid && _passwordValid && _confirmValid;
+  bool get _formValid => _nameValid && _mobileValid && _passwordValid && _confirmValid && _selectedState != null;
   bool get _accountExists => _errorCode == 'account_exists';
   bool get _accountBanned =>
       _errorCode == 'account_banned' || _errorCode == 'account_suspended';
@@ -98,6 +102,15 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
       setState(() => _error = 'Passwords do not match.');
       return;
     }
+    // Show T&C if there is an active version — registration requires acceptance.
+    final tnc = await ref.read(tncRepositoryProvider).fetchCurrent();
+    if (!mounted) return;
+    if (tnc != null) {
+      final accepted = await showTncSheet(context, tnc);
+      if (!mounted) return;
+      if (!accepted) return; // user dismissed without accepting
+    }
+
     setState(() { _busy = true; _error = null; _errorCode = null; });
 
     // Guard: re-verify the number hasn't been registered between the check and submit.
@@ -120,6 +133,18 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
       case Ok(:final value):
         final profileRepo = ref.read(profileRepositoryProvider);
         final serverId = value.primaryMemberId;
+        final stateAddr = _selectedState != null
+            ? [
+                MemberAddress(
+                  id: const Uuid().v4(),
+                  type: AddressType.home,
+                  line1: '',
+                  state: _selectedState!,
+                  city: _selectedState!,
+                  pincode: '',
+                )
+              ]
+            : const <MemberAddress>[];
         if (serverId != null) {
           await profileRepo.upsertRemote(Profile(
             id: serverId,
@@ -128,6 +153,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
             relation: FamilyRelation.me,
             language: value.language,
             createdAt: value.createdAt,
+            addresses: stateAddr,
           ));
         } else {
           await profileRepo.create(
@@ -264,6 +290,55 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                     hint: context.l10n.referralCodeHint,
                     controller: _referral,
                     textInputAction: TextInputAction.done,
+                  ),
+                  const SizedBox(height: KvlSpacing.md),
+
+                  // State dropdown
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('State',
+                          style: KvlText.caption(12)
+                              .copyWith(color: KvlColors.inkSoft)),
+                      const SizedBox(height: 6),
+                      DropdownButtonFormField<String>(
+                        initialValue: _selectedState,
+                        isExpanded: true,
+                        decoration: InputDecoration(
+                          hintText: 'Select your state',
+                          hintStyle: KvlText.body(13.5)
+                              .copyWith(color: KvlColors.muted),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 14),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                                BorderSide(color: KvlColors.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                                BorderSide(color: KvlColors.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                                color: KvlColors.primaryDeep, width: 1.5),
+                          ),
+                          filled: true,
+                          fillColor: KvlColors.surface,
+                        ),
+                        items: kIndianStates
+                            .map((s) => DropdownMenuItem(
+                                  value: s,
+                                  child: Text(s,
+                                      style: KvlText.body(13.5)),
+                                ))
+                            .toList(),
+                        onChanged: (v) =>
+                            setState(() => _selectedState = v),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: KvlSpacing.lg),
                   if (_error != null) ...[

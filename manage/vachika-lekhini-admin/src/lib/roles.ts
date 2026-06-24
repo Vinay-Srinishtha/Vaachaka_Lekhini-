@@ -38,7 +38,8 @@ const ROLE_SECTIONS: Record<AdminRole, readonly string[] | '*'> = {
 		'sessions',
 		'rewards',
 		'reward-rules',
-		'invites'
+		'invites',
+		'tnc'
 	],
 	assets_admin: ['config'],
 	marketplace_admin: ['store']

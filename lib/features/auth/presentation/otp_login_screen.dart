@@ -47,8 +47,9 @@ class _OtpLoginScreenState extends ConsumerState<OtpLoginScreen> {
   }
 
   String get _digits => _mobile.text.replaceAll(RegExp(r'\D'), '');
-  String get _e164 => '+91$_digits';
-  bool get _mobileOk => _digits.length == 10;
+  // 10-digit → prepend +91; 12-digit → already has country code
+  String get _e164 => _digits.length == 12 ? '+$_digits' : '+91$_digits';
+  bool get _mobileOk => _digits.length == 10 || _digits.length == 12;
   bool get _canSubmit => _mobileOk && _password.text.isNotEmpty;
   bool get _noAccount => _errorCode == 'account_not_found';
   bool get _accountBanned =>
@@ -227,26 +228,17 @@ class _MobileRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SizedBox(
-        width: 78,
-        child: KvlInput(label: 'Code', hint: '+91', readOnly: true),
-      ),
-      const SizedBox(width: 8),
-      Expanded(
-        child: KvlInput(
-          label: 'Mobile',
-          hint: '98765 43210',
-          controller: controller,
-          focusNode: focusNode,
-          keyboardType: TextInputType.phone,
-          autofocus: true,
-          inputFormatters: [AuthMobileFormatter()],
-          textInputAction: TextInputAction.next,
-          onSubmitted: (_) => onSubmit?.call(),
-        ),
-      ),
-    ]);
+    return KvlInput(
+      label: 'Mobile',
+      hint: '98765 43210',
+      controller: controller,
+      focusNode: focusNode,
+      keyboardType: TextInputType.phone,
+      autofocus: true,
+      inputFormatters: [AuthMobileFormatter()],
+      textInputAction: TextInputAction.next,
+      onSubmitted: (_) => onSubmit?.call(),
+    );
   }
 }
 

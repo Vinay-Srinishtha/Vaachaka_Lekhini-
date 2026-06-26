@@ -65,11 +65,31 @@ class VoiceEnrolmentService {
   int _target = 11;
   Mantra? _mantra;
 
-  /// How often (ms) we force a finalisation regardless of silence.
-  /// 800 ms: at fast-chanting pace (~1 chant/600 ms) this means at most one
-  /// chant lands per window, making recognition reliable. Vosk's own
-  /// silence-detection fires first for slower chants.
-  static const int _windowMs = 800;
+  /// Timestamp of the last audio chunk whose peak exceeded [_speechThreshold].
+  /// Used to detect inter-chant silence so we never force-finalize mid-word.
+  int _lastSpeechMs = 0;
+
+  /// Timestamp of the last successful forced-finalize. Used as a backup cap so
+  /// we never defer longer than [_maxDeferMs] even with zero silence gaps.
+  int _lastFinalizeMs = 0;
+
+  /// Peak amplitude threshold: chunks below this are treated as silence.
+  /// 500 is low enough to catch soft voices; AudioCapture peaks on speech are
+  /// typically 2 000–8 000 on a phone mic.
+  static const int _speechThreshold = 500;
+
+  /// Timer fires this often to poll for silence.
+  static const int _pollMs = 300;
+
+  /// Minimum silence after last speech before we force-finalize.
+  /// 180 ms ≈ the natural gap between two fast chants — short enough not to
+  /// add noticeable latency, long enough not to cut mid-syllable.
+  static const int _silenceMs = 180;
+
+  /// Hard backup: force-finalize even mid-speech if no finalize has happened
+  /// for this long. Prevents infinite deferral when chanting is truly non-stop.
+  static const int _maxDeferMs = 2000;
+
 
   Stream<VoiceTrainingEvent> get events => _events.stream;
 
@@ -98,6 +118,8 @@ class VoiceEnrolmentService {
     _matches = 0;
     _target = target;
     _mantra = mantra;
+    _lastSpeechMs = 0;
+    _lastFinalizeMs = DateTime.now().millisecondsSinceEpoch;
 
     await warmUp();
     // Wider grammar = higher recall: the small model can land on the full
@@ -114,16 +136,22 @@ class VoiceEnrolmentService {
       noiseMultiplier: 1.5,
     );
 
-    // ── Start window timer immediately ─────────────────────────────────────
-    // Previously the timer was deferred until speech onset (peak ≥ threshold).
-    // That caused the first 1–3 chants to be lost: they accumulated in Vosk
-    // but were never force-finalized because the threshold was never crossed
-    // (quiet room, mic warmup, etc.). Starting the timer right away means
-    // the first chant always gets finalized within one window.
+    // ── VAD-gated window timer ─────────────────────────────────────────────
+    // Polls every _pollMs (300 ms). Force-finalises only when:
+    //   (a) silence has lasted ≥ _silenceMs since last speech chunk, OR
+    //   (b) no finalize has happened for ≥ _maxDeferMs (backup for non-stop chanting).
+    // This prevents the fixed-phase 800 ms window from cutting mid-word.
     _timerStarted = true;
     _windowTimer = Timer.periodic(
-      const Duration(milliseconds: _windowMs),
-      (_) => _forceFinalize(),
+      const Duration(milliseconds: _pollMs),
+      (_) {
+        final now = DateTime.now().millisecondsSinceEpoch;
+        final msSinceSpeech = now - _lastSpeechMs;
+        final msSinceFinalize = now - _lastFinalizeMs;
+        if (msSinceSpeech >= _silenceMs || msSinceFinalize >= _maxDeferMs) {
+          _forceFinalize();
+        }
+      },
     );
 
     _sub = stream.listen(
@@ -131,6 +159,9 @@ class VoiceEnrolmentService {
         final peak = AudioCapture.peakAmplitude(chunk);
         if (!_levels.isClosed) {
           _levels.add((peak / 6000.0).clamp(0.0, 1.0));
+        }
+        if (peak >= _speechThreshold) {
+          _lastSpeechMs = DateTime.now().millisecondsSinceEpoch;
         }
 
         if (!_running) return;
@@ -161,17 +192,10 @@ class VoiceEnrolmentService {
     );
   }
 
-  /// Cancel and restart the periodic window timer from now.
-  /// Called after Vosk fires a natural silence-based final so the next
-  /// forced-finalize window starts fresh, never cutting the next chant
-  /// mid-syllable due to a fixed-phase periodic offset.
+  /// Reset the finalize timestamp after a natural Vosk final so the backup
+  /// 2 000 ms cap restarts from now rather than the last forced finalize.
   void _restartWindowTimer() {
-    if (!_running) return;
-    _windowTimer?.cancel();
-    _windowTimer = Timer.periodic(
-      const Duration(milliseconds: _windowMs),
-      (_) => _forceFinalize(),
-    );
+    _lastFinalizeMs = DateTime.now().millisecondsSinceEpoch;
   }
 
   /// Forced finalisation: flush accumulated audio, count, let Vosk reset,
@@ -179,6 +203,7 @@ class VoiceEnrolmentService {
   Future<void> _forceFinalize() async {
     if (!_running || _finalizing) return;
     _finalizing = true;
+    _lastFinalizeMs = DateTime.now().millisecondsSinceEpoch;
     try {
       final r = await _recognizer?.finalize();
       if (r != null && r.text.trim().isNotEmpty) {
@@ -188,8 +213,9 @@ class VoiceEnrolmentService {
       _finalizing = false;
     }
 
-    // Replay chunks buffered while finalization was in progress. This prevents
-    // the start of the next chant from being silently dropped.
+    // Replay ALL chunks buffered while finalization was in progress.
+    // Do NOT break on isFinal — the buffered audio is from the next chant's
+    // onset and must be fed completely to Vosk so it isn't silently dropped.
     if (!_running) {
       _bufferedChunks.clear();
       return;
@@ -202,8 +228,6 @@ class VoiceEnrolmentService {
       if (r == null) continue;
       if (r.isFinal && r.text.trim().isNotEmpty) {
         await _handleText(r.text);
-        _restartWindowTimer();
-        break;
       }
     }
   }

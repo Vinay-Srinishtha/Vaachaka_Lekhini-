@@ -60,12 +60,30 @@ class KvlBottomNav extends ConsumerWidget {
               Positioned.fill(
                 top: practiceHidden ? 0 : 9,
                 child: DecoratedBox(
-                  decoration: const BoxDecoration(
-                    color: KvlColors.surface,
-                    border: Border(
-                      top: BorderSide(color: KvlColors.rule, width: 1),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Color(0xFFFFFBF5), Color(0xFFFFF8EE)],
                     ),
-                    boxShadow: KvlShadows.elevated,
+                    border: Border(
+                      top: BorderSide(
+                        color: const Color(0xFFE88A2E).withValues(alpha: .25),
+                        width: 1,
+                      ),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF8B4513).withValues(alpha: .08),
+                        blurRadius: 20,
+                        offset: const Offset(0, -4),
+                      ),
+                      BoxShadow(
+                        color: Colors.white.withValues(alpha: .9),
+                        blurRadius: 0,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
                   ),
                   child: Padding(
                     padding: EdgeInsets.fromLTRB(
@@ -85,7 +103,7 @@ class KvlBottomNav extends ConsumerWidget {
                                       item: kvlNavItems[i],
                                       active: i == currentIndex,
                                       onTap: () => onTap(i),
-                                      pts: i == _storeIndex ? pts : null,
+                                      pts: null,
                                     ),
                             ),
                       ],
@@ -132,7 +150,7 @@ class _PracticeTabState extends State<_PracticeTab> {
   Widget build(BuildContext context) {
     final scale = _pressed ? .94 : 1.0;
     final labelColor = widget.active
-        ? KvlColors.primaryDeep
+        ? const Color(0xFF2355E8)
         : KvlColors.inkSoft;
 
     return Semantics(
@@ -166,14 +184,14 @@ class _PracticeTabState extends State<_PracticeTab> {
                     width: 2,
                   ),
                   boxShadow: [
-                    ...KvlShadows.primaryGlow,
                     BoxShadow(
                       color: (widget.active
-                              ? const Color(0xFFD94B2A)
+                              ? const Color(0xFF2355E8)
                               : KvlColors.primaryDeep)
-                          .withValues(alpha: .30),
-                      blurRadius: widget.active ? 14 : 8,
-                      offset: const Offset(0, 3),
+                          .withValues(alpha: widget.active ? .40 : .25),
+                      blurRadius: widget.active ? 18 : 10,
+                      spreadRadius: widget.active ? 1 : 0,
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),

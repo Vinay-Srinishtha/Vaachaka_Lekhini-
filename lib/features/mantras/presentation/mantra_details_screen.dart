@@ -34,34 +34,15 @@ class _MantraDetailsScreenState extends ConsumerState<MantraDetailsScreen> {
       final profile = ref.read(activeProfileProvider).value;
       if (profile == null || !mounted) return;
 
-      // Check voice enrolment — handwriting is set up separately via practice tab.
-      final voiceEnrolment = await ref
-          .read(voiceEnrolmentRepositoryProvider)
-          .get(profile.id, widget.mantraId);
-      // Already-trained counts only if it was trained in the CURRENTLY-selected
-      // mantra script. If the user switched script, send them to (re)train.
-      final currentScript =
-          ref.read(settingsProvider).value?.mantraLanguageCode ?? 'hi';
-      final hasVoice = voiceEnrolment != null &&
-          voiceEnrolment.isComplete &&
-          // Empty = legacy/unknown trained script → accept for any current
-          // script (don't force already-trained users to retrain).
-          (voiceEnrolment.trainedLanguageCode.isEmpty ||
-              voiceEnrolment.trainedLanguageCode == currentScript);
-
+      final repo = ref.read(programRepositoryProvider);
+      final existing = await repo.findActiveForMantra(
+        memberId: profile.id,
+        mantraId: widget.mantraId,
+      );
+      final program = existing ??
+          await repo.createOpen(memberId: profile.id, mantraId: widget.mantraId);
       if (!mounted) return;
-
-      if (hasVoice) {
-        // Voice already registered — skip enrolment and the goal screen, and
-        // go straight to chanting. The target (if any) is set on Finish.
-        final program = await ref
-            .read(programRepositoryProvider)
-            .createOpen(memberId: profile.id, mantraId: widget.mantraId);
-        if (!mounted) return;
-        context.go('${KvlRoute.practice}/${program.id}');
-      } else {
-        context.push('${KvlRoute.voiceTraining}/${widget.mantraId}');
-      }
+      context.go('${KvlRoute.practice}/${program.id}');
     } finally {
       if (mounted) setState(() => _starting = false);
     }

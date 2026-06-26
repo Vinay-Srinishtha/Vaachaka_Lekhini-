@@ -77,6 +77,47 @@ class ProgramRepositoryDrift implements ProgramRepository {
   }
 
   @override
+  Future<void> deduplicateForMember(String memberId) async {
+    final rows = await (_db.select(_db.programs)
+          ..where((t) => t.memberId.equals(memberId) & t.completedAt.isNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
+        .get();
+    // Group by mantraId — keep the first (most-recent), delete the rest
+    final seen = <String>{};
+    for (final row in rows) {
+      if (!seen.add(row.mantraId)) {
+        await (_db.delete(_db.programs)
+              ..where((t) => t.id.equals(row.id)))
+            .go();
+      }
+    }
+  }
+
+  /// Wipe every program and session row — one-time migration escape hatch.
+  Future<void> nukeAllProgramsAndSessions() async {
+    await _db.delete(_db.sessions).go();
+    await _db.delete(_db.programs).go();
+  }
+
+  @override
+  Future<Program?> findActiveForMantra({
+    required String memberId,
+    required String mantraId,
+  }) async {
+    final row = await (_db.select(_db.programs)
+          ..where(
+            (t) =>
+                t.memberId.equals(memberId) &
+                t.mantraId.equals(mantraId) &
+                t.completedAt.isNull(),
+          )
+          ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)])
+          ..limit(1))
+        .getSingleOrNull();
+    return row == null ? null : _toProgram(row);
+  }
+
+  @override
   Future<Program?> getById(String id) async {
     final row = await (_db.select(
       _db.programs,

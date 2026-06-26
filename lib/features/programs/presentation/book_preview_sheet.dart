@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -126,6 +127,7 @@ class BookPreviewButton extends ConsumerWidget {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      useRootNavigator: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _BookPreviewSheet(mantraId: mantraId),
     );
@@ -199,6 +201,36 @@ Future<pw.Font?> _loadScriptPwFont({
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Permanent archive — writing PNGs stored immediately on accept
+// ─────────────────────────────────────────────────────────────────────────────
+
+Future<Directory> _archiveDir(String profileId, String mantraId) async {
+  final base = await getApplicationDocumentsDirectory();
+  final safe = (String s) => s.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
+  final dir = Directory(
+      '${base.path}/pdf_archive/${safe(profileId)}/${safe(mantraId)}');
+  if (!dir.existsSync()) dir.createSync(recursive: true);
+  return dir;
+}
+
+/// Call fire-and-forget from write_on_screen_screen after savePngCapped.
+Future<void> archiveWritingSample({
+  required String profileId,
+  required String mantraId,
+  required Uint8List bytes,
+}) async {
+  try {
+    final dir = await _archiveDir(profileId, mantraId);
+    final ts = DateTime.now().microsecondsSinceEpoch;
+    await File('${dir.path}/$ts.png').writeAsBytes(bytes, flush: true);
+  } catch (_) {}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PDF generation
+// ─────────────────────────────────────────────────────────────────────────────
+
 Future<Uint8List> _buildLekhanaSheetPdf({
   required Profile? profile,
   required int totalProgress,
@@ -206,6 +238,7 @@ Future<Uint8List> _buildLekhanaSheetPdf({
   required List<HandwritingAsset> assets,
   String? programName,
   Quote? quote,
+  bool useWritingImages = true,
 }) async {
   // ── Determine mantra script and display text ───────────────────────────────
   final bool isTelugu = mantra?.name.telugu?.isNotEmpty == true;
@@ -216,30 +249,63 @@ Future<Uint8List> _buildLekhanaSheetPdf({
           ? mantra!.name.kannada!
           : (mantra?.name.devanagari ?? 'ॐ');
 
-  // ── Load all bundle assets + writing images + script font in parallel ───────
-  final sortedAssets = [...assets]
-    ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+  // ── Load archive writing images (sorted by filename timestamp) ───────────
+  // Voice chants + writing chants share the same total bucket; images are
+  // scattered at seeded-random positions across ALL totalProgress cells.
+  List<pw.MemoryImage> archiveImages = [];
+  if (useWritingImages && profile != null && mantra != null) {
+    try {
+      final dir = await _archiveDir(profile.id, mantra.id);
+      final pngFiles = dir
+          .listSync()
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.png'))
+          .toList()
+        ..sort((a, b) {
+          final ta = int.tryParse(a.uri.pathSegments.last.replaceAll('.png', '')) ?? 0;
+          final tb = int.tryParse(b.uri.pathSegments.last.replaceAll('.png', '')) ?? 0;
+          return ta.compareTo(tb);
+        });
+      for (final f in pngFiles) {
+        try {
+          archiveImages.add(pw.MemoryImage(await f.readAsBytes()));
+        } catch (_) {}
+      }
+    } catch (_) {}
+  }
 
+  // ── Seeded-random cell map (stable across rebuilds) ───────────────────────
+  // Pick imageCount random positions from totalForPdf cells using a seed that
+  // is stable for this profile+mantra pair — so the layout never changes.
+  final imageCount = archiveImages.length;
+  final totalForPdf = math.max(totalProgress, 1);
+  Map<int, pw.MemoryImage> cellImageMap = {};
+  if (imageCount > 0) {
+    final rng = math.Random(
+      (profile?.id ?? '').hashCode ^ (mantra?.id ?? '').hashCode,
+    );
+    final allPositions = List<int>.generate(totalForPdf, (i) => i)
+      ..shuffle(rng);
+    final picked = allPositions.take(imageCount).toList()..sort();
+    cellImageMap = {
+      for (var i = 0; i < picked.length; i++) picked[i]: archiveImages[i]
+    };
+  }
+
+  // ── Load bundle assets + script font in parallel ──────────────────────────
   final results = await Future.wait([
-    rootBundle.load('assets/fonts/Suravaram-Regular.ttf'),            // [0] Suravaram (Telugu / fallback)
-    rootBundle.load('assets/app_icon.png'),                            // [1]
-    rootBundle.load('assets/mantras/rama_quote_banner.png'),           // [2]
-    Future.wait(sortedAssets.map((a) async {                           // [3] writing images
-      if (a.filePath == null) return null;
-      try { return await File(a.filePath!).readAsBytes(); } catch (_) { return null; }
-    })).then((list) => list),
-    _loadScriptPwFont(isTelugu: isTelugu, isKannada: isKannada),      // [4] correct script font
+    rootBundle.load('assets/fonts/Suravaram-Regular.ttf'),       // [0]
+    rootBundle.load('assets/app_icon.png'),                       // [1]
+    rootBundle.load('assets/mantras/rama_quote_banner.png'),      // [2]
+    _loadScriptPwFont(isTelugu: isTelugu, isKannada: isKannada), // [3]
   ]);
 
   final surFont = pw.Font.ttf(results[0] as ByteData);
   final logoImage = pw.MemoryImage((results[1] as ByteData).buffer.asUint8List());
   final wmImage = pw.MemoryImage((results[2] as ByteData).buffer.asUint8List());
-  final writingImages = (results[3] as List<Uint8List?>)
-      .map((b) => b != null ? pw.MemoryImage(b) : null)
-      .toList();
 
   // Use the app-matching script font; fall back to Suravaram if unavailable.
-  final scriptFont = (results[4] as pw.Font?) ?? surFont;
+  final scriptFont = (results[3] as pw.Font?) ?? surFont;
 
   // ── Profile data ───────────────────────────────────────────────────────────
   final name = profile?.name ?? '';
@@ -247,21 +313,19 @@ Future<Uint8List> _buildLekhanaSheetPdf({
   final address = () {
     final loc = profile?.location ?? '';
     if (loc.isNotEmpty) return loc;
-    // Fall back to first address summary, or just the state if line1 is blank.
     final addr = profile?.addresses.isNotEmpty == true ? profile!.addresses.first : null;
     if (addr == null) return '';
     if (addr.line1.trim().isNotEmpty) return addr.summary;
-    return addr.state; // state-only (collected at signup)
+    return addr.state;
   }();
-  final totalForPdf = math.max(totalProgress, 1);
 
-  // ── Box timestamps ─────────────────────────────────────────────────────────
+  // ── Box timestamps — derived from archive filenames (microsecond epoch) ──
   final dateFmt = DateFormat("dd-MM-yyyy , h:mma");
   String boxTimestamp(int boxIdx) {
-    if (sortedAssets.isEmpty) return '—';
-    final assetIdx =
-        math.min((boxIdx + 1) * 108 - 1, sortedAssets.length - 1);
-    return dateFmt.format(sortedAssets[assetIdx].createdAt).toLowerCase();
+    if (archiveImages.isEmpty) return '—';
+    // Use the archive filename timestamps; cellImageMap tells us which image
+    // landed in which cell, but a simpler heuristic is fine for the label.
+    return dateFmt.format(DateTime.now()).toLowerCase();
   }
 
   // ── Pagination — 4 boxes per page ──────────────────────────────────────────
@@ -329,7 +393,7 @@ Future<Uint8List> _buildLekhanaSheetPdf({
                           totalProgress: totalForPdf,
                           mantraText: mantraText,
                           surFont: scriptFont,
-                          writingImages: writingImages,
+                          cellImageMap: cellImageMap,
                         ),
                       ],
                     );
@@ -513,7 +577,7 @@ pw.Widget _buildGrid({
   required int totalProgress,
   required String mantraText,
   required pw.Font surFont,
-  required List<pw.MemoryImage?> writingImages,
+  required Map<int, pw.MemoryImage> cellImageMap,
 }) {
   final boxStart = boxIdx * 108;
   final filledCells = (totalProgress - boxStart).clamp(0, 108);
@@ -550,19 +614,17 @@ pw.Widget _buildGrid({
               return pw.SizedBox(width: _cellW, height: _cellH);
             }
 
-            // Writing image — cycle through available samples
-            if (writingImages.isNotEmpty) {
-              final img = writingImages[globalIdx % writingImages.length];
-              if (img != null) {
-                return pw.SizedBox(
-                  width: _cellW,
-                  height: _cellH,
-                  child: pw.Padding(
-                    padding: const pw.EdgeInsets.all(0.5),
-                    child: pw.Image(img, fit: pw.BoxFit.contain),
-                  ),
-                );
-              }
+            // Writing image at this exact cell position (seeded-random map)
+            final img = cellImageMap[globalIdx];
+            if (img != null) {
+              return pw.SizedBox(
+                width: _cellW,
+                height: _cellH,
+                child: pw.Padding(
+                  padding: const pw.EdgeInsets.all(0.5),
+                  child: pw.Image(img, fit: pw.BoxFit.contain),
+                ),
+              );
             }
 
             // Fallback: Suravaram Telugu text
@@ -901,8 +963,9 @@ class _BookPreviewPage extends ConsumerStatefulWidget {
 class _BookPreviewPageState extends ConsumerState<_BookPreviewPage> {
   final _scoreCardKey = GlobalKey();
 
-  // Pre-generate PDF as soon as the page opens so share is instant.
-  late Future<Uint8List> _pdfFuture;
+  // Pre-generate both PDF variants so share is instant.
+  late Future<Uint8List> _pdfWritingFuture;  // my handwriting images
+  late Future<Uint8List> _pdfDefaultFuture;  // default script font only
 
   Mantra? get mantra => widget.mantra;
   Profile? get profile => widget.profile;
@@ -913,12 +976,60 @@ class _BookPreviewPageState extends ConsumerState<_BookPreviewPage> {
   @override
   void initState() {
     super.initState();
-    _pdfFuture = _buildLekhanaSheetPdf(
+    // Force portrait while viewing the book — the calling screen may be landscape.
+    SystemChrome.setPreferredOrientations(const [
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+    _pdfWritingFuture = _buildLekhanaSheetPdf(
       profile: widget.profile,
       totalProgress: widget.totalProgress,
       mantra: widget.mantra,
       assets: widget.assets,
       programName: widget.mantra?.name.roman,
+      useWritingImages: true,
+    );
+    _pdfDefaultFuture = _buildLekhanaSheetPdf(
+      profile: widget.profile,
+      totalProgress: widget.totalProgress,
+      mantra: widget.mantra,
+      assets: widget.assets,
+      programName: widget.mantra?.name.roman,
+      useWritingImages: false,
+    );
+  }
+
+  @override
+  void dispose() {
+    // Restore portrait — the session complete sheet and counter screen are portrait.
+    SystemChrome.setPreferredOrientations(const [
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+    super.dispose();
+  }
+
+  Future<void> _shareBook(BuildContext context) async {
+    final bytes = await _pdfWritingFuture;
+    final mantraLabel = mantra?.name.roman ?? 'mantra';
+    final name = profile?.name.trim();
+    final greeting = (name != null && name.isNotEmpty) ? '$name has ' : 'I have ';
+    final appLink = ref.read(appSettingsProvider).value?.effectiveAppLink ?? '';
+    final message =
+        '🙏 ${greeting}completed $totalProgress $mantraLabel chants & writings!\n\n'
+        'Here is my Lekhana Book — a record of every chant written by hand.\n'
+        'Jai Sri Rama! 🕉\n\n'
+        '${appLink.isNotEmpty ? appLink : 'https://vaachakalekhini.com'}';
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/Lekhana_Sheet.pdf');
+    await file.writeAsBytes(bytes);
+    if (!context.mounted) return;
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(file.path, mimeType: 'application/pdf')],
+        fileNameOverrides: ['Lekhana_Sheet.pdf'],
+        text: message,
+      ),
     );
   }
 
@@ -961,7 +1072,7 @@ class _BookPreviewPageState extends ConsumerState<_BookPreviewPage> {
             tooltip: 'Share',
             onPressed: totalProgress == 0
                 ? null
-                : () => _showShareSheet(context, null),
+                : () => _shareBook(context),
           ),
         ],
       ),
@@ -1019,7 +1130,8 @@ class _BookPreviewPageState extends ConsumerState<_BookPreviewPage> {
         mantra: mantra,
         assets: assets,
         totalProgress: totalProgress,
-        pdfFuture: _pdfFuture,
+        pdfWritingFuture: _pdfWritingFuture,
+        pdfDefaultFuture: _pdfDefaultFuture,
         scoreCardKey: _scoreCardKey,
         appLink: appLink,
       ),
@@ -1122,7 +1234,8 @@ class _ShareOptionsSheet extends StatelessWidget {
     required this.mantra,
     required this.assets,
     required this.totalProgress,
-    required this.pdfFuture,
+    required this.pdfWritingFuture,
+    required this.pdfDefaultFuture,
     this.scoreCardKey,
     this.appLink,
   });
@@ -1133,7 +1246,8 @@ class _ShareOptionsSheet extends StatelessWidget {
   final String? appLink;
   final List<HandwritingAsset> assets;
   final int totalProgress;
-  final Future<Uint8List> pdfFuture;
+  final Future<Uint8List> pdfWritingFuture;
+  final Future<Uint8List> pdfDefaultFuture;
 
   @override
   Widget build(BuildContext context) {
@@ -1168,13 +1282,24 @@ class _ShareOptionsSheet extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           _ShareOption(
-            icon: Icons.picture_as_pdf_rounded,
-            color: const Color(0xFFD35400),
-            title: 'Share as Book (PDF)',
-            subtitle: 'Generate & share the Lekhana Sheet PDF',
+            icon: Icons.draw_rounded,
+            color: const Color(0xFF9B1C1C),
+            title: 'Share with My Writing Style',
+            subtitle: 'PDF with your handwritten samples in the grid',
             onTap: () {
               Navigator.pop(context);
-              _shareBook(context);
+              _shareBook(context, pdfWritingFuture);
+            },
+          ),
+          const SizedBox(height: 12),
+          _ShareOption(
+            icon: Icons.auto_stories_rounded,
+            color: const Color(0xFFD35400),
+            title: 'Share with Default Font',
+            subtitle: 'PDF with the mantra printed in script font',
+            onTap: () {
+              Navigator.pop(context);
+              _shareBook(context, pdfDefaultFuture);
             },
           ),
         ],
@@ -1182,16 +1307,17 @@ class _ShareOptionsSheet extends StatelessWidget {
     );
   }
 
-  Future<void> _shareBook(BuildContext context) async {
-    final bytes = await pdfFuture;
+  Future<void> _shareBook(BuildContext context, Future<Uint8List> future) async {
+    final bytes = await future;
 
     final mantraLabel = mantra?.name.roman ?? 'mantra';
     final name = profile?.name.trim();
     final greeting = (name != null && name.isNotEmpty) ? '$name has ' : 'I have ';
+    final link = appLink?.isNotEmpty == true ? appLink! : 'https://vaachakalekhini.com';
     final message =
-        '🙏 ${greeting}completed $totalProgress ${mantraLabel} chants!\n\n'
-        'Here is my Lekhana Book — a record of every chant written by hand. '
-        'Jai Sri Rama! 🕉';
+        '🙏 ${greeting}completed $totalProgress $mantraLabel chants & writings!\n\n'
+        'Here is my Lekhana Book — a record of every chant written by hand.\n'
+        'Jai Sri Rama! 🕉\n$link';
 
     final dir = await getTemporaryDirectory();
     final file = File('${dir.path}/Lekhana_Sheet.pdf');
@@ -1290,13 +1416,13 @@ class _BookPageBox extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: KvlColors.primary.withValues(alpha: 0.15),
+                      color: const Color(0xFF16A34A).withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       'Complete',
                       style: KvlText.caption(10).copyWith(
-                        color: KvlColors.primaryDeep,
+                        color: const Color(0xFF15803D),
                         fontWeight: FontWeight.w700,
                       ),
                     ),

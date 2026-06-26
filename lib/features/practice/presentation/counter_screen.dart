@@ -4,10 +4,12 @@ import 'dart:math' as math;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/audio/reward_sound_service.dart';
@@ -21,6 +23,7 @@ import '../../../core/widgets/kvl_toast.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../programs/domain/session.dart';
 import '../../global_sadhana/domain/global_sadhana.dart';
+import '../../../core/sharing/share_cache.dart';
 import '../../programs/presentation/book_preview_sheet.dart';
 import '../../programs/presentation/daily_progress_screen.dart';
 import '../../settings/domain/settings_repository.dart';
@@ -86,8 +89,11 @@ final _ambientPlayerProvider = Provider.autoDispose<AudioPlayer>((ref) {
 });
 
 class CounterScreen extends ConsumerWidget {
-  const CounterScreen({super.key, required this.programId});
+  const CounterScreen({super.key, required this.programId, this.forGlobal = false});
   final String programId;
+  /// When true, global sadhana context (banner, global pill) is visible.
+  /// Only set when navigating from a global sadhana detail screen.
+  final bool forGlobal;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -120,22 +126,22 @@ class CounterScreen extends ConsumerWidget {
           ),
         ),
       ),
-      data: (state) => _Body(programId: programId, state: state),
+      data: (state) => _Body(programId: programId, state: state, forGlobal: forGlobal),
     );
   }
 }
 
 class _Body extends ConsumerStatefulWidget {
-  const _Body({required this.programId, required this.state});
+  const _Body({required this.programId, required this.state, this.forGlobal = false});
   final String programId;
   final PracticeState state;
+  final bool forGlobal;
 
   @override
   ConsumerState<_Body> createState() => _BodyState();
 }
 
 class _BodyState extends ConsumerState<_Body> {
-  bool _dedicationShown = false;
   bool _draftDialogShown = false;
   late final PracticeController _controllerForDispose;
   late final AudioPlayer _ambientPlayer;
@@ -254,14 +260,19 @@ class _BodyState extends ConsumerState<_Body> {
     // community chant stat — this is the programme the user is contributing to.
     final sadhanas = ref.watch(activeGlobalSadhanaProvider).value ?? const [];
     final gsRepo = ref.read(globalSadhanaRepositoryProvider);
+    // Global sadhana context ONLY appears when the user explicitly navigated
+    // from a global sadhana detail screen (forGlobal=true). Never bleed into
+    // personal or bonus sadhana screens.
     GlobalSadhana? enrolledGs;
     int? enrolledGlobalCount;
-    for (final gs in sadhanas) {
-      if (gs.mantraId == state.program.mantraId &&
-          gsRepo.cachedEnrollment(gs.id) != null) {
-        enrolledGs = gs;
-        enrolledGlobalCount = gs.currentCount;
-        break;
+    if (widget.forGlobal) {
+      for (final gs in sadhanas) {
+        if (gs.mantraId == state.program.mantraId &&
+            gsRepo.cachedEnrollment(gs.id) != null) {
+          enrolledGs = gs;
+          enrolledGlobalCount = gs.currentCount;
+          break;
+        }
       }
     }
     final globalBase =
@@ -273,7 +284,20 @@ class _BodyState extends ConsumerState<_Body> {
 
     return Scaffold(
       backgroundColor: KvlColors.bg,
-      body: SafeArea(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFFFF8F0),
+              Color(0xFFFFF0DC),
+              Color(0xFFFFF8EE),
+            ],
+            stops: [0.0, 0.55, 1.0],
+          ),
+        ),
+        child: SafeArea(
         bottom: false,
         child: LayoutBuilder(
           builder: (context, c) {
@@ -292,6 +316,47 @@ class _BodyState extends ConsumerState<_Body> {
               ),
               child: Column(
                 children: [
+                  // Global Sadhana initiative name banner
+                  if (enrolledGs != null) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: compact ? 4 : 5,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF7B2D00), Color(0xFFBF5000), Color(0xFFE8851A)],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.public_rounded,
+                              size: 12, color: Colors.white70),
+                          const SizedBox(width: 5),
+                          Flexible(
+                            child: Text(
+                              enrolledGs.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: compact ? 4 : 6),
+                  ],
                   _TopBar(
                     compact: compact,
                     sessionCount: state.sessionCount,
@@ -363,20 +428,13 @@ class _BodyState extends ConsumerState<_Body> {
                         await _showSessionCompleteSheet(
                           context, ref,
                           sessionCount: sessionTotal,
+                          todaysTotal: afterState?.todaysTotal ?? sessionTotal,
                           mantraId: state.program.mantraId,
                           programId: programId,
+                          enrolledGs: enrolledGs,
                         );
                         if (!context.mounted) return;
-                        final build = await _askBuildOrBonus(context, sessionTotal);
-                        if (!context.mounted) return;
-                        if (build == true) {
-                          context.go(
-                            '${KvlRoute.setTargetWritings}/${state.program.mantraId}'
-                            '?programId=${state.program.id}',
-                          );
-                        } else {
-                          context.go(KvlRoute.home);
-                        }
+                        context.go(KvlRoute.home);
                         return;
                       }
 
@@ -392,14 +450,6 @@ class _BodyState extends ConsumerState<_Body> {
                       ref.read(sessionCompletedProvider.notifier).increment();
                       ref.invalidate(globalStatsProvider(state.program.mantraId));
 
-                      // Show program-complete dedication sheet when target was met.
-                      if (targetWasReached && !_dedicationShown) {
-                        _dedicationShown = true;
-                        await _showDedicationDialog(context, ref, programId);
-                        if (!context.mounted) return;
-                        return; // _showDedicationDialog navigates on dedicate
-                      }
-
                       // Silent toast if daily goal was just hit — no blocking sheet.
                       final afterState = ref.read(practiceControllerProvider(programId)).value;
                       if (afterState != null && dailyTarget > 0 &&
@@ -412,13 +462,17 @@ class _BodyState extends ConsumerState<_Body> {
                         );
                       }
 
+                      final afterStateGoal = ref.read(practiceControllerProvider(programId)).value;
                       await _showSessionCompleteSheet(
                         context, ref,
                         sessionCount: state.sessionCount,
+                        todaysTotal: afterStateGoal?.todaysTotal ?? state.sessionCount,
                         mantraId: state.program.mantraId,
                         programId: programId,
+                        enrolledGs: enrolledGs,
                       );
                       if (!context.mounted) return;
+
                       context.go(KvlRoute.home);
                     },
                   ),
@@ -450,6 +504,7 @@ class _BodyState extends ConsumerState<_Body> {
             );
           },
         ),
+      ),
       ),
     );
   }
@@ -499,66 +554,14 @@ class _BodyState extends ConsumerState<_Body> {
     );
   }
 
-  Future<void> _showDedicationDialog(
-    BuildContext context,
-    WidgetRef ref,
-    String programId,
-  ) async {
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => _DedicationDialog(
-        onDedicate: () async {
-          Navigator.of(context).pop();
-
-          // Mark the session as finished and the program as completed.
-          final controller = ref.read(
-            practiceControllerProvider(programId).notifier,
-          );
-          final mantraId = ref
-              .read(practiceControllerProvider(programId))
-              .value
-              ?.program
-              .mantraId;
-          await controller.finish();
-          if (mantraId != null) ref.invalidate(globalStatsProvider(mantraId));
-          final program = ref
-              .read(practiceControllerProvider(programId))
-              .value
-              ?.program;
-          final mantraName = mantraId != null
-              ? (ref.read(mantraByIdProvider(mantraId))?.name.devanagari ?? '')
-              : '';
-          if (program != null && !program.isCompleted) {
-            await ref
-                .read(programRepositoryProvider)
-                .update(program.copyWith(completedAt: DateTime.now()));
-          }
-
-          if (!context.mounted) return;
-
-          // Show the dedication sheet before leaving the counter screen.
-          await DedicateSheet.show(
-            context,
-            programId: programId,
-            mantraName: mantraName,
-          );
-
-          if (!context.mounted) return;
-          // Navigate to the programs list so the user sees the completed
-          // program card (disabled) — clears the full navigation stack.
-          context.go(KvlRoute.programs);
-        },
-      ),
-    );
-  }
-
   Future<void> _showSessionCompleteSheet(
     BuildContext context,
     WidgetRef ref, {
     required int sessionCount,
+    required int todaysTotal,
     required String mantraId,
     required String programId,
+    GlobalSadhana? enrolledGs,
   }) async {
     final mantra = ref.read(mantraByIdProvider(mantraId));
     final mantraName = mantra?.name.devanagari ?? 'Sri Rama';
@@ -568,9 +571,11 @@ class _BodyState extends ConsumerState<_Body> {
       backgroundColor: Colors.transparent,
       builder: (_) => _SessionCompleteSheet(
         sessionCount: sessionCount,
+        todaysTotal: todaysTotal,
         mantraName: mantraName,
         mantraId: mantraId,
         programId: programId,
+        enrolledGs: enrolledGs,
       ),
     );
   }
@@ -607,8 +612,7 @@ class _TopBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Single diameter shared by every top-bar button so back / ringer /
     // writing all render at exactly the same size.
-    final double btn = compact ? 44 : 50;
-    final double labelH = compact ? 15 : 18;
+    final double labelH = compact ? 17 : 20;
 
     final (ringerIcon, ringerLabel) = switch (ringerMode) {
       RingerMode.silent => (Icons.notifications_off_rounded, 'Silent'),
@@ -620,24 +624,23 @@ class _TopBar extends ConsumerWidget {
     // One identically-shaped slot per button: a [btn]-sized circle on top and
     // a fixed-height label area below (kept even when empty) so every column
     // is the same height — equal top/bottom padding for all four.
+    final double iconSz = compact ? 28 : 32;
+
     Widget slot({
-      required Widget circle,
+      required IconData icon,
       required VoidCallback onTap,
       String? label,
+      Color? color,
     }) {
-      return InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 2),
+      final ic = color ?? const Color(0xFF5C3A1E);
+      return Expanded(
+        child: GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              SizedBox(
-                width: btn,
-                height: btn,
-                child: Center(child: circle),
-              ),
+              Icon(icon, size: iconSz, color: ic),
               const SizedBox(height: 2),
               SizedBox(
                 height: labelH,
@@ -649,7 +652,7 @@ class _TopBar extends ConsumerWidget {
                           label,
                           maxLines: 1,
                           style: KvlText.caption(
-                            compact ? 11 : 12,
+                            compact ? 12 : 13,
                           ).copyWith(color: KvlColors.inkSoft),
                         ),
                       ),
@@ -660,82 +663,32 @@ class _TopBar extends ConsumerWidget {
       );
     }
 
-    Widget iconCircle(IconData icon) =>
-        Icon(icon, size: btn * 0.62, color: const Color(0xFF252525));
-
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Expanded(
-          child: slot(
-            circle: iconCircle(Icons.arrow_back_rounded),
-            onTap: onBack,
-          ),
+        slot(icon: Icons.arrow_back_rounded, onTap: onBack),
+        slot(icon: ringerIcon, onTap: onCycleRinger, label: ringerLabel),
+        slot(icon: Icons.draw_outlined, onTap: onWritingMode, label: 'Write'),
+        slot(
+          icon: ref.watch(_ambientOnProvider)
+              ? Icons.music_note_rounded
+              : Icons.music_off_rounded,
+          label: 'Ambient',
+          onTap: () async {
+            ref.read(_ambientOnProvider.notifier).toggle();
+            final player = ref.read(_ambientPlayerProvider);
+            if (ref.read(_ambientOnProvider)) {
+              await player.resume();
+            } else {
+              await player.pause();
+            }
+          },
         ),
-        Expanded(
-          child: slot(
-            circle: iconCircle(ringerIcon),
-            onTap: onCycleRinger,
-            label: ringerLabel,
-          ),
-        ),
-        Expanded(
-          child: slot(
-            circle: iconCircle(Icons.draw_outlined),
-            onTap: onWritingMode,
-            label: 'Write',
-          ),
-        ),
-        Expanded(
-          child: slot(
-            circle: iconCircle(ref.watch(_ambientOnProvider)
-                ? Icons.music_note_rounded
-                : Icons.music_off_rounded),
-            label: 'Ambient',
-            onTap: () async {
-              ref.read(_ambientOnProvider.notifier).toggle();
-              final player = ref.read(_ambientPlayerProvider);
-              if (ref.read(_ambientOnProvider)) {
-                // Source is pre-loaded — resume is instant with no gap.
-                await player.resume();
-              } else {
-                await player.pause();
-              }
-            },
-          ),
-        ),
-        // Reward points + book count stacked in the top-right.
-        // Matches slot() height: btn circle area + 2px gap + labelH label area.
-        Expanded(
-          flex: 2,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                SizedBox(
-                  height: btn,
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: _PointsBadge(compact: compact, sessionCount: sessionCount),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                SizedBox(
-                  height: labelH,
-                  child: Align(
-                    alignment: Alignment.topRight,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerRight,
-                      child: _BookCountBadge(compact: compact, mantraId: mantraId),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+        slot(
+          icon: Icons.import_contacts_rounded,
+          color: KvlColors.primaryDeep,
+          label: 'Book',
+          onTap: () => BookPreviewButton.openSheet(context, mantraId),
         ),
       ],
     );
@@ -887,10 +840,10 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
                     colors: [
                       const Color(
                         0xFFFFC58A,
-                      ).withValues(alpha: widget.isRunning ? 0.26 : 0.12),
+                      ).withValues(alpha: widget.isRunning ? 0.26 : 0.18),
                       const Color(
                         0xFFFF8C42,
-                      ).withValues(alpha: widget.isRunning ? 0.12 : 0.05),
+                      ).withValues(alpha: widget.isRunning ? 0.12 : 0.08),
                       KvlColors.primary.withValues(alpha: 0.0),
                     ],
                     stops: const [0.0, 0.55, 1.0],
@@ -928,6 +881,13 @@ class _HeroMicState extends State<_HeroMic> with TickerProviderStateMixin {
                             fontWeight: FontWeight.w800,
                             letterSpacing: 0,
                             color: color,
+                            shadows: [
+                              Shadow(
+                                color: const Color(0xFFE8851A).withValues(alpha: 0.30),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -1151,24 +1111,12 @@ class _Counts extends StatefulWidget {
   State<_Counts> createState() => _CountsState();
 }
 
-class _CountsState extends State<_Counts> with SingleTickerProviderStateMixin {
-  late final AnimationController _pulseCtrl = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1100),
-  )..repeat(reverse: true);
-
-  @override
-  void dispose() {
-    _pulseCtrl.dispose();
-    super.dispose();
-  }
-
+class _CountsState extends State<_Counts> {
   @override
   Widget build(BuildContext context) {
     final compact = widget.compact;
     final added = widget.added;
     final globalBase = (widget.globalCount - added).clamp(0, widget.globalCount);
-    final hasLive = widget.memberCount > 0;
 
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 400),
@@ -1182,16 +1130,16 @@ class _CountsState extends State<_Counts> with SingleTickerProviderStateMixin {
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Colors.white, Color(0xFFFFF1E2)],
+            colors: [Color(0xFFFFF3E0), Color(0xFFFFE0B2)],
           ),
           border: Border.all(
-            color: KvlColors.primary.withValues(alpha: 0.35),
-            width: 1.2,
+            color: KvlColors.primary.withValues(alpha: 0.50),
+            width: 1.5,
           ),
           boxShadow: [
             BoxShadow(
-              color: KvlColors.primary.withValues(alpha: 0.14),
-              blurRadius: 14,
+              color: KvlColors.primary.withValues(alpha: 0.18),
+              blurRadius: 20,
               offset: const Offset(0, 5),
             ),
           ],
@@ -1204,7 +1152,7 @@ class _CountsState extends State<_Counts> with SingleTickerProviderStateMixin {
               Icon(
                 Icons.public_rounded,
                 size: compact ? 15 : 17,
-                color: KvlColors.primaryDeep,
+                color: KvlColors.primary,
               ),
               const SizedBox(width: 7),
               Text(
@@ -1243,46 +1191,6 @@ class _CountsState extends State<_Counts> with SingleTickerProviderStateMixin {
                   ).copyWith(color: const Color(0xFF16A34A)),
                 ),
               ),
-              if (hasLive) ...[
-                Container(
-                  width: 1,
-                  height: compact ? 14 : 17,
-                  margin: const EdgeInsets.symmetric(horizontal: 10),
-                  color: KvlColors.border,
-                ),
-                AnimatedBuilder(
-                  animation: _pulseCtrl,
-                  builder: (_, __) => Container(
-                    width: compact ? 6 : 7,
-                    height: compact ? 6 : 7,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Color.lerp(
-                        const Color(0xFF22C55E),
-                        const Color(0xFF16A34A),
-                        _pulseCtrl.value,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF22C55E).withValues(
-                            alpha: 0.4 + 0.3 * _pulseCtrl.value,
-                          ),
-                          blurRadius: 4 + 3 * _pulseCtrl.value,
-                          spreadRadius: 1,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 5),
-                Text(
-                  '${IndianNumberFormat.format(widget.memberCount)} Live',
-                  style: KvlText.ui(
-                    compact ? 12 : 13,
-                    FontWeight.w700,
-                  ).copyWith(color: const Color(0xFF16A34A)),
-                ),
-              ],
             ],
           ),
         ),
@@ -1441,6 +1349,11 @@ class _ActionRow extends StatelessWidget {
             label: startLabel,
             icon: startIcon,
             color: KvlColors.primary,
+            gradient: const LinearGradient(
+              colors: [Color(0xFFE8851A), Color(0xFFBF5000), Color(0xFF7B2D00)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
             onTap: onStart,
             compact: compact,
           ),
@@ -1469,12 +1382,14 @@ class _ActionButton extends StatelessWidget {
     required this.onTap,
     required this.compact,
     this.icon,
+    this.gradient,
   });
   final String label;
   final Color color;
   final VoidCallback? onTap;
   final bool compact;
   final IconData? icon;
+  final Gradient? gradient;
 
   @override
   Widget build(BuildContext context) {
@@ -1486,15 +1401,15 @@ class _ActionButton extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: radius,
-          color: Colors.white,
-          border: Border.all(color: color, width: 1.8),
+          color: gradient == null ? color : null,
+          gradient: gradient,
           boxShadow: disabled
               ? null
               : [
                   BoxShadow(
-                    color: color.withValues(alpha: 0.18),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+                    color: color.withValues(alpha: 0.32),
+                    blurRadius: 14,
+                    offset: const Offset(0, 5),
                   ),
                 ],
         ),
@@ -1503,8 +1418,8 @@ class _ActionButton extends StatelessWidget {
           child: InkWell(
             onTap: onTap,
             borderRadius: radius,
-            splashColor: color.withValues(alpha: 0.10),
-            highlightColor: color.withValues(alpha: 0.06),
+            splashColor: Colors.white.withValues(alpha: 0.15),
+            highlightColor: Colors.white.withValues(alpha: 0.08),
             child: SizedBox(
               height: compact ? 48 : 54,
               width: double.infinity,
@@ -1516,7 +1431,7 @@ class _ActionButton extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       if (icon != null) ...[
-                        Icon(icon, color: color, size: 21),
+                        Icon(icon, color: Colors.white, size: 21),
                         const SizedBox(width: 8),
                       ],
                       Text(
@@ -1524,7 +1439,7 @@ class _ActionButton extends StatelessWidget {
                         style: KvlText.ui(
                           compact ? 15 : 18,
                           FontWeight.w800,
-                        ).copyWith(color: color, letterSpacing: 0.4),
+                        ).copyWith(color: Colors.white, letterSpacing: 0.4),
                       ),
                     ],
                   ),
@@ -1582,17 +1497,34 @@ class _SimpleProgressBar extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: progress),
-              duration: const Duration(milliseconds: 700),
-              curve: Curves.easeOutCubic,
-              builder: (_, v, __) => LinearProgressIndicator(
-                value: v,
-                minHeight: compact ? 7 : 9,
-                backgroundColor: KvlColors.primary.withValues(alpha: 0.12),
-                valueColor: AlwaysStoppedAnimation<Color>(KvlColors.primary),
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: progress),
+            duration: const Duration(milliseconds: 700),
+            curve: Curves.easeOutCubic,
+            builder: (_, v, __) => ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: SizedBox(
+                height: compact ? 7 : 9,
+                child: LayoutBuilder(
+                  builder: (ctx, bc) => Stack(
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        color: KvlColors.primary.withValues(alpha: 0.10),
+                      ),
+                      Container(
+                        width: bc.maxWidth * v,
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Color(0xFFE8851A), Color(0xFFBF5000)],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
@@ -1921,65 +1853,6 @@ class _MicErrorCard extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Dedication dialog
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _DedicationDialog extends StatelessWidget {
-  const _DedicationDialog({required this.onDedicate});
-  final VoidCallback onDedicate;
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: KvlRadius.brLG),
-      child: Padding(
-        padding: const EdgeInsets.all(KvlSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [Color(0xFFFFB572), KvlColors.primary],
-                ),
-              ),
-              alignment: Alignment.center,
-              child: const Icon(
-                Icons.self_improvement_rounded,
-                color: Colors.white,
-                size: 32,
-              ),
-            ),
-            const SizedBox(height: KvlSpacing.md),
-            Text(
-              'Program Complete!',
-              style: KvlText.ui(
-                20,
-                FontWeight.w800,
-              ).copyWith(color: KvlColors.ink),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: KvlSpacing.sm),
-            Text(
-              'You have completed your sankalpa.\nWould you like to dedicate this practice?',
-              style: KvlText.caption(
-                13.5,
-              ).copyWith(color: KvlColors.inkSoft, height: 1.5),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: KvlSpacing.lg),
-            KvlButton(label: 'Dedicate & Complete', onPressed: onDedicate),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 /// One-time tip bottom sheet with a "Don't show again" checkbox.
 class _TipSheet extends StatefulWidget {
   const _TipSheet({
@@ -2068,6 +1941,105 @@ class _TipSheetState extends State<_TipSheet> {
   }
 }
 
+// ── Personal session complete header ─────────────────────────────────────────
+
+class _PersonalCompleteHeader extends ConsumerWidget {
+  const _PersonalCompleteHeader({
+    required this.mantraId,
+    required this.sessionFmt,
+    required this.mantraName,
+    required this.dedicatedTo,
+  });
+  final String mantraId;
+  final String sessionFmt;
+  final String mantraName;
+  final String? dedicatedTo;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mantra = ref.watch(mantraByIdProvider(mantraId));
+    final imageUrl = mantra?.imageUrl ?? mantra?.previewImageUrl;
+
+    return Column(
+      children: [
+        // Mantra image or fallback icon
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: imageUrl != null
+              ? Image.network(
+                  imageUrl,
+                  width: 120, height: 120,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => _fallbackIcon(),
+                )
+              : _fallbackIcon(),
+        ),
+        const SizedBox(height: 16),
+        Text('Session Complete 🙏', style: KvlText.title(20),
+            textAlign: TextAlign.center),
+        const SizedBox(height: 8),
+        if (dedicatedTo != null) ...[
+          Text(
+            'You chanted $sessionFmt $mantraName',
+            style: KvlText.body().copyWith(fontSize: 15, color: Colors.black87),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.favorite_rounded, size: 14, color: Color(0xFFE57373)),
+              const SizedBox(width: 5),
+              Text(
+                'Dedicated to $dedicatedTo',
+                style: KvlText.body().copyWith(
+                  fontSize: 14,
+                  color: KvlColors.primaryDeep,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Every chant is a sacred offering 🙏',
+            style: KvlText.body().copyWith(
+                fontSize: 13,
+                color: Colors.grey[600],
+                fontStyle: FontStyle.italic),
+            textAlign: TextAlign.center,
+          ),
+        ] else ...[
+          Text(
+            'You chanted $sessionFmt $mantraName',
+            style: KvlText.body().copyWith(fontSize: 15, color: Colors.black87),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Every chant is a step closer to the divine.',
+            style: KvlText.body().copyWith(
+                fontSize: 13,
+                color: Colors.grey[600],
+                fontStyle: FontStyle.italic),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _fallbackIcon() => Container(
+    width: 120, height: 120,
+    decoration: BoxDecoration(
+      color: KvlColors.primary.withValues(alpha: 0.12),
+      shape: BoxShape.circle,
+    ),
+    child: const Icon(Icons.self_improvement_rounded,
+        size: 48, color: KvlColors.primary),
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Session complete bottom sheet
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2075,15 +2047,19 @@ class _TipSheetState extends State<_TipSheet> {
 class _SessionCompleteSheet extends ConsumerStatefulWidget {
   const _SessionCompleteSheet({
     required this.sessionCount,
+    required this.todaysTotal,
     required this.mantraName,
     required this.mantraId,
     required this.programId,
+    this.enrolledGs,
   });
 
   final int sessionCount;
+  final int todaysTotal;
   final String mantraName;
   final String mantraId;
   final String programId;
+  final GlobalSadhana? enrolledGs;
 
   @override
   ConsumerState<_SessionCompleteSheet> createState() =>
@@ -2092,15 +2068,86 @@ class _SessionCompleteSheet extends ConsumerStatefulWidget {
 
 class _SessionCompleteSheetState extends ConsumerState<_SessionCompleteSheet> {
   bool _sharing = false;
+  String? _cachedImagePath;
+  bool _prefetchStarted = false;
+  String? _dedicatedTo; // name from SharedPreferences
+
+  @override
+  void initState() {
+    super.initState();
+    // Always portrait for the session complete sheet.
+    SystemChrome.setPreferredOrientations(const [
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+    final url = widget.enrolledGs?.imageUrl ?? '';
+    if (url.isNotEmpty) _prefetchImage(url);
+    _loadDedication();
+  }
+
+  Future<void> _loadDedication() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('dedication_${widget.programId}');
+    if (raw != null && raw.contains('||')) {
+      final name = raw.split('||')[0].trim();
+      if (name.isNotEmpty && mounted) {
+        setState(() => _dedicatedTo = name);
+      }
+    }
+  }
+
+  void _prefetchImage(String url) {
+    if (_prefetchStarted) return;
+    _prefetchStarted = true;
+    cachedShareImagePath(url).then((p) {
+      if (mounted) setState(() => _cachedImagePath = p);
+    });
+  }
 
   Future<void> _share() async {
     if (_sharing) return;
     setState(() => _sharing = true);
     try {
-      final count = IndianNumberFormat.format(widget.sessionCount);
-      await SharePlus.instance.share(ShareParams(
-        text: 'I completed $count ${widget.mantraName} chants today 🙏\n\nShared via Vachika Lekhini',
-      ));
+      final appLink = ref.read(appSettingsProvider).value?.effectiveAppLink ?? '';
+      final sessionFmt = IndianNumberFormat.format(widget.sessionCount);
+      final todayFmt = IndianNumberFormat.format(widget.todaysTotal);
+      final gs = widget.enrolledGs;
+      String msg;
+      if (gs != null) {
+        final globalTotal = IndianNumberFormat.format(gs.currentCount);
+        msg = '🕉 I chanted $todayFmt ${widget.mantraName} today as part of the "${gs.title}" Global Sadhana!\n'
+            'Together we have reached $globalTotal chants toward the sacred goal.\n'
+            'Join us on Vachika Lekhini 🙏';
+      } else if (_dedicatedTo != null) {
+        msg = '🕉 I completed $sessionFmt ${widget.mantraName} chants today, dedicated to $_dedicatedTo! 🙏\n'
+            'Every chant is a sacred offering.\n'
+            'Join me on Vachika Lekhini';
+      } else {
+        msg = '🕉 I completed $sessionFmt ${widget.mantraName} chants today!\n'
+            'Every chant is a step closer to the divine 🙏\n'
+            'Join me on Vachika Lekhini';
+      }
+      if (appLink.isNotEmpty) msg += '\n$appLink';
+
+      final imgPath = _cachedImagePath;
+      if (imgPath != null) {
+        // Share image + text — open WhatsApp directly via share intent
+        final ext = imgPath.endsWith('.png') ? 'png' : 'jpg';
+        await SharePlus.instance.share(ShareParams(
+          text: msg,
+          files: [XFile(imgPath, mimeType: 'image/$ext')],
+          sharePositionOrigin: Rect.zero,
+        ));
+      } else {
+        // Text-only — deep-link straight into WhatsApp, fall back to system share
+        final waUri = Uri.parse(
+          'https://wa.me/?text=${Uri.encodeComponent(msg)}',
+        );
+        final opened = await launchUrl(waUri, mode: LaunchMode.externalApplication);
+        if (!opened) {
+          await SharePlus.instance.share(ShareParams(text: msg));
+        }
+      }
     } finally {
       if (mounted) setState(() => _sharing = false);
     }
@@ -2108,11 +2155,22 @@ class _SessionCompleteSheetState extends ConsumerState<_SessionCompleteSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final count = IndianNumberFormat.format(widget.sessionCount);
+    final gs = widget.enrolledGs;
+    final sessionFmt = IndianNumberFormat.format(widget.sessionCount);
+    final todayFmt = IndianNumberFormat.format(widget.todaysTotal);
+    final isGlobal = gs != null;
+
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        gradient: isGlobal
+            ? const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFFFFF8EE), Color(0xFFFFF0D6)],
+              )
+            : null,
+        color: isGlobal ? null : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       padding: EdgeInsets.fromLTRB(
         24, 20, 24, 24 + MediaQuery.of(context).viewInsets.bottom,
@@ -2120,110 +2178,329 @@ class _SessionCompleteSheetState extends ConsumerState<_SessionCompleteSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Drag handle
           Container(
-            width: 40,
-            height: 4,
+            width: 40, height: 4,
             decoration: BoxDecoration(
               color: Colors.grey[300],
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const SizedBox(height: 24),
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              color: KvlColors.primary.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.self_improvement_rounded,
-                size: 36, color: KvlColors.primary),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Session Complete 🙏',
-            style: KvlText.title(20),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'You chanted $count ${widget.mantraName}',
-            style: KvlText.body().copyWith(
-              fontSize: 15,
-              color: Colors.black87,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Every chant is a step closer to the divine.',
-            style: KvlText.body().copyWith(
-              fontSize: 13,
-              color: Colors.grey[600],
-              fontStyle: FontStyle.italic,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 28),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _sharing ? null : _share,
-                  icon: _sharing
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.share_rounded, size: 18),
-                  label: const Text('Share'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: KvlColors.primaryDeep,
-                    side: BorderSide(color: KvlColors.primaryDeep),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: KvlRadius.brMD),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+          const SizedBox(height: 20),
+
+          if (isGlobal) ...[
+            // ── Global session complete layout ─────────────────────────────
+
+            // Image preview card
+            if (gs.imageUrl != null) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.network(
+                        gs.imageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Container(
+                          color: KvlColors.primarySoft,
+                          child: const Icon(Icons.image_outlined,
+                              size: 40, color: KvlColors.primary),
+                        ),
+                      ),
+                      // Gradient overlay
+                      Positioned.fill(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                Colors.black.withValues(alpha: .55),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Today's count overlaid on image
+                      Positioned(
+                        bottom: 12,
+                        left: 0,
+                        right: 0,
+                        child: Column(
+                          children: [
+                            Text(
+                              todayFmt,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 28,
+                                fontWeight: FontWeight.w900,
+                                shadows: [
+                                  Shadow(color: Colors.black45, blurRadius: 6),
+                                ],
+                              ),
+                            ),
+                            Text(
+                              '${widget.mantraName} chants today',
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    BookPreviewButton.openSheet(context, widget.mantraId);
-                  },
-                  icon: const Icon(Icons.menu_book_rounded, size: 18),
-                  label: const Text('Book Preview'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: KvlColors.primaryDeep,
-                    side: BorderSide(color: KvlColors.primaryDeep),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: KvlRadius.brMD),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                ),
-              ),
+              const SizedBox(height: 16),
             ],
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: () => Navigator.of(context).pop(),
-              style: FilledButton.styleFrom(
-                backgroundColor: KvlColors.primary,
-                shape: RoundedRectangleBorder(borderRadius: KvlRadius.brMD),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-              child: Text(
-                'Continue',
-                style: KvlText.ui(15, FontWeight.w700)
-                    .copyWith(color: Colors.white),
+
+            Text(
+              'Jai ${widget.mantraName}! 🙏',
+              style: KvlText.title(18),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 6),
+            // Session stat
+            RichText(
+              textAlign: TextAlign.center,
+              text: TextSpan(
+                style: KvlText.caption(13).copyWith(color: KvlColors.inkSoft),
+                children: [
+                  const TextSpan(text: 'This session: '),
+                  TextSpan(
+                    text: '$sessionFmt chants',
+                    style: const TextStyle(
+                      color: KvlColors.primaryDeep,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const TextSpan(text: '  •  Today total: '),
+                  TextSpan(
+                    text: '$todayFmt chants',
+                    style: const TextStyle(
+                      color: KvlColors.primaryDeep,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
+            const SizedBox(height: 6),
+            Text(
+              'contributing to "${gs.title}"',
+              style: KvlText.caption(12).copyWith(
+                color: KvlColors.inkSoft,
+                fontStyle: FontStyle.italic,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+
+            // Share preview prompt
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: KvlColors.primary.withValues(alpha: .07),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                    color: KvlColors.primary.withValues(alpha: .20)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.share_rounded,
+                      color: KvlColors.primary, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Share your contribution with devotees worldwide?',
+                      style: KvlText.caption(12.5).copyWith(
+                        color: KvlColors.primaryDeep,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Share + Continue buttons
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFF9A3E), Color(0xFFE07020)],
+                      ),
+                      borderRadius: KvlRadius.brMD,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFE07020).withValues(alpha: .30),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: KvlRadius.brMD,
+                        onTap: _sharing ? null : _share,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (_sharing)
+                                const SizedBox(
+                                  width: 16, height: 16,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white),
+                                )
+                              else
+                                const Icon(Icons.share_rounded,
+                                    color: Colors.white, size: 18),
+                              const SizedBox(width: 8),
+                              const Text('Share',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                  )),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: KvlColors.primaryDeep,
+                      side: BorderSide(color: KvlColors.primaryDeep),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: KvlRadius.brMD),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: const Text('Continue',
+                        style: TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ],
+            ),
+          ] else ...[
+            // ── Personal session complete layout ──────────────────────────
+            _PersonalCompleteHeader(
+              mantraId: widget.mantraId,
+              sessionFmt: sessionFmt,
+              mantraName: widget.mantraName,
+              dedicatedTo: _dedicatedTo,
+            ),
+            const SizedBox(height: 20),
+
+            // ── Dedicate button (prominent) ───────────────────────────────
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  final mantra = ref.read(mantraByIdProvider(widget.mantraId));
+                  await showModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    useRootNavigator: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (_) => DedicateSheet(
+                      programId: widget.programId,
+                      mantraName: mantra?.name.devanagari ?? widget.mantraName,
+                    ),
+                  );
+                  // Reload dedication after sheet closes
+                  if (mounted) await _loadDedication();
+                },
+                icon: const Icon(Icons.favorite_rounded, size: 18),
+                label: Text(_dedicatedTo != null
+                    ? 'Dedicated to $_dedicatedTo'
+                    : 'Dedicate this session'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFFB83240),
+                  side: const BorderSide(color: Color(0xFFB83240)),
+                  shape: RoundedRectangleBorder(borderRadius: KvlRadius.brMD),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // ── Share + Book Preview ──────────────────────────────────────
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _sharing ? null : _share,
+                    icon: _sharing
+                        ? const SizedBox(
+                            width: 16, height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.share_rounded, size: 18),
+                    label: const Text('Share'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: KvlColors.primaryDeep,
+                      side: BorderSide(color: KvlColors.primaryDeep),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: KvlRadius.brMD),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      BookPreviewButton.openSheet(
+                        Navigator.of(context, rootNavigator: true).context,
+                        widget.mantraId,
+                      );
+                    },
+                    icon: const Icon(Icons.menu_book_rounded, size: 18),
+                    label: const Text('Book Preview'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: KvlColors.primaryDeep,
+                      side: BorderSide(color: KvlColors.primaryDeep),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: KvlRadius.brMD),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: FilledButton.styleFrom(
+                  backgroundColor: KvlColors.primary,
+                  shape: RoundedRectangleBorder(borderRadius: KvlRadius.brMD),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: Text('Continue',
+                    style: KvlText.ui(15, FontWeight.w700)
+                        .copyWith(color: Colors.white)),
+              ),
+            ),
+          ],
         ],
       ),
     );

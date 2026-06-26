@@ -51,9 +51,19 @@ bool isAccountLevelError(String? code) => const {
 class AuthMobileFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(_, TextEditingValue n) {
-    final d = n.text.replaceAll(RegExp(r'\D'), '');
-    final s = d.length > 10 ? d.substring(0, 10) : d;
-    final f = s.length > 5 ? '${s.substring(0, 5)} ${s.substring(5)}' : s;
+    var d = n.text.replaceAll(RegExp(r'\D'), '');
+    // Cap at 12 digits (10-digit or full 12-digit with country code)
+    if (d.length > 12) d = d.substring(0, 12);
+    // Format: space after 5th digit for 10-digit, or after 2nd+7th for 12-digit
+    String f;
+    if (d.length <= 5) {
+      f = d;
+    } else if (d.length <= 10) {
+      f = '${d.substring(0, 5)} ${d.substring(5)}';
+    } else {
+      // 11 or 12 digits — show as-is spaced
+      f = d;
+    }
     return TextEditingValue(
         text: f, selection: TextSelection.collapsed(offset: f.length));
   }

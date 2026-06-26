@@ -188,8 +188,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '${KvlRoute.practice}/:programId',
-        builder: (_, state) =>
-            CounterScreen(programId: state.pathParameters['programId']!),
+        builder: (_, state) => CounterScreen(
+          programId: state.pathParameters['programId']!,
+          forGlobal: state.uri.queryParameters['global'] == '1',
+        ),
       ),
       GoRoute(
         path: KvlRoute.inviteFriends,
@@ -390,11 +392,7 @@ class _ShellPageState extends ConsumerState<_ShellPage> {
                     ? () => shell.goBranch(0)
                     : null,
                 topGapColor: isCommunity || isStore ? Colors.black : null,
-                leading: isStore
-                    ? _RewardHistoryChipConnected(
-                        onTap: () => context.push(KvlRoute.rewardHistory),
-                      )
-                    : null,
+                leading: null,
                 trailing: _AvatarChip(
                   initial: initial,
                   profileId: profile?.id ?? '',

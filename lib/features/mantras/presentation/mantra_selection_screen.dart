@@ -19,7 +19,8 @@ class MantraSelectionScreen extends ConsumerStatefulWidget {
 
 class _MantraSelectionScreenState extends ConsumerState<MantraSelectionScreen> {
   String? _selectedId;
-  bool _redirected = false;
+  bool _starting = false;
+  bool _autoTriggered = false; // ensures single-mantra auto-start fires exactly once
 
   @override
   void initState() {
@@ -27,30 +28,46 @@ class _MantraSelectionScreenState extends ConsumerState<MantraSelectionScreen> {
     Future.microtask(() => ref.read(mantraRepositoryProvider).refresh());
   }
 
+  Future<void> _start() async {
+    final mantraId = _selectedId;
+    if (mantraId == null || _starting) return;
+    setState(() => _starting = true);
+    try {
+      final profile = ref.read(activeProfileProvider).value;
+      if (profile == null || !mounted) return;
+
+      final repo = ref.read(programRepositoryProvider);
+      final existing = await repo.findActiveForMantra(
+        memberId: profile.id,
+        mantraId: mantraId,
+      );
+      final program = existing ??
+          await repo.createOpen(memberId: profile.id, mantraId: mantraId);
+      if (!mounted) return;
+      context.go('${KvlRoute.practice}/${program.id}');
+    } finally {
+      if (mounted) setState(() => _starting = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final catalog = ref.watch(mantraCatalogProvider).value ?? const [];
-
-    // Only one mantra available — don't make the user "choose"; go straight
-    // to that mantra's details/start flow.
-    if (catalog.length == 1 && !_redirected) {
-      _redirected = true;
-      final onlyId = catalog.first.id;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          context.pushReplacement('${KvlRoute.mantraDetails}/$onlyId');
-        }
-      });
-      return KvlScaffold(
-        title: context.l10n.mantraSelectionTitle,
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
 
     if (_selectedId != null && !catalog.any((m) => m.id == _selectedId)) {
       _selectedId = catalog.isNotEmpty ? catalog.first.id : null;
     }
     _selectedId ??= catalog.isNotEmpty ? catalog.first.id : null;
+
+    // Single mantra — kick off immediately without showing the list UI.
+    // _autoTriggered ensures only one callback is ever queued regardless of rebuilds.
+    if (catalog.length == 1 && _selectedId != null && !_autoTriggered) {
+      _autoTriggered = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _start();
+      });
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
     return KvlScaffold(
       title: context.l10n.mantraSelectionTitle,
@@ -73,10 +90,8 @@ class _MantraSelectionScreenState extends ConsumerState<MantraSelectionScreen> {
           ),
           const SizedBox(height: KvlSpacing.sm),
           KvlButton(
-            label: context.l10n.confirmSelection,
-            onPressed: _selectedId == null
-                ? null
-                : () => context.push('${KvlRoute.mantraDetails}/$_selectedId'),
+            label: _starting ? 'Starting…' : context.l10n.confirmSelection,
+            onPressed: (_selectedId == null || _starting) ? null : _start,
           ),
         ],
       ),

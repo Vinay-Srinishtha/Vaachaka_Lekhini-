@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/scheduler.dart';
 
@@ -15,6 +16,15 @@ import '../../../l10n/l10n.dart';
 import '../../settings/domain/settings_repository.dart';
 import '../domain/program.dart';
 import 'book_preview_sheet.dart';
+
+/// Reads dedication name from SharedPreferences for a given programId.
+/// Returns null if not set.
+final _dedicationProvider = FutureProvider.family<String?, String>((ref, programId) async {
+  final prefs = await SharedPreferences.getInstance();
+  final raw = prefs.getString('dedication_$programId');
+  if (raw == null || !raw.contains('||')) return null;
+  return raw.split('||')[0].trim().isNotEmpty ? raw.split('||')[0].trim() : null;
+});
 
 class ProgramsScreen extends ConsumerWidget {
   const ProgramsScreen({super.key});
@@ -87,221 +97,328 @@ class _BodyState extends ConsumerState<_Body>
   @override
   Widget build(BuildContext context) {
     final programs = widget.programs;
-    // Goal-less programs are split out into the Bonus Chants section below.
     final active =
         programs.where((p) => p.hasGoal && !p.isGoalReached).toList();
     final completed =
         programs.where((p) => p.hasGoal && p.isGoalReached).toList();
 
-    // Bonus chants: goal-less programs with recorded chants, grouped per mantra
-    // (most-recent program per mantra is the representative the card opens).
     final bonusByMantra = <String, List<Program>>{};
     for (final p in programs.where((p) => p.isBonus)) {
       (bonusByMantra[p.mantraId] ??= []).add(p);
     }
 
-    // Overall progress is based on active programs only
     final activeTarget = active.fold<int>(0, (a, p) => a + p.targetWritings);
     final overallProgress = (active.isEmpty || activeTarget == 0)
         ? 0.0
         : (active.fold<int>(0, (a, p) => a + p.totalProgress) / activeTarget)
             .clamp(0.0, 1.0);
     final totalChants = programs.fold<int>(0, (a, p) => a + p.totalProgress);
-    final daysAvg = active.isEmpty
+    final daysActive = active.isEmpty
         ? 0
         : (active.map((p) => p.daysElapsed).reduce((a, b) => a + b) /
                   active.length)
               .round();
 
     final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final mottoText = active.isEmpty && completed.isNotEmpty
+        ? context.l10n.allSadhanasComplete
+        : active.isEmpty
+            ? context.l10n.everyJourneyBegins
+            : context.l10n.keepChanting;
 
     return ListView(
-      padding: EdgeInsets.fromLTRB(
-        KvlSpacing.lg,
-        KvlSpacing.lg + 100,
-        KvlSpacing.lg,
-        bottomInset + 104,
-      ),
+      padding: EdgeInsets.fromLTRB(16, 100 + 16, 16, bottomInset + 104),
       children: [
+        // ── Stats card with ring ───────────────────────────────────────────
         _animated(
-          KvlCard(
-            variant: KvlCardVariant.soft,
-            padding: const EdgeInsets.fromLTRB(
-              KvlSpacing.lg,
-              KvlSpacing.lg,
-              KvlSpacing.lg,
-              KvlSpacing.md,
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 20, 16, 20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF7B2D00),
+                  Color(0xFFBF5000),
+                  Color(0xFFE8851A),
+                  Color(0xFFCC6A00),
+                ],
+                stops: [0.0, 0.35, 0.70, 1.0],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0xFFBF5000),
+                  blurRadius: 24,
+                  spreadRadius: 0,
+                  offset: Offset(0, 10),
+                ),
+                BoxShadow(
+                  color: Color(0xFF7B2D00),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ],
             ),
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFFFFBC70), KvlColors.primary],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(
-                  active.isEmpty && completed.isNotEmpty
-                      ? context.l10n.allSadhanasComplete
-                      : active.isEmpty
-                          ? context.l10n.everyJourneyBegins
-                          : context.l10n.keepChanting,
-                  style: KvlText.body(13).copyWith(
-                    color: Colors.white,
-                    fontStyle: FontStyle.italic,
-                    height: 1.45,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        mottoText,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontStyle: FontStyle.italic,
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      // 2×2 KPI grid
+                      Row(
+                        children: [
+                          _Kpi(label: 'Total Chants', value: IndianNumberFormat.compact(totalChants)),
+                          const SizedBox(width: 24),
+                          _Kpi(label: 'Sadhanas', value: '${active.length}'),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          _Kpi(label: 'Days Active', value: '$daysActive'),
+                          const SizedBox(width: 24),
+                          _Kpi(label: 'Completed', value: '${completed.length}'),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: KvlSpacing.md),
-                Wrap(
-                  spacing: KvlSpacing.lg,
-                  runSpacing: KvlSpacing.sm,
-                  children: [
-                    _Kpi(
-                      label: context.l10n.totalChants,
-                      value: IndianNumberFormat.compact(totalChants),
-                      onDark: true,
-                    ),
-                    _Kpi(
-                      label: context.l10n.complete,
-                      value: '${(overallProgress * 100).round()}%',
-                      onDark: true,
-                    ),
-                    _Kpi(
-                      label: context.l10n.daysPractising,
-                      value: '$daysAvg',
-                      onDark: true,
-                    ),
-                    _Kpi(
-                      label: context.l10n.programs,
-                      value: '${active.length}',
-                      onDark: true,
-                    ),
-                  ],
-                ),
+                const SizedBox(width: 12),
+                _OverallRing(progress: overallProgress),
               ],
             ),
           ),
           0,
         ),
-        const SizedBox(height: KvlSpacing.md),
+        const SizedBox(height: 14),
+
+        // ── Start a New Sadhana ────────────────────────────────────────────
         _animated(
-          Center(child: _OverallRing(progress: overallProgress)),
+          GestureDetector(
+            onTap: () => context.push(KvlRoute.mantraSelection),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF16A34A), Color(0xFF0F7A36), Color(0xFF22C55E)],
+                  stops: [0.0, 0.45, 1.0],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0xFF16A34A),
+                    blurRadius: 18,
+                    offset: Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40, height: 40,
+                    decoration: BoxDecoration(
+                      color: Color(0x33000000),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 20),
+                  ),
+                  const SizedBox(width: 14),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Start your Sadhana',
+                          style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+                        SizedBox(height: 2),
+                        Text('Begin your spiritual journey today',
+                          style: TextStyle(color: Colors.white70, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    width: 32, height: 32,
+                    decoration: BoxDecoration(
+                      color: Color(0x33000000),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 17),
+                  ),
+                ],
+              ),
+            ),
+          ),
           1,
         ),
-        const SizedBox(height: KvlSpacing.md),
+        const SizedBox(height: 10),
+
+        // ── Global Sadhanas ────────────────────────────────────────────────
         _animated(
-          KvlButton(
-            label: context.l10n.createNewProgramButton,
-            icon: Icons.add,
-            onPressed: () => context.push(KvlRoute.mantraSelection),
+          GestureDetector(
+            onTap: () => context.push(KvlRoute.globalSadhanaList),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFFFF8F0), Color(0xFFFFEDD5)],
+                ),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: const Color(0xFFE8851A).withValues(alpha: 0.35),
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFE8851A).withValues(alpha: 0.12),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36, height: 36,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF1E88E5), Color(0xFF0D47A1)],
+                      ),
+                    ),
+                    child: const Icon(Icons.public_rounded, color: Colors.white, size: 18),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('Global Sadhanas',
+                          style: KvlText.ui(14, FontWeight.w700).copyWith(color: KvlColors.primaryDeep)),
+                        Text('Join a worldwide community practice',
+                          style: KvlText.caption(11).copyWith(color: KvlColors.inkSoft)),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: KvlColors.primaryDeep),
+                ],
+              ),
+            ),
           ),
           2,
         ),
-        const SizedBox(height: KvlSpacing.sm),
+        const SizedBox(height: 18),
+
+        // ── Active Sadhanas header ─────────────────────────────────────────
         _animated(
-          OutlinedButton.icon(
-            onPressed: () => context.push(KvlRoute.globalSadhanaList),
-            icon: const Icon(Icons.public_rounded, size: 18),
-            label: Text(context.l10n.browseGlobalSadhanas),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(double.infinity, 48),
-              foregroundColor: KvlColors.primary,
-              side: BorderSide(color: KvlColors.primary),
-            ),
+          Row(
+            children: [
+              Container(
+                width: 30, height: 30,
+                decoration: BoxDecoration(
+                  color: KvlColors.primary,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.menu_book_rounded, color: Colors.white, size: 16),
+              ),
+              const SizedBox(width: 10),
+              Text('Active Sadhanas', style: KvlText.title(16)),
+            ],
           ),
           3,
         ),
-        const SizedBox(height: KvlSpacing.md),
-        _animated(
-          Text(context.l10n.myRecitationPrograms, style: KvlText.title(16)),
-          4,
-        ),
-        const SizedBox(height: KvlSpacing.sm),
+        const SizedBox(height: 10),
+
+        // ── Active program cards ───────────────────────────────────────────
         if (active.isEmpty && completed.isEmpty)
           _animated(
             KvlCard(
               child: Column(
                 children: [
-                  const Icon(
-                    Icons.menu_book_rounded,
-                    color: KvlColors.muted,
-                    size: 36,
-                  ),
+                  const Icon(Icons.menu_book_rounded, color: KvlColors.muted, size: 36),
                   const SizedBox(height: 8),
                   Text(context.l10n.noProgramsYet, style: KvlText.title(13)),
                   const SizedBox(height: 4),
-                  Text(
-                    context.l10n.pickMantraAndTargetToStart,
-                    textAlign: TextAlign.center,
-                    style: KvlText.caption(11.5),
-                  ),
+                  Text(context.l10n.pickMantraAndTargetToStart,
+                      textAlign: TextAlign.center, style: KvlText.caption(11.5)),
                 ],
               ),
             ),
-            5,
+            4,
           )
         else if (active.isEmpty)
           _animated(
             KvlCard(
               child: Column(
                 children: [
-                  const Icon(Icons.check_circle_rounded,
-                      color: KvlColors.primary, size: 36),
+                  const Icon(Icons.check_circle_rounded, color: KvlColors.primary, size: 36),
                   const SizedBox(height: 8),
                   Text('No active Sadhanas', style: KvlText.title(13)),
                   const SizedBox(height: 4),
-                  Text(
-                    'Start a new one to keep your practice going.',
-                    textAlign: TextAlign.center,
-                    style: KvlText.caption(11.5),
-                  ),
+                  Text('Start a new one to keep your practice going.',
+                      textAlign: TextAlign.center, style: KvlText.caption(11.5)),
                 ],
               ),
             ),
-            5,
+            4,
           )
         else ...[
           for (var i = 0; i < active.length; i++) ...[
-            _animated(_ProgramCard(program: active[i]), 5 + i),
-            const SizedBox(height: KvlSpacing.sm),
+            _animated(_ProgramCard(program: active[i]), 4 + i),
+            const SizedBox(height: 10),
           ],
         ],
+
+        // ── Completed Sadhanas ─────────────────────────────────────────────
         if (completed.isNotEmpty) ...[
-          const SizedBox(height: KvlSpacing.sm),
+          const SizedBox(height: 6),
           _animated(
             _ViewCompletedButton(
               count: completed.length,
               expanded: _showCompleted,
               onTap: () => setState(() => _showCompleted = !_showCompleted),
             ),
-            5 + active.length,
+            4 + active.length,
           ),
           if (_showCompleted) ...[
-            const SizedBox(height: KvlSpacing.sm),
+            const SizedBox(height: 10),
             for (var i = 0; i < completed.length; i++) ...[
-              _animated(
-                _ProgramCard(program: completed[i]),
-                6 + active.length + i,
-              ),
-              const SizedBox(height: KvlSpacing.sm),
+              _animated(_ProgramCard(program: completed[i]), 5 + active.length + i),
+              const SizedBox(height: 10),
             ],
           ],
         ],
+
+        // ── Bonus Chants ───────────────────────────────────────────────────
         if (bonusByMantra.isNotEmpty) ...[
-          const SizedBox(height: KvlSpacing.lg),
+          const SizedBox(height: 18),
           _animated(
             Row(
               children: [
-                const Icon(Icons.star_rounded,
-                    size: 18, color: KvlColors.primary),
+                const Icon(Icons.star_rounded, size: 18, color: KvlColors.primary),
                 const SizedBox(width: 6),
                 Text('Bonus Chants', style: KvlText.title(16)),
               ],
             ),
-            5 + active.length + 1,
+            5 + active.length,
           ),
-          const SizedBox(height: KvlSpacing.sm),
+          const SizedBox(height: 10),
           for (var i = 0; i < bonusByMantra.entries.length; i++) ...[
             _animated(
               _BonusCard(
@@ -312,7 +429,7 @@ class _BodyState extends ConsumerState<_Body>
               ),
               6 + active.length + i,
             ),
-            const SizedBox(height: KvlSpacing.sm),
+            const SizedBox(height: 10),
           ],
         ],
       ],
@@ -338,6 +455,7 @@ class _BonusCard extends ConsumerWidget {
         program.mantraId;
     final imgUrl = mantra?.previewImageUrl ?? mantra?.imageUrl;
     final glyph = mantra?.name.thumbGlyph() ?? '';
+    final dedication = ref.watch(_dedicationProvider(program.id)).value;
 
     return KvlCard(
       onTap: () => context.push('${KvlRoute.practice}/${program.id}'),
@@ -359,6 +477,22 @@ class _BonusCard extends ConsumerWidget {
                   '${IndianNumberFormat.format(total)} bonus chants · no goal',
                   style: KvlText.muted(12),
                 ),
+                if (dedication != null) ...[
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      const Icon(Icons.favorite_rounded, size: 11, color: Color(0xFFE57373)),
+                      const SizedBox(width: 3),
+                      Text(
+                        'Dedicated to $dedication',
+                        style: KvlText.muted(11).copyWith(
+                          color: KvlColors.primaryDeep,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -427,34 +561,23 @@ class _ViewCompletedButton extends StatelessWidget {
 }
 
 class _Kpi extends StatelessWidget {
-  const _Kpi({required this.label, required this.value, this.onDark = false});
+  const _Kpi({required this.label, required this.value});
   final String label;
   final String value;
-  final bool onDark;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 130,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: KvlText.muted(12).copyWith(
-              color: onDark ? Colors.white.withValues(alpha: .88) : null,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: KvlText.bigNumber(
-              20,
-            ).copyWith(color: onDark ? Colors.white : null),
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: const TextStyle(
+                color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 2),
+        Text(value,
+            style: const TextStyle(
+                color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800, height: 1.1)),
+      ],
     );
   }
 }
@@ -469,13 +592,13 @@ class _OverallRing extends StatelessWidget {
       duration: const Duration(milliseconds: 1100),
       curve: Curves.easeOutCubic,
       builder: (_, value, __) => SizedBox(
-        width: 140,
-        height: 140,
+        width: 108,
+        height: 108,
         child: Stack(
           alignment: Alignment.center,
           children: [
             CustomPaint(
-              size: const Size(140, 140),
+              size: const Size(108, 108),
               painter: _RingPainter(progress: value),
             ),
             Column(
@@ -483,9 +606,14 @@ class _OverallRing extends StatelessWidget {
               children: [
                 Text(
                   '${(value * 100).round()}%',
-                  style: KvlText.bigNumber(22),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-                Text(context.l10n.overallProgress, style: KvlText.muted(9.5)),
+                const Text('Progress',
+                    style: TextStyle(color: Colors.white70, fontSize: 10)),
               ],
             ),
           ],
@@ -504,16 +632,14 @@ class _RingPainter extends CustomPainter {
     final center = size.center(Offset.zero);
     final radius = math.min(size.width, size.height) / 2 - 6;
     final bg = Paint()
-      ..color = KvlColors.primarySoft
+      ..color = Colors.white.withValues(alpha: 0.25)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 12
+      ..strokeWidth = 11
       ..strokeCap = StrokeCap.round;
     final fg = Paint()
-      ..shader = const LinearGradient(
-        colors: [KvlColors.primary, KvlColors.primaryDeep],
-      ).createShader(Rect.fromCircle(center: center, radius: radius))
+      ..color = Colors.white
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 12
+      ..strokeWidth = 11
       ..strokeCap = StrokeCap.round;
 
     canvas.drawCircle(center, radius, bg);
@@ -547,6 +673,7 @@ class _ProgramCard extends ConsumerWidget {
     final complete = program.isCompleted;
     final imgUrl = mantra?.previewImageUrl ?? mantra?.imageUrl;
     final glyph = mantra?.name.thumbGlyph() ?? '';
+    final dedication = ref.watch(_dedicationProvider(program.id)).value;
 
     return KvlCard(
       onTap: () => context.push('${KvlRoute.practice}/${program.id}'),
@@ -581,6 +708,22 @@ class _ProgramCard extends ConsumerWidget {
                     color: complete ? KvlColors.success : KvlColors.muted,
                   ),
                 ),
+                if (dedication != null) ...[
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      const Icon(Icons.favorite_rounded, size: 11, color: Color(0xFFE57373)),
+                      const SizedBox(width: 3),
+                      Text(
+                        'Dedicated to $dedication',
+                        style: KvlText.muted(11).copyWith(
+                          color: KvlColors.primaryDeep,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),

@@ -44,6 +44,7 @@ dependencies:
   signature: ^6.3.0
   flutter_tesseract_ocr: ^0.4.31   # offline OCR; traineddata bundled in assets
   image: ^4.3.0                    # composite strokes onto white bg for OCR
+  google_mlkit_digital_ink_recognition: ^0.12.0  # stroke-based recognition for Indic scripts
 
   # --- Media ---
   image_picker: ^1.1.2

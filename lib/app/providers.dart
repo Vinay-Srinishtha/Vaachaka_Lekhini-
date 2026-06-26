@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/api/api_client.dart';
 import '../core/asr/vosk_model_loader.dart';
@@ -266,6 +267,17 @@ final accountHydrationProvider = Provider<void>((ref) {
               DateTime.now(),
         );
         await ref.read(profileRepositoryProvider).upsertRemote(profile);
+
+        // After reinstall the active profile ID is gone — restore it
+        // automatically for the primary member so the user isn't left
+        // with an empty profile screen.
+        if (isPrimary) {
+          final profileRepo = ref.read(profileRepositoryProvider);
+          final activeProfile = await profileRepo.getActive();
+          if (activeProfile == null) {
+            await profileRepo.setActive(memberId);
+          }
+        }
 
         final programs = member['programs'] as List<dynamic>? ?? const [];
         final serverProgramIds = <String>{};
@@ -534,6 +546,16 @@ final programsForActiveProfileProvider = StreamProvider<List<Program>>((
     yield const [];
     return;
   }
+
+  // One-time migration: wipe all stale/duplicate test programs on first launch.
+  // Flag is never reset so it runs exactly once per device install.
+  const nukeFlag = 'programs_nuke_v1';
+  final prefs = await SharedPreferences.getInstance();
+  if (prefs.getBool(nukeFlag) != true) {
+    await ref.read(programRepositoryProvider).nukeAllProgramsAndSessions();
+    await prefs.setBool(nukeFlag, true);
+  }
+
   // profile.id IS the memberId (Prisma Member.id)
   yield* ref.watch(programRepositoryProvider).watchForProfile(profile.id);
 });

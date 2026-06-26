@@ -66,6 +66,18 @@ abstract class ProgramRepository {
   /// recently updated program if no sessions yet.
   Future<Program?> mostRecentlyActive(String memberId);
 
+  /// Delete duplicate active programs per mantra, keeping the most recently updated.
+  Future<void> deduplicateForMember(String memberId);
+
+  /// Wipe every program and session row — one-time migration escape hatch.
+  Future<void> nukeAllProgramsAndSessions();
+
+  /// Return the first non-completed program for [memberId] + [mantraId], or null.
+  Future<Program?> findActiveForMantra({
+    required String memberId,
+    required String mantraId,
+  });
+
   /// Subtract [by] from totalWritings for [programId] (used when a writing is deleted).
   Future<void> decrementWritings(String programId, {int by = 1});
 

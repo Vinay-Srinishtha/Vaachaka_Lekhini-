@@ -60,8 +60,8 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
   }
 
   String get _rawDigits => _mobile.text.replaceAll(RegExp(r'\D'), '');
-  String get _e164Mobile => '+91$_rawDigits';
-  bool get _mobileValid => _rawDigits.length == 10;
+  String get _e164Mobile => _rawDigits.length == 12 ? '+$_rawDigits' : '+91$_rawDigits';
+  bool get _mobileValid => _rawDigits.length == 10 || _rawDigits.length == 12;
   bool get _nameValid => _username.text.trim().isNotEmpty;
   bool get _passwordValid => _password.text.length >= 8;
   bool get _confirmValid => _confirm.text == _password.text;
@@ -205,31 +205,22 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                 const SizedBox(height: KvlSpacing.md),
 
                 // Mobile
-                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  SizedBox(
-                    width: 78,
-                    child: KvlInput(label: 'Code', hint: '+91', readOnly: true),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: KvlInput(
-                      label: context.l10n.mobileNumberLabel,
-                      hint: context.l10n.mobileNumberHint,
-                      controller: _mobile,
-                      keyboardType: TextInputType.phone,
-                      inputFormatters: [AuthMobileFormatter()],
-                      textInputAction: TextInputAction.next,
-                      onChanged: (_) {
-                        // Always clear previous result when number changes.
-                        if (_errorCode != null) {
-                          setState(() { _error = null; _errorCode = null; });
-                        }
-                        // Check availability as soon as 10 digits are complete.
-                        if (_mobileValid) _checkMobile();
-                      },
-                    ),
-                  ),
-                ]),
+                KvlInput(
+                  label: context.l10n.mobileNumberLabel,
+                  hint: context.l10n.mobileNumberHint,
+                  controller: _mobile,
+                  keyboardType: TextInputType.phone,
+                  inputFormatters: [AuthMobileFormatter()],
+                  textInputAction: TextInputAction.next,
+                  onChanged: (_) {
+                    // Always clear previous result when number changes.
+                    if (_errorCode != null) {
+                      setState(() { _error = null; _errorCode = null; });
+                    }
+                    // Check availability as soon as 10 digits are complete.
+                    if (_mobileValid) _checkMobile();
+                  },
+                ),
 
                 // Proactive check feedback — shown while verifying availability.
                 if (_checkingMobile) ...[

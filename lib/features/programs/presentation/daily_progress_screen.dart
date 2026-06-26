@@ -14,6 +14,7 @@ import '../../../app/providers.dart';
 import '../../../app/router.dart';
 import '../../../core/i18n/language_options.dart';
 import '../../../core/navigation/back_navigation.dart';
+import '../../../core/sharing/share_cache.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/utils/indian_number_format.dart';
 import '../../../core/widgets/widgets.dart';
@@ -644,10 +645,27 @@ class _ShareSheet {
   }
 }
 
-class _ShareSheetContent extends StatelessWidget {
+class _ShareSheetContent extends StatefulWidget {
   const _ShareSheetContent({required this.message, this.shareImageUrl});
   final String message;
   final String? shareImageUrl;
+
+  @override
+  State<_ShareSheetContent> createState() => _ShareSheetContentState();
+}
+
+class _ShareSheetContentState extends State<_ShareSheetContent> {
+  String? _cachedImagePath;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.shareImageUrl != null && widget.shareImageUrl!.isNotEmpty) {
+      cachedShareImagePath(widget.shareImageUrl!).then((p) {
+        if (mounted) setState(() => _cachedImagePath = p);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -683,21 +701,25 @@ class _ShareSheetContent extends StatelessWidget {
                 icon: Icons.chat_rounded,
                 onTap: () async {
                   Navigator.pop(context);
-                  // If there's a share image, use share_plus to attach it
-                  // (WhatsApp on Android picks up the image from the share intent).
-                  if (shareImageUrl != null && shareImageUrl!.isNotEmpty) {
-                    await _shareWithImage(message: message, imageUrl: shareImageUrl!);
+                  if (_cachedImagePath != null) {
+                    final ext = _cachedImagePath!.endsWith('.png') ? 'png' : 'jpg';
+                    await SharePlus.instance.share(ShareParams(
+                      text: widget.message,
+                      files: [XFile(_cachedImagePath!, mimeType: 'image/$ext')],
+                    ));
+                  } else if (widget.shareImageUrl != null && widget.shareImageUrl!.isNotEmpty) {
+                    await _shareWithImage(message: widget.message, imageUrl: widget.shareImageUrl!);
                   } else {
                     final appUri = Uri(
                       scheme: 'whatsapp',
                       host: 'send',
-                      queryParameters: {'text': message},
+                      queryParameters: {'text': widget.message},
                     );
                     if (await canLaunchUrl(appUri)) {
                       await launchUrl(appUri, mode: LaunchMode.externalApplication);
                     } else {
                       final webUri = Uri.parse(
-                        'https://wa.me/?text=${Uri.encodeComponent(message)}',
+                        'https://wa.me/?text=${Uri.encodeComponent(widget.message)}',
                       );
                       await launchUrl(webUri, mode: LaunchMode.externalApplication);
                     }
@@ -710,16 +732,13 @@ class _ShareSheetContent extends StatelessWidget {
                 icon: Icons.facebook_rounded,
                 onTap: () async {
                   Navigator.pop(context);
-                  // Try Facebook app deep link first, fall back to Messenger share sheet
                   final appUri = Uri.parse(
-                    'fb://share?quote=${Uri.encodeComponent(message)}',
+                    'fb://share?quote=${Uri.encodeComponent(widget.message)}',
                   );
                   if (await canLaunchUrl(appUri)) {
                     await launchUrl(appUri, mode: LaunchMode.externalApplication);
                   } else {
-                    // Facebook app doesn't support plain-text deep share;
-                    // use system share sheet pre-filtered to Facebook
-                    await SharePlus.instance.share(ShareParams(text: message));
+                    await SharePlus.instance.share(ShareParams(text: widget.message));
                   }
                 },
               ),
@@ -729,10 +748,16 @@ class _ShareSheetContent extends StatelessWidget {
                 icon: Icons.camera_alt_rounded,
                 onTap: () async {
                   Navigator.pop(context);
-                  if (shareImageUrl != null && shareImageUrl!.isNotEmpty) {
-                    await _shareWithImage(message: message, imageUrl: shareImageUrl!);
+                  if (_cachedImagePath != null) {
+                    final ext = _cachedImagePath!.endsWith('.png') ? 'png' : 'jpg';
+                    await SharePlus.instance.share(ShareParams(
+                      text: widget.message,
+                      files: [XFile(_cachedImagePath!, mimeType: 'image/$ext')],
+                    ));
+                  } else if (widget.shareImageUrl != null && widget.shareImageUrl!.isNotEmpty) {
+                    await _shareWithImage(message: widget.message, imageUrl: widget.shareImageUrl!);
                   } else {
-                    await SharePlus.instance.share(ShareParams(text: message));
+                    await SharePlus.instance.share(ShareParams(text: widget.message));
                   }
                 },
               ),
@@ -741,10 +766,16 @@ class _ShareSheetContent extends StatelessWidget {
                 color: KvlColors.inkSoft,
                 icon: Icons.more_horiz_rounded,
                 onTap: () async {
-                  if (shareImageUrl != null && shareImageUrl!.isNotEmpty) {
-                    await _shareWithImage(message: message, imageUrl: shareImageUrl!);
+                  if (_cachedImagePath != null) {
+                    final ext = _cachedImagePath!.endsWith('.png') ? 'png' : 'jpg';
+                    await SharePlus.instance.share(ShareParams(
+                      text: widget.message,
+                      files: [XFile(_cachedImagePath!, mimeType: 'image/$ext')],
+                    ));
+                  } else if (widget.shareImageUrl != null && widget.shareImageUrl!.isNotEmpty) {
+                    await _shareWithImage(message: widget.message, imageUrl: widget.shareImageUrl!);
                   } else {
-                    await SharePlus.instance.share(ShareParams(text: message));
+                    await SharePlus.instance.share(ShareParams(text: widget.message));
                   }
                   if (context.mounted) Navigator.pop(context);
                 },

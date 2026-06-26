@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -48,14 +49,30 @@ class HomeScreen extends ConsumerWidget {
 
     final isLoadingPrograms = programsAsync.isLoading && programsAsync.value == null;
     final todayTotal = ref.watch(todayChantTotalProvider).value ?? 0;
-    final greeting = (profile == null || profile.name.trim().isEmpty)
-        ? context.l10n.welcomeGreeting
-        : context.l10n.welcomeGreetingUser(profile.name.trim());
-    final subline = isLoadingPrograms
-        ? context.l10n.homeSublineEmpty
-        : (activePrograms.isEmpty && todayTotal == 0)
-            ? context.l10n.homeSublineEmpty
-            : 'Today you chanted ${IndianNumberFormat.format(todayTotal)} times';
+    final lifetimeTotal = programs.fold<int>(0, (s, p) => s + p.totalProgress);
+
+    // "Welcome" only on account creation day; "Welcome back" every other time.
+    final isNewAccount = profile != null &&
+        DateTime.now().difference(profile.createdAt).inHours < 24;
+    final String greeting;
+    if (profile == null || profile.name.trim().isEmpty) {
+      greeting = context.l10n.welcomeGreeting;
+    } else if (isNewAccount) {
+      greeting = context.l10n.welcomeGreetingUser(profile.name.trim());
+    } else {
+      greeting = '${context.l10n.welcomeBack}, ${profile.name.trim()}!';
+    }
+
+    final String subline;
+    if (isLoadingPrograms) {
+      subline = context.l10n.homeSublineEmpty;
+    } else if (activePrograms.isEmpty && todayTotal == 0) {
+      subline = context.l10n.homeSublineEmpty;
+    } else {
+      final todayFmt = IndianNumberFormat.format(todayTotal);
+      final lifetimeFmt = IndianNumberFormat.format(lifetimeTotal);
+      subline = 'Today: $todayFmt  •  Lifetime: $lifetimeFmt';
+    }
     return SafeArea(
       top: false,
       bottom: false,
@@ -120,18 +137,7 @@ class HomeScreen extends ConsumerWidget {
                       },
                     ),
                     SizedBox(height: gap),
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 220),
-                      switchInCurve: Curves.easeOut,
-                      switchOutCurve: Curves.easeIn,
-                      child: isLoadingPrograms
-                          ? _ProgramCardShimmer(key: const ValueKey('shimmer'), compact: compact)
-                          : _ProgramCarousel(
-                              key: const ValueKey('carousel'),
-                              programs: activePrograms,
-                              compact: compact,
-                            ),
-                    ),
+                    _RamaKotiBook(compact: compact),
                     SizedBox(height: gap),
                     _GlobalSadhanaSection(compact: compact),
                     SizedBox(height: gap),
@@ -272,7 +278,8 @@ class _BulletinState extends State<_Bulletin>
       height: 34,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFFE8650A), Color(0xFFD4520A), Color(0xFFE8650A)],
+          colors: [Color(0xFF7B2D00), Color(0xFFBF5000), Color(0xFFE8851A), Color(0xFFBF5000), Color(0xFF7B2D00)],
+          stops: [0.0, 0.25, 0.5, 0.75, 1.0],
         ),
       ),
       child: ClipRect(
@@ -456,18 +463,15 @@ class _NewSadhanaCard extends StatelessWidget {
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFFFFF3E8), Color(0xFFFFE4C8)],
+            colors: [Color(0xFF16A34A), Color(0xFF0F7A36), Color(0xFF22C55E)],
+            stops: [0.0, 0.45, 1.0],
           ),
           borderRadius: KvlRadius.brLG,
-          border: Border.all(
-            color: KvlColors.primary.withValues(alpha: 0.35),
-            width: 1.4,
-          ),
           boxShadow: [
             BoxShadow(
-              color: KvlColors.primary.withValues(alpha: 0.06),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
+              color: Color(0xFF16A34A),
+              blurRadius: 16,
+              offset: Offset(0, 6),
             ),
           ],
         ),
@@ -477,22 +481,21 @@ class _NewSadhanaCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Plus icon in a circle — matches the program ring style
             Container(
               width: iconSize,
               height: iconSize,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: KvlColors.primary.withValues(alpha: 0.10),
+                color: Colors.white.withValues(alpha: 0.20),
                 border: Border.all(
-                  color: KvlColors.primary.withValues(alpha: 0.30),
+                  color: Colors.white.withValues(alpha: 0.30),
                   width: 2,
                 ),
               ),
               child: Icon(
-                Icons.add_rounded,
-                color: KvlColors.primary,
-                size: iconSize * 0.46,
+                Icons.auto_awesome_rounded,
+                color: Colors.white,
+                size: iconSize * 0.44,
               ),
             ),
             const SizedBox(width: KvlSpacing.md),
@@ -507,8 +510,8 @@ class _NewSadhanaCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: compact ? 13.5 : 15,
-                      fontWeight: FontWeight.w700,
-                      color: KvlColors.ink,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
                     ),
                   ),
                   const SizedBox(height: 3),
@@ -518,7 +521,7 @@ class _NewSadhanaCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: compact ? 11 : 12,
-                      color: KvlColors.primary,
+                      color: Colors.white70,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -530,7 +533,7 @@ class _NewSadhanaCard extends StatelessWidget {
               width: compact ? 32 : 38,
               height: compact ? 32 : 38,
               decoration: BoxDecoration(
-                color: KvlColors.primary,
+                color: Colors.white.withValues(alpha: 0.20),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -569,14 +572,18 @@ class _ProgramCard extends ConsumerWidget {
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFFFFF8F0), Color(0xFFFFEDD8)],
+            colors: [Color(0xFFFFF4E6), Color(0xFFFFE5C0), Color(0xFFFFF0D8)],
+            stops: [0.0, 0.55, 1.0],
           ),
           borderRadius: KvlRadius.brLG,
-          border: Border.all(color: KvlColors.primarySoft, width: 1.2),
+          border: Border.all(
+            color: const Color(0xFFE8851A).withValues(alpha: 0.40),
+            width: 1.5,
+          ),
           boxShadow: [
             BoxShadow(
-              color: KvlColors.primary.withValues(alpha: 0.08),
-              blurRadius: 12,
+              color: const Color(0xFFE8851A).withValues(alpha: 0.15),
+              blurRadius: 16,
               offset: const Offset(0, 4),
             ),
           ],
@@ -629,24 +636,6 @@ class _ProgramCard extends ConsumerWidget {
                     style: KvlText.ui(compact ? 15.5 : 17, FontWeight.w800)
                         .copyWith(color: KvlColors.ink),
                   ),
-                  const SizedBox(height: 3),
-                  Text(
-                    context.l10n.continueSadhana,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: KvlText.caption(compact ? 12 : 13)
-                        .copyWith(color: KvlColors.primaryDeep),
-                  ),
-                  if (program.targetDays > 0) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      context.l10n.programDayOf(
-                          (program.daysElapsed + 1).clamp(1, program.targetDays), program.targetDays),
-                      maxLines: 1,
-                      style: KvlText.caption(compact ? 10.5 : 11.5)
-                          .copyWith(color: KvlColors.muted),
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -773,13 +762,46 @@ class _ProgramCardShimmerState extends State<_ProgramCardShimmer>
 // Hero quote card
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _HeroQuote extends ConsumerWidget {
+class _HeroQuote extends ConsumerStatefulWidget {
   const _HeroQuote({required this.compact, required this.tight});
   final bool compact;
   final bool tight;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_HeroQuote> createState() => _HeroQuoteState();
+}
+
+class _HeroQuoteState extends ConsumerState<_HeroQuote> {
+  String? _prefetchedSharePath;
+  String? _prefetchingForUrl;
+
+  void _prefetchQuoteImage(String? imageUrl, String appLink, String? template,
+      String quoteText, String attribution) {
+    if (imageUrl == null || imageUrl.isEmpty) return;
+    if (_prefetchingForUrl == imageUrl) return;
+    _prefetchingForUrl = imageUrl;
+    _doFetch(imageUrl, appLink, template, quoteText, attribution);
+  }
+
+  Future<void> _doFetch(String imageUrl, String appLink, String? template,
+      String quoteText, String attribution) async {
+    try {
+      final tmpDir = await getTemporaryDirectory();
+      final ext = imageUrl.contains('.png') ? 'png' : 'jpg';
+      final hash = imageUrl.hashCode.toRadixString(36);
+      final rawFile = File('${tmpDir.path}/quote_raw_$hash.$ext');
+      if (!rawFile.existsSync()) {
+        await Dio().download(imageUrl, rawFile.path);
+      }
+      final stamped = await _stampLinkOnImage(rawFile.readAsBytesSync(), appLink);
+      final outFile = File('${tmpDir.path}/quote_share_$hash.png');
+      await outFile.writeAsBytes(stamped);
+      if (mounted) setState(() => _prefetchedSharePath = outFile.path);
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final appSettings = ref.watch(appSettingsProvider).value;
     final profile = ref.watch(activeProfileProvider).value;
     // Use the mantra language (the script the user chants in) so the quote
@@ -796,6 +818,13 @@ class _HeroQuote extends ConsumerWidget {
     final quoteText = chosen.textFor(quoteLanguage) ?? '';
     final attribution = chosen.sourceFor(quoteLanguage) ?? '';
     final hasImage = chosen.imageUrl != null && chosen.imageUrl!.isNotEmpty;
+    _prefetchQuoteImage(
+      chosen.imageUrl,
+      appSettings?.effectiveAppLink ?? '',
+      appSettings?.shareQuoteText,
+      quoteText,
+      attribution,
+    );
 
     return KvlCard(
       variant: KvlCardVariant.warm,
@@ -839,10 +868,10 @@ class _HeroQuote extends ConsumerWidget {
             ),
             Padding(
               padding: EdgeInsets.fromLTRB(
-                compact ? KvlSpacing.md : KvlSpacing.lg,
-                tight ? KvlSpacing.xs : KvlSpacing.sm,
-                compact ? KvlSpacing.md : KvlSpacing.lg,
-                tight ? KvlSpacing.xs : KvlSpacing.sm,
+                widget.compact ? KvlSpacing.md : KvlSpacing.lg,
+                widget.tight ? KvlSpacing.xs : KvlSpacing.sm,
+                widget.compact ? KvlSpacing.md : KvlSpacing.lg,
+                widget.tight ? KvlSpacing.xs : KvlSpacing.sm,
               ),
               child: Stack(
                 alignment: Alignment.bottomRight,
@@ -860,16 +889,16 @@ class _HeroQuote extends ConsumerWidget {
                               maxLines: 1,
                               textAlign: TextAlign.center,
                               style: KvlText.mantraTelugu(
-                                tight ? 14.5 : (compact ? 16 : 18),
+                                widget.tight ? 14.5 : (widget.compact ? 16 : 18),
                               ).copyWith(height: 1.35),
                             ),
                           ),
                         ),
                         if (attribution.isNotEmpty) ...[
-                          SizedBox(height: tight ? KvlSpacing.xs : KvlSpacing.sm),
+                          SizedBox(height: widget.tight ? KvlSpacing.xs : KvlSpacing.sm),
                           Text(
                             '— $attribution',
-                            style: KvlText.muted(tight ? 11.5 : 14)
+                            style: KvlText.muted(widget.tight ? 11.5 : 14)
                                 .copyWith(fontWeight: FontWeight.w600),
                           ),
                         ],
@@ -884,6 +913,7 @@ class _HeroQuote extends ConsumerWidget {
                       imageUrl: chosen.imageUrl,
                       appLink: appSettings?.effectiveAppLink ?? '',
                       template: appSettings?.shareQuoteText,
+                      prefetchedPath: _prefetchedSharePath,
                     ),
                     borderRadius: BorderRadius.circular(18),
                     child: Container(
@@ -923,6 +953,7 @@ Future<void> _shareQuote(
   required String? imageUrl,
   required String appLink,
   required String? template,
+  String? prefetchedPath,
 }) async {
   if (_shareInProgress) return;
   _shareInProgress = true;
@@ -941,35 +972,29 @@ Future<void> _shareQuote(
     if (appLink.isNotEmpty) shareText += '\n$appLink';
   }
 
+  // Use pre-fetched stamped image if available — share is instant
+  if (prefetchedPath != null) {
+    await SharePlus.instance.share(ShareParams(
+      text: shareText,
+      files: [XFile(prefetchedPath, mimeType: 'image/png')],
+    ));
+    return;
+  }
+
   if (imageUrl == null || imageUrl.isEmpty) {
     await SharePlus.instance.share(ShareParams(text: shareText));
   } else {
     try {
       final tmpDir = await getTemporaryDirectory();
       final ext = imageUrl.contains('.png') ? 'png' : 'jpg';
-      final rawFile = File('${tmpDir.path}/quote_share_raw.$ext');
-      await Dio().download(imageUrl, rawFile.path);
-
-      // Burn the app link onto the image so it's visible on every platform.
-      final stamped = await _stampLinkOnImage(
-        rawFile.readAsBytesSync(),
-        appLink,
-      );
-      final outFile = File('${tmpDir.path}/quote_share.png');
-      await outFile.writeAsBytes(stamped);
-
-      // Copy full caption to clipboard — Instagram/Facebook ignore text in share sheet.
-      await Clipboard.setData(ClipboardData(text: shareText));
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Caption copied — paste it in Instagram/Facebook.'),
-            duration: Duration(seconds: 4),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+      final hash = imageUrl.hashCode.toRadixString(36);
+      final rawFile = File('${tmpDir.path}/quote_share_raw_$hash.$ext');
+      if (!rawFile.existsSync()) {
+        await Dio().download(imageUrl, rawFile.path);
       }
-
+      final stamped = await _stampLinkOnImage(rawFile.readAsBytesSync(), appLink);
+      final outFile = File('${tmpDir.path}/quote_share_$hash.png');
+      await outFile.writeAsBytes(stamped);
       await SharePlus.instance.share(ShareParams(
         files: [XFile(outFile.path, mimeType: 'image/png')],
       ));
@@ -1187,17 +1212,27 @@ class _GlobalSadhanaCard extends StatelessWidget {
         child: Container(
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            color: const Color(0xFFFFF8E8),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFFFFF4E6), Color(0xFFFFEDD5), Color(0xFFFFF8F0)],
+              stops: [0.0, 0.5, 1.0],
+            ),
             borderRadius: KvlRadius.brLG,
             border: Border.all(
-              color: _accent.withValues(alpha: 0.30),
-              width: 1.4,
+              color: _accent.withValues(alpha: 0.40),
+              width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: _accent.withValues(alpha: 0.08),
-                blurRadius: 10,
-                offset: const Offset(0, 3),
+                color: _accent.withValues(alpha: 0.14),
+                blurRadius: 14,
+                offset: const Offset(0, 5),
+              ),
+              BoxShadow(
+                color: _accent.withValues(alpha: 0.06),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
               ),
             ],
           ),
@@ -1227,53 +1262,6 @@ class _GlobalSadhanaCard extends StatelessWidget {
                           ),
                           child: Icon(Icons.public_rounded,
                               color: _accent.withValues(alpha: 0.35), size: 40),
-                        ),
-                      ),
-                      // Gradient scrim so text is legible on any image
-                      Positioned(
-                        left: 0, right: 0, bottom: 0,
-                        height: 52,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.black.withValues(alpha: 0),
-                                Colors.black.withValues(alpha: 0.45),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      // Label over the image
-                      Positioned(
-                        left: compact ? 10 : 14,
-                        bottom: compact ? 8 : 10,
-                        right: compact ? 10 : 14,
-                        child: Row(
-                          children: [
-                            Text(
-                              '🕉  Global Sadhana',
-                              style: KvlText.caption(compact ? 10 : 11).copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.4,
-                                shadows: [Shadow(blurRadius: 4, color: Colors.black38)],
-                              ),
-                            ),
-                            const Spacer(),
-                            Container(
-                              width: compact ? 26 : 30,
-                              height: compact ? 26 : 30,
-                              decoration: const BoxDecoration(
-                                color: _accent,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(Icons.arrow_forward_rounded,
-                                  color: Colors.white, size: compact ? 13 : 15),
-                            ),
-                          ],
                         ),
                       ),
                     ],
@@ -1344,17 +1332,28 @@ class _GlobalSadhanaCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           '${IndianNumberFormat.format(sadhana.currentCount)} / ${IndianNumberFormat.format(sadhana.targetCount)}',
                           style: KvlText.caption(compact ? 10 : 11)
                               .copyWith(color: KvlColors.inkSoft),
                         ),
+                        const SizedBox(width: 6),
                         Text(
-                          '${sadhana.participantCount} joined',
+                          '• ${sadhana.participantCount} joined',
                           style: KvlText.caption(compact ? 10 : 11)
                               .copyWith(color: KvlColors.inkSoft),
+                        ),
+                        const Spacer(),
+                        Container(
+                          width: compact ? 26 : 30,
+                          height: compact ? 26 : 30,
+                          decoration: const BoxDecoration(
+                            color: _accent,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.arrow_forward_rounded,
+                              color: Colors.white, size: compact ? 13 : 15),
                         ),
                       ],
                     ),
@@ -1365,5 +1364,398 @@ class _GlobalSadhanaCard extends StatelessWidget {
           ),
         ),
       );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 3-D Rama Koti Book — tappable, pulses gold, opens with overlay animation
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _RamaKotiBook extends ConsumerStatefulWidget {
+  const _RamaKotiBook({required this.compact});
+  final bool compact;
+
+  @override
+  ConsumerState<_RamaKotiBook> createState() => _RamaKotiBookState();
+}
+
+class _RamaKotiBookState extends ConsumerState<_RamaKotiBook>
+    with TickerProviderStateMixin {
+  late final AnimationController _ringCtrl;
+  late final Animation<double> _ring;
+  late final AnimationController _floatCtrl;
+  late final Animation<double> _float;
+
+  @override
+  void initState() {
+    super.initState();
+    _ringCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1800))
+      ..repeat(reverse: true);
+    _ring = CurvedAnimation(parent: _ringCtrl, curve: Curves.easeInOut);
+
+    _floatCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 2600))
+      ..repeat(reverse: true);
+    _float = CurvedAnimation(parent: _floatCtrl, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() {
+    _ringCtrl.dispose();
+    _floatCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bookH = widget.compact ? 180.0 : 220.0;
+    final bookW = bookH * 0.70;
+    final spineW = bookH * 0.09;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+      onTap: () {
+        final overlay = Overlay.of(context);
+        late OverlayEntry entry;
+        entry = OverlayEntry(
+          builder: (_) => _BookOpenOverlay(
+            onComplete: () {
+              entry.remove();
+              if (context.mounted) context.push(KvlRoute.mantraSelection);
+            },
+          ),
+        );
+        overlay.insert(entry);
+      },
+      child: AnimatedBuilder(
+        animation: Listenable.merge([_ring, _float]),
+        builder: (_, child) {
+          return Center(
+            child: Transform.translate(
+              offset: Offset(0, -4 * _float.value),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFFD700)
+                          .withValues(alpha: 0.15 + 0.30 * _ring.value),
+                      blurRadius: 20 + 16 * _ring.value,
+                      spreadRadius: 2 + 6 * _ring.value,
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.35),
+                      blurRadius: 18,
+                      offset: const Offset(6, 10),
+                    ),
+                  ],
+                ),
+                child: child,
+              ),
+            ),
+          );
+        },
+        child: SizedBox(
+          width: bookW + spineW,
+          height: bookH,
+          child: Stack(
+            children: [
+              // ── Main cover ──────────────────────────────────────────────
+              Positioned(
+                left: 0,
+                top: 0,
+                width: bookW,
+                height: bookH,
+                child: _buildCover(bookW, bookH),
+              ),
+              // ── Spine (3-D thickness on right) ──────────────────────────
+              Positioned(
+                right: 0,
+                top: bookH * 0.015,
+                width: spineW,
+                height: bookH * 0.97,
+                child: _buildSpine(spineW, bookH * 0.97),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+        const SizedBox(height: 8),
+        Text(
+          'Tap to open your book',
+          style: KvlText.caption(12).copyWith(
+            color: KvlColors.primaryDeep,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.3,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCover(double w, double h) {
+    return ClipRRect(
+      borderRadius: BorderRadius.only(
+        topLeft: Radius.circular(h * 0.03),
+        bottomLeft: Radius.circular(h * 0.03),
+        topRight: Radius.circular(h * 0.01),
+        bottomRight: Radius.circular(h * 0.01),
+      ),
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF9B1C1C), Color(0xFF6B0F0F), Color(0xFF3D0505)],
+            stops: [0.0, 0.55, 1.0],
+          ),
+        ),
+        child: Stack(
+          children: [
+            // Gold inner border frame
+            Positioned.fill(
+              child: Padding(
+                padding: EdgeInsets.all(h * 0.045),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                        color: const Color(0xFFFFD700).withValues(alpha: 0.65),
+                        width: 1.0),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+              ),
+            ),
+            // Content
+            Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: w * 0.10),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // OM
+                    Text(
+                      'ॐ',
+                      style: TextStyle(
+                        color: const Color(0xFFFFD700),
+                        fontSize: h * 0.17,
+                        fontWeight: FontWeight.w300,
+                        height: 1.0,
+                      ),
+                    ),
+                    SizedBox(height: h * 0.025),
+                    // Top divider
+                    _goldLine(w * 0.62),
+                    SizedBox(height: h * 0.035),
+                    // Title
+                    Text(
+                      'Rama\nKoti',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: const Color(0xFFFFD700),
+                        fontSize: h * 0.155,
+                        fontWeight: FontWeight.w800,
+                        height: 1.15,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    SizedBox(height: h * 0.03),
+                    // Diamond ornament
+                    Text(
+                      '✦',
+                      style: TextStyle(
+                        color: const Color(0xFFFFD700).withValues(alpha: 0.85),
+                        fontSize: h * 0.05,
+                      ),
+                    ),
+                    SizedBox(height: h * 0.03),
+                    // Bottom divider
+                    _goldLine(w * 0.62),
+                    SizedBox(height: h * 0.035),
+                    // MY SADHANAS
+                    Text(
+                      'MY SADHANAS',
+                      style: TextStyle(
+                        color: const Color(0xFFFFD700).withValues(alpha: 0.88),
+                        fontSize: h * 0.055,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.8,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _goldLine(double width) => Container(
+        width: width,
+        height: 0.9,
+        color: const Color(0xFFFFD700).withValues(alpha: 0.65),
+      );
+
+  Widget _buildSpine(double w, double h) {
+    return ClipRRect(
+      borderRadius: BorderRadius.only(
+        topRight: Radius.circular(w * 0.4),
+        bottomRight: Radius.circular(w * 0.4),
+      ),
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [
+              Color(0xFF3D0505),
+              Color(0xFF6B0F0F),
+              Color(0xFF4A0808),
+              Color(0xFF1A0202),
+            ],
+            stops: [0.0, 0.35, 0.7, 1.0],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Full-screen overlay: book cover swings open then fades to programs screen
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _BookOpenOverlay extends StatefulWidget {
+  const _BookOpenOverlay({required this.onComplete});
+  final VoidCallback onComplete;
+
+  @override
+  State<_BookOpenOverlay> createState() => _BookOpenOverlayState();
+}
+
+class _BookOpenOverlayState extends State<_BookOpenOverlay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _coverAngle;
+  late final Animation<double> _glowOpacity;
+  late final Animation<double> _fadeMid;
+  late final Animation<double> _exitFade;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 820));
+
+    _coverAngle = Tween<double>(begin: 0.0, end: math.pi / 2).animate(
+      CurvedAnimation(
+          parent: _ctrl,
+          curve: const Interval(0.0, 0.60, curve: Curves.easeInQuart)),
+    );
+    _glowOpacity = CurvedAnimation(
+        parent: _ctrl,
+        curve: const Interval(0.0, 0.68, curve: Curves.easeIn));
+    _fadeMid = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(
+          parent: _ctrl,
+          curve: const Interval(0.66, 0.83, curve: Curves.easeIn)),
+    );
+    _exitFade = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(
+          parent: _ctrl,
+          curve: const Interval(0.80, 1.0, curve: Curves.easeIn)),
+    );
+
+    _ctrl.forward().then((_) => widget.onComplete());
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (context, _) {
+        return Opacity(
+          opacity: _exitFade.value,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Dark bg
+              Container(
+                color: Colors.black.withValues(
+                    alpha: 0.85 * _glowOpacity.value * _fadeMid.value),
+              ),
+              // Book cover rotating open around left spine
+              Center(
+                child: Transform(
+                  alignment: Alignment.centerLeft,
+                  transform: Matrix4.identity()
+                    ..setEntry(3, 2, 0.001)
+                    ..rotateY(_coverAngle.value),
+                  child: Opacity(
+                    opacity: (_glowOpacity.value * _fadeMid.value).clamp(0.0, 1.0),
+                    child: Container(
+                      width: MediaQuery.of(context).size.width * 0.72,
+                      height: MediaQuery.of(context).size.height * 0.60,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color(0xFF9B1C1C),
+                            Color(0xFF6B0F0F),
+                            Color(0xFF3D0505),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFFFD700)
+                                .withValues(alpha: 0.3),
+                            blurRadius: 30,
+                            spreadRadius: 4,
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('ॐ',
+                                style: TextStyle(
+                                    color: const Color(0xFFFFD700),
+                                    fontSize:
+                                        MediaQuery.of(context).size.height *
+                                            0.08)),
+                            Text('Rama Koti',
+                                style: TextStyle(
+                                    color: const Color(0xFFFFD700),
+                                    fontSize:
+                                        MediaQuery.of(context).size.height *
+                                            0.06,
+                                    fontWeight: FontWeight.w800)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

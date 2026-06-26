@@ -55,6 +55,8 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
   Color _penColor = KvlColors.ink;
   int _writingCount = 0;
   Timer? _idleTimer;
+  // Frozen on first build so the "base" global count never jumps mid-session.
+  int? _frozenGlobalBase;
 
   /// Language the user chose for this writing session.
   /// null = not yet chosen (picker not completed).
@@ -89,7 +91,7 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
     // Dismiss any rejection snackbar the moment the user starts writing again.
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     _idleTimer = Timer(
-      const Duration(milliseconds: 900),
+      const Duration(milliseconds: 1000),
       _submitOne,
     );
   }
@@ -233,9 +235,14 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
         if (langCode != 'en')
           ExpectedWriting(tessLang: 'eng', text: mantra.name.roman),
       ];
+      final rawStrokes = _controller
+          .pointsToStrokes(3)
+          .map((s) => s.map((p) => p.offset).toList())
+          .toList();
       final result = await HandwritingRecognizer.instance.check(
         pngBytes: png,
         candidates: candidates,
+        strokes: rawStrokes,
       );
 
       if (!result.accepted) {
@@ -251,6 +258,12 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
             mantraId: widget.mantraId,
             bytes: png,
           );
+      // Archive permanently — fire-and-forget, never trimmed.
+      unawaited(archiveWritingSample(
+        profileId: profile.id,
+        mantraId: widget.mantraId,
+        bytes: png,
+      ));
       // Invalidate book provider immediately so the count pill and book sheet
       // reflect the new writing without waiting for session completion.
       ref.invalidate(bookAssetsProvider(widget.mantraId));
@@ -278,11 +291,6 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
             ? "Couldn't read that — write the mantra clearly and try again."
             : 'That looked like "${result.recognized.trim()}". Write the mantra and try again.',
         style: const TextStyle(color: Colors.white, fontSize: 13),
-      ),
-      action: SnackBarAction(
-        label: '✕',
-        textColor: Colors.white,
-        onPressed: messenger.clearSnackBars,
       ),
     ));
   }
@@ -378,16 +386,6 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
         }
       }
       if (!mounted) return;
-      // Check if target was reached — show dedication dialog before leaving.
-      final practiceState = ref
-          .read(practiceControllerProvider(programId))
-          .value;
-      final targetReached = practiceState?.targetReached ?? false;
-      if (targetReached && mounted) {
-        await _showDedicationDialog(programId);
-        return;
-      }
-      if (!mounted) return;
       // Show session summary snackbar.
       final messenger = ScaffoldMessenger.of(context);
       messenger
@@ -474,40 +472,6 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
     }
   }
 
-  Future<void> _showDedicationDialog(String programId) async {
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => _DedicationDialog(
-        onDedicate: () async {
-          Navigator.of(context).pop();
-          final mantraId = widget.mantraId;
-          ref.invalidate(globalStatsProvider(mantraId));
-          final program = ref
-              .read(programsForActiveProfileProvider)
-              .value
-              ?.where((p) => p.id == programId)
-              .firstOrNull;
-          if (program != null && !program.isCompleted) {
-            await ref
-                .read(programRepositoryProvider)
-                .update(program.copyWith(completedAt: DateTime.now()));
-          }
-          if (!mounted) return;
-          final mantraName =
-              ref.read(mantraByIdProvider(mantraId))?.name.devanagari ?? '';
-          await DedicateSheet.show(
-            context,
-            programId: programId,
-            mantraName: mantraName,
-          );
-          if (!mounted) return;
-          context.go(KvlRoute.programs);
-        },
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final mantra = ref.watch(mantraByIdProvider(widget.mantraId));
@@ -535,9 +499,10 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
           break;
         }
       }
-      final globalBase =
-          enrolledGlobalCount ?? (globalStats?.globalChantCount ?? 0);
-      final globalCount = globalBase + _writingCount;
+      // Freeze globalBase at first render so the left number never jumps;
+      // only the right-side increment (_writingCount) ticks up each acceptance.
+      _frozenGlobalBase ??= enrolledGlobalCount ?? (globalStats?.globalChantCount ?? 0);
+      final globalCount = _frozenGlobalBase! + _writingCount;
       return _ProtoWriteScaffold(
         controller: _controller,
         guide: guide,
@@ -750,12 +715,6 @@ class _SampleLandscapeWriteScaffoldState
                       icon: Icons.undo_rounded,
                       tooltip: context.l10n.undoTooltip,
                       onTap: widget.onUndo,
-                    ),
-                    SizedBox(width: compact ? 8 : 10),
-                    _SampleFloatingTool(
-                      icon: Icons.redo_rounded,
-                      tooltip: context.l10n.redoTooltip,
-                      onTap: widget.onRedo,
                     ),
                   ],
                 ),
@@ -1207,7 +1166,7 @@ class _ProtoWriteScaffold extends ConsumerStatefulWidget {
 }
 
 class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
-  double _guideScale = 1.0;
+  double _guideScale = 0.7;
   bool _guideVisible = true;
   AudioPlayer? _ambientPlayer;
 
@@ -1283,19 +1242,9 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
                   penColor: widget.penColor,
                   onColorSelected: widget.onColorSelected,
                   globalCount: globalCount,
-                  yours: yours,
+                  yours: widget.writingCount,
                   increment: widget.writingCount,
                   mantraId: widget.mantraId,
-                ),
-              ),
-              // Bottom-right: Complete button
-              Positioned(
-                right: compact ? 10 : 16,
-                bottom: bottomStripH + (compact ? 6 : 10),
-                child: _MergedActionButton(
-                  saving: widget.saving,
-                  onTap: widget.onFinish,
-                  compact: compact,
                 ),
               ),
               // Right rail: canvas tools — start just below top bar
@@ -1303,37 +1252,75 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
                 right: compact ? 10 : 16,
                 top: topInset,
                 bottom: bottomStripH + (compact ? 6 : 10),
-                child: SingleChildScrollView(
+                child: SizedBox(
+                width: 52,
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _ProtoPlainIcon(
-                      icon: Icons.zoom_in_rounded,
-                      onTap: _guideScale < _scaleMax ? _zoomIn : null,
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _ProtoPlainIcon(
+                          icon: Icons.zoom_in_rounded,
+                          onTap: _guideScale < _scaleMax ? _zoomIn : null,
+                        ),
+                        SizedBox(height: compact ? 6 : 10),
+                        _ProtoPlainIcon(
+                          icon: Icons.zoom_out_rounded,
+                          onTap: _guideScale > _scaleMin ? _zoomOut : null,
+                        ),
+                        SizedBox(height: compact ? 6 : 10),
+                        _ProtoRoundTool(
+                          icon: Icons.backspace_rounded,
+                          selected: false,
+                          onTap: widget.onClear,
+                        ),
+                        SizedBox(height: compact ? 6 : 10),
+                        _ProtoRoundTool(
+                          icon: Icons.undo_rounded,
+                          selected: false,
+                          onTap: widget.onUndo,
+                        ),
+                      ],
                     ),
-                    SizedBox(height: compact ? 6 : 10),
-                    _ProtoPlainIcon(
-                      icon: Icons.zoom_out_rounded,
-                      onTap: _guideScale > _scaleMin ? _zoomOut : null,
-                    ),
-                    SizedBox(height: compact ? 6 : 10),
-                    _ProtoRoundTool(
-                      icon: Icons.backspace_rounded,
-                      selected: false,
-                      onTap: widget.onClear,
-                    ),
-                    SizedBox(height: compact ? 6 : 10),
-                    _ProtoRoundTool(
-                      icon: Icons.undo_rounded,
-                      selected: false,
-                      onTap: widget.onUndo,
-                    ),
-                    SizedBox(height: compact ? 6 : 10),
-                    _ProtoRoundTool(
-                      icon: Icons.redo_rounded,
-                      selected: false,
-                      onTap: widget.onRedo,
-                    ),
+                    // Green Complete button at bottom of rail
+                    if (widget.onFinish != null)
+                      GestureDetector(
+                        onTap: widget.saving ? null : widget.onFinish,
+                        child: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: widget.saving
+                                ? Colors.grey.shade300
+                                : const Color(0xFF16A34A),
+                            boxShadow: widget.saving
+                                ? []
+                                : [
+                                    BoxShadow(
+                                      color: const Color(0xFF16A34A)
+                                          .withValues(alpha: 0.4),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                          ),
+                          child: widget.saving
+                              ? const Center(
+                                  child: SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2.5,
+                                    ),
+                                  ),
+                                )
+                              : const Icon(Icons.check_rounded,
+                                  color: Colors.white, size: 26),
+                        ),
+                      ),
                   ],
                 ),
                 ),
@@ -1380,15 +1367,24 @@ class _ProtoWritingCanvas extends StatelessWidget {
     final baseSize = compact ? 200.0 : 240.0;
     // Scale the entire canvas (guide + ink) together so strokes stay in sync
     // with the reference when the user zooms in or out.
-    return ClipRect(
-      child: Transform.scale(
-        scale: guideScale,
-        alignment: Alignment.center,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (guideVisible)
-              Positioned.fill(
+    // Guide is scaled/clipped; Signature is full-screen so the user can write
+    // anywhere regardless of guide zoom level.
+    // Right rail is ~52px wide + ~16px margin = ~68px. Use equal padding on
+    // both sides so the guide is always symmetric, centered in the canvas.
+    final hPad = compact ? 60.0 : 72.0;
+    // Top bar is ~80-90px; bottom strip ~28-32px. Use equal vertical padding
+    // so guide sits in the middle of the writable area.
+    final vPad = compact ? 74.0 : 90.0;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (guideVisible)
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
+            child: Center(
+              child: Transform.scale(
+                scale: guideScale,
+                alignment: Alignment.center,
                 child: FittedBox(
                   fit: BoxFit.contain,
                   child: SizedBox(
@@ -1403,10 +1399,10 @@ class _ProtoWritingCanvas extends StatelessWidget {
                   ),
                 ),
               ),
-            Signature(controller: controller, backgroundColor: Colors.transparent),
-          ],
-        ),
-      ),
+            ),
+          ),
+        Signature(controller: controller, backgroundColor: Colors.transparent),
+      ],
     );
   }
 }
@@ -1612,8 +1608,6 @@ class _LandscapeTopBar extends ConsumerWidget {
     final double pillIconSz = compact ? 13.0 : 15.0;
     final double gap = compact ? 14.0 : 18.0;
     final ambientOn = ref.watch(_ambientOnProvider);
-    final points = ref.watch(rewardTotalProvider).value ?? 0;
-    final bookCount = ref.watch(bookAssetsProvider(mantraId)).value?.length ?? 0;
     final globalBase = (globalCount - yours).clamp(0, globalCount);
 
     // Uniform icon+label button
@@ -1680,95 +1674,144 @@ class _LandscapeTopBar extends ConsumerWidget {
       },
     );
 
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: compact ? 4 : 6, vertical: compact ? 4 : 6),
+    // Tool buttons (centered, slightly left) + pills pinned to the right.
+    final toolButtons = Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        btn(icon: ringerIcon, label: ringerLabel, onTap: onCycleRinger),
+        SizedBox(width: gap),
+        btn(
+          icon: guideVisible ? Icons.auto_stories_rounded : Icons.edit_rounded,
+          label: guideVisible ? 'Hide Ref' : 'Show Ref',
+          onTap: onGuideToggle,
+          iconColor: guideVisible ? KvlColors.primary : KvlColors.ink,
+        ),
+        SizedBox(width: gap),
+        btn(
+          icon: ambientOn ? Icons.music_note_rounded : Icons.music_off_rounded,
+          label: 'Ambient',
+          iconColor: ambientOn ? KvlColors.primary : KvlColors.ink,
+          onTap: () async {
+            ref.read(_ambientOnProvider.notifier).toggle();
+            final isNowOn = ref.read(_ambientOnProvider);
+            final player = ref.read(_ambientPlayerProvider);
+            if (isNowOn) {
+              await player.play(AssetSource('audio/ambient_loop.mp3'));
+            } else {
+              await player.stop();
+            }
+          },
+        ),
+        SizedBox(width: gap),
+        btn(icon: Icons.translate_rounded, label: selectedLangLabel, onTap: onPickLanguage, iconColor: KvlColors.primaryDeep),
+        if (onSwitchToVoice != null) ...[
+          SizedBox(width: gap),
+          btn(icon: Icons.mic_rounded, label: 'Voice Mode', onTap: onSwitchToVoice!, iconColor: KvlColors.accent),
+        ],
+        SizedBox(width: gap),
+        paletteBtn,
+        SizedBox(width: gap),
+        btn(
+          icon: Icons.import_contacts_rounded,
+          label: 'Book',
+          onTap: () => BookPreviewButton.openSheet(context, mantraId),
+          iconColor: KvlColors.primaryDeep,
+        ),
+      ],
+    );
+
+    // Premium global count pill — gradient card, bigger text
+    final globalPill = Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 12 : 14,
+        vertical: compact ? 6 : 8,
+      ),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF7B2D00), Color(0xFFBF5000), Color(0xFFE8851A)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFBF5000).withValues(alpha: 0.40),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.public_rounded,
+            size: compact ? 15 : 17, color: Colors.white70),
+        const SizedBox(width: 5),
+        Text(
+          IndianNumberFormat.format(globalBase),
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: compact ? 15 : 17,
+            fontWeight: FontWeight.w900,
+            height: 1.0,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Text(
+            '+',
+            style: TextStyle(
+              color: Colors.white54,
+              fontSize: compact ? 13 : 15,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        TweenAnimationBuilder<double>(
+          key: ValueKey(increment),
+          tween: Tween(begin: increment > 0 ? 1.20 : 1.0, end: 1.0),
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+          builder: (_, s, child) => Transform.scale(scale: s, child: child),
+          child: Text(
+            IndianNumberFormat.format(increment),
+            style: TextStyle(
+              color: const Color(0xFF90FF9A),
+              fontSize: compact ? 15 : 17,
+              fontWeight: FontWeight.w900,
+              height: 1.0,
+            ),
+          ),
+        ),
+      ]),
+    );
+
+    // Toolbar has a subtle card background for premium feel
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: compact ? 4 : 6, vertical: compact ? 3 : 5),
+      padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 10, vertical: compact ? 6 : 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.88),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: const Color(0xFFE8C99A).withValues(alpha: 0.50),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFE8851A).withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // ── Tool buttons ──────────────────────────────────────────────
-          btn(icon: ringerIcon, label: ringerLabel, onTap: onCycleRinger),
-          SizedBox(width: gap),
-          btn(
-            icon: guideVisible ? Icons.auto_stories_rounded : Icons.edit_rounded,
-            label: guideVisible ? 'Hide Ref' : 'Show Ref',
-            onTap: onGuideToggle,
-            iconColor: guideVisible ? KvlColors.primary : KvlColors.ink,
+          globalPill,
+          // Icons centred in the remaining space
+          Expanded(
+            child: Center(child: toolButtons),
           ),
-          SizedBox(width: gap),
-          btn(
-            icon: ambientOn ? Icons.music_note_rounded : Icons.music_off_rounded,
-            label: 'Ambient',
-            iconColor: ambientOn ? KvlColors.primary : KvlColors.ink,
-            onTap: () async {
-              ref.read(_ambientOnProvider.notifier).toggle();
-              final isNowOn = ref.read(_ambientOnProvider);
-              final player = ref.read(_ambientPlayerProvider);
-              if (isNowOn) {
-                await player.play(AssetSource('audio/ambient_loop.mp3'));
-              } else {
-                await player.stop();
-              }
-            },
-          ),
-          SizedBox(width: gap),
-          btn(icon: Icons.translate_rounded, label: selectedLangLabel, onTap: onPickLanguage, iconColor: KvlColors.primaryDeep),
-          if (onSwitchToVoice != null) ...[
-            SizedBox(width: gap),
-            btn(icon: Icons.mic_rounded, label: 'Voice Mode', onTap: onSwitchToVoice!, iconColor: KvlColors.accent),
-          ],
-          SizedBox(width: gap),
-          paletteBtn,
-
-          divider(),
-
-          // ── Info pills — same height, inline ─────────────────────────
-          // Global
-          pill(
-            bg: const Color(0xFFFFF4EC),
-            border: KvlColors.primary.withValues(alpha: 0.3),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(Icons.public_rounded, size: pillIconSz, color: KvlColors.primaryDeep),
-              const SizedBox(width: 4),
-              Text(IndianNumberFormat.format(globalBase),
-                  style: KvlText.ui(pillFs, FontWeight.w800).copyWith(color: const Color(0xFFCC6A2B))),
-              Text('  +  ', style: KvlText.ui(pillFs, FontWeight.w500).copyWith(color: KvlColors.inkSoft)),
-              TweenAnimationBuilder<double>(
-                key: ValueKey(increment),
-                tween: Tween(begin: increment > 0 ? 1.15 : 1.0, end: 1.0),
-                duration: const Duration(milliseconds: 260),
-                curve: Curves.easeOutCubic,
-                builder: (_, s, child) => Transform.scale(scale: s, child: child),
-                child: Text(IndianNumberFormat.format(increment),
-                    style: KvlText.ui(pillFs, FontWeight.w800).copyWith(color: const Color(0xFF16A34A))),
-              ),
-            ]),
-          ),
-          const SizedBox(width: 6),
-          // Points
-          pill(
-            bg: const Color(0xFFFBF3D8),
-            border: const Color(0xFFE8C04A),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(Icons.star_rounded, size: pillIconSz, color: KvlColors.gold),
-              const SizedBox(width: 4),
-              Text(IndianNumberFormat.format(points),
-                  style: KvlText.ui(pillFs, FontWeight.w800).copyWith(color: const Color(0xFF5a4400))),
-            ]),
-          ),
-          if (bookCount > 0) ...[
-            const SizedBox(width: 6),
-            // Book
-            pill(
-              onTap: () => BookPreviewButton.openSheet(context, mantraId),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.menu_book_rounded, size: pillIconSz, color: KvlColors.primaryDeep),
-                const SizedBox(width: 4),
-                Text(IndianNumberFormat.format(bookCount),
-                    style: KvlText.ui(pillFs, FontWeight.w800).copyWith(color: KvlColors.primaryDeep)),
-              ]),
-            ),
-          ],
         ],
       ),
     );
@@ -1869,9 +1912,6 @@ class _CompactInfoRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final globalBase = (globalCount - yours).clamp(0, globalCount);
-    final points = ref.watch(rewardTotalProvider).value ?? 0;
-    final bookCount =
-        ref.watch(bookAssetsProvider(mantraId)).value?.length ?? 0;
     final fs = compact ? 12.0 : 13.0;
     final iconSz = compact ? 13.0 : 15.0;
     final gap = compact ? 6.0 : 8.0;
@@ -1912,45 +1952,6 @@ class _CompactInfoRow extends ConsumerWidget {
             ],
           ),
         ),
-        SizedBox(width: gap),
-        // Points: ⭐ number
-        _pill(
-          bg: const Color(0xFFFBF3D8),
-          border: const Color(0xFFE8C04A),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.star_rounded, size: iconSz, color: KvlColors.gold),
-              const SizedBox(width: 4),
-              Text(
-                IndianNumberFormat.format(points),
-                style: KvlText.ui(fs, FontWeight.w800)
-                    .copyWith(color: const Color(0xFF5a4400)),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(width: gap),
-        // Book: 📖 number
-        if (bookCount > 0)
-          GestureDetector(
-            onTap: () => BookPreviewButton.openSheet(context, mantraId),
-            child: _pill(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.menu_book_rounded,
-                      size: iconSz, color: KvlColors.primaryDeep),
-                  const SizedBox(width: 4),
-                  Text(
-                    IndianNumberFormat.format(bookCount),
-                    style: KvlText.ui(fs, FontWeight.w800)
-                        .copyWith(color: KvlColors.primaryDeep),
-                  ),
-                ],
-              ),
-            ),
-          ),
       ],
     );
   }
@@ -2330,7 +2331,7 @@ class _MergedActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const bgColor = Color(0xFF16A34A);
+    const bgColor = Color(0xFFE8851A);
     return GestureDetector(
       onTap: saving ? null : onTap,
       child: AnimatedContainer(
@@ -2461,58 +2462,6 @@ class _ProgressStrip extends StatelessWidget {
                 .copyWith(color: KvlColors.ink),
           ),
         ],
-      ),
-    );
-  }
-}
-
-
-class _DedicationDialog extends StatelessWidget {
-  const _DedicationDialog({required this.onDedicate});
-  final VoidCallback onDedicate;
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: KvlRadius.brLG),
-      child: Padding(
-        padding: const EdgeInsets.all(KvlSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [Color(0xFFFFB572), KvlColors.primary],
-                ),
-              ),
-              alignment: Alignment.center,
-              child: const Icon(
-                Icons.self_improvement_rounded,
-                color: Colors.white,
-                size: 32,
-              ),
-            ),
-            const SizedBox(height: KvlSpacing.md),
-            Text(
-              'Program Complete!',
-              style: KvlText.ui(20, FontWeight.w800).copyWith(color: KvlColors.ink),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: KvlSpacing.sm),
-            Text(
-              'You have completed your sankalpa.\nWould you like to dedicate this practice?',
-              style: KvlText.caption(13.5)
-                  .copyWith(color: KvlColors.inkSoft, height: 1.5),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: KvlSpacing.lg),
-            KvlButton(label: 'Dedicate & Complete', onPressed: onDedicate),
-          ],
-        ),
       ),
     );
   }

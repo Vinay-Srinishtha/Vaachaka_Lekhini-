@@ -38,22 +38,57 @@ class _GlobalSadhanaListScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
+            // ── Header ────────────────────────────────────────────────────────
+            Container(
               padding: const EdgeInsets.fromLTRB(
-                KvlSpacing.lg, KvlSpacing.lg, KvlSpacing.lg, KvlSpacing.sm),
+                  KvlSpacing.lg, KvlSpacing.lg, KvlSpacing.lg, KvlSpacing.md),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFFFF8EE), Color(0xFFFFF0D6)],
+                ),
+                border: Border(
+                  bottom: BorderSide(
+                    color: const Color(0xFFE88A2E).withValues(alpha: .15),
+                  ),
+                ),
+              ),
               child: Row(
                 children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFF9A3E), Color(0xFFE07020)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFE07020).withValues(alpha: .30),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(Icons.public_rounded,
+                        color: Colors.white, size: 20),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'Global Sadhana',
-                          style: KvlText.ui(22, FontWeight.w800),
+                          style: KvlText.ui(20, FontWeight.w800),
                         ),
                         Text(
-                          'Join a collective practice with devotees worldwide',
-                          style: KvlText.caption(13)
+                          'Collective practice with devotees worldwide',
+                          style: KvlText.caption(12)
                               .copyWith(color: KvlColors.muted),
                         ),
                       ],
@@ -62,10 +97,14 @@ class _GlobalSadhanaListScreenState
                 ],
               ),
             ),
+
+            // ── List ──────────────────────────────────────────────────────────
             Expanded(
               child: sadhanasAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => _ErrorView(onRetry: () => ref.refresh(activeGlobalSadhanaProvider)),
+                loading: () =>
+                    const Center(child: CircularProgressIndicator()),
+                error: (e, _) => _ErrorView(
+                    onRetry: () => ref.refresh(activeGlobalSadhanaProvider)),
                 data: (sadhanas) {
                   final active = sadhanas
                       .where((s) => s.isActive)
@@ -84,7 +123,7 @@ class _GlobalSadhanaListScreenState
                         ref.refresh(activeGlobalSadhanaProvider),
                     child: ListView.separated(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: KvlSpacing.lg, vertical: KvlSpacing.sm),
+                          horizontal: KvlSpacing.lg, vertical: KvlSpacing.md),
                       itemCount: active.length,
                       separatorBuilder: (_, _) =>
                           const SizedBox(height: KvlSpacing.md),
@@ -129,9 +168,14 @@ class _SadhanaCard extends ConsumerWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: .06),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              color: const Color(0xFF8B4513).withValues(alpha: .10),
+              blurRadius: 16,
+              offset: const Offset(0, 5),
+            ),
+            BoxShadow(
+              color: Colors.white.withValues(alpha: .8),
+              blurRadius: 0,
+              offset: const Offset(0, -1),
             ),
           ],
         ),
@@ -139,131 +183,289 @@ class _SadhanaCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Image banner
-            AspectRatio(
-              aspectRatio: 16 / 9,
-              child: sadhana.imageUrl != null
-                  ? CachedNetworkImage(
-                      imageUrl: sadhana.imageUrl!,
-                      fit: BoxFit.cover,
-                      errorWidget: (_, _, _) => _PlaceholderBanner(sadhana: sadhana),
-                    )
-                  : _PlaceholderBanner(sadhana: sadhana),
-            ),
-
-            Padding(
-              padding: const EdgeInsets.all(KvlSpacing.md),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Sponsored badge
-                  if (sadhana.isSponsored)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: KvlSpacing.xs),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: KvlColors.gold.withValues(alpha: .15),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.star_rounded,
-                              size: 12, color: KvlColors.gold),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Sponsored',
-                            style: KvlText.caption(11).copyWith(
-                                color: KvlColors.gold,
-                                fontWeight: FontWeight.w700),
-                          ),
+            // ── Image banner ────────────────────────────────────────────────
+            Stack(
+              children: [
+                AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: sadhana.imageUrl != null
+                      ? CachedNetworkImage(
+                          imageUrl: sadhana.imageUrl!,
+                          fit: BoxFit.cover,
+                          errorWidget: (_, _, _) =>
+                              _PlaceholderBanner(sadhana: sadhana),
+                        )
+                      : _PlaceholderBanner(sadhana: sadhana),
+                ),
+                // Gradient overlay at bottom of image
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: 56,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: .45),
                         ],
                       ),
                     ),
+                  ),
+                ),
+                // Badges overlay
+                Positioned(
+                  top: 10,
+                  left: 10,
+                  child: Row(
+                    children: [
+                      if (sadhana.isSponsored)
+                        _Badge(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFFD700), Color(0xFFE8A020)],
+                          ),
+                          icon: Icons.star_rounded,
+                          label: 'Sponsored',
+                        ),
+                      if (sadhana.isSponsored && isEnrolled)
+                        const SizedBox(width: 6),
+                      if (isEnrolled)
+                        _Badge(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF22C55E), Color(0xFF16A34A)],
+                          ),
+                          icon: Icons.check_circle_rounded,
+                          label: 'You\'re in',
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
 
+            // ── Info ────────────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  KvlSpacing.md, KvlSpacing.md, KvlSpacing.md, KvlSpacing.sm),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
                   Text(
                     sadhana.title,
                     style: KvlText.ui(16, FontWeight.w800),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    sadhana.description,
-                    style: KvlText.caption(13)
-                        .copyWith(color: KvlColors.muted),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  if (sadhana.description.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      sadhana.description,
+                      style:
+                          KvlText.caption(12).copyWith(color: KvlColors.muted),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                   const SizedBox(height: KvlSpacing.sm),
 
-                  // Progress bar
+                  // Progress bar — gradient fill
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: sadhana.progress,
-                      minHeight: 6,
-                      backgroundColor:
-                          KvlColors.primary.withValues(alpha: .12),
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(KvlColors.primary),
+                    borderRadius: BorderRadius.circular(6),
+                    child: SizedBox(
+                      height: 7,
+                      child: Stack(
+                        children: [
+                          Container(
+                            color: KvlColors.primary.withValues(alpha: .12),
+                          ),
+                          FractionallySizedBox(
+                            widthFactor: sadhana.progress.clamp(0.0, 1.0),
+                            child: DecoratedBox(
+                              decoration: const BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Color(0xFFFF9A3E),
+                                    Color(0xFFE07020)
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 7),
 
                   Row(
                     children: [
                       Expanded(
                         child: Text(
-                          '${IndianNumberFormat.format(sadhana.currentCount)} / ${IndianNumberFormat.format(sadhana.targetCount)} chants',
+                          '${IndianNumberFormat.format(sadhana.currentCount)} / ${IndianNumberFormat.format(sadhana.targetCount)}',
                           style: KvlText.caption(12)
                               .copyWith(color: KvlColors.muted),
                         ),
                       ),
-                      Text(
-                        '${sadhana.participantCount} devotees',
-                        style: KvlText.caption(12)
-                            .copyWith(color: KvlColors.muted),
+                      Row(
+                        children: [
+                          Icon(Icons.people_outline_rounded,
+                              size: 13, color: KvlColors.muted),
+                          const SizedBox(width: 3),
+                          Text(
+                            '${IndianNumberFormat.format(sadhana.participantCount)} joined',
+                            style: KvlText.caption(12)
+                                .copyWith(color: KvlColors.muted),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: KvlSpacing.md),
+                  const SizedBox(height: KvlSpacing.sm),
 
-                  // Join / Continue button
-                  SizedBox(
-                    width: double.infinity,
-                    child: isEnrolled
-                        ? OutlinedButton.icon(
-                            onPressed: () => context.push(
-                                '${KvlRoute.globalSadhana}/${sadhana.id}'),
-                            icon: const Icon(Icons.play_arrow_rounded,
-                                size: 18),
-                            label: const Text('Continue'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: KvlColors.primary,
-                              side: BorderSide(color: KvlColors.primary),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
+                  // CTA button
+                  isEnrolled
+                      ? Container(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF22C55E), Color(0xFF16A34A)],
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
                             ),
-                          )
-                        : FilledButton.icon(
-                            onPressed: () => context.push(
-                                '${KvlRoute.globalSadhana}/${sadhana.id}'),
-                            icon: const Icon(Icons.add_rounded, size: 18),
-                            label: const Text('Join Sadhana'),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: KvlColors.primary,
-                              foregroundColor: Colors.white,
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 12),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF16A34A)
+                                    .withValues(alpha: .30),
+                                blurRadius: 10,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: () => context.push(
+                                  '${KvlRoute.globalSadhana}/${sadhana.id}'),
+                              child: const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 13),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.check_circle_rounded,
+                                        color: Colors.white, size: 18),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'You\'re a Part of This',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
-                  ),
+                        )
+                      : Container(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFF9A3E), Color(0xFFE07020)],
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFE07020)
+                                    .withValues(alpha: .30),
+                                blurRadius: 10,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: () => context.push(
+                                  '${KvlRoute.globalSadhana}/${sadhana.id}'),
+                              child: const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 13),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.add_rounded,
+                                        color: Colors.white, size: 18),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Join Sadhana',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _Badge extends StatelessWidget {
+  const _Badge({
+    required this.gradient,
+    required this.icon,
+    required this.label,
+  });
+  final LinearGradient gradient;
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: .18),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: Colors.white),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -276,9 +478,9 @@ class _PlaceholderBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [KvlColors.primary, KvlColors.primaryDeep],
+          colors: [Color(0xFFFF8C42), Color(0xFFE07020)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),

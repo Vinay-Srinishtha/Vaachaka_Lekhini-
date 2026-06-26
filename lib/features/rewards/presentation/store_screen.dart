@@ -87,7 +87,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
         bottomInset + 104,
       ),
       children: [
-        _PromoBanner(),
+        _BalanceCard(points: points),
         const SizedBox(height: KvlSpacing.md),
         const _EarnGuide(),
         const SizedBox(height: KvlSpacing.md),
@@ -145,9 +145,9 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
             padding: EdgeInsets.zero,
             physics: const NeverScrollableScrollPhysics(),
             crossAxisCount: 2,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 0.62,
+            mainAxisSpacing: 14,
+            crossAxisSpacing: 14,
+            childAspectRatio: 0.54,
             children: [
               for (final i in items)
                 _StoreCard(
@@ -387,45 +387,178 @@ class _EarnRuleRow extends StatelessWidget {
   }
 }
 
-class _PromoBanner extends StatelessWidget {
+class _BalanceCard extends StatelessWidget {
+  const _BalanceCard({required this.points});
+  final int points;
+
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: KvlRadius.brLG,
-      child: AspectRatio(
-        aspectRatio: 16 / 7,
-        child: DecoratedBox(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF7C9BB8), Color(0xFF3F5B7E)],
-            ),
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF7B2D00),
+            Color(0xFFBF5000),
+            Color(0xFFD97B1A),
+            Color(0xFFB34A00),
+          ],
+          stops: [0.0, 0.35, 0.70, 1.0],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFBF5000).withValues(alpha: 0.45),
+            blurRadius: 24,
+            spreadRadius: 0,
+            offset: const Offset(0, 10),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(KvlSpacing.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                KvlChip(
-                  label: context.l10n.specialOffer,
-                  variant: KvlChipVariant.gold,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  context.l10n.guidedMeditationSeries,
-                  style: KvlText.title(15).copyWith(color: Colors.white),
-                ),
-                Text(
-                  context.l10n.unlockPeaceSeries,
-                  style: KvlText.caption(
-                    10.5,
-                  ).copyWith(color: Colors.white.withValues(alpha: .92)),
-                ),
-              ],
-            ),
+          BoxShadow(
+            color: const Color(0xFF7B2D00).withValues(alpha: 0.25),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: Stack(
+          children: [
+            // Decorative glow circles
+            Positioned(
+              right: -30,
+              top: -30,
+              child: Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.07),
+                ),
+              ),
+            ),
+            Positioned(
+              right: 30,
+              bottom: -40,
+              child: Container(
+                width: 90,
+                height: 90,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFFFFD700).withValues(alpha: 0.10),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 20, 22, 20),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 5,
+                              height: 5,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Color(0xFFFFD700),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            const Text(
+                              'YOUR BALANCE',
+                              style: TextStyle(
+                                color: Colors.white60,
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.4,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.star_rounded,
+                                color: Color(0xFFFFD700), size: 30),
+                            const SizedBox(width: 8),
+                            Text(
+                              IndianNumberFormat.format(points),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 34,
+                                fontWeight: FontWeight.w900,
+                                height: 1.0,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            const Padding(
+                              padding: EdgeInsets.only(top: 6),
+                              child: Text(
+                                'pts',
+                                style: TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.18),
+                              width: 1,
+                            ),
+                          ),
+                          child: const Text(
+                            '🕉  Keep chanting to earn more',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          Colors.white.withValues(alpha: 0.28),
+                          Colors.white.withValues(alpha: 0.10),
+                        ],
+                      ),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.25),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: const Icon(Icons.card_giftcard_rounded,
+                        color: Colors.white, size: 26),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -468,58 +601,162 @@ class _StoreCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final canAfford = points >= item.pricePoints;
+    final comingSoon = item.comingSoon;
+
     return Container(
       decoration: BoxDecoration(
-        color: KvlColors.surface,
-        borderRadius: KvlRadius.brLG,
-        border: Border.all(color: KvlColors.border),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.09),
+            blurRadius: 18,
+            spreadRadius: 0,
+            offset: const Offset(0, 6),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
       child: ClipRRect(
-        borderRadius: KvlRadius.brLG,
+        borderRadius: BorderRadius.circular(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Image with optional "Coming Soon" badge
             AspectRatio(
-              aspectRatio: 4 / 3,
-              child: item.imageUrl != null
-                  ? Image.network(
-                      item.imageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, e, s) => _ItemPlaceholder(item: item),
-                    )
-                  : _ItemPlaceholder(item: item),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(KvlSpacing.sm),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      item.title,
-                      style: KvlText.ui(12, FontWeight.w600),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '★ ${IndianNumberFormat.format(item.pricePoints)} Points',
-                      style: KvlText.caption(10.5).copyWith(
-                        color: KvlColors.gold,
-                        fontWeight: FontWeight.w600,
+              aspectRatio: 1.0,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  item.imageUrl != null
+                      ? Image.network(
+                          item.imageUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              _ItemPlaceholder(item: item),
+                        )
+                      : _ItemPlaceholder(item: item),
+                  // Subtle bottom fade for better text contrast
+                  Positioned(
+                    left: 0, right: 0, bottom: 0,
+                    height: 48,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: [
+                            Colors.black.withValues(alpha: 0.28),
+                            Colors.transparent,
+                          ],
+                        ),
                       ),
                     ),
-                    const Spacer(),
-                    _RedeemButton(
-                      canAfford: canAfford && !isRedeemed,
-                      isRedeemed: isRedeemed,
-                      label: isRedeemed
-                          ? 'Redeemed ✓'
-                          : context.l10n.redeemButton,
-                      onRedeem: isRedeemed ? null : onRedeem,
+                  ),
+                  if (comingSoon)
+                    Positioned(
+                      bottom: 10,
+                      left: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFBF5000), Color(0xFFE8851A)],
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFBF5000).withValues(alpha: 0.4),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Text(
+                          'Coming Soon',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ),
                     ),
-                  ],
+                ],
+              ),
+            ),
+            // Info + button
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.white, Color(0xFFFFF8F2)],
                 ),
+              ),
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    item.title,
+                    style: KvlText.ui(13, FontWeight.w700),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  // Price pill — prominent gold border
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF9E6),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: const Color(0xFFFFD700),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFFFD700).withValues(alpha: 0.25),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.star_rounded,
+                            size: 13, color: KvlColors.gold),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${IndianNumberFormat.format(item.pricePoints)} pts',
+                          style: KvlText.caption(11).copyWith(
+                            color: const Color(0xFF7A5A00),
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _RedeemButton(
+                    canAfford: canAfford && !isRedeemed && !comingSoon,
+                    isRedeemed: isRedeemed,
+                    comingSoon: comingSoon,
+                    label: isRedeemed
+                        ? 'Redeemed ✓'
+                        : context.l10n.redeemButton,
+                    onRedeem: (isRedeemed || comingSoon) ? null : onRedeem,
+                  ),
+                ],
               ),
             ),
           ],
@@ -533,11 +770,13 @@ class _RedeemButton extends StatelessWidget {
   const _RedeemButton({
     required this.canAfford,
     required this.isRedeemed,
+    required this.comingSoon,
     required this.label,
     required this.onRedeem,
   });
   final bool canAfford;
   final bool isRedeemed;
+  final bool comingSoon;
   final String label;
   final VoidCallback? onRedeem;
 
@@ -545,48 +784,64 @@ class _RedeemButton extends StatelessWidget {
   Widget build(BuildContext context) {
     if (isRedeemed) {
       return SizedBox(
-        width: double.infinity,
-        height: 36,
+        height: 34,
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: const Color(0xFFE8F5E9),
-            borderRadius: KvlRadius.brMD,
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(color: const Color(0xFF81C784)),
           ),
-          child: Center(
-            child: Text(
-              label,
-              style: const TextStyle(
-                color: Color(0xFF388E3C),
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.3,
-              ),
-            ),
+          child: const Center(
+            child: Text('Redeemed ✓',
+                style: TextStyle(
+                    color: Color(0xFF388E3C),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700)),
           ),
         ),
       );
     }
-    return Opacity(
-      opacity: canAfford ? 1.0 : 0.38,
-      child: SizedBox(
-        width: double.infinity,
-        height: 36,
+    // Coming soon or can't afford → muted button
+    final active = canAfford && !comingSoon;
+    return SizedBox(
+      height: 36,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: active
+              ? const LinearGradient(
+                  colors: [Color(0xFFBF5000), Color(0xFFE8851A)],
+                )
+              : LinearGradient(
+                  colors: [
+                    const Color(0xFF8B4513).withValues(alpha: 0.30),
+                    const Color(0xFF8B4513).withValues(alpha: 0.20),
+                  ],
+                ),
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: active
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFFBF5000).withValues(alpha: 0.35),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  )
+                ]
+              : [],
+        ),
         child: Material(
-          color: KvlColors.primary,
-          borderRadius: KvlRadius.brMD,
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
           child: InkWell(
-            borderRadius: KvlRadius.brMD,
-            onTap: canAfford ? onRedeem : null,
+            borderRadius: BorderRadius.circular(10),
+            onTap: active ? onRedeem : null,
             child: Center(
               child: Text(
                 label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
-                ),
+                style: TextStyle(
+                    color: active ? Colors.white : Colors.white54,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.2),
               ),
             ),
           ),

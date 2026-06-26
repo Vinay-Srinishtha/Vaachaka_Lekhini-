@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:ui' show Offset;
 
 import 'package:flutter_tesseract_ocr/flutter_tesseract_ocr.dart';
+import 'package:google_mlkit_digital_ink_recognition/google_mlkit_digital_ink_recognition.dart';
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 
@@ -28,60 +30,86 @@ class HandwritingResult {
 
   final bool accepted;
   final double similarity; // best 0..1 over all candidates
-  final String recognized; // best-matching OCR output (debug/feedback)
+  final String recognized; // best-matching output (debug/feedback)
   final String expected; // the target it was closest to
 }
 
-/// Fully offline handwriting verification using bundled Tesseract traineddata.
+/// Tesseract lang code → ML Kit BCP-47 digital ink model tag.
+/// Languages absent from this map fall through to Tesseract OCR (e.g. 'eng').
+const _mlKitLangMap = {
+  'eng': 'en-US', // English cursive/print handwriting via ML Kit stroke model
+  'hin': 'hi',
+  'tel': 'te',
+  'kan': 'kn',
+};
+
+/// Fully offline handwriting verification.
 ///
-/// Renders the user's strokes to a clean black-on-white image, OCRs it in the
-/// relevant script(s), then fuzzy-matches the text against the expected mantra
-/// spelling. A wrong word (e.g. "Ravi" vs "Sri Rama") is recognised as itself
-/// and falls far below the similarity threshold, so it is rejected — unlike the
-/// old shape-only matcher that accepted any consistent scribble.
+/// English → Tesseract OCR (unchanged, bundled traineddata).
+/// Hindi / Telugu / Kannada → Google ML Kit Digital Ink Recognition
+///   (stroke-gesture model; downloaded from Google on first use, then cached).
+///
+/// Both paths use the same _normalize + _similarity scoring pipeline with the
+/// same _minSimilarity = 0.50 acceptance threshold.
 class HandwritingRecognizer {
   HandwritingRecognizer._();
   static final HandwritingRecognizer instance = HandwritingRecognizer._();
 
-  /// Minimum normalised similarity (0..1) to accept. Tuned to tolerate minor
-  /// recognition slips / spelling variation while still rejecting other words.
-  /// (e.g. "श्री राम" misread as "श्री शम" ≈ 0.71 → accept; "Ravi" ≈ 0.15 → reject.)
   static const double _minSimilarity = 0.50;
 
-  /// Recognise [pngBytes] (transparent background, dark ink) and decide whether
-  /// it matches any of [candidates].
+  // ML Kit recognizer instances, cached by BCP-47 language code.
+  final _recognizers = <String, DigitalInkRecognizer>{};
+  final _modelManager = DigitalInkRecognizerModelManager();
+
+  /// Recognise [pngBytes] and decide whether it matches any of [candidates].
+  ///
+  /// [strokes] — raw stroke data from the drawing canvas:
+  ///   `controller.pointsToStrokes(3).map((s) => s.map((p) => p.offset).toList()).toList()`
+  /// When provided, Indic-script candidates use ML Kit Digital Ink instead of
+  /// Tesseract OCR. English candidates always use Tesseract regardless.
   Future<HandwritingResult> check({
     required Uint8List pngBytes,
     required List<ExpectedWriting> candidates,
+    List<List<Offset>>? strokes,
   }) async {
-    final imagePath = await _renderForOcr(pngBytes);
-
-    // OCR once per distinct script, then match each candidate to its script.
-    final langs = {for (final c in candidates) c.tessLang};
-    final recognisedByLang = <String, String>{};
-    for (final lang in langs) {
-      recognisedByLang[lang] = await _ocr(imagePath, lang);
-    }
-
     var bestSim = 0.0;
     var bestRecognised = '';
     var bestExpected = '';
+
+    // Defer Tesseract image rendering until actually needed.
+    String? imagePath;
+    final recognisedByTessLang = <String, String>{};
+
     for (final c in candidates) {
-      final got = _normalize(recognisedByLang[c.tessLang] ?? '');
-      final want = _normalize(c.text);
-      if (want.isEmpty) continue;
-      final sim = _similarity(got, want);
+      final mlLang = _mlKitLangMap[c.tessLang];
+      String got;
+
+      if (mlLang != null && strokes != null && strokes.isNotEmpty) {
+        // ── ML Kit Digital Ink path (Hindi / Telugu / Kannada) ────────────
+        got = await _mlKitRecognize(strokes, mlLang);
+      } else {
+        // ── Tesseract OCR path (English + fallback) ───────────────────────
+        if (!recognisedByTessLang.containsKey(c.tessLang)) {
+          imagePath ??= await _renderForOcr(pngBytes);
+          recognisedByTessLang[c.tessLang] = await _ocr(imagePath, c.tessLang);
+        }
+        got = recognisedByTessLang[c.tessLang]!;
+      }
+
+      final normGot = _normalize(got);
+      final normWant = _normalize(c.text);
+      if (normWant.isEmpty) continue;
+      final sim = _similarity(normGot, normWant);
       if (sim > bestSim) {
         bestSim = sim;
-        bestRecognised = recognisedByLang[c.tessLang] ?? '';
+        bestRecognised = got;
         bestExpected = c.text;
       }
     }
 
-    // Clean up the temp image; ignore failures.
-    try {
-      await File(imagePath).delete();
-    } catch (_) {}
+    if (imagePath != null) {
+      try { await File(imagePath).delete(); } catch (_) {}
+    }
 
     return HandwritingResult(
       accepted: bestSim >= _minSimilarity,
@@ -89,6 +117,46 @@ class HandwritingRecognizer {
       recognized: bestRecognised,
       expected: bestExpected,
     );
+  }
+
+  /// ML Kit Digital Ink recognition. Returns the top candidate text, or ''
+  /// on any failure (graceful degradation → low similarity → rejection).
+  Future<String> _mlKitRecognize(
+    List<List<Offset>> strokes,
+    String mlLang,
+  ) async {
+    try {
+      // Download model on first use; subsequent calls are instant (cached).
+      final available = await _modelManager.isModelDownloaded(mlLang);
+      if (!available) {
+        await _modelManager.downloadModel(mlLang);
+      }
+
+      // Build Ink with synthetic timestamps — ML Kit only uses these to
+      // identify stroke boundaries, not for timing accuracy.
+      var t = 0;
+      final inkStrokes = <Stroke>[];
+      for (final stroke in strokes) {
+        if (stroke.isEmpty) continue;
+        final pts = <StrokePoint>[];
+        for (var i = 0; i < stroke.length; i++) {
+          pts.add(StrokePoint(x: stroke[i].dx, y: stroke[i].dy, t: t));
+          t += 10;
+        }
+        inkStrokes.add(Stroke()..points = pts);
+        t += 500; // inter-stroke gap
+      }
+      if (inkStrokes.isEmpty) return '';
+
+      final ink = Ink()..strokes = inkStrokes;
+      _recognizers[mlLang] ??= DigitalInkRecognizer(languageCode: mlLang);
+      final results = await _recognizers[mlLang]!.recognize(ink);
+
+      // ML Kit returns candidates sorted by score (lower = more confident).
+      return results.isNotEmpty ? results.first.text : '';
+    } catch (_) {
+      return '';
+    }
   }
 
   Future<String> _ocr(String imagePath, String lang) async {
@@ -135,14 +203,12 @@ class HandwritingRecognizer {
     return path;
   }
 
-  /// Lowercase, strip everything that isn't a letter mark (keeps Indic glyphs
-  /// and Latin letters), drop spaces — so "Sri Rama" == "srirama".
+  /// Lowercase, strip everything that isn't a Latin letter or Indic glyph,
+  /// drop spaces — so "Sri Rama" == "srirama".
   String _normalize(String s) {
     final buf = StringBuffer();
     for (final r in s.toLowerCase().runes) {
       final c = String.fromCharCode(r);
-      // Keep Latin letters and any non-ASCII letter/mark (Devanagari, Telugu,
-      // Kannada). Drop digits, punctuation, whitespace, control chars.
       final isLatin = RegExp(r'[a-z]').hasMatch(c);
       final isIndic = r >= 0x0900 && r <= 0x0CFF; // Devanagari..Kannada blocks
       if (isLatin || isIndic) buf.write(c);
@@ -150,10 +216,6 @@ class HandwritingRecognizer {
     return buf.toString();
   }
 
-  /// Similarity of OCR output [got] to the expected word [want], in 0..1.
-  /// Uses an *infix* match: the expected word only has to align well with the
-  /// best-fitting region of the OCR text, so stray marks / noise around the
-  /// word don't drag the score down. Normalised by the expected length.
   double _similarity(String got, String want) {
     if (want.isEmpty) return got.isEmpty ? 1 : 0;
     if (got.isEmpty) return 0;
@@ -161,9 +223,6 @@ class HandwritingRecognizer {
     return (1 - dist / want.length).clamp(0.0, 1.0);
   }
 
-  /// Minimum edit distance to match [pat] against the best contiguous region
-  /// of [text]. Leading/trailing characters of [text] are free (cost 0), so
-  /// OCR noise surrounding the word is not penalised.
   int _infixDistance(String pat, String text) {
     final m = pat.length, n = text.length;
     var prev = List<int>.filled(n + 1, 0); // row 0 = start anywhere in text

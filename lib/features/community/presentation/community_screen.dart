@@ -137,109 +137,117 @@ class _BodyState extends State<_Body> {
       return _EmptyView();
     }
 
-    return RefreshIndicator(
-      onRefresh: widget.onRetry != null ? () async => widget.onRetry!() : () async {},
-      color: KvlColors.primary,
-      child: CustomScrollView(
-        controller: _scrollController,
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          // ── Scrollable header: sort toggle + mantra filter ──
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                KvlSpacing.lg,
-                topInset + 68,
-                KvlSpacing.lg,
-                KvlSpacing.md,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _SortToggle(sort: widget.sort, onChanged: widget.onSortChanged),
-                  if (widget.mantras.length > 1) ...[
-                    const SizedBox(height: KvlSpacing.sm),
-                    _MantraFilter(
-                      mantras: widget.mantras,
-                      selectedId: widget.selectedMantraId,
-                      onChanged: widget.onMantraChanged,
+    // ── Fixed header height calculation ──────────────────────────────────────
+    // topInset + appbar(68) + padding(md) + sortToggle(50) + gap(sm) +
+    // [mantraFilter(36) + gap(sm)] + podium(168) + bottomGap(sm)
+    final hasMantraFilter = widget.mantras.length > 1;
+    final headerH = topInset +
+        68 +
+        KvlSpacing.md +
+        50 +
+        KvlSpacing.sm +
+        (hasMantraFilter ? 36 + KvlSpacing.sm : 0) +
+        168 +
+        KvlSpacing.sm;
+
+    return Stack(
+      children: [
+        // ── Scrollable rank list — fills the whole area ───────────────────
+        Positioned.fill(
+          child: RefreshIndicator(
+            onRefresh: widget.onRetry != null
+                ? () async => widget.onRetry!()
+                : () async {},
+            color: KvlColors.primary,
+            displacement: headerH + 16,
+            child: rest.isEmpty
+                ? ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.only(top: headerH),
+                    children: const [],
+                  )
+                : ListView.builder(
+                    controller: _scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.fromLTRB(
+                      KvlSpacing.lg,
+                      headerH + KvlSpacing.sm,
+                      KvlSpacing.lg,
+                      bottomInset + 104,
                     ),
-                  ],
-                ],
-              ),
+                    itemCount: rest.length,
+                    itemBuilder: (context, i) {
+                      final friend = rest[i];
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          bottom:
+                              i < rest.length - 1 ? KvlSpacing.xs : 0,
+                        ),
+                        child: _RankRow(
+                          key: friend.isSelf ? _selfKey : null,
+                          rank: i + 4,
+                          friend: friend,
+                          sort: widget.sort,
+                          highlight: friend.isSelf,
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ),
+
+        // ── Fixed header — always on top, never scrolls ───────────────────
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: Container(
+            padding: EdgeInsets.fromLTRB(
+              KvlSpacing.lg,
+              topInset + 68,
+              KvlSpacing.lg,
+              KvlSpacing.sm,
             ),
-          ),
-
-          // ── Pinned podium — always visible ──
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _PodiumHeader(top3: podium, sort: widget.sort),
-          ),
-
-          // ── Rank rows: 4th place onward ──
-          if (rest.isEmpty)
-            const SliverToBoxAdapter(child: SizedBox.shrink())
-          else
-            SliverPadding(
-              padding: EdgeInsets.fromLTRB(
-                KvlSpacing.lg,
-                KvlSpacing.sm,
-                KvlSpacing.lg,
-                bottomInset + 104,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFFFFF8EE), Color(0xFFFFF4E8)],
               ),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, i) {
-                    final friend = rest[i];
-                    return Padding(
-                      padding: EdgeInsets.only(
-                        bottom: i < rest.length - 1 ? KvlSpacing.xs : 0,
-                      ),
-                      child: _RankRow(
-                        key: friend.isSelf ? _selfKey : null,
-                        rank: i + 4,
-                        friend: friend,
-                        sort: widget.sort,
-                        highlight: friend.isSelf,
-                      ),
-                    );
-                  },
-                  childCount: rest.length,
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFE8851A).withValues(alpha: .14),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
                 ),
-              ),
+              ],
             ),
-        ],
-      ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _SortToggle(
+                    sort: widget.sort, onChanged: widget.onSortChanged),
+                if (hasMantraFilter) ...[
+                  const SizedBox(height: KvlSpacing.sm),
+                  _MantraFilter(
+                    mantras: widget.mantras,
+                    selectedId: widget.selectedMantraId,
+                    onChanged: widget.onMantraChanged,
+                  ),
+                ],
+                const SizedBox(height: KvlSpacing.md),
+                _Podium(top3: podium, sort: widget.sort),
+                const SizedBox(height: KvlSpacing.xs),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
 
-// ─── Pinned podium header ─────────────────────────────────────────────────────
-
-class _PodiumHeader extends SliverPersistentHeaderDelegate {
-  const _PodiumHeader({required this.top3, required this.sort});
-  final List<Friend> top3;
-  final LeaderboardSort sort;
-
-  static const double _height = 168.0;
-
-  @override
-  double get minExtent => _height;
-  @override
-  double get maxExtent => _height;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
-      padding: const EdgeInsets.symmetric(horizontal: KvlSpacing.lg),
-      child: _Podium(top3: top3, sort: sort),
-    );
-  }
-
-  @override
-  bool shouldRebuild(_PodiumHeader old) => old.top3 != top3 || old.sort != sort;
-}
 
 // ─── Sort toggle ─────────────────────────────────────────────────────────────
 
@@ -253,8 +261,18 @@ class _SortToggle extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: KvlColors.primaryGhost,
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFFF0E0), Color(0xFFFFE8CC)],
+        ),
         borderRadius: KvlRadius.brSM,
+        border: Border.all(color: const Color(0xFFE8C99A), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFE8851A).withValues(alpha: 0.10),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -283,20 +301,34 @@ class _Pill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: InkWell(
+      child: GestureDetector(
         onTap: onTap,
-        borderRadius: KvlRadius.brMD,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: selected ? KvlColors.primary : Colors.transparent,
+            gradient: selected
+                ? const LinearGradient(
+                    colors: [Color(0xFFE8851A), Color(0xFFBF5000)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
             borderRadius: KvlRadius.brMD,
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFFBF5000).withValues(alpha: 0.30),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ]
+                : null,
           ),
           alignment: Alignment.center,
           child: Text(
             label,
-            style: KvlText.ui(12, FontWeight.w600)
+            style: KvlText.ui(12, FontWeight.w700)
                 .copyWith(color: selected ? Colors.white : KvlColors.inkSoft),
           ),
         ),
@@ -338,69 +370,132 @@ class _Pod extends StatelessWidget {
   final int place;
   final LeaderboardSort sort;
 
-  static const _borders = <int, Color>{
-    1: KvlColors.gold,
-    2: Color(0xFFC7C7C7),
+  static const _medalColors = <int, List<Color>>{
+    1: [Color(0xFFFFD700), Color(0xFFFFAA00), Color(0xFFCC8800)],
+    2: [Color(0xFFE8E8E8), Color(0xFFBDBDBD), Color(0xFF9E9E9E)],
+    3: [Color(0xFFE8A060), Color(0xFFCD7F32), Color(0xFFA0522D)],
+  };
+  static const _medalGlow = <int, Color>{
+    1: Color(0xFFFFD700),
+    2: Color(0xFFBDBDBD),
     3: Color(0xFFCD7F32),
   };
 
   @override
   Widget build(BuildContext context) {
-    final size = place == 1 ? 60.0 : 52.0;
-    final border = _borders[place]!;
+    final size = place == 1 ? 66.0 : 54.0;
+    final medalColors = _medalColors[place]!;
+    final glowColor = _medalGlow[place]!;
     final metric = sort == LeaderboardSort.streak
         ? context.l10n.streakDaysCount(friend.longestStreak)
         : IndianNumberFormat.compact(friend.totalChants);
     final isSelf = friend.isSelf;
+
+    final avatarGradient = isSelf
+        ? const LinearGradient(
+            colors: [Color(0xFFFF9A3C), Color(0xFFBF5000)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          )
+        : const LinearGradient(
+            colors: [Color(0xFFFF9A3C), Color(0xFFE8851A), Color(0xFFC05E00)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          );
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         if (place == 1)
-          const Text('👑', style: TextStyle(fontSize: 18))
+          const Text('👑', style: TextStyle(fontSize: 20))
         else
-          const SizedBox(height: 18),
+          const SizedBox(height: 20),
+        // Glow ring behind avatar
         Container(
-          width: size,
-          height: size,
+          width: size + 10,
+          height: size + 10,
           margin: const EdgeInsets.only(top: 2),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(
-              color: isSelf ? KvlColors.primary : border,
-              width: isSelf ? 3.5 : 3,
+            boxShadow: [
+              BoxShadow(
+                color: (isSelf ? KvlColors.primary : glowColor)
+                    .withValues(alpha: place == 1 ? 0.50 : 0.30),
+                blurRadius: place == 1 ? 18 : 12,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: Container(
+            margin: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: isSelf
+                    ? [KvlColors.primary, KvlColors.primaryDeep]
+                    : medalColors,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
             ),
+            padding: const EdgeInsets.all(2.5),
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: avatarGradient,
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                friend.initials,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: size / 3.2,
+                  shadows: const [
+                    Shadow(
+                      color: Colors.black26,
+                      blurRadius: 4,
+                      offset: Offset(0, 1),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        // Medal badge for rank
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: isSelf
                   ? [KvlColors.primary, KvlColors.primaryDeep]
-                  : [
-                      KvlColors.primary.withValues(alpha: .9),
-                      KvlColors.primaryDeep,
-                    ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+                  : [medalColors[0], medalColors[2]],
             ),
+            borderRadius: BorderRadius.circular(10),
           ),
-          alignment: Alignment.center,
           child: Text(
-            friend.initials,
-            style: TextStyle(
+            '#$place',
+            style: const TextStyle(
               color: Colors.white,
-              fontWeight: FontWeight.w700,
-              fontSize: size / 3,
+              fontSize: 9,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.5,
             ),
           ),
         ),
         const SizedBox(height: 4),
         SizedBox(
-          width: 72,
+          width: 76,
           child: Text(
             isSelf ? 'You' : friend.name,
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: KvlText.caption(10.5).copyWith(
-              fontWeight: FontWeight.w600,
-              color: isSelf ? KvlColors.primaryDeep : null,
+              fontWeight: FontWeight.w700,
+              color: isSelf ? KvlColors.primaryDeep : KvlColors.ink,
             ),
           ),
         ),
@@ -408,7 +503,7 @@ class _Pod extends StatelessWidget {
           metric,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: KvlText.muted(10),
+          style: KvlText.muted(10).copyWith(fontWeight: FontWeight.w600),
         ),
       ],
     );
@@ -506,48 +601,81 @@ class _RankRow extends StatelessWidget {
     final metric = sort == LeaderboardSort.streak
         ? context.l10n.streakDaysCount(friend.longestStreak)
         : IndianNumberFormat.compact(friend.totalChants);
-    return KvlCard(
-      variant: highlight ? KvlCardVariant.soft : KvlCardVariant.plain,
-      border: highlight
-          ? Border.all(color: KvlColors.primarySoft, width: 1.5)
-          : null,
-      padding: const EdgeInsets.symmetric(
-        horizontal: KvlSpacing.md,
-        vertical: 10,
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        gradient: highlight
+            ? const LinearGradient(
+                colors: [Color(0xFFFFF4E8), Color(0xFFFFEDD5)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : null,
+        color: highlight ? null : Colors.white,
+        border: highlight
+            ? Border.all(color: const Color(0xFFE8851A).withValues(alpha: 0.5), width: 1.5)
+            : Border.all(color: const Color(0xFFF0E8DC), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: highlight
+                ? const Color(0xFFE8851A).withValues(alpha: 0.12)
+                : Colors.black.withValues(alpha: 0.05),
+            blurRadius: highlight ? 12 : 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       child: Row(
         children: [
+          // Rank number
           SizedBox(
-            width: 22,
+            width: 26,
             child: Text(
               '$rank',
-              style: KvlText.ui(13, FontWeight.w700).copyWith(
+              style: KvlText.ui(13, FontWeight.w800).copyWith(
                 color: highlight ? KvlColors.primaryDeep : KvlColors.inkSoft,
               ),
             ),
           ),
+          // Avatar with gradient
           Container(
-            width: 30,
-            height: 30,
-            decoration: const BoxDecoration(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFFFFB572), KvlColors.primary],
-              ),
+              gradient: highlight
+                  ? const LinearGradient(
+                      colors: [Color(0xFFFF9A3C), Color(0xFFBF5000)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    )
+                  : const LinearGradient(
+                      colors: [Color(0xFFFFB572), Color(0xFFE8851A)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+              boxShadow: highlight
+                  ? [
+                      BoxShadow(
+                        color: KvlColors.primary.withValues(alpha: 0.30),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : [],
             ),
             alignment: Alignment.center,
             child: Text(
               friend.initials,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
-          const SizedBox(width: KvlSpacing.sm),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -555,7 +683,9 @@ class _RankRow extends StatelessWidget {
               children: [
                 Text(
                   highlight ? context.l10n.youLabel : friend.name,
-                  style: KvlText.ui(12, FontWeight.w600),
+                  style: KvlText.ui(12.5, FontWeight.w700).copyWith(
+                    color: highlight ? KvlColors.primaryDeep : KvlColors.ink,
+                  ),
                 ),
                 Text(
                   sort == LeaderboardSort.streak
@@ -571,8 +701,10 @@ class _RankRow extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                friend.streakActive ? '$metric 🔥' : metric,
-                style: KvlText.ui(12, FontWeight.w600),
+                friend.streakActive ? '$metric 🙏' : metric,
+                style: KvlText.ui(13, FontWeight.w800).copyWith(
+                  color: highlight ? KvlColors.primaryDeep : KvlColors.ink,
+                ),
               ),
               if (sort == LeaderboardSort.streak &&
                   friend.currentStreak > 0 &&

@@ -24,6 +24,7 @@ class StoreItem extends Equatable {
     this.category,
     this.glyph = '🛍',
     this.background = const [0xFFE0A85C, 0xFFA56A3D],
+    this.comingSoon = false,
   });
 
   final String id;
@@ -34,6 +35,8 @@ class StoreItem extends Equatable {
   final int pricePoints;
   final String glyph;
   final List<int> background;
+  /// Admin-controlled: set `coming_soon: true` in the store JSON to show badge.
+  final bool comingSoon;
 
   factory StoreItem.fromJson(Map<String, dynamic> j) {
     StoreCategory? cat;
@@ -57,6 +60,7 @@ class StoreItem extends Equatable {
       category: cat,
       glyph: (j['glyph'] as String?) ?? '🛍',
       background: bg,
+      comingSoon: (j['coming_soon'] as bool?) ?? false,
     );
   }
 

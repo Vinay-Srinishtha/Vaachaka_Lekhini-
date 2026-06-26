@@ -52,8 +52,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   }
 
   String get _digits => _mobile.text.replaceAll(RegExp(r'\D'), '');
-  String get _e164 => '+91$_digits';
-  bool get _mobileOk => _digits.length == 10;
+  String get _e164 => _digits.length == 12 ? '+$_digits' : '+91$_digits';
+  bool get _mobileOk => _digits.length == 10 || _digits.length == 12;
   bool get _passwordValid => _password.text.length >= 8;
   bool get _confirmValid => _confirm.text == _password.text;
   bool get _resetValid => _otp.length == 6 && _passwordValid && _confirmValid;
@@ -151,23 +151,17 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           const SizedBox(height: KvlSpacing.xl),
 
           // Mobile
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            SizedBox(width: 78, child: KvlInput(label: 'Code', hint: '+91', readOnly: true)),
-            const SizedBox(width: 8),
-            Expanded(
-              child: KvlInput(
-                label: 'Mobile',
-                hint: '98765 43210',
-                controller: _mobile,
-                keyboardType: TextInputType.phone,
-                autofocus: true,
-                readOnly: _codeSent,
-                inputFormatters: [AuthMobileFormatter()],
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) { if (!_codeSent && _mobileOk) _sendCode(); },
-              ),
-            ),
-          ]),
+          KvlInput(
+            label: 'Mobile',
+            hint: '98765 43210',
+            controller: _mobile,
+            keyboardType: TextInputType.phone,
+            autofocus: true,
+            readOnly: _codeSent,
+            inputFormatters: [AuthMobileFormatter()],
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) { if (!_codeSent && _mobileOk) _sendCode(); },
+          ),
           const SizedBox(height: KvlSpacing.lg),
 
           if (_noAccount) ...[

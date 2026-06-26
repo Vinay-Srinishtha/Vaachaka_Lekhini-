@@ -41,11 +41,11 @@ abstract final class KvlColors {
     end: Alignment.bottomCenter,
     colors: [Color(0xFFEE9A4F), Color(0xFFE8893B)],
   );
-  // Active state for the Practice FAB — deep orange-red to signal "you are here".
+  // Active state for the Practice FAB — indigo-blue so it's unmistakably "selected".
   static const practiceActiveGradient = LinearGradient(
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
-    colors: [Color(0xFFE86040), Color(0xFFD94B2A)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF4F7FFF), Color(0xFF2355E8), Color(0xFF1A3FCC)],
   );
   static const welcomeGradient = LinearGradient(
     begin: Alignment.topLeft,

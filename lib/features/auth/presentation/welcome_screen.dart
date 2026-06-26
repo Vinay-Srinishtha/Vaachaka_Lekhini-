@@ -9,11 +9,18 @@ import '../../../core/theme/theme.dart';
 import '../../settings/domain/settings_repository.dart';
 import '../../../l10n/l10n.dart';
 
-class WelcomeScreen extends ConsumerWidget {
+class WelcomeScreen extends ConsumerStatefulWidget {
   const WelcomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<WelcomeScreen> createState() => _WelcomeScreenState();
+}
+
+class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
+  bool _languageChosen = false;
+
+  @override
+  Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
     final languages = KvlLanguage.availableFor(
       ref.watch(mantraCatalogProvider).value ?? const [],
@@ -42,12 +49,6 @@ class WelcomeScreen extends ConsumerWidget {
                   ),
                   child: Column(
                     children: [
-                      _LanguageSelector(
-                        compact: compact,
-                        languages: languages,
-                        currentCode: settings.languageCode,
-                        onChanged: settingsRepo.setLanguage,
-                      ),
                       const Spacer(flex: 3),
                       _AppMark(size: veryCompact ? 84 : (compact ? 96 : 112)),
                       SizedBox(height: veryCompact ? 10 : 18),
@@ -71,11 +72,33 @@ class WelcomeScreen extends ConsumerWidget {
                           veryCompact ? 13.5 : 16,
                         ).copyWith(color: Colors.white, height: 1.15),
                       ),
-                      const Spacer(flex: 3),
-                      _AuthActions(
+                      SizedBox(height: veryCompact ? 14 : 22),
+                      // Language selector moved here — below the tagline
+                      _LanguageSelector(
                         compact: compact,
-                        onLogin: () => context.push(KvlRoute.otpLogin),
-                        onRegister: () => context.push(KvlRoute.createAccount),
+                        languages: languages,
+                        currentCode: settings.languageCode,
+                        onChanged: (code) async {
+                          await settingsRepo.setLanguage(code);
+                          if (mounted) setState(() => _languageChosen = true);
+                        },
+                      ),
+                      const Spacer(flex: 3),
+                      // Login/Register hidden until language is chosen
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 280),
+                        child: _languageChosen
+                            ? KeyedSubtree(
+                                key: const ValueKey('auth'),
+                                child: _AuthActions(
+                                  compact: compact,
+                                  onLogin: () =>
+                                      context.push(KvlRoute.otpLogin),
+                                  onRegister: () =>
+                                      context.push(KvlRoute.createAccount),
+                                ),
+                              )
+                            : const SizedBox.shrink(key: ValueKey('hidden')),
                       ),
                       const Spacer(flex: 3),
                       _KnowAppButton(onTap: () => context.push('/info/about')),
@@ -125,15 +148,17 @@ class _LanguageSelector extends StatelessWidget {
       compact ? 15 : 17,
     ).copyWith(color: Colors.white);
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           context.l10n.setLanguage,
-          style: KvlText.body(compact ? 16 : 18).copyWith(color: KvlColors.ink),
+          style: KvlText.body(compact ? 14 : 15).copyWith(
+            color: Colors.white.withValues(alpha: .75),
+          ),
         ),
-        SizedBox(height: compact ? KvlSpacing.md : KvlSpacing.lg),
+        SizedBox(height: compact ? KvlSpacing.sm : KvlSpacing.md),
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             for (final lang in languages)
               _LanguageTab(

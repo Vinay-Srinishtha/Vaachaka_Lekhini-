@@ -86,6 +86,8 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
   void _onCanvasChanged() {
     _idleTimer?.cancel();
     if (_controller.isEmpty || _checking || _saving) return;
+    // Dismiss any rejection snackbar the moment the user starts writing again.
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     _idleTimer = Timer(
       const Duration(milliseconds: 900),
       _submitOne,
@@ -268,7 +270,7 @@ class _WriteOnScreenScreenState extends ConsumerState<WriteOnScreenScreen> {
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(SnackBar(
-      duration: const Duration(seconds: 3),
+      duration: const Duration(seconds: 2),
       backgroundColor: Colors.orange.shade700,
       behavior: SnackBarBehavior.floating,
       content: Text(

@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../app/providers.dart';
@@ -359,6 +360,13 @@ class _BodyState extends ConsumerState<_Body> {
                         final sessionTotal = (afterState != null)
                             ? (afterState.program.totalProgress - beforeTotal).clamp(0, 999999)
                             : state.sessionCount;
+                        await _showSessionCompleteSheet(
+                          context, ref,
+                          sessionCount: sessionTotal,
+                          mantraId: state.program.mantraId,
+                          programId: programId,
+                        );
+                        if (!context.mounted) return;
                         final build = await _askBuildOrBonus(context, sessionTotal);
                         if (!context.mounted) return;
                         if (build == true) {
@@ -404,6 +412,13 @@ class _BodyState extends ConsumerState<_Body> {
                         );
                       }
 
+                      await _showSessionCompleteSheet(
+                        context, ref,
+                        sessionCount: state.sessionCount,
+                        mantraId: state.program.mantraId,
+                        programId: programId,
+                      );
+                      if (!context.mounted) return;
                       context.go(KvlRoute.home);
                     },
                   ),
@@ -534,6 +549,28 @@ class _BodyState extends ConsumerState<_Body> {
           // program card (disabled) — clears the full navigation stack.
           context.go(KvlRoute.programs);
         },
+      ),
+    );
+  }
+
+  Future<void> _showSessionCompleteSheet(
+    BuildContext context,
+    WidgetRef ref, {
+    required int sessionCount,
+    required String mantraId,
+    required String programId,
+  }) async {
+    final mantra = ref.read(mantraByIdProvider(mantraId));
+    final mantraName = mantra?.name.devanagari ?? 'Sri Rama';
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _SessionCompleteSheet(
+        sessionCount: sessionCount,
+        mantraName: mantraName,
+        mantraId: mantraId,
+        programId: programId,
       ),
     );
   }
@@ -2026,6 +2063,168 @@ class _TipSheetState extends State<_TipSheet> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Session complete bottom sheet
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SessionCompleteSheet extends ConsumerStatefulWidget {
+  const _SessionCompleteSheet({
+    required this.sessionCount,
+    required this.mantraName,
+    required this.mantraId,
+    required this.programId,
+  });
+
+  final int sessionCount;
+  final String mantraName;
+  final String mantraId;
+  final String programId;
+
+  @override
+  ConsumerState<_SessionCompleteSheet> createState() =>
+      _SessionCompleteSheetState();
+}
+
+class _SessionCompleteSheetState extends ConsumerState<_SessionCompleteSheet> {
+  bool _sharing = false;
+
+  Future<void> _share() async {
+    if (_sharing) return;
+    setState(() => _sharing = true);
+    try {
+      final count = IndianNumberFormat.format(widget.sessionCount);
+      await SharePlus.instance.share(ShareParams(
+        text: 'I completed $count ${widget.mantraName} chants today 🙏\n\nShared via Vachika Lekhini',
+      ));
+    } finally {
+      if (mounted) setState(() => _sharing = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final count = IndianNumberFormat.format(widget.sessionCount);
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.fromLTRB(
+        24, 20, 24, 24 + MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: KvlColors.primary.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.self_improvement_rounded,
+                size: 36, color: KvlColors.primary),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Session Complete 🙏',
+            style: KvlText.title(20),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'You chanted $count ${widget.mantraName}',
+            style: KvlText.body().copyWith(
+              fontSize: 15,
+              color: Colors.black87,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Every chant is a step closer to the divine.',
+            style: KvlText.body().copyWith(
+              fontSize: 13,
+              color: Colors.grey[600],
+              fontStyle: FontStyle.italic,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 28),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _sharing ? null : _share,
+                  icon: _sharing
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.share_rounded, size: 18),
+                  label: const Text('Share'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: KvlColors.primaryDeep,
+                    side: BorderSide(color: KvlColors.primaryDeep),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: KvlRadius.brMD),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    BookPreviewButton.openSheet(context, widget.mantraId);
+                  },
+                  icon: const Icon(Icons.menu_book_rounded, size: 18),
+                  label: const Text('Book Preview'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: KvlColors.primaryDeep,
+                    side: BorderSide(color: KvlColors.primaryDeep),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: KvlRadius.brMD),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: FilledButton.styleFrom(
+                backgroundColor: KvlColors.primary,
+                shape: RoundedRectangleBorder(borderRadius: KvlRadius.brMD),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: Text(
+                'Continue',
+                style: KvlText.ui(15, FontWeight.w700)
+                    .copyWith(color: Colors.white),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -76,7 +76,7 @@ class BookPreviewButton extends ConsumerWidget {
         ),
         decoration: BoxDecoration(
           color: KvlColors.surface,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(color: KvlColors.border, width: 1.1),
           boxShadow: [
             BoxShadow(
@@ -140,8 +140,7 @@ class BookPreviewButton extends ConsumerWidget {
       if (!context.mounted) return;
       Navigator.push(
         context,
-        MaterialPageRoute<void>(
-          fullscreenDialog: true,
+        _BookDiveRoute(
           builder: (_) => _BookPreviewPage(
             mantraId: mantraId,
             mantra: mantra,
@@ -719,8 +718,7 @@ class _BookPreviewSheetState extends ConsumerState<_BookPreviewSheet> {
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute<void>(
-                              fullscreenDialog: true,
+                            _BookDiveRoute(
                               builder: (_) => _BookPreviewPage(
                                 mantraId: widget.mantraId,
                                 mantra: mantra,
@@ -988,12 +986,24 @@ class _BookPreviewPageState extends ConsumerState<_BookPreviewPage> {
                 // Book pages (boxes of 108)
                 ...List.generate(
                   (totalProgress / 108).ceil(),
-                  (boxIdx) => _BookPageBox(
-                    boxIdx: boxIdx,
-                    totalProgress: totalProgress,
-                    assets: assets,
-                    mantraId: mantraId,
-                  ),
+                  (boxIdx) {
+                    final bool isTelugu =
+                        mantra?.name.telugu?.isNotEmpty == true;
+                    final bool isKannada = !isTelugu &&
+                        (mantra?.name.kannada?.isNotEmpty == true);
+                    final String mantraText = isTelugu
+                        ? mantra!.name.telugu!
+                        : isKannada
+                            ? mantra!.name.kannada!
+                            : (mantra?.name.devanagari ?? 'ॐ');
+                    return _BookPageBox(
+                      boxIdx: boxIdx,
+                      totalProgress: totalProgress,
+                      assets: assets,
+                      mantraId: mantraId,
+                      mantraText: mantraText,
+                    );
+                  },
                 ),
               ],
             ),
@@ -1234,12 +1244,14 @@ class _BookPageBox extends StatelessWidget {
     required this.totalProgress,
     required this.assets,
     required this.mantraId,
+    required this.mantraText,
   });
 
   final int boxIdx;
   final int totalProgress;
   final List<HandwritingAsset> assets;
   final String mantraId;
+  final String mantraText;
 
   static const int _cols = 12;
   static const int _rows = 9;
@@ -1340,6 +1352,7 @@ class _BookPageBox extends StatelessWidget {
                               cellH: cellH,
                               boxStart: boxStart,
                               filledInBox: filledInBox,
+                              mantraText: mantraText,
                             ),
                       ],
                     );
@@ -1360,12 +1373,12 @@ class _BookPageBox extends StatelessWidget {
     required double cellH,
     required int boxStart,
     required int filledInBox,
+    required String mantraText,
   }) {
     final cellIdx = row * _cols + col;
     final globalIdx = boxStart + cellIdx;
 
     if (cellIdx >= filledInBox) {
-      // Empty cell
       return Positioned(
         left: col * cellW,
         top: row * cellH,
@@ -1375,7 +1388,7 @@ class _BookPageBox extends StatelessWidget {
       );
     }
 
-    // Filled cell — show writing image if available
+    // Filled — show writing image if available
     if (assets.isNotEmpty) {
       final asset = assets[globalIdx % assets.length];
       if (asset.filePath != null) {
@@ -1387,23 +1400,33 @@ class _BookPageBox extends StatelessWidget {
           child: Image.file(
             File(asset.filePath!),
             fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) => _filledCell(cellW, cellH),
+            errorBuilder: (_, __, ___) => _textCell(mantraText),
           ),
         );
       }
     }
 
+    // No writing sample — show mantra script text
     return Positioned(
       left: col * cellW + 0.5,
       top: row * cellH + 0.5,
       width: cellW - 1,
       height: cellH - 1,
-      child: _filledCell(cellW, cellH),
+      child: _textCell(mantraText),
     );
   }
 
-  Widget _filledCell(double w, double h) => Container(
-        color: KvlColors.primary.withValues(alpha: 0.18),
+  Widget _textCell(String text) => FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 11,
+            color: KvlColors.primaryDeep,
+            fontWeight: FontWeight.w600,
+          ),
+          textAlign: TextAlign.center,
+        ),
       );
 }
 
@@ -1657,4 +1680,43 @@ class _EmptyBook extends StatelessWidget {
       ),
     );
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// "Dive inside the book" page transition
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _BookDiveRoute<T> extends PageRouteBuilder<T> {
+  _BookDiveRoute({required WidgetBuilder builder})
+      : super(
+          fullscreenDialog: true,
+          transitionDuration: const Duration(milliseconds: 600),
+          reverseTransitionDuration: const Duration(milliseconds: 380),
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              builder(context),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final scale = Tween<double>(begin: 0.06, end: 1.0).animate(
+              CurvedAnimation(parent: animation, curve: Curves.easeInOutCubic),
+            );
+            final fade = Tween<double>(begin: 0.0, end: 1.0).animate(
+              CurvedAnimation(
+                parent: animation,
+                curve: const Interval(0.0, 0.6, curve: Curves.easeIn),
+              ),
+            );
+            final reverseFade = Tween<double>(begin: 1.0, end: 0.0).animate(
+              CurvedAnimation(
+                parent: secondaryAnimation,
+                curve: Curves.easeOut,
+              ),
+            );
+            return FadeTransition(
+              opacity: reverseFade,
+              child: FadeTransition(
+                opacity: fade,
+                child: ScaleTransition(scale: scale, child: child),
+              ),
+            );
+          },
+        );
 }

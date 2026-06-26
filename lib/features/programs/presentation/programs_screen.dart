@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../../../app/providers.dart';
 import '../../../app/router.dart';
@@ -37,8 +38,51 @@ class _Body extends ConsumerStatefulWidget {
   ConsumerState<_Body> createState() => _BodyState();
 }
 
-class _BodyState extends ConsumerState<_Body> {
+class _BodyState extends ConsumerState<_Body>
+    with SingleTickerProviderStateMixin {
   bool _showCompleted = false;
+  late AnimationController _entryCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _entryCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _entryCtrl.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _entryCtrl.dispose();
+    super.dispose();
+  }
+
+  Animation<double> _itemAnim(int index) {
+    final start = (index * 0.08).clamp(0.0, 0.7);
+    final end = (start + 0.4).clamp(0.0, 1.0);
+    return CurvedAnimation(
+      parent: _entryCtrl,
+      curve: Interval(start, end, curve: Curves.easeOutCubic),
+    );
+  }
+
+  Widget _animated(Widget child, int index) {
+    final anim = _itemAnim(index);
+    return AnimatedBuilder(
+      animation: anim,
+      builder: (_, __) => Opacity(
+        opacity: anim.value,
+        child: Transform.translate(
+          offset: Offset(0, 28 * (1 - anim.value)),
+          child: child,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,159 +123,194 @@ class _BodyState extends ConsumerState<_Body> {
         bottomInset + 104,
       ),
       children: [
-        KvlCard(
-          variant: KvlCardVariant.soft,
-          padding: const EdgeInsets.fromLTRB(
-            KvlSpacing.lg,
-            KvlSpacing.lg,
-            KvlSpacing.lg,
-            KvlSpacing.md,
-          ),
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFFFBC70), KvlColors.primary],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                active.isEmpty && completed.isNotEmpty
-                    ? context.l10n.allSadhanasComplete
-                    : active.isEmpty
-                        ? context.l10n.everyJourneyBegins
-                        : context.l10n.keepChanting,
-                style: KvlText.body(13).copyWith(
-                  color: Colors.white,
-                  fontStyle: FontStyle.italic,
-                  height: 1.45,
+        _animated(
+          KvlCard(
+            variant: KvlCardVariant.soft,
+            padding: const EdgeInsets.fromLTRB(
+              KvlSpacing.lg,
+              KvlSpacing.lg,
+              KvlSpacing.lg,
+              KvlSpacing.md,
+            ),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFFFFBC70), KvlColors.primary],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  active.isEmpty && completed.isNotEmpty
+                      ? context.l10n.allSadhanasComplete
+                      : active.isEmpty
+                          ? context.l10n.everyJourneyBegins
+                          : context.l10n.keepChanting,
+                  style: KvlText.body(13).copyWith(
+                    color: Colors.white,
+                    fontStyle: FontStyle.italic,
+                    height: 1.45,
+                  ),
                 ),
-              ),
-              const SizedBox(height: KvlSpacing.md),
-              Wrap(
-                spacing: KvlSpacing.lg,
-                runSpacing: KvlSpacing.sm,
+                const SizedBox(height: KvlSpacing.md),
+                Wrap(
+                  spacing: KvlSpacing.lg,
+                  runSpacing: KvlSpacing.sm,
+                  children: [
+                    _Kpi(
+                      label: context.l10n.totalChants,
+                      value: IndianNumberFormat.compact(totalChants),
+                      onDark: true,
+                    ),
+                    _Kpi(
+                      label: context.l10n.complete,
+                      value: '${(overallProgress * 100).round()}%',
+                      onDark: true,
+                    ),
+                    _Kpi(
+                      label: context.l10n.daysPractising,
+                      value: '$daysAvg',
+                      onDark: true,
+                    ),
+                    _Kpi(
+                      label: context.l10n.programs,
+                      value: '${active.length}',
+                      onDark: true,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          0,
+        ),
+        const SizedBox(height: KvlSpacing.md),
+        _animated(
+          Center(child: _OverallRing(progress: overallProgress)),
+          1,
+        ),
+        const SizedBox(height: KvlSpacing.md),
+        _animated(
+          KvlButton(
+            label: context.l10n.createNewProgramButton,
+            icon: Icons.add,
+            onPressed: () => context.push(KvlRoute.mantraSelection),
+          ),
+          2,
+        ),
+        const SizedBox(height: KvlSpacing.sm),
+        _animated(
+          OutlinedButton.icon(
+            onPressed: () => context.push(KvlRoute.globalSadhanaList),
+            icon: const Icon(Icons.public_rounded, size: 18),
+            label: Text(context.l10n.browseGlobalSadhanas),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 48),
+              foregroundColor: KvlColors.primary,
+              side: BorderSide(color: KvlColors.primary),
+            ),
+          ),
+          3,
+        ),
+        const SizedBox(height: KvlSpacing.md),
+        _animated(
+          Text(context.l10n.myRecitationPrograms, style: KvlText.title(16)),
+          4,
+        ),
+        const SizedBox(height: KvlSpacing.sm),
+        if (active.isEmpty && completed.isEmpty)
+          _animated(
+            KvlCard(
+              child: Column(
                 children: [
-                  _Kpi(
-                    label: context.l10n.totalChants,
-                    value: IndianNumberFormat.compact(totalChants),
-                    onDark: true,
+                  const Icon(
+                    Icons.menu_book_rounded,
+                    color: KvlColors.muted,
+                    size: 36,
                   ),
-                  _Kpi(
-                    label: context.l10n.complete,
-                    value: '${(overallProgress * 100).round()}%',
-                    onDark: true,
-                  ),
-                  _Kpi(
-                    label: context.l10n.daysPractising,
-                    value: '$daysAvg',
-                    onDark: true,
-                  ),
-                  _Kpi(
-                    label: context.l10n.programs,
-                    value: '${active.length}',
-                    onDark: true,
+                  const SizedBox(height: 8),
+                  Text(context.l10n.noProgramsYet, style: KvlText.title(13)),
+                  const SizedBox(height: 4),
+                  Text(
+                    context.l10n.pickMantraAndTargetToStart,
+                    textAlign: TextAlign.center,
+                    style: KvlText.caption(11.5),
                   ),
                 ],
               ),
-            ],
-          ),
-        ),
-        const SizedBox(height: KvlSpacing.md),
-        Center(child: _OverallRing(progress: overallProgress)),
-        const SizedBox(height: KvlSpacing.md),
-        KvlButton(
-          label: context.l10n.createNewProgramButton,
-          icon: Icons.add,
-          onPressed: () => context.push(KvlRoute.mantraSelection),
-        ),
-        const SizedBox(height: KvlSpacing.sm),
-        OutlinedButton.icon(
-          onPressed: () => context.push(KvlRoute.globalSadhanaList),
-          icon: const Icon(Icons.public_rounded, size: 18),
-          label: Text(context.l10n.browseGlobalSadhanas),
-          style: OutlinedButton.styleFrom(
-            minimumSize: const Size(double.infinity, 48),
-            foregroundColor: KvlColors.primary,
-            side: BorderSide(color: KvlColors.primary),
-          ),
-        ),
-        const SizedBox(height: KvlSpacing.md),
-        Text(context.l10n.myRecitationPrograms, style: KvlText.title(16)),
-        const SizedBox(height: KvlSpacing.sm),
-        if (active.isEmpty && completed.isEmpty)
-          KvlCard(
-            child: Column(
-              children: [
-                const Icon(
-                  Icons.menu_book_rounded,
-                  color: KvlColors.muted,
-                  size: 36,
-                ),
-                const SizedBox(height: 8),
-                Text(context.l10n.noProgramsYet, style: KvlText.title(13)),
-                const SizedBox(height: 4),
-                Text(
-                  context.l10n.pickMantraAndTargetToStart,
-                  textAlign: TextAlign.center,
-                  style: KvlText.caption(11.5),
-                ),
-              ],
             ),
+            5,
           )
         else if (active.isEmpty)
-          KvlCard(
-            child: Column(
-              children: [
-                const Icon(Icons.check_circle_rounded, color: KvlColors.primary, size: 36),
-                const SizedBox(height: 8),
-                Text('No active Sadhanas', style: KvlText.title(13)),
-                const SizedBox(height: 4),
-                Text(
-                  'Start a new one to keep your practice going.',
-                  textAlign: TextAlign.center,
-                  style: KvlText.caption(11.5),
-                ),
-              ],
+          _animated(
+            KvlCard(
+              child: Column(
+                children: [
+                  const Icon(Icons.check_circle_rounded,
+                      color: KvlColors.primary, size: 36),
+                  const SizedBox(height: 8),
+                  Text('No active Sadhanas', style: KvlText.title(13)),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Start a new one to keep your practice going.',
+                    textAlign: TextAlign.center,
+                    style: KvlText.caption(11.5),
+                  ),
+                ],
+              ),
             ),
+            5,
           )
         else ...[
-          for (final p in active) ...[
-            _ProgramCard(program: p),
+          for (var i = 0; i < active.length; i++) ...[
+            _animated(_ProgramCard(program: active[i]), 5 + i),
             const SizedBox(height: KvlSpacing.sm),
           ],
         ],
         if (completed.isNotEmpty) ...[
           const SizedBox(height: KvlSpacing.sm),
-          _ViewCompletedButton(
-            count: completed.length,
-            expanded: _showCompleted,
-            onTap: () => setState(() => _showCompleted = !_showCompleted),
+          _animated(
+            _ViewCompletedButton(
+              count: completed.length,
+              expanded: _showCompleted,
+              onTap: () => setState(() => _showCompleted = !_showCompleted),
+            ),
+            5 + active.length,
           ),
           if (_showCompleted) ...[
             const SizedBox(height: KvlSpacing.sm),
-            for (final p in completed) ...[
-              _ProgramCard(program: p),
+            for (var i = 0; i < completed.length; i++) ...[
+              _animated(
+                _ProgramCard(program: completed[i]),
+                6 + active.length + i,
+              ),
               const SizedBox(height: KvlSpacing.sm),
             ],
           ],
         ],
         if (bonusByMantra.isNotEmpty) ...[
           const SizedBox(height: KvlSpacing.lg),
-          Row(
-            children: [
-              const Icon(Icons.star_rounded,
-                  size: 18, color: KvlColors.primary),
-              const SizedBox(width: 6),
-              Text('Bonus Chants', style: KvlText.title(16)),
-            ],
+          _animated(
+            Row(
+              children: [
+                const Icon(Icons.star_rounded,
+                    size: 18, color: KvlColors.primary),
+                const SizedBox(width: 6),
+                Text('Bonus Chants', style: KvlText.title(16)),
+              ],
+            ),
+            5 + active.length + 1,
           ),
           const SizedBox(height: KvlSpacing.sm),
-          for (final entry in bonusByMantra.entries) ...[
-            _BonusCard(
-              programs: entry.value,
-              total:
-                  entry.value.fold<int>(0, (a, p) => a + p.totalProgress),
+          for (var i = 0; i < bonusByMantra.entries.length; i++) ...[
+            _animated(
+              _BonusCard(
+                programs: bonusByMantra.values.elementAt(i),
+                total: bonusByMantra.values
+                    .elementAt(i)
+                    .fold<int>(0, (a, p) => a + p.totalProgress),
+              ),
+              6 + active.length + i,
             ),
             const SizedBox(height: KvlSpacing.sm),
           ],
@@ -385,27 +464,32 @@ class _OverallRing extends StatelessWidget {
   final double progress;
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 130,
-      height: 130,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          CustomPaint(
-            size: const Size(130, 130),
-            painter: _RingPainter(progress: progress),
-          ),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '${(progress * 100).round()}%',
-                style: KvlText.bigNumber(20),
-              ),
-              Text(context.l10n.overallProgress, style: KvlText.muted(9.5)),
-            ],
-          ),
-        ],
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: progress),
+      duration: const Duration(milliseconds: 1100),
+      curve: Curves.easeOutCubic,
+      builder: (_, value, __) => SizedBox(
+        width: 140,
+        height: 140,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            CustomPaint(
+              size: const Size(140, 140),
+              painter: _RingPainter(progress: value),
+            ),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '${(value * 100).round()}%',
+                  style: KvlText.bigNumber(22),
+                ),
+                Text(context.l10n.overallProgress, style: KvlText.muted(9.5)),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

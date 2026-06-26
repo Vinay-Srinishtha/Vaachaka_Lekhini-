@@ -107,8 +107,9 @@
 	<!-- Brand header -->
 	<div class="h-[68px] flex items-center px-3 shrink-0 border-b border-white/[0.06]">
 		<!-- App logo -->
-		<div class="w-10 h-10 rounded-2xl shrink-0 overflow-hidden shadow-lg shadow-black/40 border border-white/10">
-			<img src="/app_icon.png" alt="Vaachaka Lekhini" class="w-full h-full object-cover" />
+		<div class="w-10 h-10 rounded-2xl shrink-0 overflow-hidden shadow-lg shadow-black/40 border border-white/10 bg-amber-900">
+			<img src="/app_icon.png" alt="Vaachaka Lekhini" class="w-full h-full object-cover"
+				onerror="this.style.display='none'" />
 		</div>
 
 		{#if !collapsed || mobileOpen}

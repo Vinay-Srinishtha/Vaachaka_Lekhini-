@@ -20,6 +20,15 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   bool _languageChosen = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Show auth buttons immediately for returning users who already have a
+    // persisted language preference (settingsProvider has a sync Hive value).
+    final saved = ref.read(settingsProvider).value;
+    if (saved != null) _languageChosen = true;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider).value ?? KvlSettings.fallback;
     final languages = KvlLanguage.availableFor(

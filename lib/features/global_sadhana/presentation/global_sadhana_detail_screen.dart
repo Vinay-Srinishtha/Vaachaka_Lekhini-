@@ -187,7 +187,6 @@ class _GlobalSadhanaDetailScreenState
     final mantra = ref.watch(mantraByIdProvider(sadhana.mantraId));
 
     return KvlScaffold(
-      title: sadhana.title,
       scrollable: true,
       onBack: () => context.canPop()
           ? context.pop()

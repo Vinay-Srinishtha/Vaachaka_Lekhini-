@@ -57,6 +57,7 @@ export const storeSummarySelect = {
 	stock: true,
 	imageUrl: true,
 	isActive: true,
+	comingSoon: true,
 	sortOrder: true,
 	updatedAt: true
 } as const;

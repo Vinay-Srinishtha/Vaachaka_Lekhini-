@@ -7,7 +7,7 @@
 	import Pagination from '$lib/components/Pagination.svelte';
 	import { patchQuery } from '$lib/url';
 	import { toasts } from '$lib/stores/toast';
-	import { PlusCircle, Eye, EyeOff, Pencil, Trash2 } from '@lucide/svelte';
+	import { PlusCircle, Eye, EyeOff, Pencil, Trash2, Clock } from '@lucide/svelte';
 
 	let { data, form } = $props();
 
@@ -83,7 +83,7 @@
 			<table class="w-full text-sm">
 				<thead class="bg-slate-50 border-b border-slate-200">
 					<tr>
-						{#each ['Item', 'Cost', 'Stock', 'Status', 'Order', ''] as h}
+						{#each ['Item', 'Cost', 'Stock', 'Status', 'Coming Soon', 'Order', ''] as h}
 							<th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
 						{/each}
 					</tr>
@@ -121,6 +121,17 @@
 									<input type="hidden" name="id" value={item.id} />
 									<button type="submit" class="rounded-full p-1 transition-colors {item.isActive ? 'text-green-600 hover:bg-green-50' : 'text-slate-400 hover:bg-slate-100'}" title={item.isActive ? 'Active — click to deactivate' : 'Inactive — click to activate'}>
 										{#if item.isActive}<Eye size={16} />{:else}<EyeOff size={16} />{/if}
+									</button>
+								</form>
+							</td>
+							<!-- Coming Soon toggle -->
+							<td class="px-4 py-3">
+								<form method="POST" action="?/toggleComingSoon" use:enhance={({ cancel: _c }) => {
+									return async ({ update }) => update({ reset: false });
+								}}>
+									<input type="hidden" name="id" value={item.id} />
+									<button type="submit" class="rounded-full p-1 transition-colors {item.comingSoon ? 'text-amber-500 hover:bg-amber-50' : 'text-slate-300 hover:bg-slate-100'}" title={item.comingSoon ? 'Coming Soon — click to remove badge' : 'Click to mark as Coming Soon'}>
+										<Clock size={16} />
 									</button>
 								</form>
 							</td>

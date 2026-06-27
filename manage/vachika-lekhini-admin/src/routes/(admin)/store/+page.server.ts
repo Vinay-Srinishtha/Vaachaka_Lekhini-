@@ -49,6 +49,20 @@ export const actions: Actions = {
 		return { ok: true };
 	},
 
+	toggleComingSoon: async (event) => {
+		requireRole(event, 'editor');
+		const data = await event.request.formData();
+		const id = String(data.get('id') ?? '');
+		if (!id) return fail(400, { error: 'Missing id' });
+		const current = await prisma.storeItem.findUnique({
+			where: { id },
+			select: { comingSoon: true }
+		});
+		if (!current) throw error(404, 'Store item not found');
+		await prisma.storeItem.update({ where: { id }, data: { comingSoon: !current.comingSoon } });
+		return { ok: true };
+	},
+
 	delete: async (event) => {
 		requireRole(event, 'editor');
 		const data = await event.request.formData();

@@ -12,6 +12,7 @@ export const storeItemFormSchema = z.object({
 	imageUrl: z.string().url().max(500).nullable().optional(),
 	stock: z.coerce.number().int().min(0).nullable().optional(),
 	isActive: z.coerce.boolean().default(true),
+	comingSoon: z.coerce.boolean().default(false),
 	sortOrder: z.coerce.number().int().default(0)
 });
 export type StoreItemFormInput = z.infer<typeof storeItemFormSchema>;
@@ -25,6 +26,7 @@ export function parseStoreItemForm(data: FormData): StoreItemFormInput {
 		imageUrl: emptyToNull(data.get('imageUrl')),
 		stock: emptyToNull(data.get('stock')),
 		isActive: data.get('isActive') === 'on' || data.get('isActive') === 'true',
+		comingSoon: data.get('comingSoon') === 'on' || data.get('comingSoon') === 'true',
 		sortOrder: Number(data.get('sortOrder') ?? 0)
 	};
 	const parsed = storeItemFormSchema.safeParse(raw);

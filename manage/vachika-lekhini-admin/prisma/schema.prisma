@@ -1,96 +1,65 @@
-// KVL admin — Postgres schema.
-//
-// Domain split:
-//   • Catalog tables (Mantra / StoreItem / FeatureFlag) drive what the
-//     Flutter app shows. Admin-controlled, served at /api/v1/{mantras,store,config}.
-//   • Account-side tables (Account / Member / Program / Session / RewardEvent / ...)
-//     hold user-generated data synced from the Flutter app.
-//   • Admin tables (AdminUser / RevokedToken) gate this dashboard.
-//
-// Naming: an `Account` is one mobile-number login. A `Member` is one
-// person who chants — Netflix-profile model, multiple Members per Account.
-
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["partialIndexes"]
 }
 
 datasource db {
   provider = "postgresql"
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// Catalog (admin → Flutter, read-only public API)
-// ─────────────────────────────────────────────────────────────────────────
-
 model Mantra {
-  id               String   @id @default(cuid())
-  slug             String   @unique
-  nameDevanagari   String
-  nameRoman        String
-  nameTelugu       String?
-  nameKannada      String?
-  description      String
-  deity            String?
-  tags             MantraTag[]
-  recommendedCount Int?
-  recommendedDays  Int?
-  pronunciationUrl String?
-  /// Shown in mantra selection list and daily practice reminders.
-  previewImageUrl  String?
-  /// Shown in the mantra detail / chanting view.
-  imageUrl         String?
-  /// Image attached when sharing this mantra's progress on WhatsApp / social.
-  shareImageUrl    String?
-  /// Share message template. Placeholders: {mantra_name} {chant_count} {app_link}
-  shareText        String?  @db.Text
+  id                 String              @id @default(cuid())
+  slug               String              @unique
+  nameDevanagari     String
+  nameRoman          String
+  nameTelugu         String?
+  nameKannada        String?
+  description        String
+  deity              String?
+  tags               MantraTag[]
+  recommendedCount   Int?
+  recommendedDays    Int?
+  pronunciationUrl   String?
+  isActive           Boolean             @default(true)
+  sortOrder          Int                 @default(0)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
   /// Program count presets + day options shown on the Set Target screen.
   /// JSON: [{ count: number, dayOptions: number[] }]
-  milestones       Json?    @db.JsonB
-  isActive         Boolean  @default(true)
-  sortOrder        Int      @default(0)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  programs           Program[]
-  voiceEnrolments    VoiceEnrolment[]
-  handwritingSamples HandwritingSample[]
-  quotes             Quote[]
+  milestones         Json?
+  /// Shown in the mantra detail / chanting view.
+  imageUrl           String?
+  /// Shown in mantra selection list and daily practice reminders.
+  previewImageUrl    String?
+  /// Image attached when sharing this mantra's progress on WhatsApp / social.
+  shareImageUrl      String?
+  /// Share message template. Placeholders: {mantra_name} {chant_count} {app_link}
+  shareText          String?
   globalSadhanas     GlobalSadhana[]
+  handwritingSamples HandwritingSample[]
+  programs           Program[]
+  quotes             Quote[]
+  voiceEnrolments    VoiceEnrolment[]
 
   @@index([isActive, sortOrder])
   @@index([nameRoman])
   @@index([nameDevanagari])
 }
 
-enum MantraTag {
-  peace
-  righteousness
-  healing
-  protection
-  strength
-  courage
-  wealth
-  prosperity
-  liberation
-  enlightenment
-  wisdom
-  devotion
-}
-
 model StoreItem {
-  id          String   @id @default(cuid())
-  slug        String   @unique
-  name        String
-  description String
-  pointsCost  Int
-  imageUrl    String?
-  stock       Int?
-  isActive    Boolean  @default(true)
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
+  id           String        @id @default(cuid())
+  slug         String        @unique
+  name         String
+  description  String
+  pointsCost   Int
+  imageUrl     String?
+  stock        Int?
+  isActive     Boolean       @default(true)
+  sortOrder    Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  comingSoon   Boolean       @default(false)
   rewardEvents RewardEvent[]
 
   @@index([isActive, sortOrder])
@@ -99,44 +68,32 @@ model StoreItem {
 model FeatureFlag {
   key         String   @id
   valueType   FlagType
-  value       Json     @db.JsonB
+  value       Json
   description String?
   updatedAt   DateTime @updatedAt
 }
 
-enum FlagType {
-  bool
-  int
-  string
-  json
-}
-
-// ─────────────────────────────────────────────────────────────────────────
-// Account & Member  (Netflix-style: 1 login → many family profiles)
-// ─────────────────────────────────────────────────────────────────────────
-
 /// One mobile-number login. Owns the password, referral code, ban state.
 /// Auth flow: OTP (always available) OR password (set after first login).
 model Account {
-  id              String    @id @default(cuid())
-  mobile          String    @unique
-  countryCode     String    @default("+91")
-  passwordHash    String?   // null until the user sets a password
-  passwordSetAt   DateTime?
-  referralCode    String?   @unique
-  invitedById     String?
-  invitedBy       Account?  @relation("Referrals", fields: [invitedById], references: [id])
-  referrals       Account[] @relation("Referrals")
-  isBanned        Boolean   @default(false)
-  bannedReason    String?
-  createdAt       DateTime  @default(now())
-  lastSeenAt      DateTime?
-
-  members      Member[]
-  devices      Device[]
-  invitesSent  Invite[]   @relation("InviterAccount")
-  invitesGot   Invite[]   @relation("InviteeAccount")
-  otpChallenges OtpChallenge[]
+  id             String          @id @default(cuid())
+  mobile         String          @unique
+  countryCode    String          @default("+91")
+  passwordHash   String?
+  passwordSetAt  DateTime?
+  referralCode   String?         @unique
+  invitedById    String?
+  isBanned       Boolean         @default(false)
+  bannedReason   String?
+  createdAt      DateTime        @default(now())
+  lastSeenAt     DateTime?
+  invitedBy      Account?        @relation("Referrals", fields: [invitedById], references: [id])
+  referrals      Account[]       @relation("Referrals")
+  devices        Device[]
+  invitesGot     Invite[]        @relation("InviteeAccount")
+  invitesSent    Invite[]        @relation("InviterAccount")
+  members        Member[]
+  otpChallenges  OtpChallenge[]
   tncAcceptances TncAcceptance[]
 
   @@index([isBanned])
@@ -146,39 +103,35 @@ model Account {
 /// handwriting samples, reward ledger. One Member is `isPrimary` (the
 /// original account holder); deleting that one requires reassigning.
 model Member {
-  id           String    @id @default(cuid())
-  accountId    String
-  account      Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  displayName  String
-  relation     FamilyRelation @default(other)
-  avatarKey    String?
-  language     String    @default("en")
-  mantraLanguage String  @default("hi")
-  birthYear    Int?
-  gender       String?   // 'male' | 'female' | 'other' | 'prefer_not_to_say'
-  motherTongue String?   // BCP-47 language code, e.g. 'hi', 'te', 'kn', 'ta'
-  preferences  Json      @default("{}") @db.JsonB
-  isPrimary    Boolean   @default(false)
-
+  id                         String                      @id @default(cuid())
+  accountId                  String
+  displayName                String
+  relation                   FamilyRelation              @default(other)
+  avatarKey                  String?
+  language                   String                      @default("en")
+  birthYear                  Int?
+  preferences                Json                        @default("{}")
+  isPrimary                  Boolean                     @default(false)
   /// Denormalised cache. Source of truth = sum of RewardEvent.amount
   /// for this member. Recomputed server-side on each ledger write.
-  rewardPointsBalance Int @default(0)
-
+  rewardPointsBalance        Int                         @default(0)
+  createdAt                  DateTime                    @default(now())
+  updatedAt                  DateTime                    @updatedAt
+  lastActiveAt               DateTime?
+  mantraLanguage             String                      @default("hi")
+  gender                     String?
+  motherTongue               String?
   /// Set once when all required profile fields are filled. Guards the
   /// 50-point profile-completion bonus so it is awarded only once.
-  profileCompletedAt DateTime?
-
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  lastActiveAt DateTime?
-
-  programs           Program[]
-  sessions           Session[]
-  rewardEvents       RewardEvent[]
-  voiceEnrolments    VoiceEnrolment[]
-  handwritingSamples HandwritingSample[]
-  globalSadhanaEnrollments   GlobalSadhanaEnrollment[]
+  profileCompletedAt         DateTime?
   globalSadhanaContributions GlobalSadhanaContribution[]
+  globalSadhanaEnrollments   GlobalSadhanaEnrollment[]
+  handwritingSamples         HandwritingSample[]
+  account                    Account                     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  programs                   Program[]
+  rewardEvents               RewardEvent[]
+  sessions                   Session[]
+  voiceEnrolments            VoiceEnrolment[]
 
   @@index([accountId])
   @@index([accountId, isPrimary])
@@ -187,38 +140,27 @@ model Member {
   @@index([displayName])
 }
 
-enum FamilyRelation {
-  self
-  spouse
-  parent
-  child
-  sibling
-  friend
-  other
-}
-
 /// Per-member, per-mantra practice goal + running aggregates.
 /// `totalWritings` / streak fields are denorm caches; sum of Session.countAdded
 /// over this program is the source of truth.
 model Program {
-  id              String   @id @default(cuid())
-  memberId        String
-  member          Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  mantraId        String
-  mantra          Mantra   @relation(fields: [mantraId], references: [id])
-  targetWritings  Int
-  targetDays      Int
-  startedAt       DateTime @default(now())
-  completedAt     DateTime?
-  totalWritings   Int      @default(0)
-  totalChants     Int      @default(0)
-  currentStreak   Int      @default(0)
-  longestStreak   Int      @default(0)
-  lastActiveDate  DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  sessions Session[]
+  id             String    @id @default(cuid())
+  memberId       String
+  mantraId       String
+  targetWritings Int
+  targetDays     Int
+  startedAt      DateTime  @default(now())
+  completedAt    DateTime?
+  totalWritings  Int       @default(0)
+  currentStreak  Int       @default(0)
+  longestStreak  Int       @default(0)
+  lastActiveDate DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  totalChants    Int       @default(0)
+  mantra         Mantra    @relation(fields: [mantraId], references: [id])
+  member         Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  sessions       Session[]
 
   @@index([memberId])
   @@index([mantraId])
@@ -229,53 +171,39 @@ model Program {
 /// One row per chant session — start to finish. Lets us reconstruct totals
 /// if a cache drifts and answer time-of-day analytics.
 model Session {
-  id              String   @id @default(cuid())
+  id              String          @id @default(cuid())
   memberId        String
-  member          Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
   programId       String
-  program         Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
   startedAt       DateTime
   endedAt         DateTime?
-  durationSec     Int      @default(0)
+  durationSec     Int             @default(0)
   countAdded      Int
   modality        SessionModality
   voiceMatchScore Float?
-  createdAt       DateTime @default(now())
+  createdAt       DateTime        @default(now())
+  member          Member          @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  program         Program         @relation(fields: [programId], references: [id], onDelete: Cascade)
 
   @@index([memberId, startedAt])
   @@index([programId, startedAt])
   @@index([startedAt])
 }
 
-enum SessionModality {
-  voice
-  handwriting
-  manual
-}
-
 /// Append-only ledger of reward-point grants and spends. Sum of `amount`
 /// (with `kind` providing sign semantics) = the member's balance.
 model RewardEvent {
-  id          String   @id @default(cuid())
+  id          String          @id @default(cuid())
   memberId    String
-  member      Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
   kind        RewardEventKind
-  amount      Int       // always positive; sign comes from `kind`
-  source      String    // free-text key e.g. "session_complete:program:abc"
+  amount      Int
+  source      String
   storeItemId String?
-  storeItem   StoreItem? @relation(fields: [storeItemId], references: [id])
-  occurredAt  DateTime  @default(now())
+  occurredAt  DateTime        @default(now())
+  member      Member          @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  storeItem   StoreItem?      @relation(fields: [storeItemId], references: [id])
 
   @@index([memberId, occurredAt])
   @@index([kind, occurredAt])
-}
-
-enum RewardEventKind {
-  earn
-  spend
-  milestone
-  gift
-  refund
 }
 
 /// Voice fingerprint per (member, mantra). Replaces local TFLite ECAPA-TDNN
@@ -283,128 +211,98 @@ enum RewardEventKind {
 model VoiceEnrolment {
   id           String   @id @default(cuid())
   memberId     String
-  member       Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
   mantraId     String
-  mantra       Mantra   @relation(fields: [mantraId], references: [id])
-  embeddingUrl String   // R2/S3 URL to embedding blob
+  embeddingUrl String
   sampleCount  Int      @default(0)
   qualityScore Float?
   enrolledAt   DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  mantra       Mantra   @relation(fields: [mantraId], references: [id])
+  member       Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@unique([memberId, mantraId])
 }
 
 model HandwritingSample {
-  id             String   @id @default(cuid())
+  id             String          @id @default(cuid())
   memberId       String
-  member         Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
   mantraId       String
-  mantra         Mantra   @relation(fields: [mantraId], references: [id])
   mode           HandwritingMode
-  storageUrl     String?  // R2/S3 URL when mode != useDefaultFont
-  isPersonalized Boolean  @default(false)
-  createdAt      DateTime @default(now())
+  storageUrl     String?
+  isPersonalized Boolean         @default(false)
+  createdAt      DateTime        @default(now())
+  mantra         Mantra          @relation(fields: [mantraId], references: [id])
+  member         Member          @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@index([memberId, mantraId])
-}
-
-enum HandwritingMode {
-  writeOnScreen
-  captureCamera
-  uploadGallery
-  useDefaultFont
 }
 
 /// Devices signed in to an account. Used for FCM push routing + "you
 /// logged in on a new phone" awareness.
 model Device {
-  id         String   @id @default(cuid())
-  accountId  String
-  account    Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  id           String         @id @default(cuid())
+  accountId    String
   /// Last member chosen on this device (so reopening lands on the right profile).
   lastMemberId String?
-  platform   DevicePlatform
-  appVersion String?
-  pushToken  String?  // FCM token
-  createdAt  DateTime @default(now())
-  lastSeenAt DateTime @default(now())
+  platform     DevicePlatform
+  appVersion   String?
+  pushToken    String?
+  createdAt    DateTime       @default(now())
+  lastSeenAt   DateTime       @default(now())
+  account      Account        @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   @@index([accountId])
   @@index([pushToken])
   @@index([platform])
 }
 
-enum DevicePlatform {
-  android
-  ios
-  web
-}
-
 /// Referrals: who invited whom. Reward is granted via a RewardEvent when
 /// the invitee signs up.
 model Invite {
-  id               String   @id @default(cuid())
+  id               String       @id @default(cuid())
   inviterAccountId String
-  inviter          Account  @relation("InviterAccount", fields: [inviterAccountId], references: [id], onDelete: Cascade)
   inviteeMobile    String?
   inviteeAccountId String?
-  invitee          Account? @relation("InviteeAccount", fields: [inviteeAccountId], references: [id])
   status           InviteStatus @default(pending)
-  rewardGranted    Boolean  @default(false)
-  createdAt        DateTime @default(now())
+  rewardGranted    Boolean      @default(false)
+  createdAt        DateTime     @default(now())
   acceptedAt       DateTime?
+  invitee          Account?     @relation("InviteeAccount", fields: [inviteeAccountId], references: [id])
+  inviter          Account      @relation("InviterAccount", fields: [inviterAccountId], references: [id], onDelete: Cascade)
 
   @@index([inviterAccountId])
   @@index([inviteeMobile])
   @@index([status])
 }
 
-enum InviteStatus {
-  pending
-  accepted
-  expired
-}
-
 /// Short-lived OTP challenges. Stored hashed (we never persist the raw code).
 /// Cleaned by a background job — see /api/v1/auth/otp/start.
 model OtpChallenge {
-  id          String   @id @default(cuid())
+  id         String    @id @default(cuid())
   /// Nullable so first-time signup OTPs work before an Account row exists.
-  accountId   String?
-  account     Account? @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  mobile      String
-  codeHash    String   // bcrypt of the 6-digit code
-  attempts    Int      @default(0)
-  expiresAt   DateTime
-  consumedAt  DateTime?
-  createdAt   DateTime @default(now())
+  accountId  String?
+  mobile     String
+  codeHash   String
+  attempts   Int       @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+  account    Account?  @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   @@index([mobile, expiresAt])
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// Admin dashboard auth
-// ─────────────────────────────────────────────────────────────────────────
-
 model AdminUser {
-  id           String     @id @default(cuid())
-  username     String     @unique
-  email        String?    @unique
+  id           String    @id @default(cuid())
+  username     String    @unique
+  email        String?   @unique
   passwordHash String
-  role         AdminRole  @default(main_admin)
-  isActive     Boolean    @default(true)
-  createdAt    DateTime   @default(now())
+  role         AdminRole @default(main_admin)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
   lastLoginAt  DateTime?
 
   @@index([isActive])
-}
-
-enum AdminRole {
-  super_admin
-  main_admin
-  assets_admin
-  marketplace_admin
 }
 
 /// Stores the permission set for each admin role.
@@ -418,8 +316,8 @@ model AdminRoleConfig {
 /// Custom roles defined by super admins — stored alongside the built-in enum roles.
 model CustomAdminRole {
   id          String   @id @default(cuid())
-  key         String   @unique // e.g. "content_editor"
-  label       String            // e.g. "Content Editor"
+  key         String   @unique
+  label       String
   permissions String[] @default([])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -435,7 +333,7 @@ model RevokedToken {
 model Faq {
   id        String   @id @default(cuid())
   question  String
-  answer    String   @db.Text
+  answer    String
   sortOrder Int      @default(0)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -461,55 +359,217 @@ model RewardRule {
 /// Generic key→value app settings. Keys: support_email, privacy_policy, app_logo_url.
 model AppSetting {
   key       String   @id
-  value     String   @db.Text
+  value     String
   updatedAt DateTime @updatedAt
 }
-
-// ─────────────────────────────────────────────────────────────────────────
-// Quotes — inspirational cards shown on the Flutter home screen
-// ─────────────────────────────────────────────────────────────────────────
 
 /// One inspirational quote card. Shown on the home screen.
 /// If mantraId is set, only shown to members who have an active program for
 /// that mantra. If null, shown universally.
 /// Images are uploaded to the S3 quarantine bucket for review.
 model Quote {
-  id        String   @id @default(cuid())
-  /// Unique human-readable slug (from the CSV import "slug" column).
-  slug      String?  @unique
+  id               String   @id @default(cuid())
   /// Legacy/fallback text field — populated from textRoman on import.
-  text      String?  @db.Text
+  text             String?
   /// Legacy/fallback source field.
-  source    String?
-
-  // Multilingual text + attribution
-  textRoman        String?  @db.Text
-  sourceRoman      String?
-  textTelugu       String?  @db.Text
-  sourceTelugu     String?
-  textDevanagari   String?  @db.Text
-  sourceDevanagari String?
-  textKannada      String?  @db.Text
-  sourceKannada    String?
-
+  source           String?
   /// S3 image URL. Nullable — text-only quotes are valid.
-  imageUrl  String?
+  imageUrl         String?
   /// When set, only members with a program for this mantra see this quote.
-  mantraId  String?
-  isActive  Boolean  @default(true)
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  mantra Mantra? @relation(fields: [mantraId], references: [id])
+  mantraId         String?
+  isActive         Boolean  @default(true)
+  sortOrder        Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  /// Unique human-readable slug (from the CSV import "slug" column).
+  slug             String?  @unique(where: raw("(slug IS NOT NULL)"))
+  textRoman        String?
+  sourceRoman      String?
+  textTelugu       String?
+  sourceTelugu     String?
+  textDevanagari   String?
+  sourceDevanagari String?
+  textKannada      String?
+  sourceKannada    String?
+  mantra           Mantra?  @relation(fields: [mantraId], references: [id])
 
   @@index([isActive, sortOrder])
   @@index([mantraId])
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// Global Sadhana — community-wide spiritual initiative
-// ─────────────────────────────────────────────────────────────────────────
+/// An admin-created community spiritual drive. All enrolled members
+/// contribute their chants/writings toward a shared target count.
+/// Auto-closes when currentCount >= targetCount.
+model GlobalSadhana {
+  id                String                      @id @default(cuid())
+  title             String
+  description       String
+  mantraId          String
+  mantraText        String?
+  mantraLanguage    String                      @default("hi")
+  targetCount       Int
+  currentCount      Int                         @default(0)
+  startAt           DateTime
+  endAt             DateTime?
+  imageUrl          String?
+  isSponsored       Boolean                     @default(false)
+  status            GlobalSadhanaStatus         @default(draft)
+  participationMode ParticipationMode           @default(both)
+  instructions      String?
+  createdByAdminId  String?
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
+  completedAt       DateTime?
+  mantra            Mantra                      @relation(fields: [mantraId], references: [id])
+  contributions     GlobalSadhanaContribution[]
+  enrollments       GlobalSadhanaEnrollment[]
+
+  @@index([status, startAt])
+  @@index([mantraId])
+}
+
+model GlobalSadhanaEnrollment {
+  id                          String        @id @default(cuid())
+  globalSadhanaId             String
+  memberId                    String
+  enrolledAt                  DateTime      @default(now())
+  voiceTrainingComplete       Boolean       @default(false)
+  handwritingTrainingComplete Boolean       @default(false)
+  globalSadhana               GlobalSadhana @relation(fields: [globalSadhanaId], references: [id], onDelete: Cascade)
+  member                      Member        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([globalSadhanaId, memberId])
+  @@index([globalSadhanaId])
+  @@index([memberId])
+}
+
+/// One record per session that contributed to a GlobalSadhana. The countAdded
+/// is capped server-side so currentCount never exceeds targetCount.
+model GlobalSadhanaContribution {
+  id              String          @id @default(cuid())
+  globalSadhanaId String
+  memberId        String
+  countAdded      Int
+  modality        SessionModality
+  sessionId       String?
+  createdAt       DateTime        @default(now())
+  globalSadhana   GlobalSadhana   @relation(fields: [globalSadhanaId], references: [id], onDelete: Cascade)
+  member          Member          @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([globalSadhanaId, memberId])
+  @@index([globalSadhanaId, createdAt])
+  @@index([memberId])
+}
+
+model TermsAndConditions {
+  id          String          @id @default(cuid())
+  version     String          @unique
+  title       String
+  content     String
+  isActive    Boolean         @default(false)
+  effectiveAt DateTime        @default(now())
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  acceptances TncAcceptance[]
+}
+
+model TncAcceptance {
+  id         String             @id @default(cuid())
+  accountId  String
+  tncId      String
+  acceptedAt DateTime           @default(now())
+  account    Account            @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  tnc        TermsAndConditions @relation(fields: [tncId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, tncId])
+  @@index([accountId])
+}
+
+/// In-app bug reports and feedback submissions.
+model SupportReport {
+  id        String   @id @default(cuid())
+  subject   String
+  body      String
+  memberId  String?
+  mobile    String?
+  status    String   @default("open")
+  createdAt DateTime @default(now())
+  kind      String   @default("report")
+
+  @@index([kind, status, createdAt])
+}
+
+enum MantraTag {
+  peace
+  righteousness
+  healing
+  protection
+  strength
+  courage
+  wealth
+  prosperity
+  liberation
+  enlightenment
+  wisdom
+  devotion
+}
+
+enum FlagType {
+  bool
+  int
+  string
+  json
+}
+
+enum FamilyRelation {
+  self
+  spouse
+  parent
+  child
+  sibling
+  friend
+  other
+}
+
+enum SessionModality {
+  voice
+  handwriting
+  manual
+}
+
+enum RewardEventKind {
+  earn
+  spend
+  milestone
+  gift
+  refund
+}
+
+enum HandwritingMode {
+  writeOnScreen
+  captureCamera
+  uploadGallery
+  useDefaultFont
+}
+
+enum DevicePlatform {
+  android
+  ios
+  web
+}
+
+enum InviteStatus {
+  pending
+  accepted
+  expired
+}
+
+enum AdminRole {
+  super_admin
+  main_admin
+  assets_admin
+  marketplace_admin
+}
 
 enum GlobalSadhanaStatus {
   draft
@@ -524,108 +584,4 @@ enum ParticipationMode {
   voice
   handwriting
   both
-}
-
-/// An admin-created community spiritual drive. All enrolled members
-/// contribute their chants/writings toward a shared target count.
-/// Auto-closes when currentCount >= targetCount.
-model GlobalSadhana {
-  id                String              @id @default(cuid())
-  title             String
-  description       String              @db.Text
-  mantraId          String
-  mantra            Mantra              @relation(fields: [mantraId], references: [id])
-  mantraText        String?             @db.Text
-  mantraLanguage    String              @default("hi")
-  targetCount       Int
-  currentCount      Int                 @default(0)
-  startAt           DateTime
-  endAt             DateTime?
-  imageUrl          String?
-  isSponsored       Boolean             @default(false)
-  status            GlobalSadhanaStatus @default(draft)
-  participationMode ParticipationMode   @default(both)
-  instructions      String?             @db.Text
-  createdByAdminId  String?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  completedAt       DateTime?
-
-  enrollments   GlobalSadhanaEnrollment[]
-  contributions GlobalSadhanaContribution[]
-
-  @@index([status, startAt])
-  @@index([mantraId])
-}
-
-model GlobalSadhanaEnrollment {
-  id              String        @id @default(cuid())
-  globalSadhanaId String
-  globalSadhana   GlobalSadhana @relation(fields: [globalSadhanaId], references: [id], onDelete: Cascade)
-  memberId        String
-  member          Member        @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  enrolledAt      DateTime      @default(now())
-  voiceTrainingComplete       Boolean @default(false)
-  handwritingTrainingComplete Boolean @default(false)
-
-  @@unique([globalSadhanaId, memberId])
-  @@index([globalSadhanaId])
-  @@index([memberId])
-}
-
-/// One record per session that contributed to a GlobalSadhana. The countAdded
-/// is capped server-side so currentCount never exceeds targetCount.
-model GlobalSadhanaContribution {
-  id              String          @id @default(cuid())
-  globalSadhanaId String
-  globalSadhana   GlobalSadhana   @relation(fields: [globalSadhanaId], references: [id], onDelete: Cascade)
-  memberId        String
-  member          Member          @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  countAdded      Int
-  modality        SessionModality
-  sessionId       String?
-  createdAt       DateTime        @default(now())
-
-  @@index([globalSadhanaId, memberId])
-  @@index([globalSadhanaId, createdAt])
-  @@index([memberId])
-}
-
-model TermsAndConditions {
-  id          String   @id @default(cuid())
-  version     String   @unique
-  title       String
-  content     String
-  isActive    Boolean  @default(false)
-  effectiveAt DateTime @default(now())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  acceptances TncAcceptance[]
-}
-
-model TncAcceptance {
-  id         String             @id @default(cuid())
-  accountId  String
-  account    Account            @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  tncId      String
-  tnc        TermsAndConditions @relation(fields: [tncId], references: [id], onDelete: Cascade)
-  acceptedAt DateTime           @default(now())
-
-  @@unique([accountId, tncId])
-  @@index([accountId])
-}
-
-/// In-app bug reports and feedback submissions.
-model SupportReport {
-  id        String   @id @default(cuid())
-  kind      String   @default("report")   // "report" | "feedback"
-  subject   String
-  body      String   @db.Text
-  memberId  String?
-  mobile    String?
-  status    String   @default("open")
-  createdAt DateTime @default(now())
-
-  @@index([kind, status, createdAt])
 }

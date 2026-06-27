@@ -17,6 +17,7 @@
 		imageUrl: v.imageUrl ? String(v.imageUrl) : null,
 		stock: v.stock ? Number(v.stock) : null,
 		isActive: v.isActive !== undefined ? v.isActive === 'on' || v.isActive === 'true' : true,
+		comingSoon: v.comingSoon !== undefined ? v.comingSoon === 'on' || v.comingSoon === 'true' : false,
 		sortOrder: v.sortOrder ? Number(v.sortOrder) : 0
 	});
 

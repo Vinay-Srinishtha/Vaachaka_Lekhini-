@@ -13,6 +13,7 @@
 		imageUrl: string | null;
 		stock: number | null;
 		isActive: boolean;
+		comingSoon: boolean;
 		sortOrder: number;
 	}
 
@@ -123,6 +124,21 @@
 			<input type="checkbox" name="isActive" checked={value.isActive} class="sr-only" />
 			<div class="relative shrink-0 w-11 h-6 rounded-full transition-colors {value.isActive ? 'bg-green-500' : 'bg-gray-300'}">
 				<span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform {value.isActive ? 'translate-x-5' : 'translate-x-0'}"></span>
+			</div>
+		</label>
+		<label class="flex items-center justify-between gap-4 p-3 rounded-lg border cursor-pointer select-none
+			{value.comingSoon ? 'border-amber-200 bg-amber-50' : 'border-gray-200 bg-gray-50'}">
+			<div>
+				<p class="text-sm font-semibold {value.comingSoon ? 'text-amber-800' : 'text-gray-700'}">
+					{value.comingSoon ? 'Coming Soon — shown with badge, buy button disabled' : 'Available now — users can redeem this item'}
+				</p>
+				<p class="text-xs mt-0.5 {value.comingSoon ? 'text-amber-600' : 'text-gray-500'}">
+					Toggle to display an "Coming Soon" badge in the Flutter Store tab
+				</p>
+			</div>
+			<input type="checkbox" name="comingSoon" checked={value.comingSoon} class="sr-only" />
+			<div class="relative shrink-0 w-11 h-6 rounded-full transition-colors {value.comingSoon ? 'bg-amber-400' : 'bg-gray-300'}">
+				<span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform {value.comingSoon ? 'translate-x-5' : 'translate-x-0'}"></span>
 			</div>
 		</label>
 	</section>

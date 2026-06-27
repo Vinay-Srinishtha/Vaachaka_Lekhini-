@@ -19,6 +19,7 @@
 		imageUrl: v.imageUrl !== undefined ? (v.imageUrl ? String(v.imageUrl) : null) : it.imageUrl,
 		stock: v.stock !== undefined ? (v.stock ? Number(v.stock) : null) : it.stock,
 		isActive: v.isActive !== undefined ? v.isActive === 'on' || v.isActive === 'true' : it.isActive,
+		comingSoon: v.comingSoon !== undefined ? v.comingSoon === 'on' || v.comingSoon === 'true' : (it.comingSoon ?? false),
 		sortOrder: v.sortOrder ? Number(v.sortOrder) : it.sortOrder
 	});
 

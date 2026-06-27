@@ -35,6 +35,7 @@ export const actions: Actions = {
 				imageUrl: parsed.imageUrl ?? null,
 				stock: parsed.stock ?? null,
 				isActive: parsed.isActive,
+				comingSoon: parsed.comingSoon,
 				sortOrder: parsed.sortOrder
 			}
 		});

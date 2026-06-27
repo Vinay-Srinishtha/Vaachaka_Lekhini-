@@ -15,6 +15,7 @@ export const GET: RequestHandler = async () => {
 				pointsCost: true,
 				imageUrl: true,
 				stock: true,
+				comingSoon: true,
 				sortOrder: true,
 				updatedAt: true
 			}

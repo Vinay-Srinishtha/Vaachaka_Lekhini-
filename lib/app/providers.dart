@@ -601,6 +601,23 @@ final activeProfileProvider = StreamProvider<Profile?>((ref) async* {
   yield* ref.watch(profileRepositoryProvider).watchActive();
 });
 
+/// Profile completion fraction (0.0–1.0) — single source of truth used by
+/// every screen that shows the ring or completion percentage.
+///
+/// Fields counted: name, gender, birthYear, motherTongue, avatarSeed.
+final profileCompletionProvider = Provider<double>((ref) {
+  final profile = ref.watch(activeProfileProvider).value;
+  if (profile == null) return 0.0;
+  int filled = 0;
+  const total = 5;
+  if (profile.name.trim().isNotEmpty) filled++;
+  if (profile.gender != null) filled++;
+  if (profile.birthYear != null) filled++;
+  if (profile.motherTongue != null) filled++;
+  if (profile.avatarSeed != null && profile.avatarSeed!.isNotEmpty) filled++;
+  return filled / total;
+});
+
 // Hive cache keys for the cache-first remote providers below. Stored in the
 // shared cacheBox() as decoded JSON (same approach as the mantra catalogue).
 const _kStoreCache = 'remote.store.payload';

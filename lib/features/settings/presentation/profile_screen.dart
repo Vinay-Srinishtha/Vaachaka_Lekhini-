@@ -74,9 +74,8 @@ class ProfileScreen extends ConsumerWidget {
 
           // Avatar + name
           Center(
-            child: MilestoneRing(
-              completed: programs.where((p) => p.isGoalReached).length,
-              total: programs.length,
+            child: MilestoneRing.fraction(
+              fraction: ref.watch(profileCompletionProvider),
               strokeWidth: 3.5,
               gap: 3.0,
               child: _EditableAvatar(
@@ -2370,34 +2369,15 @@ class _EditableAvatarState extends State<_EditableAvatar> {
 
   @override
   Widget build(BuildContext context) {
-    final hasPhoto = _localPath != null;
     return GestureDetector(
       onTap: _showOptions,
       child: Stack(
         children: [
-          Container(
-            width: 74,
-            height: 74,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: hasPhoto
-                  ? null
-                  : const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFFFFB572), KvlColors.primary],
-                    ),
-              image: hasPhoto
-                  ? DecorationImage(image: FileImage(File(_localPath!)), fit: BoxFit.cover)
-                  : null,
-            ),
-            alignment: Alignment.center,
-            child: hasPhoto
-                ? null
-                : Text(
-                    widget.initials,
-                    style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w600),
-                  ),
+          KvlProfileAvatar(
+            profileId: widget.profileId ?? '',
+            initials: widget.initials,
+            size: 74,
+            textSize: 24,
           ),
           Positioned(
             bottom: 0,

@@ -20,22 +20,10 @@ import '../../../core/utils/indian_number_format.dart';
 import '../../../core/widgets/kvl_profile_avatar.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../global_sadhana/domain/global_sadhana.dart';
-import '../../profiles/domain/profile.dart';
 import '../../programs/domain/program.dart';
 import '../../settings/domain/settings_repository.dart';
 import '../../../l10n/l10n.dart';
 
-double _profileCompletion(Profile? profile) {
-  if (profile == null) return 0.0;
-  int filled = 0;
-  const total = 5;
-  if (profile.name.trim().isNotEmpty) filled++;
-  if (profile.gender != null) filled++;
-  if (profile.birthYear != null) filled++;
-  if (profile.motherTongue != null) filled++;
-  if (profile.avatarSeed != null && profile.avatarSeed!.isNotEmpty) filled++;
-  return filled / total;
-}
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -95,7 +83,7 @@ class HomeScreen extends ConsumerWidget {
             profileId: profile?.id ?? '',
             compact: compact,
             onProfileTap: () => context.push(KvlRoute.profile),
-            profileCompletion: _profileCompletion(profile),
+            profileCompletion: ref.watch(profileCompletionProvider),
             todayCount: hasStats ? todayTotal : null,
             lifetimeCount: hasStats ? lifetimeTotal : null,
           );

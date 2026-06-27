@@ -457,18 +457,6 @@ class _RewardHistoryChip extends StatelessWidget {
   }
 }
 
-double _profileCompletion(Profile? profile) {
-  if (profile == null) return 0.0;
-  int filled = 0;
-  const total = 5;
-  if (profile.name.trim().isNotEmpty) filled++;
-  if (profile.gender != null) filled++;
-  if (profile.birthYear != null) filled++;
-  if (profile.motherTongue != null) filled++;
-  if (profile.avatarSeed != null && profile.avatarSeed!.isNotEmpty) filled++;
-  return filled / total;
-}
-
 class _AvatarChip extends ConsumerWidget {
   const _AvatarChip({required this.initial, required this.onTap, required this.profileId});
   final String initial;
@@ -477,8 +465,7 @@ class _AvatarChip extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profile = ref.watch(activeProfileProvider).value;
-    final fraction = _profileCompletion(profile);
+    final fraction = ref.watch(profileCompletionProvider);
 
     return InkWell(
       onTap: onTap,

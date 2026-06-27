@@ -462,11 +462,10 @@ class _BodyState extends ConsumerState<_Body> {
                         );
                       }
 
-                      final afterStateGoal = ref.read(practiceControllerProvider(programId)).value;
                       await _showSessionCompleteSheet(
                         context, ref,
                         sessionCount: state.sessionCount,
-                        todaysTotal: afterStateGoal?.todaysTotal ?? state.sessionCount,
+                        todaysTotal: afterState?.todaysTotal ?? state.sessionCount,
                         mantraId: state.program.mantraId,
                         programId: programId,
                         enrolledGs: enrolledGs,

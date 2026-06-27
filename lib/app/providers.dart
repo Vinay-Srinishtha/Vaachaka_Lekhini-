@@ -537,6 +537,10 @@ final programRepositoryProvider = Provider<ProgramRepository>((ref) {
   );
 });
 
+// Module-level flag — skips the platform-channel prefs call on every re-entry
+// after the migration has already run in this process lifetime.
+bool _programsNukeDone = false;
+
 /// Programs belonging to the active member. Empty when no profile is selected.
 final programsForActiveProfileProvider = StreamProvider<List<Program>>((
   ref,
@@ -547,13 +551,15 @@ final programsForActiveProfileProvider = StreamProvider<List<Program>>((
     return;
   }
 
-  // One-time migration: wipe all stale/duplicate test programs on first launch.
-  // Flag is never reset so it runs exactly once per device install.
-  const nukeFlag = 'programs_nuke_v1';
-  final prefs = await SharedPreferences.getInstance();
-  if (prefs.getBool(nukeFlag) != true) {
-    await ref.read(programRepositoryProvider).nukeAllProgramsAndSessions();
-    await prefs.setBool(nukeFlag, true);
+  // One-time migration: wipe stale/duplicate test programs on first launch.
+  if (!_programsNukeDone) {
+    const nukeFlag = 'programs_nuke_v1';
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(nukeFlag) != true) {
+      await ref.read(programRepositoryProvider).nukeAllProgramsAndSessions();
+      await prefs.setBool(nukeFlag, true);
+    }
+    _programsNukeDone = true;
   }
 
   // profile.id IS the memberId (Prisma Member.id)

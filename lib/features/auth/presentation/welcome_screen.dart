@@ -64,22 +64,54 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                       _ScaleText(
                         context.l10n.appName,
                         style: KvlText.mantraDevanagari(
-                          veryCompact ? 32 : 42,
-                        ).copyWith(color: Colors.white, height: 1.05),
+                          veryCompact ? 32 : 44,
+                        ).copyWith(
+                          color: Colors.white,
+                          height: 1.05,
+                          letterSpacing: 0.5,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withValues(alpha: .35),
+                              blurRadius: 12,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       _ScaleText(
                         context.l10n.appTagline,
                         style: KvlText.body(
-                          veryCompact ? 14 : 17,
-                        ).copyWith(color: Colors.white, height: 1.15),
+                          veryCompact ? 13 : 15.5,
+                        ).copyWith(
+                          color: Colors.white.withValues(alpha: .88),
+                          height: 1.3,
+                          letterSpacing: 0.2,
+                        ),
                       ),
-                      SizedBox(height: veryCompact ? 10 : 16),
+                      SizedBox(height: veryCompact ? 6 : 10),
+                      // decorative divider
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(width: 28, height: 1, color: Colors.white.withValues(alpha: .30)),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            child: Text('🕉', style: TextStyle(fontSize: veryCompact ? 13 : 15)),
+                          ),
+                          Container(width: 28, height: 1, color: Colors.white.withValues(alpha: .30)),
+                        ],
+                      ),
+                      SizedBox(height: veryCompact ? 6 : 10),
                       _ScaleText(
                         context.l10n.appMottoChant,
                         style: KvlText.body(
-                          veryCompact ? 13.5 : 16,
-                        ).copyWith(color: Colors.white, height: 1.15),
+                          veryCompact ? 12.5 : 14.5,
+                        ).copyWith(
+                          color: Colors.white.withValues(alpha: .80),
+                          height: 1.3,
+                          fontStyle: FontStyle.italic,
+                        ),
                       ),
                       SizedBox(height: veryCompact ? 14 : 22),
                       // Language selector moved here — below the tagline
@@ -153,31 +185,36 @@ class _LanguageSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final languageStyle = KvlText.body(
-      compact ? 15 : 17,
-    ).copyWith(color: Colors.white);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           context.l10n.setLanguage,
-          style: KvlText.body(compact ? 14 : 15).copyWith(
-            color: Colors.white.withValues(alpha: .75),
+          style: KvlText.body(compact ? 12 : 13).copyWith(
+            color: Colors.white.withValues(alpha: .65),
+            letterSpacing: 1.1,
           ),
         ),
         SizedBox(height: compact ? KvlSpacing.sm : KvlSpacing.md),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            for (final lang in languages)
-              _LanguageTab(
-                language: lang,
-                selected: lang.code == currentCode,
-                style: languageStyle,
-                compact: compact,
-                onTap: () => onChanged(lang.code),
-              ),
-          ],
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(40),
+            color: Colors.black.withValues(alpha: .18),
+            border: Border.all(color: Colors.white.withValues(alpha: .15), width: 1),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final lang in languages)
+                _LanguageTab(
+                  language: lang,
+                  selected: lang.code == currentCode,
+                  compact: compact,
+                  onTap: () => onChanged(lang.code),
+                ),
+            ],
+          ),
         ),
       ],
     );
@@ -188,39 +225,43 @@ class _LanguageTab extends StatelessWidget {
   const _LanguageTab({
     required this.language,
     required this.selected,
-    required this.style,
     required this.compact,
     required this.onTap,
   });
 
   final KvlLanguage language;
   final bool selected;
-  final TextStyle style;
   final bool compact;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final fontSize = compact ? 14.0 : 15.5;
     final textStyle = switch (language.code) {
-      'hi' => KvlText.bodyDevanagari(
-        compact ? 16 : 18,
-      ).copyWith(color: Colors.white),
-      'kn' => KvlText.bodyKannada(
-        compact ? 16 : 18,
-      ).copyWith(color: Colors.white),
-      _ => style,
+      'hi' => KvlText.bodyDevanagari(fontSize),
+      'kn' => KvlText.bodyKannada(fontSize),
+      _ => KvlText.body(fontSize),
     };
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: KvlRadius.brSM,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 12 : 16,
+          vertical: compact ? 7 : 9,
+        ),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(36),
+          color: selected ? Colors.white.withValues(alpha: .92) : Colors.transparent,
+          boxShadow: selected
+              ? [BoxShadow(color: Colors.black.withValues(alpha: .15), blurRadius: 8, offset: const Offset(0, 2))]
+              : null,
+        ),
         child: Text(
           language.nativeLabel,
           style: textStyle.copyWith(
-            decoration: selected ? TextDecoration.underline : null,
-            decorationColor: Colors.white,
-            decorationThickness: 1.2,
+            color: selected ? const Color(0xFFB03A10) : Colors.white.withValues(alpha: .88),
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
           ),
         ),
       ),
@@ -234,28 +275,55 @@ class _AppMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(size * .22),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: .22),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        // golden glow ring
+        Container(
+          width: size + 28,
+          height: size + 28,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(
+              colors: [
+                const Color(0xFFFFD080).withValues(alpha: .55),
+                const Color(0xFFFFAA30).withValues(alpha: .18),
+                Colors.transparent,
+              ],
+              stops: const [0.0, 0.55, 1.0],
+            ),
           ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(size * .22),
-        child: Image.asset(
-          'assets/app_icon.png',
+        ),
+        // icon
+        Container(
           width: size,
           height: size,
-          fit: BoxFit.cover,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(size * .22),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF8B2800).withValues(alpha: .55),
+                blurRadius: 28,
+                offset: const Offset(0, 10),
+              ),
+              BoxShadow(
+                color: const Color(0xFFFFCC60).withValues(alpha: .22),
+                blurRadius: 16,
+                offset: Offset.zero,
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(size * .22),
+            child: Image.asset(
+              'assets/app_icon.png',
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+            ),
+          ),
         ),
-      ),
+      ],
     );
   }
 }
@@ -311,32 +379,55 @@ class _AuthButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xFFFFFCEF),
+      color: Colors.transparent,
       borderRadius: KvlRadius.brPill,
-      elevation: 9,
-      shadowColor: Colors.black.withValues(alpha: .22),
       child: InkWell(
         onTap: onTap,
         borderRadius: KvlRadius.brPill,
-        child: SizedBox(
-          height: compact ? 66 : 76,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _ScaleText(
-                eyebrow,
-                style: KvlText.caption(
-                  compact ? 11.5 : 13,
-                ).copyWith(color: const Color(0xFF1E2733)),
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: KvlRadius.brPill,
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFFFFFDF4), Color(0xFFFFF0D0)],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF6B1A00).withValues(alpha: .38),
+                blurRadius: 20,
+                offset: const Offset(0, 6),
               ),
-              _ScaleText(
-                label,
-                style: KvlText.title(
-                  compact ? 18 : 22,
-                  FontWeight.w400,
-                ).copyWith(color: KvlColors.primary, height: 1.05),
+              BoxShadow(
+                color: Colors.white.withValues(alpha: .12),
+                blurRadius: 4,
+                offset: const Offset(0, -1),
               ),
             ],
+          ),
+          child: SizedBox(
+            height: compact ? 68 : 78,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _ScaleText(
+                  eyebrow,
+                  style: KvlText.caption(
+                    compact ? 11 : 12.5,
+                  ).copyWith(
+                    color: const Color(0xFF6B3A1A),
+                    letterSpacing: 0.4,
+                  ),
+                ),
+                _ScaleText(
+                  label,
+                  style: KvlText.title(
+                    compact ? 20 : 24,
+                    FontWeight.w600,
+                  ).copyWith(color: const Color(0xFFB03A10), height: 1.05),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -354,18 +445,20 @@ class _KnowAppButton extends StatelessWidget {
       onTap: onTap,
       child: Container(
         constraints: const BoxConstraints(minWidth: 180),
-        padding: const EdgeInsets.symmetric(
-          horizontal: KvlSpacing.lg,
-          vertical: 5,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: KvlSpacing.xl, vertical: 9),
         decoration: BoxDecoration(
           borderRadius: KvlRadius.brPill,
-          border: Border.all(color: Colors.white, width: 1.4),
+          color: Colors.black.withValues(alpha: .15),
+          border: Border.all(color: Colors.white.withValues(alpha: .55), width: 1.2),
         ),
         child: Text(
           context.l10n.knowOurApp,
           textAlign: TextAlign.center,
-          style: KvlText.body(16).copyWith(color: Colors.white, height: 1.1),
+          style: KvlText.body(15).copyWith(
+            color: Colors.white,
+            height: 1.1,
+            letterSpacing: 0.3,
+          ),
         ),
       ),
     );

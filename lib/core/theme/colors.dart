@@ -48,9 +48,16 @@ abstract final class KvlColors {
     colors: [Color(0xFF4F7FFF), Color(0xFF2355E8), Color(0xFF1A3FCC)],
   );
   static const welcomeGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFFF4A056), Color(0xFFE8893B), Color(0xFFC97328)],
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [
+      Color(0xFFB03A10), // deep crimson-maroon top
+      Color(0xFFD45A18), // saffron mid-upper
+      Color(0xFFE87828), // warm saffron centre
+      Color(0xFFD06020), // amber-ochre lower
+      Color(0xFF8C3010), // rich maroon base
+    ],
+    stops: [0.0, 0.22, 0.5, 0.76, 1.0],
   );
   static const tealGradient = LinearGradient(
     begin: Alignment.topCenter,

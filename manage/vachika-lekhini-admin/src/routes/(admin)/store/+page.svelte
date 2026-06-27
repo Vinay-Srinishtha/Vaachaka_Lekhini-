@@ -110,8 +110,14 @@
 								{item.pointsCost.toLocaleString()}
 							</td>
 							<!-- Stock -->
-							<td class="px-4 py-3 whitespace-nowrap text-slate-500">
-								{item.stock == null ? '∞' : item.stock}
+							<td class="px-4 py-3 whitespace-nowrap">
+								{#if item.stock === 0}
+									<span class="inline-flex items-center gap-1 rounded-full bg-red-50 border border-red-200 px-2 py-0.5 text-xs font-semibold text-red-600">
+										🚫 Out of Stock
+									</span>
+								{:else}
+									<span class="text-slate-500">{item.stock == null ? '∞' : item.stock}</span>
+								{/if}
 							</td>
 							<!-- Active toggle -->
 							<td class="px-4 py-3">

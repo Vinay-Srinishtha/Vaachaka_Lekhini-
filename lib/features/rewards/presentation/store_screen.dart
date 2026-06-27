@@ -602,6 +602,8 @@ class _StoreCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final canAfford = points >= item.pricePoints;
     final comingSoon = item.comingSoon;
+    final outOfStock = item.stock != null && item.stock! <= 0;
+    final blocked = comingSoon || outOfStock;
 
     return Container(
       decoration: BoxDecoration(
@@ -626,21 +628,37 @@ class _StoreCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Image with optional "Coming Soon" badge
+            // Image with status banner overlay
             AspectRatio(
               aspectRatio: 1.0,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  item.imageUrl != null
-                      ? Image.network(
-                          item.imageUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) =>
-                              _ItemPlaceholder(item: item),
-                        )
-                      : _ItemPlaceholder(item: item),
-                  // Subtle bottom fade for better text contrast
+                  // Dim image when unavailable
+                  ColorFiltered(
+                    colorFilter: blocked
+                        ? const ColorFilter.matrix([
+                            0.5, 0, 0, 0, 0,
+                            0, 0.5, 0, 0, 0,
+                            0, 0, 0.5, 0, 0,
+                            0, 0, 0, 1, 0,
+                          ])
+                        : const ColorFilter.matrix([
+                            1, 0, 0, 0, 0,
+                            0, 1, 0, 0, 0,
+                            0, 0, 1, 0, 0,
+                            0, 0, 0, 1, 0,
+                          ]),
+                    child: item.imageUrl != null
+                        ? Image.network(
+                            item.imageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                _ItemPlaceholder(item: item),
+                          )
+                        : _ItemPlaceholder(item: item),
+                  ),
+                  // Subtle bottom fade
                   Positioned(
                     left: 0, right: 0, bottom: 0,
                     height: 48,
@@ -657,35 +675,16 @@ class _StoreCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (comingSoon)
+                  // Full-width banner strip at top
+                  if (comingSoon || outOfStock)
                     Positioned(
-                      bottom: 10,
-                      left: 10,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFBF5000), Color(0xFFE8851A)],
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFBF5000).withValues(alpha: 0.4),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: const Text(
-                          'Coming Soon',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.3,
-                          ),
-                        ),
+                      top: 0, left: 0, right: 0,
+                      child: _StatusBanner(
+                        label: comingSoon ? 'Coming Soon' : 'Out of Stock',
+                        colors: comingSoon
+                            ? [const Color(0xFF8B3DFF), const Color(0xFFBB6BFF)]
+                            : [const Color(0xFF1A1A2E), const Color(0xFF374060)],
+                        icon: comingSoon ? '🕐' : '🚫',
                       ),
                     ),
                 ],
@@ -748,13 +747,18 @@ class _StoreCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   _RedeemButton(
-                    canAfford: canAfford && !isRedeemed && !comingSoon,
+                    canAfford: canAfford && !isRedeemed && !blocked,
                     isRedeemed: isRedeemed,
                     comingSoon: comingSoon,
+                    outOfStock: outOfStock,
                     label: isRedeemed
                         ? 'Redeemed ✓'
-                        : context.l10n.redeemButton,
-                    onRedeem: (isRedeemed || comingSoon) ? null : onRedeem,
+                        : outOfStock
+                            ? 'Out of Stock'
+                            : comingSoon
+                                ? 'Coming Soon'
+                                : context.l10n.redeemButton,
+                    onRedeem: (isRedeemed || blocked) ? null : onRedeem,
                   ),
                 ],
               ),
@@ -766,17 +770,63 @@ class _StoreCard extends StatelessWidget {
   }
 }
 
+class _StatusBanner extends StatelessWidget {
+  const _StatusBanner({
+    required this.label,
+    required this.colors,
+    required this.icon,
+  });
+  final String label;
+  final List<Color> colors;
+  final String icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: colors),
+        boxShadow: [
+          BoxShadow(
+            color: colors.first.withValues(alpha: 0.45),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(icon, style: const TextStyle(fontSize: 12)),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _RedeemButton extends StatelessWidget {
   const _RedeemButton({
     required this.canAfford,
     required this.isRedeemed,
     required this.comingSoon,
+    required this.outOfStock,
     required this.label,
     required this.onRedeem,
   });
   final bool canAfford;
   final bool isRedeemed;
   final bool comingSoon;
+  final bool outOfStock;
   final String label;
   final VoidCallback? onRedeem;
 
@@ -801,8 +851,7 @@ class _RedeemButton extends StatelessWidget {
         ),
       );
     }
-    // Coming soon or can't afford → muted button
-    final active = canAfford && !comingSoon;
+    final active = canAfford && !comingSoon && !outOfStock;
     return SizedBox(
       height: 36,
       child: DecoratedBox(

@@ -22,6 +22,7 @@ class StoreItem extends Equatable {
     this.subtitle,
     this.imageUrl,
     this.category,
+    this.stock,
     this.glyph = '🛍',
     this.background = const [0xFFE0A85C, 0xFFA56A3D],
     this.comingSoon = false,
@@ -33,9 +34,10 @@ class StoreItem extends Equatable {
   final String? imageUrl;
   final StoreCategory? category;
   final int pricePoints;
+  /// Null means unlimited. 0 means out of stock.
+  final int? stock;
   final String glyph;
   final List<int> background;
-  /// Admin-controlled: set `coming_soon: true` in the store JSON to show badge.
   final bool comingSoon;
 
   factory StoreItem.fromJson(Map<String, dynamic> j) {
@@ -57,6 +59,7 @@ class StoreItem extends Equatable {
       subtitle: j['description'] as String?,
       imageUrl: j['image_url'] as String?,
       pricePoints: j['points_cost'] as int,
+      stock: j['stock'] as int?,
       category: cat,
       glyph: (j['glyph'] as String?) ?? '🛍',
       background: bg,

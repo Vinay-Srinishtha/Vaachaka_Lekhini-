@@ -95,6 +95,35 @@ class _LoggedOutAuthRepository implements AuthRepository {
       Err(AuthFailure.accountNotFound());
 
   @override
+  Future<Result<Session>> register({
+    required String mobile,
+    required String username,
+    required String password,
+    String? referralCode,
+    String? language,
+  }) async =>
+      Err(AuthFailure.accountNotFound());
+
+  @override
+  Future<Result<Session>> loginWithPassword({
+    required String mobile,
+    required String password,
+  }) async =>
+      Err(AuthFailure.accountNotFound());
+
+  @override
+  Future<Result<void>> requestPasswordReset(String mobile) async =>
+      const Ok(null);
+
+  @override
+  Future<Result<Session>> resetPassword({
+    required String mobile,
+    required String otp,
+    required String newPassword,
+  }) async =>
+      Err(AuthFailure.accountNotFound());
+
+  @override
   Future<void> deleteAccount() async {}
 
   @override

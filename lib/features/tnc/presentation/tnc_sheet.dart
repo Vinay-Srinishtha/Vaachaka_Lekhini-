@@ -37,6 +37,16 @@ class _TncSheetState extends ConsumerState<_TncSheet> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    // If the content fits without scrolling, unlock immediately after first frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!_scrollController.hasClients) {
+        setState(() => _scrolledToBottom = true);
+        return;
+      }
+      final max = _scrollController.position.maxScrollExtent;
+      if (max <= 40) setState(() => _scrolledToBottom = true);
+    });
   }
 
   @override

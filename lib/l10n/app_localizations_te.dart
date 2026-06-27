@@ -54,7 +54,7 @@ class AppLocalizationsTe extends AppLocalizations {
   String get mobileNumberLabel => 'మొబైల్ నంబర్';
 
   @override
-  String get mobileNumberHint => '98765 43210';
+  String get mobileNumberHint => 'Enter your mobile number';
 
   @override
   String get referralCodeLabel => 'రెఫరల్ కోడ్ (ఐచ్ఛికం)';
@@ -608,7 +608,7 @@ class AppLocalizationsTe extends AppLocalizations {
   String get deleteAccount => 'ఖాతా తొలగించండి';
 
   @override
-  String get versionNumber => 'వెర్షన్ 0.1.0';
+  String get versionNumber => 'వెర్షన్ 8.0.1';
 
   @override
   String get logoutDialogTitle => 'లాగ్అవుట్ అవుతారా?';
@@ -668,7 +668,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get infoAboutBody =>
-      'వాచక లేఖిని మీ వ్యక్తిగత ఆధ్యాత్మిక సాధన సహాయి. మీరు ఎంచుకున్న మంత్రాలను జపించండి లేదా రాయండి, మీ పురోగతిని ట్రాక్ చేయండి, మరియు మీ కుటుంబంతో కలిసి మీ క్రమశిక్షణను పెంచుకోండి.\n\nవెర్షన్ 0.1.0';
+      'వాచక లేఖిని మీ వ్యక్తిగత ఆధ్యాత్మిక సాధన సహాయి. మీరు ఎంచుకున్న మంత్రాలను జపించండి లేదా రాయండి, మీ పురోగతిని ట్రాక్ చేయండి, మరియు మీ కుటుంబంతో కలిసి మీ క్రమశిక్షణను పెంచుకోండి.\n\nవెర్షన్ 8.0.1';
 
   @override
   String recitationsOnDate(String date) {

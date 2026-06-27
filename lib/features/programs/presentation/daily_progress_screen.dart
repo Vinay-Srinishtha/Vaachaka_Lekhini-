@@ -1282,7 +1282,7 @@ class _DedicateSheetState extends State<DedicateSheet> {
                   controller: _phoneCtrl,
                   keyboardType: TextInputType.phone,
                   decoration: InputDecoration(
-                    hintText: 'e.g. +91 98765 43210',
+                    hintText: 'e.g. +91 98765 00000',
                     hintStyle: KvlText.caption(13)
                         .copyWith(color: KvlColors.muted),
                     filled: true,

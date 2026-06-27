@@ -54,7 +54,7 @@ class AppLocalizationsKn extends AppLocalizations {
   String get mobileNumberLabel => 'ಮೊಬೈಲ್ ಸಂಖ್ಯೆ';
 
   @override
-  String get mobileNumberHint => '98765 43210';
+  String get mobileNumberHint => 'Enter your mobile number';
 
   @override
   String get referralCodeLabel => 'ರೆಫರಲ್ ಕೋಡ್ (ಐಚ್ಛಿಕ)';
@@ -609,7 +609,7 @@ class AppLocalizationsKn extends AppLocalizations {
   String get deleteAccount => 'ಖಾತೆ ಅಳಿಸಿ';
 
   @override
-  String get versionNumber => 'ಆವೃತ್ತಿ 0.1.0';
+  String get versionNumber => 'ಆವೃತ್ತಿ 8.0.1';
 
   @override
   String get logoutDialogTitle => 'ಲಾಗ್‌ಔಟ್ ಆಗುವಿರಾ?';
@@ -669,7 +669,7 @@ class AppLocalizationsKn extends AppLocalizations {
 
   @override
   String get infoAboutBody =>
-      'ವಾಚಕ ಲೇಖಿನಿ ನಿಮ್ಮ ವೈಯಕ್ತಿಕ ಆಧ್ಯಾತ್ಮಿಕ ಅಭ್ಯಾಸ ಸಹಾಯಕ. ನಿಮ್ಮ ಆಯ್ಕೆಯ ಮಂತ್ರಗಳನ್ನು ಜಪಿಸಿ ಅಥವಾ ಬರೆಯಿರಿ, ನಿಮ್ಮ ಪ್ರಗತಿ ಟ್ರ್ಯಾಕ್ ಮಾಡಿ, ಮತ್ತು ನಿಮ್ಮ ಕುಟುಂಬದೊಂದಿಗೆ ಶಿಸ್ತು ಬೆಳೆಸಿಕೊಳ್ಳಿ.\n\nಆವೃತ್ತಿ 0.1.0';
+      'ವಾಚಕ ಲೇಖಿನಿ ನಿಮ್ಮ ವೈಯಕ್ತಿಕ ಆಧ್ಯಾತ್ಮಿಕ ಅಭ್ಯಾಸ ಸಹಾಯಕ. ನಿಮ್ಮ ಆಯ್ಕೆಯ ಮಂತ್ರಗಳನ್ನು ಜಪಿಸಿ ಅಥವಾ ಬರೆಯಿರಿ, ನಿಮ್ಮ ಪ್ರಗತಿ ಟ್ರ್ಯಾಕ್ ಮಾಡಿ, ಮತ್ತು ನಿಮ್ಮ ಕುಟುಂಬದೊಂದಿಗೆ ಶಿಸ್ತು ಬೆಳೆಸಿಕೊಳ್ಳಿ.\n\nಆವೃತ್ತಿ 8.0.1';
 
   @override
   String recitationsOnDate(String date) {

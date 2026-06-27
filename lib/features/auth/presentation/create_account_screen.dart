@@ -103,12 +103,18 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
       return;
     }
     // Show T&C if there is an active version — registration requires acceptance.
-    final tnc = await ref.read(tncRepositoryProvider).fetchCurrent();
-    if (!mounted) return;
-    if (tnc != null) {
-      final accepted = await showTncSheet(context, tnc);
+    // If the fetch fails, skip the T&C step so registration isn't blocked.
+    try {
+      final tnc = await ref.read(tncRepositoryProvider).fetchCurrent();
       if (!mounted) return;
-      if (!accepted) return; // user dismissed without accepting
+      if (tnc != null) {
+        final accepted = await showTncSheet(context, tnc);
+        if (!mounted) return;
+        if (!accepted) return; // user dismissed without accepting
+      }
+    } catch (_) {
+      if (!mounted) return;
+      // T&C fetch failed — continue without it.
     }
 
     setState(() { _busy = true; _error = null; _errorCode = null; });

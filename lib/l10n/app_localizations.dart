@@ -195,7 +195,7 @@ abstract class AppLocalizations {
   /// No description provided for @mobileNumberHint.
   ///
   /// In en, this message translates to:
-  /// **'98765 43210'**
+  /// **'Enter your mobile number'**
   String get mobileNumberHint;
 
   /// No description provided for @referralCodeLabel.

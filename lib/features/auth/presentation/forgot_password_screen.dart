@@ -153,7 +153,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           // Mobile
           KvlInput(
             label: 'Mobile',
-            hint: '98765 43210',
+            hint: 'Enter your mobile number',
             controller: _mobile,
             keyboardType: TextInputType.phone,
             autofocus: true,

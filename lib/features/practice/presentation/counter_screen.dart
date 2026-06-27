@@ -703,8 +703,7 @@ class _BookCountBadge extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final count =
-        ref.watch(bookAssetsProvider(mantraId)).value?.length ?? 0;
+    final count = ref.watch(bookTotalForMantraProvider(mantraId));
     if (count == 0) return const SizedBox.shrink();
 
     return GestureDetector(

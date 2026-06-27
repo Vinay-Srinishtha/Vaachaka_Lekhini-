@@ -54,7 +54,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get mobileNumberLabel => 'मोबाइल नंबर';
 
   @override
-  String get mobileNumberHint => '98765 43210';
+  String get mobileNumberHint => 'Enter your mobile number';
 
   @override
   String get referralCodeLabel => 'रेफरल कोड (वैकल्पिक)';
@@ -608,7 +608,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get deleteAccount => 'खाता हटाएं';
 
   @override
-  String get versionNumber => 'संस्करण 0.1.0';
+  String get versionNumber => 'संस्करण 8.0.1';
 
   @override
   String get logoutDialogTitle => 'लॉगआउट करें?';
@@ -668,7 +668,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get infoAboutBody =>
-      'वाचक लेखिनी आपका व्यक्तिगत आध्यात्मिक साधना सहायक है। अपने चुने हुए मंत्रों का जप करें या लिखें, अपनी प्रगति ट्रैक करें, और अपने परिवार के साथ मिलकर अनुशासन बढ़ाएं।\n\nसंस्करण 0.1.0';
+      'वाचक लेखिनी आपका व्यक्तिगत आध्यात्मिक साधना सहायक है। अपने चुने हुए मंत्रों का जप करें या लिखें, अपनी प्रगति ट्रैक करें, और अपने परिवार के साथ मिलकर अनुशासन बढ़ाएं।\n\nसंस्करण 8.0.1';
 
   @override
   String recitationsOnDate(String date) {

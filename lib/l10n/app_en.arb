@@ -15,7 +15,7 @@
   "usernameLabel": "Name",
   "usernameHint": "Enter your name",
   "mobileNumberLabel": "Mobile Number",
-  "mobileNumberHint": "98765 43210",
+  "mobileNumberHint": "Enter your mobile number",
   "referralCodeLabel": "Referral Code (Optional)",
   "referralCodeHint": "Enter referral code",
   "selectLanguage": "Select Language",
@@ -290,7 +290,7 @@
   "aboutApp": "About App",
   "logoutButton": "Logout",
   "deleteAccount": "Delete Account",
-  "versionNumber": "Version 0.1.0",
+  "versionNumber": "Version 8.0.1",
   "logoutDialogTitle": "Logout?",
   "logoutDialogContent": "Your local data stays on this device.",
   "logoutDialogCancel": "Cancel",
@@ -308,7 +308,7 @@
   "infoPrivacyTitle": "Privacy Policy",
   "infoPrivacyBody": "Your practice data lives on your device until you choose to sync it. Voice and handwriting samples never leave this device in version 1.",
   "infoAboutTitle": "About Vaachaka Lekhini",
-  "infoAboutBody": "Vaachaka Lekhini is your personal spiritual practice companion. Chant or write your chosen mantras, track your progress, and grow your discipline — together with your family.\n\nVersion 0.1.0",
+  "infoAboutBody": "Vaachaka Lekhini is your personal spiritual practice companion. Chant or write your chosen mantras, track your progress, and grow your discipline — together with your family.\n\nVersion 8.0.1",
   "recitationsOnDate": "Recitations on {date}",
   "@recitationsOnDate": {
     "placeholders": {

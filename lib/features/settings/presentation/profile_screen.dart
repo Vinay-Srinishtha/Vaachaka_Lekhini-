@@ -2035,7 +2035,7 @@ class _ChangeMobileSheetState extends ConsumerState<_ChangeMobileSheet> {
                     Expanded(
                       child: KvlInput(
                         label: 'New Mobile',
-                        hint: '98765 43210',
+                        hint: 'Enter your mobile number',
                         controller: _mobileCtrl,
                         keyboardType: TextInputType.phone,
                         autofocus: true,

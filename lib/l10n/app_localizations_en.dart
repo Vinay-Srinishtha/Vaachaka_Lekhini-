@@ -54,7 +54,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mobileNumberLabel => 'Mobile Number';
 
   @override
-  String get mobileNumberHint => '98765 43210';
+  String get mobileNumberHint => 'Enter your mobile number';
 
   @override
   String get referralCodeLabel => 'Referral Code (Optional)';
@@ -607,7 +607,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteAccount => 'Delete Account';
 
   @override
-  String get versionNumber => 'Version 0.1.0';
+  String get versionNumber => 'Version 8.0.1';
 
   @override
   String get logoutDialogTitle => 'Logout?';
@@ -667,7 +667,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get infoAboutBody =>
-      'Vaachaka Lekhini is your personal spiritual practice companion. Chant or write your chosen mantras, track your progress, and grow your discipline — together with your family.\n\nVersion 0.1.0';
+      'Vaachaka Lekhini is your personal spiritual practice companion. Chant or write your chosen mantras, track your progress, and grow your discipline — together with your family.\n\nVersion 8.0.1';
 
   @override
   String recitationsOnDate(String date) {

@@ -230,7 +230,7 @@ class _MobileRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return KvlInput(
       label: 'Mobile',
-      hint: '98765 43210',
+      hint: 'Enter your mobile number',
       controller: controller,
       focusNode: focusNode,
       keyboardType: TextInputType.phone,

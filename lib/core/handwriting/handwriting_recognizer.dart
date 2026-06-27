@@ -99,6 +99,9 @@ class HandwritingRecognizer {
       final normGot = _normalize(got);
       final normWant = _normalize(c.text);
       if (normWant.isEmpty) continue;
+      // Syllable gate: exact syllable count match required.
+      // Prevents partial words ("श्री" for "श्रीराम") from passing via infix score.
+      if (_syllableCount(normGot) != _syllableCount(normWant)) continue;
       final sim = _similarity(normGot, normWant);
       if (sim > bestSim) {
         bestSim = sim;
@@ -214,6 +217,68 @@ class HandwritingRecognizer {
       if (isLatin || isIndic) buf.write(c);
     }
     return buf.toString();
+  }
+
+  /// Counts phonemic syllable nuclei in a normalised string.
+  ///
+  /// Latin (romanized): count vowel letters — a e i o u.
+  /// Devanagari/Telugu/Kannada: count vowel matras + independent vowels +
+  ///   consonants that carry the inherent 'a' (not followed by virama or matra).
+  ///
+  /// Examples:
+  ///   "sri"       → 1    "srirama"     → 3    "sriramaya"   → 4
+  ///   "श्री"      → 1    "श्रीराम"    → 3    "श्रीरामाय"  → 4
+  int _syllableCount(String normalized) {
+    if (normalized.isEmpty) return 0;
+    final runes = normalized.runes.toList();
+    final first = runes.first;
+
+    // ── Latin path ─────────────────────────────────────────────────────────
+    if (first < 0x0900) {
+      return runes.where((r) =>
+          r == 0x61 || r == 0x65 || r == 0x69 || r == 0x6F || r == 0x75).length;
+    }
+
+    // ── Indic path: select script constants ────────────────────────────────
+    final int virama;
+    final int matraStart, matraEnd;
+    final int ivStart, ivEnd; // independent vowels
+    final int csStart, csEnd; // consonants
+
+    if (first <= 0x097F) {
+      // Devanagari
+      virama = 0x094D;
+      matraStart = 0x093E; matraEnd = 0x094C;
+      ivStart = 0x0905;    ivEnd = 0x0914;
+      csStart = 0x0915;    csEnd = 0x0939;
+    } else if (first <= 0x0C7F) {
+      // Telugu
+      virama = 0x0C4D;
+      matraStart = 0x0C3E; matraEnd = 0x0C4C;
+      ivStart = 0x0C05;    ivEnd = 0x0C14;
+      csStart = 0x0C15;    csEnd = 0x0C39;
+    } else {
+      // Kannada
+      virama = 0x0CCD;
+      matraStart = 0x0CBE; matraEnd = 0x0CCC;
+      ivStart = 0x0C85;    ivEnd = 0x0C94;
+      csStart = 0x0C95;    csEnd = 0x0CB9;
+    }
+
+    bool isMatra(int r) => r >= matraStart && r <= matraEnd;
+
+    var count = 0;
+    for (var i = 0; i < runes.length; i++) {
+      final r = runes[i];
+      if (isMatra(r) || (r >= ivStart && r <= ivEnd)) {
+        count++;
+      } else if (r >= csStart && r <= csEnd) {
+        // Consonant contributes a syllable only when not followed by virama or matra
+        final next = i + 1 < runes.length ? runes[i + 1] : -1;
+        if (next != virama && !isMatra(next)) count++;
+      }
+    }
+    return count;
   }
 
   double _similarity(String got, String want) {

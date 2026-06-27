@@ -63,16 +63,10 @@ class HomeScreen extends ConsumerWidget {
       greeting = '${context.l10n.welcomeBack}, ${profile.name.trim()}!';
     }
 
-    final String subline;
-    if (isLoadingPrograms) {
-      subline = context.l10n.homeSublineEmpty;
-    } else if (activePrograms.isEmpty && todayTotal == 0) {
-      subline = context.l10n.homeSublineEmpty;
-    } else {
-      final todayFmt = IndianNumberFormat.format(todayTotal);
-      final lifetimeFmt = IndianNumberFormat.format(lifetimeTotal);
-      subline = 'Today: $todayFmt  •  Lifetime: $lifetimeFmt';
-    }
+    final bool hasStats = !isLoadingPrograms && (todayTotal > 0 || lifetimeTotal > 0);
+    final String subline = isLoadingPrograms || (!hasStats)
+        ? context.l10n.homeSublineEmpty
+        : '';
     final hasQuote = ref.watch(dailyQuoteProvider) != null;
 
     return SafeArea(
@@ -102,6 +96,8 @@ class HomeScreen extends ConsumerWidget {
             compact: compact,
             onProfileTap: () => context.push(KvlRoute.profile),
             profileCompletion: _profileCompletion(profile),
+            todayCount: hasStats ? todayTotal : null,
+            lifetimeCount: hasStats ? lifetimeTotal : null,
           );
 
           final bulletin = Builder(
@@ -126,20 +122,59 @@ class HomeScreen extends ConsumerWidget {
 
           if (!hasQuote) {
             // No quote — non-scrollable, centred layout with equal spacing
-            return Padding(
-              padding: EdgeInsets.fromLTRB(side, topInset, side, side),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  header,
-                  SizedBox(height: headerGap),
-                  bulletin,
-                  const Spacer(),
-                  _RamaKotiBook(compact: compact),
-                  SizedBox(height: gap * 1.5),
-                  _GlobalSadhanaSection(compact: compact),
-                  const Spacer(),
-                ],
+            return Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFFFFFBF5), Color(0xFFFFF0DC)],
+                ),
+              ),
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(side, topInset, side, side),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    header,
+                    SizedBox(height: headerGap),
+                    bulletin,
+                    const Spacer(),
+                    _RamaKotiBook(compact: compact),
+                    SizedBox(height: gap * 1.5),
+                    _GlobalSadhanaSection(compact: compact),
+                    Expanded(
+                      child: Center(
+                        child: Opacity(
+                          opacity: 0.09,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'ॐ',
+                                style: const TextStyle(
+                                  fontSize: 44,
+                                  color: Color(0xFF7B2D00),
+                                  fontWeight: FontWeight.w300,
+                                  height: 1.0,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              const Text(
+                                'श्री राम जय राम',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF7B2D00),
+                                  fontWeight: FontWeight.w500,
+                                  letterSpacing: 3.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -194,6 +229,8 @@ class _HomeHeader extends StatelessWidget {
     required this.compact,
     required this.onProfileTap,
     required this.profileCompletion,
+    this.todayCount,
+    this.lifetimeCount,
   });
 
   final String greeting;
@@ -203,10 +240,13 @@ class _HomeHeader extends StatelessWidget {
   final bool compact;
   final VoidCallback onProfileTap;
   final double profileCompletion;
+  final int? todayCount;
+  final int? lifetimeCount;
 
   @override
   Widget build(BuildContext context) {
     final size = compact ? 54.0 : 60.0;
+    final showChips = todayCount != null;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -226,20 +266,40 @@ class _HomeHeader extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 2),
-              SizedBox(
-                width: double.infinity,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    subline,
-                    maxLines: 1,
-                    style: KvlText.caption(compact ? 13.5 : 15)
-                        .copyWith(color: KvlColors.inkSoft),
+              const SizedBox(height: 5),
+              if (showChips)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _StatChip(
+                      icon: Icons.edit_note_rounded,
+                      value: IndianNumberFormat.format(todayCount!),
+                      label: 'chants today',
+                      color: KvlColors.primary,
+                    ),
+                    const SizedBox(width: 6),
+                    _StatChip(
+                      icon: Icons.star_rounded,
+                      value: IndianNumberFormat.format(lifetimeCount ?? 0),
+                      label: 'lifetime',
+                      color: KvlColors.gold,
+                    ),
+                  ],
+                )
+              else
+                SizedBox(
+                  width: double.infinity,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      subline,
+                      maxLines: 1,
+                      style: KvlText.caption(compact ? 13.5 : 15)
+                          .copyWith(color: KvlColors.inkSoft),
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
@@ -260,6 +320,50 @@ class _HomeHeader extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Stat chip — small pill with icon, count and label
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _StatChip extends StatelessWidget {
+  const _StatChip({
+    required this.icon,
+    required this.value,
+    required this.label,
+    required this.color,
+  });
+  final IconData icon;
+  final String value;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.22), width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: color),
+          const SizedBox(width: 4),
+          Text(
+            '$value $label',
+            style: TextStyle(
+              fontSize: 11.5,
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

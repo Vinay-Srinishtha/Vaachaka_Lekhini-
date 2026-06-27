@@ -239,7 +239,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: KvlRoute.programs,
-                builder: (_, _) => const ProgramsScreen(),
+                builder: (_, _) => const _MySadhanaEntry(),
               ),
             ],
           ),
@@ -247,7 +247,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: KvlRoute.practice,
-                builder: (_, _) => const PracticeScreen(),
+                builder: (_, _) => const MantraSelectionScreen(),
               ),
             ],
           ),
@@ -495,6 +495,28 @@ class _AvatarChip extends ConsumerWidget {
           gradientSeed: profileId,
         ),
       ),
+    );
+  }
+}
+
+/// My Sadhanas tab entry point — jumps directly to DailyProgressScreen for
+/// the most recently active program. Falls back to ProgramsScreen if none.
+class _MySadhanaEntry extends ConsumerWidget {
+  const _MySadhanaEntry();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final programAsync = ref.watch(mostRecentProgramProvider);
+
+    return programAsync.when(
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (_, __) => const ProgramsScreen(),
+      data: (program) {
+        if (program == null) return const ProgramsScreen();
+        return DailyProgressScreen(programId: program.id);
+      },
     );
   }
 }

@@ -73,6 +73,8 @@ class HomeScreen extends ConsumerWidget {
       final lifetimeFmt = IndianNumberFormat.format(lifetimeTotal);
       subline = 'Today: $todayFmt  •  Lifetime: $lifetimeFmt';
     }
+    final hasQuote = ref.watch(dailyQuoteProvider) != null;
+
     return SafeArea(
       top: false,
       bottom: false,
@@ -91,10 +93,60 @@ class HomeScreen extends ConsumerWidget {
           final cameraGap = MediaQuery.viewPaddingOf(context).top.clamp(40.0, 52.0);
           final topInset = cameraGap + 4.0;
 
+          // Shared widgets used in both layouts
+          final header = _HomeHeader(
+            greeting: greeting,
+            subline: subline,
+            initial: profile?.initials ?? '?',
+            profileId: profile?.id ?? '',
+            compact: compact,
+            onProfileTap: () => context.push(KvlRoute.profile),
+            profileCompletion: _profileCompletion(profile),
+          );
+
+          final bulletin = Builder(
+            builder: (ctx) {
+              final w = MediaQuery.of(ctx).size.width;
+              return SizedBox(
+                height: 34,
+                child: OverflowBox(
+                  minWidth: w,
+                  maxWidth: w,
+                  minHeight: 34,
+                  maxHeight: 34,
+                  alignment: Alignment.center,
+                  child: _Bulletin(
+                    text: ref.watch(appSettingsProvider).value?.bulletinText ??
+                        _kDefaultBulletinText,
+                  ),
+                ),
+              );
+            },
+          );
+
+          if (!hasQuote) {
+            // No quote — non-scrollable, centred layout with equal spacing
+            return Padding(
+              padding: EdgeInsets.fromLTRB(side, topInset, side, side),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  header,
+                  SizedBox(height: headerGap),
+                  bulletin,
+                  const Spacer(),
+                  _RamaKotiBook(compact: compact),
+                  SizedBox(height: gap * 1.5),
+                  _GlobalSadhanaSection(compact: compact),
+                  const Spacer(),
+                ],
+              ),
+            );
+          }
+
           return SingleChildScrollView(
             physics: const ClampingScrollPhysics(),
             child: ConstrainedBox(
-              // Keep content at least screen-tall so it never looks half-empty.
               constraints: BoxConstraints(minHeight: constraints.maxHeight),
               child: Padding(
                 padding: EdgeInsets.fromLTRB(
@@ -106,36 +158,9 @@ class HomeScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _HomeHeader(
-                      greeting: greeting,
-                      subline: subline,
-                      initial: profile?.initials ?? '?',
-                      profileId: profile?.id ?? '',
-                      compact: compact,
-                      onProfileTap: () => context.push(KvlRoute.profile),
-                      profileCompletion: _profileCompletion(profile),
-                    ),
+                    header,
                     SizedBox(height: headerGap),
-                    // Bulletin — truly edge-to-edge.
-                    Builder(
-                      builder: (ctx) {
-                        final w = MediaQuery.of(ctx).size.width;
-                        return SizedBox(
-                          height: 34,
-                          child: OverflowBox(
-                            minWidth: w,
-                            maxWidth: w,
-                            minHeight: 34,
-                            maxHeight: 34,
-                            alignment: Alignment.center,
-                            child: _Bulletin(
-                              text: ref.watch(appSettingsProvider).value?.bulletinText ??
-                                  _kDefaultBulletinText,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+                    bulletin,
                     SizedBox(height: gap),
                     _RamaKotiBook(compact: compact),
                     SizedBox(height: gap),

@@ -117,7 +117,7 @@ class KvlBottomNav extends ConsumerWidget {
                   child: _PracticeTab(
                     item: kvlNavItems[_practiceIndex],
                     active: currentIndex == _practiceIndex,
-                    onTap: () {}, // disabled — no page opens
+                    onTap: () => onTap(_practiceIndex),
                   ),
                 ),
             ],

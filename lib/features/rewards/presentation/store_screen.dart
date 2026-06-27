@@ -58,6 +58,75 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     }
   }
 
+  List<Widget> _buildItemSections(
+    BuildContext context,
+    List<StoreItem> items,
+    int points,
+    Set<String> redeemed,
+  ) {
+    final available = items
+        .where((i) => !i.comingSoon && !(i.stock != null && i.stock! <= 0))
+        .toList();
+    final outOfStock = items
+        .where((i) => !i.comingSoon && i.stock != null && i.stock! <= 0)
+        .toList();
+    final comingSoon = items.where((i) => i.comingSoon).toList();
+
+    Widget grid(List<StoreItem> list) => GridView.count(
+          shrinkWrap: true,
+          primary: false,
+          padding: EdgeInsets.zero,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 2,
+          mainAxisSpacing: 14,
+          crossAxisSpacing: 14,
+          childAspectRatio: 0.54,
+          children: [
+            for (final i in list)
+              _StoreCard(
+                item: i,
+                points: points,
+                isRedeemed: redeemed.contains(i.id),
+                onRedeem: () => _redeem(i),
+              ),
+          ],
+        );
+
+    Widget sectionHeader(String label, IconData icon, Color color) => Padding(
+          padding: const EdgeInsets.only(top: 20, bottom: 10),
+          child: Row(
+            children: [
+              Icon(icon, size: 14, color: color),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: KvlText.caption(12).copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(child: Divider(color: color.withValues(alpha: 0.3), height: 1)),
+            ],
+          ),
+        );
+
+    return [
+      if (available.isNotEmpty) grid(available),
+      if (outOfStock.isNotEmpty) ...[
+        sectionHeader('Out of Stock', Icons.remove_shopping_cart_rounded,
+            const Color(0xFF8B4513)),
+        grid(outOfStock),
+      ],
+      if (comingSoon.isNotEmpty) ...[
+        sectionHeader('Coming Soon', Icons.schedule_rounded,
+            const Color(0xFF8B3DFF)),
+        grid(comingSoon),
+      ],
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final pointsAsync = ref.watch(rewardTotalProvider);
@@ -139,35 +208,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
             ),
           )
         else ...[
-          GridView.count(
-            shrinkWrap: true,
-            primary: false,
-            padding: EdgeInsets.zero,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            mainAxisSpacing: 14,
-            crossAxisSpacing: 14,
-            childAspectRatio: 0.54,
-            children: [
-              for (final i in items)
-                _StoreCard(
-                  item: i,
-                  points: points,
-                  isRedeemed: redeemed.contains(i.id),
-                  onRedeem: () => _redeem(i),
-                ),
-            ],
-          ),
-          if (items.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(KvlSpacing.lg),
-              child: Center(
-                child: Text(
-                  context.l10n.noRewardsMatch,
-                  style: KvlText.muted(12),
-                ),
-              ),
-            ),
+          ..._buildItemSections(context, items, points, redeemed),
         ],
       ],
     ),  // ListView
@@ -751,13 +792,7 @@ class _StoreCard extends StatelessWidget {
                     isRedeemed: isRedeemed,
                     comingSoon: comingSoon,
                     outOfStock: outOfStock,
-                    label: isRedeemed
-                        ? 'Redeemed ✓'
-                        : outOfStock
-                            ? 'Out of Stock'
-                            : comingSoon
-                                ? 'Coming Soon'
-                                : context.l10n.redeemButton,
+                    label: isRedeemed ? 'Redeemed ✓' : context.l10n.redeemButton,
                     onRedeem: (isRedeemed || blocked) ? null : onRedeem,
                   ),
                 ],

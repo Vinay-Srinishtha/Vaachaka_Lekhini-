@@ -84,6 +84,7 @@ export const POST: RequestHandler = async (event) => {
 						);
 					}
 
+					const existing = await tx.rewardEvent.findUnique({ where: { id: e.id } });
 					await tx.rewardEvent.upsert({
 						where: { id: e.id },
 						create: {
@@ -97,6 +98,14 @@ export const POST: RequestHandler = async (event) => {
 						},
 						update: {} // idempotent — duplicate id is a no-op
 					});
+
+					// Decrement stock when a new spend event references a store item.
+					if (!existing && e.store_item_id) {
+						await tx.storeItem.updateMany({
+							where: { slug: e.store_item_id, stock: { gt: 0 } },
+							data: { stock: { decrement: 1 } }
+						});
+					}
 
 					insertedCount += 1;
 				},

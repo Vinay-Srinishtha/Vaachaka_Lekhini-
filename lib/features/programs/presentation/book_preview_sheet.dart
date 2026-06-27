@@ -124,36 +124,18 @@ class BookPreviewButton extends ConsumerWidget {
   }
 
   static void openSheet(BuildContext context, String mantraId) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useRootNavigator: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _BookPreviewSheet(mantraId: mantraId),
+    // Go directly to the book preview. Edit button inside opens the samples manager.
+    Navigator.push(
+      context,
+      _BookDiveRoute(
+        builder: (_) => _BookPreviewPage(mantraId: mantraId),
+      ),
     );
   }
 
-  /// Navigate directly to the full book preview page, bypassing the sheet.
-  static void openPage(BuildContext context, WidgetRef ref, String mantraId) {
-    final mantra = ref.read(mantraByIdProvider(mantraId));
-    final profile = ref.read(activeProfileProvider).value;
-    final totalProgress = ref.read(bookTotalForMantraProvider(mantraId));
-    ref.read(bookAssetsProvider(mantraId).future).then((assets) {
-      if (!context.mounted) return;
-      Navigator.push(
-        context,
-        _BookDiveRoute(
-          builder: (_) => _BookPreviewPage(
-            mantraId: mantraId,
-            mantra: mantra,
-            profile: profile,
-            assets: assets,
-            totalProgress: totalProgress,
-          ),
-        ),
-      );
-    });
-  }
+  /// Same as openSheet — kept for callers that pass a WidgetRef.
+  static void openPage(BuildContext context, WidgetRef ref, String mantraId) =>
+      openSheet(context, mantraId);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -781,13 +763,7 @@ class _BookPreviewSheetState extends ConsumerState<_BookPreviewSheet> {
                           Navigator.push(
                             context,
                             _BookDiveRoute(
-                              builder: (_) => _BookPreviewPage(
-                                mantraId: widget.mantraId,
-                                mantra: mantra,
-                                profile: profile,
-                                assets: list,
-                                totalProgress: totalProgress,
-                              ),
+                              builder: (_) => _BookPreviewPage(mantraId: widget.mantraId),
                             ),
                           );
                         },
@@ -942,19 +918,8 @@ class _PreviewBookButton extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _BookPreviewPage extends ConsumerStatefulWidget {
-  const _BookPreviewPage({
-    required this.mantraId,
-    required this.mantra,
-    required this.profile,
-    required this.assets,
-    required this.totalProgress,
-  });
-
+  const _BookPreviewPage({required this.mantraId});
   final String mantraId;
-  final Mantra? mantra;
-  final Profile? profile;
-  final List<HandwritingAsset> assets;
-  final int totalProgress;
 
   @override
   ConsumerState<_BookPreviewPage> createState() => _BookPreviewPageState();
@@ -962,46 +927,51 @@ class _BookPreviewPage extends ConsumerStatefulWidget {
 
 class _BookPreviewPageState extends ConsumerState<_BookPreviewPage> {
   final _scoreCardKey = GlobalKey();
+  bool _showHandwriting = true;
 
-  // Pre-generate both PDF variants so share is instant.
-  late Future<Uint8List> _pdfWritingFuture;  // my handwriting images
-  late Future<Uint8List> _pdfDefaultFuture;  // default script font only
+  // Regenerated whenever assets change.
+  Future<Uint8List>? _pdfWritingFuture;
+  Future<Uint8List>? _pdfDefaultFuture;
+  List<HandwritingAsset> _knownAssets = [];
 
-  Mantra? get mantra => widget.mantra;
-  Profile? get profile => widget.profile;
-  List<HandwritingAsset> get assets => widget.assets;
-  int get totalProgress => widget.totalProgress;
   String get mantraId => widget.mantraId;
 
   @override
   void initState() {
     super.initState();
-    // Force portrait while viewing the book — the calling screen may be landscape.
     SystemChrome.setPreferredOrientations(const [
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
     ]);
+  }
+
+  void _regeneratePdfs({
+    required List<HandwritingAsset> assets,
+    required int totalProgress,
+    required Mantra? mantra,
+    required Profile? profile,
+  }) {
+    _knownAssets = assets;
     _pdfWritingFuture = _buildLekhanaSheetPdf(
-      profile: widget.profile,
-      totalProgress: widget.totalProgress,
-      mantra: widget.mantra,
-      assets: widget.assets,
-      programName: widget.mantra?.name.roman,
+      profile: profile,
+      totalProgress: totalProgress,
+      mantra: mantra,
+      assets: assets,
+      programName: mantra?.name.roman,
       useWritingImages: true,
     );
     _pdfDefaultFuture = _buildLekhanaSheetPdf(
-      profile: widget.profile,
-      totalProgress: widget.totalProgress,
-      mantra: widget.mantra,
-      assets: widget.assets,
-      programName: widget.mantra?.name.roman,
+      profile: profile,
+      totalProgress: totalProgress,
+      mantra: mantra,
+      assets: assets,
+      programName: mantra?.name.roman,
       useWritingImages: false,
     );
   }
 
   @override
   void dispose() {
-    // Restore portrait — the session complete sheet and counter screen are portrait.
     SystemChrome.setPreferredOrientations(const [
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
@@ -1009,8 +979,13 @@ class _BookPreviewPageState extends ConsumerState<_BookPreviewPage> {
     super.dispose();
   }
 
-  Future<void> _shareBook(BuildContext context) async {
+  Future<void> _shareBook(BuildContext context, {
+    required Mantra? mantra,
+    required Profile? profile,
+    required int totalProgress,
+  }) async {
     final bytes = await _pdfWritingFuture;
+    if (bytes == null) return;
     final mantraLabel = mantra?.name.roman ?? 'mantra';
     final name = profile?.name.trim();
     final greeting = (name != null && name.isNotEmpty) ? '$name has ' : 'I have ';
@@ -1033,16 +1008,51 @@ class _BookPreviewPageState extends ConsumerState<_BookPreviewPage> {
     );
   }
 
+  void _openEditSamples(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useRootNavigator: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _EditSamplesSheet(mantraId: mantraId),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final allPrograms =
-        ref.watch(programsForActiveProfileProvider).value ?? [];
-    final mantraPrograms =
-        allPrograms.where((p) => p.mantraId == mantraId).toList();
-    final completedPrograms =
-        mantraPrograms.where((p) => p.isCompleted).length;
-    final activePrograms =
-        mantraPrograms.where((p) => !p.isCompleted).length;
+    final mantra = ref.watch(mantraByIdProvider(mantraId));
+    final profile = ref.watch(activeProfileProvider).value;
+    final totalProgress = ref.watch(bookTotalForMantraProvider(mantraId));
+    final assetsAsync = ref.watch(bookAssetsProvider(mantraId));
+    final assets = assetsAsync.value ?? _knownAssets;
+
+    // Regenerate PDFs whenever assets change.
+    ref.listen(bookAssetsProvider(mantraId), (_, next) {
+      if (next.hasValue && next.value != _knownAssets) {
+        setState(() => _regeneratePdfs(
+          assets: next.value!,
+          totalProgress: totalProgress,
+          mantra: mantra,
+          profile: profile,
+        ));
+      }
+    });
+
+    // Initial PDF generation on first build once assets are available.
+    if (_pdfWritingFuture == null) {
+      _regeneratePdfs(
+        assets: assets,
+        totalProgress: totalProgress,
+        mantra: mantra,
+        profile: profile,
+      );
+    }
+
+    final allPrograms = ref.watch(programsForActiveProfileProvider).value ?? [];
+    final mantraPrograms = allPrograms.where((p) => p.mantraId == mantraId).toList();
+    final completedPrograms = mantraPrograms.where((p) => p.isCompleted).length;
+    final activePrograms = mantraPrograms.where((p) => !p.isCompleted).length;
+
     return Scaffold(
       backgroundColor: const Color(0xFFFDF8F2),
       appBar: AppBar(
@@ -1056,23 +1066,64 @@ class _BookPreviewPageState extends ConsumerState<_BookPreviewPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('My Writing Book',
-                style: KvlText.title(16)
-                    .copyWith(color: KvlColors.primaryDeep)),
+                style: KvlText.title(16).copyWith(color: KvlColors.primaryDeep)),
             if (mantra != null)
-              Text(mantra!.name.roman,
-                  style: KvlText.caption(11)
-                      .copyWith(color: KvlColors.inkSoft)),
+              Text(mantra.name.roman,
+                  style: KvlText.caption(11).copyWith(color: KvlColors.inkSoft)),
           ],
         ),
         actions: [
-          // Share button → bottom sheet with 3 options
+          // Edit samples button
           IconButton(
-            icon: const Icon(Icons.share_rounded,
-                color: KvlColors.primaryDeep),
+            icon: const Icon(Icons.edit_rounded, color: KvlColors.primaryDeep, size: 20),
+            tooltip: 'Edit samples',
+            onPressed: () => _openEditSamples(context),
+          ),
+          // Toggle: original handwriting vs default font
+          GestureDetector(
+            onTap: () => setState(() => _showHandwriting = !_showHandwriting),
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: _showHandwriting
+                    ? KvlColors.primaryDeep.withValues(alpha: 0.12)
+                    : Colors.grey.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: _showHandwriting
+                      ? KvlColors.primaryDeep.withValues(alpha: 0.4)
+                      : Colors.grey.withValues(alpha: 0.4),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    _showHandwriting ? Icons.draw_rounded : Icons.text_fields_rounded,
+                    size: 14,
+                    color: _showHandwriting ? KvlColors.primaryDeep : Colors.grey.shade600,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    _showHandwriting ? 'Original' : 'Default',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: _showHandwriting ? KvlColors.primaryDeep : Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Share
+          IconButton(
+            icon: const Icon(Icons.share_rounded, color: KvlColors.primaryDeep),
             tooltip: 'Share',
             onPressed: totalProgress == 0
                 ? null
-                : () => _shareBook(context),
+                : () => _shareBook(context, mantra: mantra, profile: profile, totalProgress: totalProgress),
           ),
         ],
       ),
@@ -1081,7 +1132,6 @@ class _BookPreviewPageState extends ConsumerState<_BookPreviewPage> {
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
               children: [
-                // Score card
                 if (mantraPrograms.isNotEmpty) ...[
                   RepaintBoundary(
                     key: _scoreCardKey,
@@ -1094,14 +1144,11 @@ class _BookPreviewPageState extends ConsumerState<_BookPreviewPage> {
                   ),
                   const SizedBox(height: 16),
                 ],
-                // Book pages (boxes of 108)
                 ...List.generate(
                   (totalProgress / 108).ceil(),
                   (boxIdx) {
-                    final bool isTelugu =
-                        mantra?.name.telugu?.isNotEmpty == true;
-                    final bool isKannada = !isTelugu &&
-                        (mantra?.name.kannada?.isNotEmpty == true);
+                    final bool isTelugu = mantra?.name.telugu?.isNotEmpty == true;
+                    final bool isKannada = !isTelugu && (mantra?.name.kannada?.isNotEmpty == true);
                     final String mantraText = isTelugu
                         ? mantra!.name.telugu!
                         : isKannada
@@ -1113,6 +1160,7 @@ class _BookPreviewPageState extends ConsumerState<_BookPreviewPage> {
                       assets: assets,
                       mantraId: mantraId,
                       mantraText: mantraText,
+                      showHandwriting: _showHandwriting,
                     );
                   },
                 ),
@@ -1120,21 +1168,183 @@ class _BookPreviewPageState extends ConsumerState<_BookPreviewPage> {
             ),
     );
   }
+}
 
-  void _showShareSheet(BuildContext context, String? appLink) {
-    showModalBottomSheet<void>(
+// ─────────────────────────────────────────────────────────────────────────────
+// Edit Samples Sheet — manage / delete writing samples; book auto-updates
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _EditSamplesSheet extends ConsumerWidget {
+  const _EditSamplesSheet({required this.mantraId});
+  final String mantraId;
+
+  Future<void> _delete(BuildContext context, WidgetRef ref, HandwritingAsset asset) async {
+    final confirmed = await showDialog<bool>(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _ShareOptionsSheet(
-        profile: profile,
-        mantra: mantra,
-        assets: assets,
-        totalProgress: totalProgress,
-        pdfWritingFuture: _pdfWritingFuture,
-        pdfDefaultFuture: _pdfDefaultFuture,
-        scoreCardKey: _scoreCardKey,
-        appLink: appLink,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Remove writing?'),
+        content: const Text('This sample will be removed from your book.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Remove', style: TextStyle(color: Colors.red)),
+          ),
+        ],
       ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    await ref.read(handwritingRepositoryProvider).delete(asset.id);
+    if (asset.filePath != null) {
+      try { await File(asset.filePath!).delete(); } catch (_) {}
+    }
+    ref.invalidate(bookAssetsProvider(mantraId));
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final assets = ref.watch(bookAssetsProvider(mantraId));
+    final mantra = ref.watch(mantraByIdProvider(mantraId));
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.85,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (_, scrollCtrl) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFFFDF8F2),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 10, bottom: 4),
+                child: Container(
+                  width: 36, height: 4,
+                  decoration: BoxDecoration(color: KvlColors.border, borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                child: Row(
+                  children: [
+                    const Icon(Icons.edit_rounded, color: KvlColors.primaryDeep, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Edit Samples', style: KvlText.title(17)),
+                          if (mantra != null)
+                            Text(mantra.name.roman,
+                                style: KvlText.caption(12).copyWith(color: KvlColors.inkSoft)),
+                        ],
+                      ),
+                    ),
+                    assets.when(
+                      data: (list) => Text('${list.length} samples',
+                          style: KvlText.caption(12).copyWith(color: KvlColors.inkSoft)),
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, __) => const SizedBox.shrink(),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1, color: KvlColors.rule),
+              Expanded(
+                child: assets.when(
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => Center(child: Text('Error: $e')),
+                  data: (list) {
+                    if (list.isEmpty) {
+                      return const Center(
+                        child: Text('No writing samples yet.',
+                            style: TextStyle(color: KvlColors.inkSoft)),
+                      );
+                    }
+                    return GridView.builder(
+                      controller: scrollCtrl,
+                      padding: const EdgeInsets.all(16),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: 0.85,
+                      ),
+                      itemCount: list.length,
+                      itemBuilder: (_, i) {
+                        final asset = list[i];
+                        return Stack(
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: KvlColors.border),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: .06),
+                                    blurRadius: 6, offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                children: [
+                                  Expanded(
+                                    child: ClipRRect(
+                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                                      child: asset.filePath != null
+                                          ? Image.file(File(asset.filePath!), fit: BoxFit.cover,
+                                              width: double.infinity)
+                                          : const Icon(Icons.broken_image_rounded,
+                                              color: KvlColors.muted),
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 6),
+                                    child: Text(
+                                      DateFormat('dd/MM/yyyy').format(asset.createdAt),
+                                      style: KvlText.caption(10).copyWith(color: KvlColors.inkSoft),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Positioned(
+                              top: 6, right: 6,
+                              child: GestureDetector(
+                                onTap: () => _delete(context, ref, asset),
+                                child: Container(
+                                  padding: const EdgeInsets.all(5),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: .12),
+                                        blurRadius: 4,
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(Icons.delete_rounded,
+                                      color: Colors.red, size: 16),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -1371,6 +1581,7 @@ class _BookPageBox extends StatelessWidget {
     required this.assets,
     required this.mantraId,
     required this.mantraText,
+    this.showHandwriting = true,
   });
 
   final int boxIdx;
@@ -1378,6 +1589,7 @@ class _BookPageBox extends StatelessWidget {
   final List<HandwritingAsset> assets;
   final String mantraId;
   final String mantraText;
+  final bool showHandwriting;
 
   static const int _cols = 12;
   static const int _rows = 9;
@@ -1479,6 +1691,7 @@ class _BookPageBox extends StatelessWidget {
                               boxStart: boxStart,
                               filledInBox: filledInBox,
                               mantraText: mantraText,
+                              showHandwriting: showHandwriting,
                             ),
                       ],
                     );
@@ -1500,6 +1713,7 @@ class _BookPageBox extends StatelessWidget {
     required int boxStart,
     required int filledInBox,
     required String mantraText,
+    required bool showHandwriting,
   }) {
     final cellIdx = row * _cols + col;
     final globalIdx = boxStart + cellIdx;
@@ -1514,8 +1728,8 @@ class _BookPageBox extends StatelessWidget {
       );
     }
 
-    // Filled — show writing image if available
-    if (assets.isNotEmpty) {
+    // Filled — show writing image if available and toggle is on
+    if (showHandwriting && assets.isNotEmpty) {
       final asset = assets[globalIdx % assets.length];
       if (asset.filePath != null) {
         return Positioned(

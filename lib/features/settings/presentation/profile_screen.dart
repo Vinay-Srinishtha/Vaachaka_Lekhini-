@@ -267,7 +267,7 @@ class ProfileScreen extends ConsumerWidget {
           const SizedBox(height: KvlSpacing.sm),
           _RewardRulesCard(profileComplete: profile?.isProfileComplete ?? false),
 
-          SettingsSection(
+          ExpandableSettingsSection(
             title: context.l10n.familyCommunitySection,
             children: [
               SettingRow(
@@ -286,7 +286,7 @@ class ProfileScreen extends ConsumerWidget {
             ],
           ),
 
-          SettingsSection(
+          ExpandableSettingsSection(
             title: context.l10n.practiceSettingsSection,
             children: [
               SettingRow(
@@ -322,57 +322,7 @@ class ProfileScreen extends ConsumerWidget {
             ],
           ),
 
-          SettingsSection(
-            title: context.l10n.voiceSettingsSection,
-            children: [
-              SettingRow(
-                icon: Icons.mic_rounded,
-                label: context.l10n.reTrainVoice,
-                disabled: programs.where((p) => !p.isGoalReached).isEmpty,
-                onTap: () {
-                  final activePrograms = programs
-                      .where((p) => !p.isGoalReached)
-                      .toList();
-                  if (activePrograms.isEmpty) return;
-                  if (activePrograms.length == 1) {
-                    context.push(
-                      '${KvlRoute.voiceTraining}/${activePrograms.first.mantraId}?retrain=1',
-                    );
-                    return;
-                  }
-                  _RetrainMantraPicker.show(context, ref, activePrograms);
-                },
-              ),
-            ],
-          ),
-
-          SettingsSection(
-            title: context.l10n.writingStyleSection,
-            children: [
-              SettingRow(
-                icon: Icons.edit_rounded,
-                label: context.l10n.retrainWritingStyle,
-                disabled: programs.where((p) => !p.isGoalReached).isEmpty,
-                onTap: () {
-                  final activePrograms = programs
-                      .where((p) => !p.isGoalReached)
-                      .toList();
-                  if (activePrograms.isEmpty) return;
-                  if (activePrograms.length == 1) {
-                    // Write-on-screen is the only handwriting option — go
-                    // straight there instead of a single-choice picker.
-                    context.push(
-                      '${KvlRoute.handwritingWrite}/${activePrograms.first.mantraId}?retrain=1',
-                    );
-                    return;
-                  }
-                  _RetrainWritingPicker.show(context, ref, activePrograms);
-                },
-              ),
-            ],
-          ),
-
-          SettingsSection(
+          ExpandableSettingsSection(
             title: context.l10n.displaySection,
             children: [
               SettingRow(
@@ -402,7 +352,7 @@ class ProfileScreen extends ConsumerWidget {
             ],
           ),
 
-          SettingsSection(
+          ExpandableSettingsSection(
             title: context.l10n.linkSocialSection,
             children: [
               SettingRow(
@@ -432,7 +382,7 @@ class ProfileScreen extends ConsumerWidget {
             ],
           ),
 
-          SettingsSection(
+          ExpandableSettingsSection(
             title: context.l10n.supportPrivacySection,
             children: [
               SettingRow(
@@ -474,7 +424,7 @@ class ProfileScreen extends ConsumerWidget {
           ),
 
           if (kDebugMode) ...[
-            SettingsSection(
+            ExpandableSettingsSection(
               title: 'Developer',
               children: [
                 SettingRow(

@@ -1211,7 +1211,6 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
           final compact = constraints.maxHeight < 390;
 
           final topInset = compact ? 13.0 : 18.0;
-          final bottomStripH = compact ? 28.0 : 32.0;
           return Stack(
             children: [
               Positioned.fill(
@@ -1251,7 +1250,7 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
               Positioned(
                 right: compact ? 10 : 16,
                 top: topInset,
-                bottom: bottomStripH + (compact ? 6 : 10),
+                bottom: compact ? 6 : 10,
                 child: SizedBox(
                 width: 52,
                 child: Column(
@@ -1325,18 +1324,6 @@ class _ProtoWriteScaffoldState extends ConsumerState<_ProtoWriteScaffold> {
                 ),
                 ),
               ),
-              // Bottom strip: Progress [bar] X/Y
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                height: bottomStripH,
-                child: _ProgressStrip(
-                  currentCount: widget.currentCount + widget.writingCount,
-                  targetCount: widget.targetCount,
-                  compact: compact,
-                ),
-              ),
             ],
           );
         },
@@ -1372,15 +1359,16 @@ class _ProtoWritingCanvas extends StatelessWidget {
     // Right rail is ~52px wide + ~16px margin = ~68px. Use equal padding on
     // both sides so the guide is always symmetric, centered in the canvas.
     final hPad = compact ? 60.0 : 72.0;
-    // Top bar is ~80-90px; bottom strip ~28-32px. Use equal vertical padding
-    // so guide sits in the middle of the writable area.
-    final vPad = compact ? 74.0 : 90.0;
+    // Top bar is ~80-90px; guide is centered in the area below the top bar.
+    // topPad = top bar height so guide sits centered in [topBar, screen bottom].
+    final topPad = compact ? 74.0 : 90.0;
+    const bottomPad = 16.0;
     return Stack(
       fit: StackFit.expand,
       children: [
         if (guideVisible)
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
+            padding: EdgeInsets.fromLTRB(hPad, topPad, hPad, bottomPad),
             child: Center(
               child: Transform.scale(
                 scale: guideScale,
@@ -2375,93 +2363,6 @@ class _MergedActionButton extends StatelessWidget {
                   ),
                 ],
               ),
-      ),
-    );
-  }
-}
-
-class _ProgressStrip extends StatelessWidget {
-  const _ProgressStrip({
-    required this.currentCount,
-    required this.targetCount,
-    required this.compact,
-  });
-
-  final int currentCount;
-  final int targetCount;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    if (targetCount <= 0) return const SizedBox.shrink();
-    final progress = (currentCount / targetCount).clamp(0.0, 1.0);
-    final countText =
-        '${IndianNumberFormat.format(currentCount)}/${IndianNumberFormat.format(targetCount)}';
-    return Container(
-      color: Colors.transparent,
-      padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 14),
-      child: Row(
-        children: [
-          Text(
-            'Progress',
-            style: KvlText.ui(compact ? 9 : 10, FontWeight.w700)
-                .copyWith(color: KvlColors.inkSoft),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final fullWidth = constraints.maxWidth;
-                const height = 6.0;
-                final fillWidth = progress <= 0
-                    ? 0.0
-                    : (progress * fullWidth).clamp(height, fullWidth);
-                return Stack(
-                  alignment: Alignment.centerLeft,
-                  children: [
-                    Container(
-                      height: height,
-                      width: fullWidth,
-                      decoration: BoxDecoration(
-                        color: KvlColors.primary.withValues(alpha: 0.12),
-                        borderRadius: KvlRadius.brPill,
-                      ),
-                    ),
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 350),
-                      curve: Curves.easeOutCubic,
-                      height: height,
-                      width: fillWidth,
-                      decoration: BoxDecoration(
-                        borderRadius: KvlRadius.brPill,
-                        gradient: const LinearGradient(
-                          colors: [
-                            Color(0xFFFFB572),
-                            KvlColors.primary,
-                            KvlColors.primaryDeep,
-                          ],
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: KvlColors.primary.withValues(alpha: 0.35),
-                            blurRadius: 4,
-                            offset: const Offset(0, 1),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            countText,
-            style: KvlText.ui(compact ? 9 : 10, FontWeight.w700)
-                .copyWith(color: KvlColors.ink),
-          ),
-        ],
       ),
     );
   }

@@ -130,37 +130,7 @@ class HomeScreen extends ConsumerWidget {
                     _RamaKotiBook(compact: compact),
                     SizedBox(height: gap * 1.5),
                     _GlobalSadhanaSection(compact: compact),
-                    Expanded(
-                      child: Center(
-                        child: Opacity(
-                          opacity: 0.09,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'ॐ',
-                                style: const TextStyle(
-                                  fontSize: 44,
-                                  color: Color(0xFF7B2D00),
-                                  fontWeight: FontWeight.w300,
-                                  height: 1.0,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              const Text(
-                                'श्री राम जय राम',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Color(0xFF7B2D00),
-                                  fontWeight: FontWeight.w500,
-                                  letterSpacing: 3.5,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
+                    const Spacer(),
                   ],
                 ),
               ),
@@ -269,7 +239,7 @@ class _HomeHeader extends StatelessWidget {
                     _StatChip(
                       icon: Icons.star_rounded,
                       value: IndianNumberFormat.format(lifetimeCount ?? 0),
-                      label: 'lifetime',
+                      label: 'lifetime chants',
                       color: KvlColors.gold,
                     ),
                   ],
@@ -1693,16 +1663,23 @@ class _RamaKotiBookState extends ConsumerState<_RamaKotiBook>
                     // Bottom divider
                     _goldLine(w * 0.62),
                     SizedBox(height: h * 0.035),
-                    // MY SADHANAS
-                    Text(
-                      'MY SADHANAS',
-                      style: TextStyle(
-                        color: const Color(0xFFFFD700).withValues(alpha: 0.88),
-                        fontSize: h * 0.055,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 1.8,
-                      ),
-                    ),
+                    // Owner name
+                    Builder(builder: (context) {
+                      final name = ref.watch(activeProfileProvider).value?.name.trim() ?? '';
+                      final label = name.isNotEmpty ? name.toUpperCase() : 'MY SADHANAS';
+                      return Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: const Color(0xFFFFD700).withValues(alpha: 0.88),
+                          fontSize: h * 0.055,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1.8,
+                        ),
+                      );
+                    }),
                   ],
                 ),
               ),

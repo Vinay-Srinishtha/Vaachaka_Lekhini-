@@ -64,14 +64,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     int points,
     Set<String> redeemed,
   ) {
-    final available = items
-        .where((i) => !i.comingSoon && !(i.stock != null && i.stock! <= 0))
-        .toList();
-    final outOfStock = items
-        .where((i) => !i.comingSoon && i.stock != null && i.stock! <= 0)
-        .toList();
-    final comingSoon = items.where((i) => i.comingSoon).toList();
-
     Widget grid(List<StoreItem> list) => GridView.count(
           shrinkWrap: true,
           primary: false,
@@ -92,38 +84,8 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
           ],
         );
 
-    Widget sectionHeader(String label, IconData icon, Color color) => Padding(
-          padding: const EdgeInsets.only(top: 20, bottom: 10),
-          child: Row(
-            children: [
-              Icon(icon, size: 14, color: color),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: KvlText.caption(12).copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(child: Divider(color: color.withValues(alpha: 0.3), height: 1)),
-            ],
-          ),
-        );
-
     return [
-      if (available.isNotEmpty) grid(available),
-      if (outOfStock.isNotEmpty) ...[
-        sectionHeader('Out of Stock', Icons.remove_shopping_cart_rounded,
-            const Color(0xFF8B4513)),
-        grid(outOfStock),
-      ],
-      if (comingSoon.isNotEmpty) ...[
-        sectionHeader('Coming Soon', Icons.schedule_rounded,
-            const Color(0xFF8B3DFF)),
-        grid(comingSoon),
-      ],
+      grid(items),
     ];
   }
 

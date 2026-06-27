@@ -12,7 +12,7 @@ abstract final class RemoteConfigKeys {
   static const maxProfilesPerUser = 'config.max_profiles_per_user';
 
   /// Minimum handwriting accuracy (0–100 integer) required to accept a
-  /// written Japa count. Compared against HandwritingComparator score × 100.
+  /// written Japa count. Compared against the handwriting similarity score.
   /// Default: 35 (35%). Adjustable from admin without an app update.
   static const minHandwritingAccuracy = 'config.min_handwriting_accuracy';
 

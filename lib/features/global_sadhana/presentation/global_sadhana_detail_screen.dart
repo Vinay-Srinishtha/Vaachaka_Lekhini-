@@ -464,29 +464,6 @@ class _GlobalSadhanaDetailScreenState
 
           const SizedBox(height: KvlSpacing.md),
 
-          // ── Instructions ─────────────────────────────────────────────────
-          if (sadhana.instructions != null &&
-              sadhana.instructions!.isNotEmpty) ...[
-            Text('Instructions', style: KvlText.title(14)),
-            const SizedBox(height: KvlSpacing.xs),
-            Container(
-              padding: const EdgeInsets.all(KvlSpacing.md),
-              decoration: BoxDecoration(
-                color: KvlColors.surface,
-                borderRadius: KvlRadius.brMD,
-                border: Border.all(color: KvlColors.rule),
-              ),
-              child: Text(
-                sadhana.instructions!,
-                style: KvlText.caption(13).copyWith(
-                  color: KvlColors.ink,
-                  height: 1.6,
-                ),
-              ),
-            ),
-            const SizedBox(height: KvlSpacing.lg),
-          ],
-
           // ── CTA buttons ──────────────────────────────────────────────────
           if (sadhana.isCompleted) ...[
             Container(
@@ -507,7 +484,7 @@ class _GlobalSadhanaDetailScreenState
             ),
           ] else if (!isEnrolled && profile != null) ...[
             KvlButton(
-              label: _enrolling ? 'Joining…' : '🕉  Join Global Sadhana',
+              label: _enrolling ? 'Joining…' : '🕉  Join this Global Sadhana',
               onPressed: _enrolling || !sadhana.isActive
                   ? null
                   : () => _enroll(sadhana),
@@ -525,7 +502,7 @@ class _GlobalSadhanaDetailScreenState
                 ),
               ),
           ] else if (isEnrolled) ...[
-            // Premium gradient Continue Practice button
+            // Premium gradient Continue Your Sadhana button
             Container(
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
@@ -559,7 +536,7 @@ class _GlobalSadhanaDetailScreenState
                         Text(
                           _startingPractice
                               ? 'Starting…'
-                              : 'Continue Practice',
+                              : 'Continue Your Sadhana',
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w800,
@@ -588,6 +565,29 @@ class _GlobalSadhanaDetailScreenState
           ),
 
           const SizedBox(height: KvlSpacing.md),
+
+          // ── Instructions ─────────────────────────────────────────────────
+          if (sadhana.instructions != null &&
+              sadhana.instructions!.isNotEmpty) ...[
+            Text('Instructions', style: KvlText.title(14)),
+            const SizedBox(height: KvlSpacing.xs),
+            Container(
+              padding: const EdgeInsets.all(KvlSpacing.md),
+              decoration: BoxDecoration(
+                color: KvlColors.surface,
+                borderRadius: KvlRadius.brMD,
+                border: Border.all(color: KvlColors.rule),
+              ),
+              child: Text(
+                sadhana.instructions!,
+                style: KvlText.caption(13).copyWith(
+                  color: KvlColors.ink,
+                  height: 1.6,
+                ),
+              ),
+            ),
+            const SizedBox(height: KvlSpacing.md),
+          ],
         ],
       ),
     );

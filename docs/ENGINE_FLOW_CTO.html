@@ -1,0 +1,1280 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vaachaka Lekhini - Engine Flow Handoff</title>
+  <style>
+    :root {
+      --ink: #20242c;
+      --muted: #657081;
+      --line: #dfe3ea;
+      --paper: #fbf8f3;
+      --panel: #ffffff;
+      --soft: #f4efe6;
+      --accent: #b85c18;
+      --accent-2: #0f766e;
+      --ok: #166534;
+      --warn: #9a5b00;
+      --bad: #991b1b;
+      --code: #111827;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(180deg, rgba(255, 244, 225, .8), rgba(251, 248, 243, 0) 360px),
+        var(--paper);
+      font: 15px/1.58 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+
+    main {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 42px 26px 72px;
+    }
+
+    header {
+      padding-bottom: 26px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 28px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      max-width: 880px;
+      font-size: 36px;
+      line-height: 1.12;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 42px 0 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+      font-size: 24px;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 26px 0 10px;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    h4 {
+      margin: 18px 0 8px;
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: .02em;
+      text-transform: uppercase;
+    }
+
+    p { margin: 0 0 12px; }
+    ul, ol { margin: 8px 0 18px 22px; padding: 0; }
+    li { margin: 5px 0; }
+
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+    code { padding: 2px 5px; border-radius: 4px; background: #eef1f5; font-size: .92em; }
+
+    pre {
+      margin: 10px 0 18px;
+      padding: 14px 16px;
+      overflow-x: auto;
+      color: #f8fafc;
+      background: var(--code);
+      border-radius: 8px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 22px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f0ece4;
+      color: #344054;
+      font-weight: 760;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .subtitle {
+      max-width: 880px;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .meta div, .card, .example-card, .diagram {
+      background: rgba(255,255,255,.88);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 10px 24px rgba(32, 36, 44, .04);
+    }
+
+    .meta div { padding: 13px 14px; }
+    .meta strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    .toc {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .toc a {
+      display: block;
+      padding: 11px 12px;
+      color: var(--ink);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .toc span {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin: 16px 0 24px;
+    }
+
+    .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .card { padding: 15px; }
+    .card h3 { margin-top: 0; }
+
+    .examples {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+      margin: 16px 0 22px;
+    }
+
+    .example-card {
+      min-height: 128px;
+      padding: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .example-card::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 5px;
+      background: var(--accent);
+    }
+
+    .example-card.partial::before { background: var(--warn); }
+    .example-card.accept::before { background: var(--ok); }
+    .example-card.reject::before { background: var(--bad); }
+    .example-card.boundary::before { background: var(--accent-2); }
+    .example-card.repeat::before { background: #6d28d9; }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 750;
+      background: #eef1f5;
+      color: #384253;
+      margin-bottom: 10px;
+    }
+
+    .example {
+      display: block;
+      font-size: 20px;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 8px;
+    }
+
+    .dev { font-family: "Noto Sans Devanagari", "Nirmala UI", sans-serif; }
+    .small { color: var(--muted); font-size: 13px; }
+
+    .diagram {
+      padding: 16px;
+      margin: 16px 0 24px;
+    }
+
+    .diagram-title {
+      margin: 0 0 12px;
+      color: #344054;
+      font-size: 13px;
+      font-weight: 850;
+      text-transform: uppercase;
+    }
+
+    .chart {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .chart.five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .chart.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    .step {
+      position: relative;
+      min-height: 96px;
+      padding: 12px;
+      background: #fbfcfe;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .step:not(:last-child)::after {
+      content: "->";
+      position: absolute;
+      right: -15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--accent);
+      font-weight: 900;
+      z-index: 2;
+    }
+
+    .step strong { display: block; margin-bottom: 5px; font-size: 14px; }
+    .step small { display: block; color: var(--muted); font-size: 12px; line-height: 1.4; }
+    .decision { background: #fff8eb; border-color: #f0bd72; }
+    .okbox { background: #effaf2; border-color: #a7d8b3; }
+    .badbox { background: #fff1f1; border-color: #efb0b0; }
+
+    .callout {
+      margin: 16px 0 22px;
+      padding: 14px 16px;
+      background: #fff0de;
+      border-left: 5px solid var(--accent);
+      border-radius: 8px;
+    }
+
+    .status-ok { color: var(--ok); font-weight: 800; }
+    .status-bad { color: var(--bad); font-weight: 800; }
+    .status-warn { color: var(--warn); font-weight: 800; }
+
+    @media (max-width: 980px) {
+      .meta, .toc, .grid, .grid.two, .examples, .chart, .chart.five, .chart.four {
+        grid-template-columns: 1fr;
+      }
+      .step:not(:last-child)::after {
+        content: "v";
+        right: 50%;
+        top: auto;
+        bottom: -18px;
+        transform: translateX(50%);
+      }
+    }
+
+    @media print {
+      body { background: #fff; }
+      main { max-width: none; padding: 20px; }
+      .toc { display: none; }
+      .card, .example-card, .diagram, table { box-shadow: none; break-inside: avoid; }
+      pre { white-space: pre-wrap; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Vaachaka Lekhini Voice and Writing Engine Flow</h1>
+    <p class="subtitle">
+      Implementation handoff document covering the current voice, writing, manual counter,
+      session, and sync flows. The document uses a focused example set to show how inputs move
+      from recognition to count decisions.
+    </p>
+
+    <div class="meta">
+      <div><strong>Repository</strong>vachika_lekhini</div>
+      <div><strong>App version</strong>8.0.1+31</div>
+      <div><strong>Primary examples</strong>Sri / Sri Rama / Sai Rama / Sri Ramayana</div>
+      <div><strong>Generated</strong>2026-06-27</div>
+    </div>
+
+    <nav class="toc" aria-label="Document sections">
+      <a href="#overview">1. Overview<span>System summary</span></a>
+      <a href="#examples">2. Examples<span>Inputs and reactions</span></a>
+      <a href="#architecture">3. Architecture<span>Flow charts</span></a>
+      <a href="#voice">4. Voice<span>Vosk path</span></a>
+      <a href="#writing">5. Writing<span>OCR and Digital Ink</span></a>
+      <a href="#manual">6. Manual<span>Tap counter</span></a>
+      <a href="#sessions">7. Sessions<span>Persistence and sync</span></a>
+      <a href="#code-contracts">8. Code<span>Key implementation contracts</span></a>
+      <a href="#packages">9. Packages<span>Size and selection</span></a>
+      <a href="#readiness">10. Readiness<span>Presentation notes</span></a>
+    </nav>
+  </header>
+
+  <section id="overview">
+    <h2>1. Overview</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Voice Engine</h3>
+        <p>
+          Captures PCM audio, sends it to Vosk, receives partial/final text, and counts only when
+          the complete expected mantra phrase appears in the recognized output.
+        </p>
+      </div>
+      <div class="card">
+        <h3>Writing Engine</h3>
+        <p>
+          Captures on-screen strokes and PNG output. English can use image OCR, while Indic scripts
+          prefer stroke-based Digital Ink recognition. Both paths return the same
+          <code>HandwritingResult</code>.
+        </p>
+      </div>
+      <div class="card">
+        <h3>Shared Session Layer</h3>
+        <p>
+          Voice, writing, and manual counts all become local sessions. Session finish updates
+          program totals, streaks, and queues backend sync through the outbox.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section id="examples">
+    <h2>2. Primary Example Set</h2>
+    <p>
+      The examples below are intentionally limited. They are enough to show the important behavior:
+      partial phrase, correct phrase, similar wrong phrase, extended phrase, and repeated phrase.
+    </p>
+
+    <div class="examples">
+      <div class="example-card partial">
+        <span class="tag">Partial</span>
+        <span class="example">Sri</span>
+        <p class="small">Does not count when expected phrase is <code>Sri Rama</code>.</p>
+      </div>
+      <div class="example-card accept">
+        <span class="tag">Target</span>
+        <span class="example">Sri Rama</span>
+        <p class="small">Correct phrase. Counts in voice and accepts in writing when recognized as target.</p>
+      </div>
+      <div class="example-card reject">
+        <span class="tag">Similar</span>
+        <span class="example">Sai Rama</span>
+        <p class="small">Similar-sounding wrong phrase. Rejected when recognized as <code>Sai Rama</code>.</p>
+      </div>
+      <div class="example-card boundary">
+        <span class="tag">Extended</span>
+        <span class="example">Sri Ramayana</span>
+        <p class="small">Boundary example. Should not count as standalone <code>Sri Rama</code>.</p>
+      </div>
+      <div class="example-card repeat">
+        <span class="tag">Repeated</span>
+        <span class="example">Sri Rama Sri Rama</span>
+        <p class="small">Rapid repetition. Counts twice when recognized as two full phrases.</p>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Input example</th>
+          <th>Expected recognized output</th>
+          <th>Reaction when expected mantra is Sri Rama</th>
+          <th>Why it matters</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>Sri</code></td>
+          <td><code>श्री</code> or <code>Sri</code></td>
+          <td><span class="status-bad">No count</span></td>
+          <td>Prevents partial phrase acceptance.</td>
+        </tr>
+        <tr>
+          <td><code>Sri Rama</code></td>
+          <td><code>श्री राम</code> or <code>Sri Rama</code></td>
+          <td><span class="status-ok">Count / accept</span></td>
+          <td>Primary successful path.</td>
+        </tr>
+        <tr>
+          <td><code>Sai Rama</code></td>
+          <td><code>साई राम</code> or <code>Sai Rama</code></td>
+          <td><span class="status-bad">Reject</span></td>
+          <td>Shows similar wrong phrase behavior.</td>
+        </tr>
+        <tr>
+          <td><code>Sri Ramayana</code></td>
+          <td><code>श्री रामायण</code> or <code>Sri Ramayana</code></td>
+          <td><span class="status-bad">No count as Sri Rama</span></td>
+          <td>Shows phrase-boundary behavior.</td>
+        </tr>
+        <tr>
+          <td><code>Sri Rama Sri Rama</code></td>
+          <td><code>श्री राम श्री राम</code></td>
+          <td><span class="status-ok">Count twice</span></td>
+          <td>Shows repeated chanting behavior.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="architecture">
+    <h2>3. Architecture Flow Charts</h2>
+
+    <div class="diagram">
+      <p class="diagram-title">3.1 Whole System</p>
+      <div class="chart">
+        <div class="step"><strong>User input</strong><small>Voice, writing, or tap.</small></div>
+        <div class="step"><strong>Capture</strong><small>PCM, strokes + PNG, or tap event.</small></div>
+        <div class="step"><strong>Recognition</strong><small>Vosk, OCR, Digital Ink, or none.</small></div>
+        <div class="step decision"><strong>Decision</strong><small>Phrase match, similarity gate, or manual acceptance.</small></div>
+        <div class="step"><strong>Session</strong><small>Count added to local session.</small></div>
+        <div class="step okbox"><strong>Persist + sync</strong><small>Program totals, streaks, outbox.</small></div>
+      </div>
+    </div>
+
+    <div class="diagram">
+      <p class="diagram-title">3.2 Voice Path</p>
+      <div class="chart five">
+        <div class="step"><strong>Mic</strong><small><code>record</code> opens 16 kHz mono PCM16.</small></div>
+        <div class="step"><strong>AudioCapture</strong><small>Emits <code>Uint8List</code> chunks and levels.</small></div>
+        <div class="step"><strong>VoskRecognizer</strong><small>Returns partial/final text.</small></div>
+        <div class="step decision"><strong>PhraseMatcher</strong><small>Counts full phrase occurrences only.</small></div>
+        <div class="step okbox"><strong>PracticeController</strong><small>Bumps count and flushes deltas.</small></div>
+      </div>
+    </div>
+
+    <div class="diagram">
+      <p class="diagram-title">3.3 Writing Path</p>
+      <div class="chart five">
+        <div class="step"><strong>Canvas</strong><small>Signature strokes and PNG export.</small></div>
+        <div class="step decision"><strong>Engine branch</strong><small>English OCR or Indic Digital Ink.</small></div>
+        <div class="step"><strong>Normalize</strong><small>Remove spaces and compare script text.</small></div>
+        <div class="step decision"><strong>Similarity</strong><small>Syllable and threshold gates.</small></div>
+        <div class="step okbox"><strong>Save/count</strong><small>PNG stored, writing count credited.</small></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="voice">
+    <h2>4. Voice Engine Flow</h2>
+    <p>
+      The voice engine is an offline ASR phrase counter. It does not store raw audio in the session
+      table; it stores the accepted count produced by recognition.
+    </p>
+
+    <h3>4.1 Modules</h3>
+    <table>
+      <thead>
+        <tr><th>Module</th><th>Input</th><th>Output</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>AudioCapture</code></td>
+          <td>Microphone permission + native audio stream</td>
+          <td><code>Stream&lt;Uint8List&gt;</code> PCM16 chunks at 16 kHz</td>
+        </tr>
+        <tr>
+          <td><code>VoskRecognizer</code></td>
+          <td>PCM chunks + grammar</td>
+          <td><code>RecognitionResult(text, words, isFinal)</code></td>
+        </tr>
+        <tr>
+          <td><code>VoicePhraseMatcher</code></td>
+          <td>Recognized text + expected phrase</td>
+          <td>Number of full phrase occurrences</td>
+        </tr>
+        <tr>
+          <td><code>PracticeController</code></td>
+          <td><code>matched</code> events</td>
+          <td>Session count, today's count, pending flush</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>4.2 Grammar for Sri Rama</h3>
+    <pre>{
+  "expectedRoman": "Sri Rama",
+  "expectedDevanagari": "श्री राम",
+  "grammarPhrases": ["श्री राम", "श्री", "राम", "[unk]"]
+}</pre>
+
+    <h3>4.3 Correct Voice Example</h3>
+    <pre>{
+  "userSpeech": "Sri Rama",
+  "voskFinal": {
+    "result": [
+      { "word": "श्री", "conf": 0.91, "start": 0.12, "end": 0.34 },
+      { "word": "राम", "conf": 0.94, "start": 0.35, "end": 0.72 }
+    ],
+    "text": "श्री राम"
+  },
+  "phraseMatcher": {
+    "expected": "श्री राम",
+    "occurrences": 1
+  },
+  "event": { "type": "matched", "count": 1 },
+  "sessionDelta": 1
+}</pre>
+
+    <h3>4.4 Example Reactions</h3>
+    <table>
+      <thead>
+        <tr><th>Recognized final text</th><th>Matcher result</th><th>Voice reaction</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>श्री</code></td><td>0</td><td>No count, partial phrase.</td></tr>
+        <tr><td><code>श्री राम</code></td><td>1</td><td>Count increases by 1.</td></tr>
+        <tr><td><code>साई राम</code></td><td>0</td><td>No count, different phrase.</td></tr>
+        <tr><td><code>श्री रामायण</code></td><td>0</td><td>No count as standalone Sri Rama.</td></tr>
+        <tr><td><code>श्री राम श्री राम</code></td><td>2</td><td>Count increases by 2.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>4.5 Continuous Chanting Handling</h3>
+    <p>
+      Vosk usually finalizes when it detects silence. Continuous chanting may not provide clean
+      silence, so the service uses timed finalization:
+    </p>
+    <ul>
+      <li>Poll every <code>300 ms</code>.</li>
+      <li>Finalize after approximately <code>180 ms</code> of silence.</li>
+      <li>Force finalize after <code>2000 ms</code> if there is no gap.</li>
+      <li>Buffer chunks while finalizing so the next chant is not dropped.</li>
+    </ul>
+  </section>
+
+  <section id="writing">
+    <h2>5. Writing Engine Flow</h2>
+    <p>
+      The writing flow exports both PNG bytes and stroke points. It chooses the recognition path
+      based on the available input and script, then collapses both paths into one shared result
+      object.
+    </p>
+
+    <h3>5.1 English vs Indic Engine Split</h3>
+    <table>
+      <thead>
+        <tr><th>Language/script</th><th>Preferred engine</th><th>Input used</th><th>Engine output</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>English / Latin</td>
+          <td>Tesseract OCR image path</td>
+          <td>Prepared PNG image</td>
+          <td>Text such as <code>Sri Rama</code></td>
+        </tr>
+        <tr>
+          <td>Hindi</td>
+          <td>ML Kit Digital Ink when strokes exist</td>
+          <td>Ordered pen strokes</td>
+          <td>Text such as <code>श्री राम</code></td>
+        </tr>
+        <tr>
+          <td>Telugu</td>
+          <td>ML Kit Digital Ink when strokes exist</td>
+          <td>Ordered pen strokes</td>
+          <td>Telugu-script mantra text</td>
+        </tr>
+        <tr>
+          <td>Kannada</td>
+          <td>ML Kit Digital Ink when strokes exist</td>
+          <td>Ordered pen strokes</td>
+          <td>Kannada-script mantra text</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <strong>Implementation note:</strong> the language map includes <code>eng -> en-US</code>,
+      <code>hin -> hi</code>, <code>tel -> te</code>, and <code>kan -> kn</code>. Any mapped
+      language with stroke data can enter the Digital Ink path; otherwise the image OCR path is
+      available as fallback.
+    </div>
+
+    <h3>5.2 English OCR Example</h3>
+    <pre>{
+  "input": {
+    "expected": "Sri Rama",
+    "pngBytes": "SignatureController export"
+  },
+  "preprocess": [
+    "composite transparent ink onto white background",
+    "grayscale",
+    "upscale 2x",
+    "save temporary OCR PNG"
+  ],
+  "engine": "Tesseract OCR",
+  "recognized": "Sri Rama",
+  "normalized": {
+    "recognized": "srirama",
+    "expected": "srirama"
+  },
+  "result": {
+    "accepted": true,
+    "similarity": 1.0,
+    "recognized": "Sri Rama",
+    "expected": "Sri Rama"
+  }
+}</pre>
+
+    <h3>5.3 Indic Digital Ink Example</h3>
+    <pre>{
+  "input": {
+    "expected": "श्री राम",
+    "strokes": [
+      [{ "x": 120.4, "y": 84.2, "t": 0 }, { "x": 122.1, "y": 86.5, "t": 10 }]
+    ],
+    "pngBytes": "kept for saving and writing book"
+  },
+  "engine": "ML Kit Digital Ink",
+  "languageCode": "hi",
+  "recognized": "श्री राम",
+  "normalized": {
+    "recognized": "श्रीराम",
+    "expected": "श्रीराम"
+  },
+  "syllables": {
+    "recognized": 3,
+    "expected": 3
+  },
+  "result": {
+    "accepted": true,
+    "similarity": 1.0,
+    "recognized": "श्री राम",
+    "expected": "श्री राम"
+  }
+}</pre>
+
+    <h3>5.4 Shared Result Contract</h3>
+    <pre>{
+  "HandwritingResult": {
+    "accepted": "boolean",
+    "similarity": "0.0 to 1.0",
+    "recognized": "best engine output",
+    "expected": "closest expected candidate"
+  }
+}</pre>
+
+    <h3>5.5 Writing Example Reactions</h3>
+    <table>
+      <thead>
+        <tr><th>Written input</th><th>Recognizer output</th><th>Result</th><th>User-facing reaction</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>Sri</code></td>
+          <td><code>Sri</code> / <code>श्री</code></td>
+          <td>Rejected</td>
+          <td>Partial phrase; count unchanged.</td>
+        </tr>
+        <tr>
+          <td><code>Sri Rama</code></td>
+          <td><code>Sri Rama</code> / <code>श्री राम</code></td>
+          <td>Accepted</td>
+          <td>PNG saved, writing count +1, canvas clears.</td>
+        </tr>
+        <tr>
+          <td><code>Sai Rama</code></td>
+          <td><code>Sai Rama</code> / <code>साई राम</code></td>
+          <td>Rejected</td>
+          <td>Snackbar: looked like recognized text; count unchanged.</td>
+        </tr>
+        <tr>
+          <td><code>Sri Ramayana</code></td>
+          <td><code>Sri Ramayana</code> / <code>श्री रामायण</code></td>
+          <td>Rejected for Sri Rama target</td>
+          <td>Extended phrase does not pass as target phrase.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="manual">
+    <h2>6. Manual Counter Flow</h2>
+    <p>
+      Manual mode intentionally bypasses recognition. The user tap is the authoritative count.
+    </p>
+    <pre>{
+  "userAction": "tap count button",
+  "guard": "state.isRunning && modality == manual",
+  "effect": "_bump(sessionCount + 1)",
+  "feedback": "HapticFeedback.selectionClick",
+  "finishEffect": "program.totalChants += countAdded"
+}</pre>
+  </section>
+
+  <section id="sessions">
+    <h2>7. Session, Program, and Sync Flow</h2>
+    <div class="diagram">
+      <p class="diagram-title">7.1 Persistence Flow</p>
+      <div class="chart five">
+        <div class="step"><strong>Start</strong><small>Create local session row.</small></div>
+        <div class="step"><strong>Count</strong><small>Accepted deltas accumulate.</small></div>
+        <div class="step"><strong>Flush</strong><small><code>count_added += delta</code>.</small></div>
+        <div class="step"><strong>Finish</strong><small>Roll into program totals.</small></div>
+        <div class="step okbox"><strong>Sync</strong><small>Queue session and program payloads.</small></div>
+      </div>
+    </div>
+
+    <h3>7.2 Session Payload</h3>
+    <pre>{
+  "id": "session-uuid",
+  "program_id": "program-uuid",
+  "member_id": "member-uuid",
+  "modality": "voice | manual | handwriting",
+  "count_added": 11,
+  "duration_sec": 75,
+  "started_at": "2026-06-27T04:30:00.000Z",
+  "ended_at": "2026-06-27T04:31:15.000Z"
+}</pre>
+
+    <h3>7.3 Total Updates</h3>
+    <table>
+      <thead>
+        <tr><th>Session modality</th><th>Program field updated</th><th>Purpose</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>voice</code></td><td><code>totalChants</code></td><td>Voice chant progress.</td></tr>
+        <tr><td><code>manual</code></td><td><code>totalChants</code></td><td>Silent/manual chant progress.</td></tr>
+        <tr><td><code>handwriting</code></td><td><code>totalWritings</code></td><td>Written mantra progress.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="code-contracts">
+    <h2>8. Code-Level Contracts</h2>
+    <p>
+      These are the minimum code-level snippets needed to explain how the implementation actually
+      moves data between modules. They are intentionally focused on the contracts, not the entire
+      source files.
+    </p>
+
+    <h3>8.1 Audio Capture Contract</h3>
+    <p>
+      The voice engine depends on a live PCM stream. The app uses <code>record</code> to request
+      microphone permission and emit 16 kHz mono PCM16 chunks.
+    </p>
+    <pre>class AudioCapture {
+  static const int sampleRate = 16000;
+
+  Future&lt;Stream&lt;Uint8List&gt;&gt; start() async {
+    if (!await ensurePermission()) {
+      throw StateError('Microphone permission denied');
+    }
+
+    final stream = await _recorder.startStream(const RecordConfig(
+      encoder: AudioEncoder.pcm16bits,
+      sampleRate: sampleRate,
+      numChannels: 1,
+      noiseSuppress: false,
+      echoCancel: false,
+    ));
+
+    return stream;
+  }
+}</pre>
+
+    <h3>8.2 Vosk Recognizer Contract</h3>
+    <p>
+      Vosk is wrapped so the rest of the app receives one consistent object:
+      <code>RecognitionResult(text, words, isFinal)</code>.
+    </p>
+    <pre>class RecognitionResult {
+  final String text;
+  final List&lt;WordResult&gt; words;
+  final bool isFinal;
+}
+
+Future&lt;RecognitionResult?&gt; acceptChunk(Uint8List pcm16) async {
+  final isFinal = await recognizer.acceptWaveformBytes(pcm16);
+  final raw = isFinal
+      ? await recognizer.getFinalResult()
+      : await recognizer.getPartialResult();
+
+  return parseVoskJson(raw, isFinal);
+}</pre>
+
+    <h3>8.3 Voice Grammar and Phrase Matching</h3>
+    <p>
+      Grammar helps recognition, but counting is still guarded by a complete phrase match.
+    </p>
+    <pre>{
+  "expected": "श्री राम",
+  "grammar": ["श्री राम", "श्री", "राम", "[unk]"],
+  "rule": "only complete phrase occurrences count"
+}</pre>
+
+    <pre>int countOccurrences(String recognizedText, String expectedPhrase) {
+  final textTokens = tokenizeAndNormalize(recognizedText);
+  final phraseTokens = tokenizeAndNormalize(expectedPhrase);
+
+  // Slides over token windows and counts non-overlapping full phrase matches.
+  // "श्री" alone does not count as "श्री राम".
+  // "श्री राम श्री राम" counts as 2.
+}</pre>
+
+    <h3>8.4 Voice Event Contract</h3>
+    <p>
+      The voice service does not write program totals directly. It emits events; the practice
+      controller converts accepted events into session deltas.
+    </p>
+    <pre>sealed class VoiceTrainingEvent {
+  const VoiceTrainingEvent(this.count);
+  final int count;
+
+  factory VoiceTrainingEvent.partial(int count, String text);
+  factory VoiceTrainingEvent.miss(int count, String heard);
+  factory VoiceTrainingEvent.matched(int count);
+  factory VoiceTrainingEvent.done(int count);
+  factory VoiceTrainingEvent.error(int count, Object error);
+}</pre>
+
+    <pre>{
+  "recognized": "श्री राम",
+  "event": "matched",
+  "count": 1,
+  "controllerReaction": "_bump(1)"
+}</pre>
+
+    <h3>8.5 Writing Engine Selection Contract</h3>
+    <p>
+      Writing sends both image bytes and stroke data. If stroke data exists for a mapped language,
+      the app can use Digital Ink. Otherwise it uses the OCR image path.
+    </p>
+    <pre>const mlKitLangMap = {
+  'eng': 'en-US',
+  'hin': 'hi',
+  'tel': 'te',
+  'kan': 'kn',
+};
+
+if (mlLang != null &amp;&amp; strokes != null &amp;&amp; strokes.isNotEmpty) {
+  recognized = await mlKitRecognize(strokes, mlLang);
+} else {
+  recognized = await tesseractOcr(preparedPngPath, tessLang);
+}</pre>
+
+    <h3>8.6 English OCR Code Path</h3>
+    <p>
+      The OCR path prepares the canvas PNG so OCR reads dark ink on a clean white background.
+    </p>
+    <pre>{
+  "input": "transparent canvas PNG",
+  "steps": [
+    "composite onto white background",
+    "convert to grayscale",
+    "upscale 2x",
+    "write temporary OCR PNG",
+    "run Tesseract with language: eng"
+  ],
+  "output": "Sri Rama"
+}</pre>
+
+    <h3>8.7 Indic Digital Ink Code Path</h3>
+    <p>
+      Digital Ink uses the stroke sequence, not only the final pixels. The app gives each stroke
+      point synthetic timestamps so ML Kit can preserve stroke boundaries.
+    </p>
+    <pre>{
+  "input": [
+    [{ "x": 120.4, "y": 84.2, "t": 0 }],
+    [{ "x": 230.8, "y": 102.9, "t": 500 }]
+  ],
+  "languageCode": "hi",
+  "engine": "ML Kit Digital Ink",
+  "output": "श्री राम"
+}</pre>
+
+    <h3>8.8 Shared Handwriting Result Contract</h3>
+    <p>
+      After OCR or Digital Ink, both paths return the same object. This keeps the UI and counting
+      flow simple.
+    </p>
+    <pre>class HandwritingResult {
+  final bool accepted;
+  final double similarity;
+  final String recognized;
+  final String expected;
+}</pre>
+
+    <pre>{
+  "recognized": "साई राम",
+  "expected": "श्री राम",
+  "similarity": 0.42,
+  "accepted": false,
+  "screenReaction": "That looked like \"साई राम\". Write the mantra and try again."
+}</pre>
+
+    <h3>8.9 Accepted Writing Save Path</h3>
+    <p>
+      Accepted writings are saved as PNG assets and then counted. Rejected writings do not create
+      count deltas.
+    </p>
+    <pre>if (result.accepted) {
+  await handwritingRepository.savePngCapped(
+    profileId: profile.id,
+    mantraId: mantraId,
+    bytes: png,
+  );
+
+  writingCount++;
+  controller.clear();
+} else {
+  showRejectedFeedback(result);
+}</pre>
+
+    <h3>8.10 Session Persistence Contract</h3>
+    <p>
+      Voice, manual, and handwriting modes converge at the session repository.
+    </p>
+    <pre>{
+  "session": {
+    "programId": "program-uuid",
+    "memberId": "member-uuid",
+    "modality": "voice | manual | handwriting",
+    "countAdded": 11
+  },
+  "finishEffect": {
+    "voice/manual": "program.totalChants += countAdded",
+    "handwriting": "program.totalWritings += countAdded"
+  },
+  "outbox": ["sessions.append", "programs.upsert"]
+}</pre>
+  </section>
+
+  <section id="packages">
+    <h2>9. Package Footprint and Selection</h2>
+    <p>
+      Package sizes below are measured from the local pub cache for the resolved versions in this
+      project. They represent local package source/cache footprint, not exact final APK or IPA size.
+      Final binary size depends on native libraries, tree shaking, platform slices, and bundled
+      assets.
+    </p>
+
+    <h3>9.1 Recognition and Practice Packages</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Package</th>
+          <th>Resolved version</th>
+          <th>Local size</th>
+          <th>Used for</th>
+          <th>Why this package fits</th>
+          <th>Compared option</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>vosk_flutter_2</code></td>
+          <td>1.0.5</td>
+          <td>724K</td>
+          <td>Offline speech recognition wrapper around Vosk.</td>
+          <td>Supports offline ASR, grammar-constrained recognition, and no cloud voice upload.</td>
+          <td>Cloud STT such as Google Speech: strong accuracy, but network and privacy dependency.</td>
+        </tr>
+        <tr>
+          <td><code>record</code></td>
+          <td>7.1.0</td>
+          <td>932K</td>
+          <td>Microphone PCM stream capture.</td>
+          <td>Gives direct PCM stream needed by Vosk and supports mobile platforms cleanly.</td>
+          <td><code>flutter_sound</code>: broader audio toolkit, more surface area than needed here.</td>
+        </tr>
+        <tr>
+          <td><code>signature</code></td>
+          <td>6.3.0</td>
+          <td>428K</td>
+          <td>On-screen handwriting canvas and stroke collection.</td>
+          <td>Captures both visual PNG and stroke points, which is exactly what OCR/Digital Ink need.</td>
+          <td>Custom canvas: maximum control, but more implementation and test work.</td>
+        </tr>
+        <tr>
+          <td><code>flutter_tesseract_ocr</code></td>
+          <td>0.4.31</td>
+          <td>49M</td>
+          <td>Image-based OCR for English/fallback handwriting recognition.</td>
+          <td>Runs offline and works with bundled traineddata assets.</td>
+          <td>Cloud Vision OCR: strong OCR, but sends images off device and requires network.</td>
+        </tr>
+        <tr>
+          <td><code>google_mlkit_digital_ink_recognition</code></td>
+          <td>0.12.1</td>
+          <td>84K</td>
+          <td>Stroke-based recognition for Indic handwriting.</td>
+          <td>Uses live stroke sequence, better suited for Hindi/Telugu/Kannada than flat-image OCR.</td>
+          <td>Tesseract-only: simpler, but weaker for complex handwritten Indic scripts.</td>
+        </tr>
+        <tr>
+          <td><code>image</code></td>
+          <td>4.3.0</td>
+          <td>14M</td>
+          <td>Prepare PNGs for OCR: white background, grayscale, resize.</td>
+          <td>Pure Dart image manipulation avoids extra platform code for preprocessing.</td>
+          <td>Native image processing: faster in some cases, but more platform maintenance.</td>
+        </tr>
+        <tr>
+          <td><code>audioplayers</code></td>
+          <td>6.7.1</td>
+          <td>22M</td>
+          <td>Reward bell / app audio playback.</td>
+          <td>Simple asset playback with controllable audio focus behavior.</td>
+          <td><code>just_audio</code>: excellent playback engine, but more advanced than current bell use case.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>9.2 Storage, Sync, and App Infrastructure Packages</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Package</th>
+          <th>Resolved version</th>
+          <th>Local size</th>
+          <th>Used for</th>
+          <th>Why this package fits</th>
+          <th>Compared option</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>drift</code></td>
+          <td>2.33.0</td>
+          <td>43M</td>
+          <td>Structured local SQLite program/session/reward tables.</td>
+          <td>Typed queries, migrations, streams, and strong fit for auditable local data.</td>
+          <td><code>sqflite</code>: lighter direct SQL API, but less type-safe and more manual mapping.</td>
+        </tr>
+        <tr>
+          <td><code>sqlite3_flutter_libs</code></td>
+          <td>0.5.42</td>
+          <td>92K</td>
+          <td>SQLite native library support for Drift.</td>
+          <td>Required native SQLite packaging path for the chosen Drift setup.</td>
+          <td>Platform SQLite only: less predictable across targets.</td>
+        </tr>
+        <tr>
+          <td><code>hive_ce</code></td>
+          <td>2.19.3</td>
+          <td>35M</td>
+          <td>Lightweight key-value cache/outbox/profile storage.</td>
+          <td>Fast local object/key-value storage where relational modeling is unnecessary.</td>
+          <td><code>shared_preferences</code>: simpler, but not ideal for structured cached objects/outbox records.</td>
+        </tr>
+        <tr>
+          <td><code>hive_ce_flutter</code></td>
+          <td>2.3.4</td>
+          <td>904K</td>
+          <td>Flutter integration for Hive CE.</td>
+          <td>Provides app-directory setup and Flutter-friendly initialization.</td>
+          <td>Manual file storage: more code and less consistency.</td>
+        </tr>
+        <tr>
+          <td><code>flutter_riverpod</code></td>
+          <td>3.3.1</td>
+          <td>360K</td>
+          <td>App state, repository composition, async providers.</td>
+          <td>Good for testable dependency injection and reactive data flow.</td>
+          <td><code>provider</code>: simpler, but less structured for async/repository graphs.</td>
+        </tr>
+        <tr>
+          <td><code>go_router</code></td>
+          <td>17.2.3</td>
+          <td>1.9M</td>
+          <td>Declarative app routing.</td>
+          <td>Handles nested routes, path parameters, redirects, and app-scale navigation cleanly.</td>
+          <td>Navigator 1.0/manual routing: works, but gets verbose as flows grow.</td>
+        </tr>
+        <tr>
+          <td><code>dio</code></td>
+          <td>5.9.2</td>
+          <td>640K</td>
+          <td>Backend API client.</td>
+          <td>Interceptors and structured request handling fit auth/sync flows.</td>
+          <td><code>http</code>: smaller, but less ergonomic for bearer refresh/interceptors.</td>
+        </tr>
+        <tr>
+          <td><code>flutter_secure_storage</code></td>
+          <td>10.3.1</td>
+          <td>1.4M</td>
+          <td>JWT/token storage.</td>
+          <td>Uses platform secure storage instead of plain local preferences.</td>
+          <td><code>shared_preferences</code>: not appropriate for auth tokens.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>9.3 Media, Permissions, and Output Packages</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Package</th>
+          <th>Resolved version</th>
+          <th>Local size</th>
+          <th>Used for</th>
+          <th>Why this package fits</th>
+          <th>Compared option</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>permission_handler</code></td>
+          <td>11.4.0</td>
+          <td>520K</td>
+          <td>Microphone, camera, photos, notification permissions.</td>
+          <td>Single cross-platform permission API; version aligns with Vosk dependency cap.</td>
+          <td>Platform-channel custom code: possible, but repetitive across Android/iOS.</td>
+        </tr>
+        <tr>
+          <td><code>path_provider</code></td>
+          <td>2.1.5</td>
+          <td>624K</td>
+          <td>Application support/documents/temp directories.</td>
+          <td>Standard Flutter plugin for safe platform-specific storage paths.</td>
+          <td>Hard-coded paths: unsafe and platform-fragile.</td>
+        </tr>
+        <tr>
+          <td><code>pdf</code></td>
+          <td>3.12.0</td>
+          <td>1.7M</td>
+          <td>Generate writing-book PDFs.</td>
+          <td>Pure Dart PDF generation from saved handwriting PNGs.</td>
+          <td>Server PDF rendering: centralized, but adds network/backend dependency.</td>
+        </tr>
+        <tr>
+          <td><code>printing</code></td>
+          <td>5.14.3</td>
+          <td>2.8M</td>
+          <td>PDF preview/share/print integration.</td>
+          <td>Complements <code>pdf</code> for user-facing PDF workflows.</td>
+          <td>Manual platform sharing: more platform-specific code.</td>
+        </tr>
+        <tr>
+          <td><code>image_picker</code></td>
+          <td>1.2.2</td>
+          <td>840K</td>
+          <td>Gallery/camera media selection path.</td>
+          <td>Standard Flutter media picker with platform implementations.</td>
+          <td>Custom camera/gallery channels: more work and permission complexity.</td>
+        </tr>
+        <tr>
+          <td><code>image_cropper</code></td>
+          <td>9.1.0</td>
+          <td>23M</td>
+          <td>Crop imported handwriting/image assets.</td>
+          <td>Provides ready crop UI across platforms.</td>
+          <td>Custom crop UI: lower dependency footprint, but more UI/math work.</td>
+        </tr>
+        <tr>
+          <td><code>photo_view</code></td>
+          <td>0.15.0</td>
+          <td>17M</td>
+          <td>Zoomable image preview.</td>
+          <td>Well-suited for inspecting generated/selected visual assets.</td>
+          <td>InteractiveViewer: built-in and lighter, but less feature-complete for image preview patterns.</td>
+        </tr>
+        <tr>
+          <td><code>flutter_local_notifications</code></td>
+          <td>21.0.0</td>
+          <td>2.5M</td>
+          <td>Local reminders.</td>
+          <td>Local scheduling without requiring Firebase push setup.</td>
+          <td>Firebase Messaging: useful for remote campaigns, but not needed for local-only reminders.</td>
+        </tr>
+        <tr>
+          <td><code>share_plus</code></td>
+          <td>13.1.0</td>
+          <td>984K</td>
+          <td>Share links/PDFs/text.</td>
+          <td>Standard cross-platform share sheet integration.</td>
+          <td>Platform-specific share intents: more maintenance.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>9.4 Bundled Recognition Assets</h3>
+    <table>
+      <thead>
+        <tr><th>Asset</th><th>Local size</th><th>Purpose</th><th>Why included</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>assets/models/vosk-model-small-hi-0.22.zip</code></td>
+          <td>42M</td>
+          <td>Offline Hindi ASR model.</td>
+          <td>Allows voice counting without cloud speech APIs.</td>
+        </tr>
+        <tr>
+          <td><code>assets/tessdata</code></td>
+          <td>11M</td>
+          <td>Bundled OCR traineddata files.</td>
+          <td>Allows offline OCR path for English/fallback handwriting recognition.</td>
+        </tr>
+        <tr>
+          <td><code>assets/audio</code></td>
+          <td>328K</td>
+          <td>Bell/ambient audio assets.</td>
+          <td>Supports local reward and ambience playback.</td>
+        </tr>
+        <tr>
+          <td><code>assets/fonts</code></td>
+          <td>260K</td>
+          <td>Script display font.</td>
+          <td>Improves mantra rendering consistency.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="readiness">
+    <h2>10. Readiness Notes</h2>
+    <ul>
+      <li><strong>Local-first recognition:</strong> Voice and handwriting recognition run on-device in the current app path.</li>
+      <li><strong>Recognition boundary:</strong> Decisions are based on the text returned by the recognition engine.</li>
+      <li><strong>User recovery:</strong> Missed voice recognition, unreadable writing, and denied mic access leave counts unchanged and allow retry or manual fallback.</li>
+      <li><strong>Durability:</strong> Practice deltas flush periodically and drafts preserve active session count across app interruption.</li>
+      <li><strong>Auditability:</strong> Finished sessions record member, program, modality, count, start/end, and duration.</li>
+      <li><strong>Sync shape:</strong> Backend receives compact session/program payloads, not raw audio or raw handwriting strokes.</li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>

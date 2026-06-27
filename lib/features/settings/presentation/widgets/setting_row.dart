@@ -2,6 +2,126 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/theme.dart';
 
+/// Animated expandable settings section with a tappable header.
+class ExpandableSettingsSection extends StatefulWidget {
+  const ExpandableSettingsSection({
+    super.key,
+    required this.title,
+    required this.children,
+    this.initiallyExpanded = false,
+  });
+
+  final String title;
+  final List<Widget> children;
+  final bool initiallyExpanded;
+
+  @override
+  State<ExpandableSettingsSection> createState() =>
+      _ExpandableSettingsSectionState();
+}
+
+class _ExpandableSettingsSectionState extends State<ExpandableSettingsSection>
+    with SingleTickerProviderStateMixin {
+  late bool _expanded;
+  late final AnimationController _ctrl;
+  late final Animation<double> _rotate;
+  late final Animation<double> _expand;
+
+  @override
+  void initState() {
+    super.initState();
+    _expanded = widget.initiallyExpanded;
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+      value: _expanded ? 1.0 : 0.0,
+    );
+    _rotate = Tween<double>(begin: 0.0, end: 0.5).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeOut),
+    );
+    _expand = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _toggle() {
+    setState(() => _expanded = !_expanded);
+    if (_expanded) {
+      _ctrl.forward();
+    } else {
+      _ctrl.reverse();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Header — tappable, always visible
+        GestureDetector(
+          onTap: _toggle,
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: const EdgeInsets.only(top: KvlSpacing.md, bottom: 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.title,
+                    style: KvlText.muted(10).copyWith(
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: .06 * 10,
+                    ),
+                  ),
+                ),
+                RotationTransition(
+                  turns: _rotate,
+                  child: const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: 16,
+                    color: KvlColors.muted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Animated body
+        SizeTransition(
+          sizeFactor: _expand,
+          axisAlignment: -1,
+          child: Container(
+            decoration: BoxDecoration(
+              color: KvlColors.surface,
+              borderRadius: KvlRadius.brLG,
+              border: Border.all(color: KvlColors.border),
+            ),
+            child: Column(
+              children: [
+                for (var i = 0; i < widget.children.length; i++) ...[
+                  widget.children[i],
+                  if (i != widget.children.length - 1)
+                    const Divider(
+                      height: 1,
+                      color: KvlColors.rule,
+                      indent: KvlSpacing.md,
+                      endIndent: KvlSpacing.md,
+                    ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class SettingRow extends StatelessWidget {
   const SettingRow({
     super.key,

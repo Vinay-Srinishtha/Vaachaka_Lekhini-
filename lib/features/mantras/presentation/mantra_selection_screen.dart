@@ -66,7 +66,7 @@ class _MantraSelectionScreenState extends ConsumerState<MantraSelectionScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _start();
       });
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(backgroundColor: Color(0xFFFDF8F2), body: SizedBox.shrink());
     }
 
     return KvlScaffold(

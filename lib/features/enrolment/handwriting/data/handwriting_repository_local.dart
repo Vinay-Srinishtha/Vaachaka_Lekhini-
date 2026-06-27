@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:hive_ce/hive.dart';
@@ -86,73 +85,20 @@ class HandwritingRepositoryLocal implements HandwritingRepository {
     ));
   }
 
-  String _countKey(String profileId, String mantraId) =>
-      'handwriting_count::$profileId::$mantraId';
-
   @override
   Future<HandwritingAsset> savePngCapped({
     required String profileId,
     required String mantraId,
     required Uint8List bytes,
     int maxSamples = 10,
-  }) async {
-    // Increment the lifetime write count for this (profile, mantra).
-    final countKey = _countKey(profileId, mantraId);
-    final totalCount = (((_box.get(countKey) as int?) ?? 0) + 1);
-    await _box.put(countKey, totalCount);
-
-    // Reservoir sampling:
-    // - First maxSamples writes: always add to pool.
-    // - After that: add with probability maxSamples/totalCount,
-    //   replacing a random existing sample. This ensures every write
-    //   has an equal probability of being in the pool at any time.
-    final rng = Random();
-    if (totalCount <= maxSamples) {
-      // Pool not full yet — always save.
-      return savePng(
-        profileId: profileId,
-        mode: HandwritingMode.writeOnScreen,
-        bytes: bytes,
-        mantraId: mantraId,
-      );
-    }
-
-    // After pool is full: replace with probability maxSamples/totalCount.
-    final replaceIndex = rng.nextInt(totalCount); // 0 .. totalCount-1
-    if (replaceIndex >= maxSamples) {
-      // This write does not enter the pool — discard silently.
-      // Return a dummy asset so callers don't need to handle null.
-      return HandwritingAsset(
-        id: 'discarded',
-        profileId: profileId,
-        mode: HandwritingMode.writeOnScreen,
-        createdAt: DateTime.now(),
-        mantraId: mantraId,
-      );
-    }
-
-    // replaceIndex < maxSamples — save new sample and evict one at random.
-    final saved = await savePng(
+  }) {
+    // Cap removed — every writing is stored permanently.
+    return savePng(
       profileId: profileId,
       mode: HandwritingMode.writeOnScreen,
       bytes: bytes,
       mantraId: mantraId,
     );
-
-    final pool = (await listForProfile(profileId))
-        .where((a) =>
-            a.mantraId == mantraId &&
-            a.filePath != null &&
-            a.mode == HandwritingMode.writeOnScreen &&
-            a.id != saved.id)
-        .toList();
-
-    if (pool.length >= maxSamples) {
-      final victim = pool[rng.nextInt(pool.length)];
-      await delete(victim.id);
-    }
-
-    return saved;
   }
 
   Future<HandwritingAsset> _persist(HandwritingAsset asset) async {

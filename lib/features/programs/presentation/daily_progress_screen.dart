@@ -96,229 +96,340 @@ class _DailyProgressScreenState extends ConsumerState<DailyProgressScreen> {
             ? context.l10n.dailyProgressTitle
             : '$mantraName Mantra';
 
+        final goalReached = program != null &&
+            program.totalProgress >= program.targetWritings;
+
         return Scaffold(
-          backgroundColor: KvlColors.bg,
-          body: SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                KvlSpacing.lg,
-                KvlSpacing.sm,
-                KvlSpacing.lg,
-                KvlSpacing.md,
+          backgroundColor: Colors.transparent,
+          body: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFFFFF8EE),
+                  Color(0xFFFFF0D6),
+                  Color(0xFFFFE8C8),
+                ],
               ),
+            ),
+            child: SafeArea(
+              bottom: false,
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final height = constraints.maxHeight;
                   final compact = height < 720;
                   final tight = height < 650;
-                  final headerHeight = tight ? 64.0 : 76.0;
                   final gap = tight ? KvlSpacing.xs : KvlSpacing.sm;
                   final calendarHeight =
-                      (height *
-                              (tight
-                                  ? .42
-                                  : compact
-                                  ? .45
-                                  : .48))
-                          .clamp(248.0, 356.0);
-                  final summaryPadding = EdgeInsets.all(
-                    tight ? KvlSpacing.md : KvlSpacing.lg,
-                  );
+                      (height * (tight ? .40 : compact ? .43 : .46))
+                          .clamp(240.0, 340.0);
 
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SizedBox(
-                        height: headerHeight,
-                        child: _ProgressHeader(
-                          title: title,
-                          onBack: () => context.popOrGo(KvlRoute.practice),
-                        ),
-                      ),
-                      SizedBox(height: gap),
-                      SizedBox(
-                        height: calendarHeight,
-                        child: FutureBuilder<Map<DateTime, int>>(
-                          future: _countsFuture,
-                          builder: (_, snap) {
-                            final counts = snap.data ?? const <DateTime, int>{};
-                            return LayoutBuilder(
-                              builder: (context, calConstraints) {
-                                final monthHeaderHeight = tight ? 44.0 : 52.0;
-                                final gridHeight =
-                                    calConstraints.maxHeight -
-                                    monthHeaderHeight -
-                                    KvlSpacing.sm;
-                                return Column(
+                  final bottomPad = MediaQuery.paddingOf(context).bottom + 16;
+                  return Padding(
+                    padding: EdgeInsets.fromLTRB(KvlSpacing.lg, KvlSpacing.sm, KvlSpacing.lg, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // ── Premium mantra title card ──────────────────────
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: KvlSpacing.md, vertical: 14),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFBF5000), Color(0xFFE07020)],
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                            ),
+                            borderRadius: BorderRadius.circular(18),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFE07020)
+                                    .withValues(alpha: .28),
+                                blurRadius: 16,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              const Text('🕉',
+                                  style: TextStyle(fontSize: 22)),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
                                   children: [
-                                    SizedBox(
-                                      height: monthHeaderHeight,
-                                      child: _CalHeader(
-                                        month: _month,
-                                        compact: compact,
-                                        onPrev: () => _shiftMonth(-1),
-                                        onNext: () => _shiftMonth(1),
+                                    Text(
+                                      title,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w800,
                                       ),
                                     ),
-                                    const SizedBox(height: KvlSpacing.sm),
-                                    Expanded(
-                                      child: _CalGrid(
-                                        month: _month,
-                                        today: _today,
-                                        selected: _selected,
-                                        countsByDay: counts,
-                                        rowHeight: gridHeight / 7,
-                                        compact: compact,
-                                        onTapDay: (d) =>
-                                            setState(() {
-                                              _selected = d;
-                                              _summaryFuture = _buildSummaryFuture();
-                                            }),
+                                    Text(
+                                      context.l10n.dailyProgressTitle,
+                                      style: TextStyle(
+                                        color: Colors.white
+                                            .withValues(alpha: .75),
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
                                       ),
                                     ),
                                   ],
-                                );
-                              },
+                                ),
+                              ),
+                              if (program != null)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white
+                                        .withValues(alpha: .20),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                        color: Colors.white
+                                            .withValues(alpha: .35)),
+                                  ),
+                                  child: Text(
+                                    '${program.totalProgress} chants',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+
+                        SizedBox(height: gap),
+
+                        // ── Calendar card ──────────────────────────────────
+                        Container(
+                          height: calendarHeight,
+                          padding: const EdgeInsets.all(KvlSpacing.md),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: .85),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                                color: const Color(0xFFE07020)
+                                    .withValues(alpha: .15)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFBF5000)
+                                    .withValues(alpha: .08),
+                                blurRadius: 20,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: FutureBuilder<Map<DateTime, int>>(
+                            future: _countsFuture,
+                            builder: (_, snap) {
+                              final counts =
+                                  snap.data ?? const <DateTime, int>{};
+                              final monthHeaderH = tight ? 40.0 : 48.0;
+                              final gridH = calendarHeight -
+                                  KvlSpacing.md * 2 -
+                                  monthHeaderH -
+                                  KvlSpacing.sm;
+                              return Column(
+                                children: [
+                                  SizedBox(
+                                    height: monthHeaderH,
+                                    child: _CalHeader(
+                                      month: _month,
+                                      compact: compact,
+                                      onPrev: () => _shiftMonth(-1),
+                                      onNext: () => _shiftMonth(1),
+                                    ),
+                                  ),
+                                  const SizedBox(height: KvlSpacing.sm),
+                                  Expanded(
+                                    child: _CalGrid(
+                                      month: _month,
+                                      today: _today,
+                                      selected: _selected,
+                                      countsByDay: counts,
+                                      rowHeight: gridH / 7,
+                                      compact: compact,
+                                      onTapDay: (d) => setState(() {
+                                        _selected = d;
+                                        _summaryFuture =
+                                            _buildSummaryFuture();
+                                      }),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+
+                        SizedBox(height: tight ? KvlSpacing.sm : KvlSpacing.md),
+
+                        // ── Daily stats card ───────────────────────────────
+                        FutureBuilder<DailySummary>(
+                          future: _summaryFuture,
+                          builder: (_, snap) {
+                            final s = snap.data;
+                            return Container(
+                              padding: EdgeInsets.all(
+                                  tight ? KvlSpacing.md : KvlSpacing.lg),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    Color(0xFFFFF3E0),
+                                    Color(0xFFFFE0B2),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                    color: const Color(0xFFE07020)
+                                        .withValues(alpha: .20)),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFFBF5000)
+                                        .withValues(alpha: .08),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.stretch,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Row(children: [
+                                    const Icon(Icons.calendar_today_rounded,
+                                        size: 13,
+                                        color: Color(0xFFBF5000)),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        context.l10n.recitationsOnDate(
+                                            DateFormat.yMMMd()
+                                                .format(_selected)),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: KvlText.ui(
+                                          tight ? 11.5 : 12.5,
+                                          FontWeight.w700,
+                                        ).copyWith(
+                                            color: const Color(0xFF7B2D00)),
+                                      ),
+                                    ),
+                                  ]),
+                                  SizedBox(
+                                      height:
+                                          tight ? KvlSpacing.xs : KvlSpacing.sm),
+                                  _Row(
+                                    label: context.l10n.dailyTarget,
+                                    value: s == null
+                                        ? '—'
+                                        : '${IndianNumberFormat.format(s.dailyTarget)} chants',
+                                    compact: tight,
+                                  ),
+                                  SizedBox(height: tight ? 2 : 4),
+                                  _Row(
+                                    label: context.l10n.actualAchieved,
+                                    value: s == null
+                                        ? '—'
+                                        : '${IndianNumberFormat.format(s.actualAchieved)} chants',
+                                    highlight: (s?.metTarget ?? false)
+                                        ? KvlColors.success
+                                        : null,
+                                    compact: tight,
+                                  ),
+                                  SizedBox(height: tight ? 2 : 4),
+                                  _Row(
+                                    label: context.l10n.handwritingUsed,
+                                    value: s == null
+                                        ? '—'
+                                        : (s.usedHandwriting
+                                            ? context.l10n.handwritingUsedYes
+                                            : context.l10n.handwritingUsedNo),
+                                    highlight: s?.usedHandwriting == true
+                                        ? KvlColors.success
+                                        : null,
+                                    compact: tight,
+                                  ),
+                                ],
+                              ),
                             );
                           },
                         ),
-                      ),
-                      SizedBox(height: tight ? KvlSpacing.sm : KvlSpacing.md),
-                      FutureBuilder<DailySummary>(
-                        future: _summaryFuture,
-                        builder: (_, snap) {
-                          final s = snap.data;
-                          return KvlCard(
-                            variant: KvlCardVariant.warm,
-                            padding: summaryPadding,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  context.l10n.recitationsOnDate(DateFormat.yMMMd().format(_selected)),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: KvlText.ui(
-                                    tight ? 11.5 : 12.5,
-                                    FontWeight.w600,
+
+                        const Spacer(),
+
+                        // ── Primary CTA ────────────────────────────────────
+                        if (goalReached)
+                          _GradientButton(
+                            label: '✓  Goal Achieved',
+                            colors: const [Color(0xFF16A34A), Color(0xFF15803D)],
+                            enabled: false,
+                            onTap: null,
+                          )
+                        else
+                          _GradientButton(
+                            label: '▶  ${context.l10n.startPractice}',
+                            colors: const [
+                              Color(0xFF00897B),
+                              Color(0xFF00695C),
+                            ],
+                            onTap: () =>
+                                context.push(KvlRoute.mantraSelection),
+                          ),
+
+                        SizedBox(height: tight ? KvlSpacing.sm : KvlSpacing.md),
+
+                        // ── Secondary row ──────────────────────────────────
+                        Row(
+                          children: [
+                            if (program?.isCompleted != true) ...[
+                              Expanded(
+                                child: _GradientButton(
+                                  label: context.l10n.dedicateProgram,
+                                  colors: const [
+                                    Color(0xFFFF9A3E),
+                                    Color(0xFFE07020),
+                                  ],
+                                  onTap: () => DedicateSheet.show(
+                                    context,
+                                    programId: widget.programId,
+                                    mantraName: mantraName,
                                   ),
                                 ),
-                                SizedBox(
-                                  height: tight ? KvlSpacing.xs : KvlSpacing.sm,
+                              ),
+                              const SizedBox(width: KvlSpacing.sm),
+                            ],
+                            Expanded(
+                              child: _OutlineButton(
+                                label: context.l10n.shareProgram,
+                                icon: Icons.share_rounded,
+                                onTap: () => _ShareSheet.show(
+                                  context,
+                                  mantraName: mantraName,
+                                  programId: widget.programId,
+                                  progress: program?.totalProgress ?? 0,
+                                  shareText: mantra?.shareText,
+                                  shareImageUrl: mantra?.shareImageUrl,
+                                  appDownloadLink: appDownloadLink,
                                 ),
-                                _Row(
-                                  label: context.l10n.dailyTarget,
-                                  value: s == null
-                                      ? '—'
-                                      : '${IndianNumberFormat.format(s.dailyTarget)} chants',
-                                  compact: tight,
-                                ),
-                                SizedBox(height: tight ? 2 : 4),
-                                _Row(
-                                  label: context.l10n.actualAchieved,
-                                  value: s == null
-                                      ? '—'
-                                      : '${IndianNumberFormat.format(s.actualAchieved)} chants',
-                                  highlight: (s?.metTarget ?? false)
-                                      ? KvlColors.success
-                                      : null,
-                                  compact: tight,
-                                ),
-                                SizedBox(height: tight ? 2 : 4),
-                                _Row(
-                                  label: context.l10n.handwritingUsed,
-                                  value: s == null
-                                      ? '—'
-                                      : (s.usedHandwriting ? context.l10n.handwritingUsedYes : context.l10n.handwritingUsedNo),
-                                  highlight: s?.usedHandwriting == true
-                                      ? KvlColors.success
-                                      : null,
-                                  compact: tight,
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                      const Spacer(),
-                      Builder(builder: (context) {
-                        final goalReached = program != null &&
-                            program.totalProgress >= program.targetWritings;
-                        return goalReached
-                            ? KvlButton(
-                                label: '✓ Goal Achieved',
-                                variant: KvlButtonVariant.secondary,
-                                onPressed: null,
-                              )
-                            : KvlButton(
-                                label: context.l10n.startPractice,
-                                variant: KvlButtonVariant.teal,
-                                icon: Icons.play_arrow_rounded,
-                                onPressed: () => context.go(
-                                  '${KvlRoute.practice}/${widget.programId}',
-                                ),
-                              );
-                      }),
-                      SizedBox(height: tight ? KvlSpacing.sm : KvlSpacing.md),
-                      if (program?.isCompleted != true)
-                        KvlButton(
-                          label: context.l10n.dedicateProgram,
-                          onPressed: () => DedicateSheet.show(
-                            context,
-                            programId: widget.programId,
-                            mantraName: mantraName,
-                          ),
-                        ),
-                      if (program?.isCompleted != true)
-                        SizedBox(height: tight ? KvlSpacing.sm : KvlSpacing.md),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Builder(builder: (context) {
-                              final goalReached = program != null &&
-                                  program.totalProgress >= program.targetWritings;
-                              return goalReached
-                                  ? KvlButton(
-                                      variant: KvlButtonVariant.secondary,
-                                      label: 'Download Data',
-                                      icon: Icons.download_rounded,
-                                      onPressed: () => downloadPracticeReport(ref),
-                                    )
-                                  : KvlButton(
-                                      variant: KvlButtonVariant.secondary,
-                                      label: context.l10n.editGoal,
-                                      onPressed: program == null
-                                          ? null
-                                          : () => _EditGoalSheet.show(
-                                                context,
-                                                ref: ref,
-                                                program: program,
-                                              ),
-                                    );
-                            }),
-                          ),
-                          const SizedBox(width: KvlSpacing.md),
-                          Expanded(
-                            child: KvlButton(
-                              variant: KvlButtonVariant.ghost,
-                              label: context.l10n.shareProgram,
-                              icon: Icons.share_rounded,
-                              onPressed: () => _ShareSheet.show(
-                                context,
-                                mantraName: mantraName,
-                                programId: widget.programId,
-                                progress: program?.totalProgress ?? 0,
-                                shareText: mantra?.shareText,
-                                shareImageUrl: mantra?.shareImageUrl,
-                                appDownloadLink: appDownloadLink,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
+                          ],
+                        ),
+                        SizedBox(height: bottomPad),
+                      ],
+                    ),
                   );
                 },
               ),
@@ -610,6 +721,91 @@ class _Row extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _GradientButton extends StatelessWidget {
+  const _GradientButton({
+    required this.label,
+    required this.colors,
+    required this.onTap,
+    this.enabled = true,
+  });
+  final String label;
+  final List<Color> colors;
+  final VoidCallback? onTap;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: enabled ? onTap : null,
+      child: Opacity(
+        opacity: enabled ? 1.0 : 0.55,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: colors),
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: colors.last.withValues(alpha: .30),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              letterSpacing: .3,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OutlineButton extends StatelessWidget {
+  const _OutlineButton({required this.label, required this.icon, required this.onTap});
+  final String label;
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 13),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: .7),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+              color: const Color(0xFFE07020).withValues(alpha: .40)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 15, color: const Color(0xFFBF5000)),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFFBF5000),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

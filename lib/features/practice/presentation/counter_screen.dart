@@ -316,47 +316,48 @@ class _BodyState extends ConsumerState<_Body> {
               ),
               child: Column(
                 children: [
-                  // Global Sadhana initiative name banner
-                  if (enrolledGs != null) ...[
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: compact ? 4 : 5,
+                  // Programme / mantra name banner — always visible
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: compact ? 4 : 5,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF7B2D00), Color(0xFFBF5000), Color(0xFFE8851A)],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
                       ),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF7B2D00), Color(0xFFBF5000), Color(0xFFE8851A)],
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          enrolledGs != null ? Icons.public_rounded : Icons.self_improvement_rounded,
+                          size: 12,
+                          color: Colors.white70,
                         ),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.public_rounded,
-                              size: 12, color: Colors.white70),
-                          const SizedBox(width: 5),
-                          Flexible(
-                            child: Text(
-                              enrolledGs.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.3,
-                              ),
+                        const SizedBox(width: 5),
+                        Flexible(
+                          child: Text(
+                            enrolledGs != null ? enrolledGs.title : mantraLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.3,
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    SizedBox(height: compact ? 4 : 6),
-                  ],
+                  ),
+                  SizedBox(height: compact ? 4 : 6),
                   _TopBar(
                     compact: compact,
                     sessionCount: state.sessionCount,
@@ -493,9 +494,6 @@ class _BodyState extends ConsumerState<_Body> {
                       },
                       onDismiss: controller.clearError,
                     ),
-                  ] else ...[
-                    SizedBox(height: compact ? 6 : 8),
-                    _SimpleProgressBar(state: state, compact: compact, enrolledGs: enrolledGs),
                   ],
                   SizedBox(height: bottomPad),
                 ],
@@ -1453,9 +1451,6 @@ class _ActionButton extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Today's progress card — circular ring + glassmorphic stat chips
-// ─────────────────────────────────────────────────────────────────────────────
-
 class _SimpleProgressBar extends StatelessWidget {
   const _SimpleProgressBar({required this.state, required this.compact, this.enrolledGs});
   final PracticeState state;
